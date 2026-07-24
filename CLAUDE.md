@@ -68,7 +68,8 @@ Esta tabla se mantiene siempre en su versión **vigente** — sin notas de fecha
 |---|---|
 | Xeitra | nombres anteriores de la empresa; "software de Xeitra" al referirse al producto |
 | Aurevia | — |
-| Prestadora (sinónimo aceptado: "licenciataria", cuando el contexto es específicamente la relación de licenciamiento SaaS con Xeitra) | empresa cliente, organización comercial, empresa usuaria (fuera del sentido técnico del sistema) |
+| Prestadora (sinónimo aceptado: "licenciataria", cuando el contexto es específicamente la relación de licenciamiento SaaS con Xeitra). Es el caso específico de un cliente de Xeitra que contrata Aurevia — no todo cliente de Xeitra es una Prestadora (podría contratar otro producto de Xeitra sin dedicarse al cuidado de personas; ver `ARQUITECTURA_NIVELES.md` en la raíz de Xeitra) | empresa cliente, organización comercial, empresa usuaria (fuera del sentido técnico del sistema) |
+| Cliente (a secas, únicamente cuando se habla desde la perspectiva de Xeitra/Nivel 1 sobre cualquier empresa que le contrata un producto, sea o no Aurevia) | usar dentro del contexto de Aurevia para referirse a la Familia o a la Prestadora — dentro de Aurevia esos dos roles siempre llevan su propio nombre, nunca "cliente" genérico |
 | Organización | entidad técnica multi-tenant — no confundir con "Prestadora" en texto de negocio |
 | Sandbox | empresa cliente, Prestadora real, organización comercial |
 | Asistente (cuidador/a, enfermero/a, etc.) | empleado/a, trabajador/a |

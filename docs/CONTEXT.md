@@ -29,14 +29,22 @@
   i18n y multi-moneda desde el arranque, residencia de datos a futuro) está definido en
   `docs/Prompt_Claude_Code_Xeitra_Multitenant.md` (dirección de arquitectura original) y su
   ejecución viva se sigue en `docs/PLAN_MULTITENANT_XEITRA.md` — ver también `CLAUDE.md`.
-  **Estado real (actualizado 2026-07-10): ya NO es mono-tenant.** Los Bloques 1
-  (aislamiento aditivo de datos: tabla `prestadoras` + `prestadora_id NOT NULL` en 15
-  tablas), 2 (RLS centralizada vía `current_tenant()`/`es_superadmin()`, ~28 policies
-  reescritas, rol `admin` renombrado a `admin_prestadora` en dato y código sin transición
-  pendiente) y 3 (filtrado de tenant en rutas backend con Service Role Key) ya están
-  aplicados y verificados contra Supabase real. Solo el Bloque 4 (`configuracion_prestadora`
-  reemplazando la configuración singleton + eliminar hardcodeos de marca/branding) sigue sin
-  arrancar — ver `docs/PROGRESS.md` para el detalle Bloque a Bloque.
+  **Estado real (verificado contra el código el 2026-07-24, no solo contra este documento):
+  ya NO es mono-tenant, y los 4 Bloques del plan están cerrados.** Bloque 1 (aislamiento
+  aditivo de datos: tabla `prestadoras` + `prestadora_id NOT NULL` en 15 tablas), Bloque 2
+  (RLS centralizada vía `current_tenant()`/`es_superadmin()`, ~28 policies reescritas, rol
+  `admin` renombrado a `admin_prestadora` en dato y código sin transición pendiente), Bloque 3
+  (filtrado de tenant en rutas backend con Service Role Key) y Bloque 4 (`configuracion_prestadora`
+  reemplazando la configuración singleton — confirmado en `backend/src/routes/panelConfiguracion.js:34-41`
+  — y hardcodeos de marca sacados de `generarDocumentoCese.js`/`calcularCese.js`) ya están
+  aplicados y verificados contra Supabase real. Desde entonces se sumó además el rol
+  `admin_plataforma` (administrativo cross-tenant, con modo "dentro de una Prestadora" —
+  ver `TenantSessionContext.jsx`), que va más allá de lo que pedía el Bloque 4. **Único
+  hardcodeo estructural que sigue abierto, a propósito**: el envío de emails sigue saliendo
+  de una sola cuenta Gmail compartida entre todas las Prestadoras (`backend/src/utils/email.js`,
+  `SMTP_USER`) — pendiente #44 en `docs/PENDIENTES.md`, con fecha de cierre exigida "antes
+  de dar de alta la primera Prestadora real", no antes — ver `docs/PROGRESS.md` para el
+  detalle Bloque a Bloque.
 
 ## Roles de usuario
 

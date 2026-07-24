@@ -192,6 +192,19 @@ h2 {
   gap: 0.5rem;
 }
 
+.panel-nav-grupo {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.45);
+  padding: 0.75rem 0.75rem 0.15rem 1.5rem;
+}
+
+.panel-nav-grupo:first-child {
+  padding-top: 0;
+}
+
 .panel-sidebar nav a {
   position: relative;
   color: rgba(255, 255, 255, 0.8);

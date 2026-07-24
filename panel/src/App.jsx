@@ -3,6 +3,7 @@ import { LocaleProvider } from './i18n/LocaleContext';
 import { AuthProvider } from './context/AuthContext';
 import { EmpresaProvider } from './context/EmpresaContext';
 import { PermisosProvider } from './context/PermisosContext';
+import { ModalidadesProvider } from './context/ModalidadesContext';
 import { TenantSessionProvider } from './context/TenantSessionContext';
 import { AdvertenciaLegalProvider } from './context/AdvertenciaLegalContext';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
@@ -37,6 +38,7 @@ function App() {
       <EmpresaProvider>
         <AuthProvider>
           <PermisosProvider>
+          <ModalidadesProvider>
           <TenantSessionProvider>
             <AdvertenciaLegalProvider>
               <BrowserRouter>
@@ -77,6 +79,7 @@ function App() {
               </BrowserRouter>
             </AdvertenciaLegalProvider>
           </TenantSessionProvider>
+          </ModalidadesProvider>
           </PermisosProvider>
         </AuthProvider>
       </EmpresaProvider>

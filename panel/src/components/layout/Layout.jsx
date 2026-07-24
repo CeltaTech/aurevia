@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useEmpresa } from '../../context/EmpresaContext';
 import { useTenantSession } from '../../context/TenantSessionContext';
 import { usePermisos } from '../../context/PermisosContext';
+import { useModalidades } from '../../context/ModalidadesContext';
 import { esAdminOSuperior } from '../../lib/roles';
 import { LOCALES } from '../../i18n/translations';
 
@@ -72,6 +73,7 @@ export function Layout() {
   const { usuario, logout } = useAuth();
   const { empresa } = useEmpresa();
   const { puede } = usePermisos();
+  const { tieneModalidad } = useModalidades();
 
   return (
     <div className="panel-layout">
@@ -81,21 +83,27 @@ export function Layout() {
           <NavLink to="/" end>
             {t.nav.dashboard}
           </NavLink>
+          <span className="panel-nav-grupo">{t.nav.grupo_plantel_asistentes}</span>
           <NavLink to="/postulaciones">{t.nav.postulaciones}</NavLink>
           <NavLink to="/solicitudes">{t.nav.solicitudes}</NavLink>
           <NavLink to="/asistentes">{t.nav.asistentes}</NavLink>
-          <NavLink to="/familias">{t.nav.familias}</NavLink>
-          <NavLink to="/guardias">{t.nav.guardias}</NavLink>
-          <NavLink to="/comunicacion">{t.nav.comunicacion}</NavLink>
-          <NavLink to="/verificacion-guardias">{t.nav.verificacion_guardias}</NavLink>
-          <NavLink to="/facturacion">{t.nav.facturacion}</NavLink>
           <NavLink to="/documentacion">{t.nav.documentacion}</NavLink>
           <NavLink to="/continuidad">{t.nav.continuidad}</NavLink>
-          <NavLink to="/lista-precios">{t.nav.lista_precios}</NavLink>
+          {tieneModalidad('directa') && (
+            <>
+              <span className="panel-nav-grupo">{t.nav.grupo_prestacion_directa}</span>
+              <NavLink to="/familias">{t.nav.familias}</NavLink>
+              <NavLink to="/guardias">{t.nav.guardias}</NavLink>
+              <NavLink to="/comunicacion">{t.nav.comunicacion}</NavLink>
+              <NavLink to="/verificacion-guardias">{t.nav.verificacion_guardias}</NavLink>
+              <NavLink to="/facturacion">{t.nav.facturacion}</NavLink>
+              <NavLink to="/lista-precios">{t.nav.lista_precios}</NavLink>
+              <NavLink to="/informes-obra-social">{t.nav.informes_obra_social}</NavLink>
+            </>
+          )}
           {(esAdminOSuperior(usuario?.rol) || puede('importar_datos_masivos')) && (
             <NavLink to="/importacion">{t.nav.importacion}</NavLink>
           )}
-          <NavLink to="/informes-obra-social">{t.nav.informes_obra_social}</NavLink>
           {esAdminOSuperior(usuario?.rol) && <NavLink to="/usuarios-panel">{t.nav.usuarios_panel}</NavLink>}
           {['admin_plataforma', 'superadmin'].includes(usuario?.rol) && <NavLink to="/prestadoras">{t.nav.prestadoras}</NavLink>}
           {usuario?.rol === 'admin_plataforma' && <NavLink to="/admin-plataforma">{t.nav.admin_plataforma}</NavLink>}

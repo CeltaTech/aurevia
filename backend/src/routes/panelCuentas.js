@@ -59,6 +59,24 @@ panelCuentasRouter.get('/permisos-efectivos', requiereRolPanel, async (req, res)
   res.json({ permisos: Object.fromEntries(ACCIONES_PERMISOS.map((accion, i) => [accion, resultados[i]])) });
 });
 
+// PRD_08 (docs/PRD_08_Dashboard_Modalidades.md, aprobado 2026-07-24): qué modalidades de
+// negocio (directa/marketplace/cooperativa) tiene activas la Prestadora, para que el menú
+// del Panel muestre solo los grupos que correspondan. Lectura disponible para cualquier rol
+// logueado (igual que permisos-efectivos) — activar/desactivar sigue siendo exclusivo de
+// admin_prestadora vía PATCH /api/panel/configuracion/modalidades (panelConfiguracion.js).
+panelCuentasRouter.get('/modalidades-activas', requiereRolPanel, async (req, res) => {
+  if (!req.usuarioPanel.prestadoraId) {
+    return res.json({ modalidades: [] });
+  }
+  const { data, error } = await supabase
+    .from('prestadora_modalidades')
+    .select('modalidad')
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .eq('activa', true);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ modalidades: (data || []).map((f) => f.modalidad) });
+});
+
 panelCuentasRouter.post('/familia', requiereRolPanel, requiereAdmin, async (req, res) => {
   const { solicitudId } = req.body;
   if (!solicitudId) {

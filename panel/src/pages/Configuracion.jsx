@@ -25,7 +25,7 @@ async function llamarApi(path, opciones = {}) {
   return resultado;
 }
 
-const TABS = ['empresa', 'zonas', 'servicios', 'documentos', 'vitales', 'notificaciones', 'whatsapp', 'permisos'];
+const TABS = ['empresa', 'modalidades', 'zonas', 'servicios', 'documentos', 'vitales', 'notificaciones', 'whatsapp', 'permisos'];
 const SIGNOS_VITALES = ['presion_sistolica', 'presion_diastolica', 'temperatura', 'saturacion', 'glucemia'];
 const ROLES_RELEVO = ['suplente', 'franquero', 'emergencia', 'familiar'];
 const TIPOS_PERSONAL_EMERGENCIA = ['franquero', 'emergencia'];
@@ -58,6 +58,7 @@ export function Configuracion() {
 
       <div className="panel-tab-contenido">
         {tab === 'empresa' && <TabEmpresa />}
+        {tab === 'modalidades' && <TabModalidades />}
         {tab === 'zonas' && <TabZonas />}
         {tab === 'servicios' && <TabServicios />}
         {tab === 'documentos' && <TabDocumentos />}
@@ -231,6 +232,86 @@ function TabPermisos() {
       <Button onClick={guardarPolitica} disabled={guardandoPolitica}>
         {guardandoPolitica ? t.comun.guardando : t.comun.guardar}
       </Button>
+    </div>
+  );
+}
+
+// Modalidades de negocio activas (PRD_08_Dashboard_Modalidades.md, aprobado 2026-07-24,
+// primer corte "Base: tabla + menú + onboarding"). Punto único de verdad: tabla dedicada
+// prestadora_modalidades, no el motor de permisos ni catalogo_modulos (ver
+// schema_prestadora_modalidades.sql). 'cooperativa' no se ofrece todavía: no tiene menú ni
+// pantallas (PRD_08 §3.8).
+function TabModalidades() {
+  const { t } = useLocale();
+  const { recargar: recargarMenu } = useModalidades();
+  const [modalidades, setModalidades] = useState([]);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [actualizandoModalidad, setActualizandoModalidad] = useState(null);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const { modalidades: filas } = await llamarApi('/modalidades');
+      setModalidades(filas);
+      setEstado('listo');
+    } catch (err) {
+      setError(err.message);
+      setEstado('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  async function toggleActiva(fila) {
+    setActualizandoModalidad(fila.modalidad);
+    setError(null);
+    try {
+      await llamarApi(`/modalidades/${fila.modalidad}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ activa: !fila.activa }),
+      });
+      await Promise.all([recargar(), recargarMenu()]);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setActualizandoModalidad(null);
+    }
+  }
+
+  return (
+    <div>
+      <h2>{t.configuracion.modalidades_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.modalidades_explicacion}</p>
+      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
+      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{t.configuracion.modalidades_col_modalidad}</th>
+              <th>{t.configuracion.modalidades_col_activa}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {modalidades.map((fila) => (
+              <tr key={fila.modalidad}>
+                <td>{t.configuracion[`modalidades_${fila.modalidad}`]}</td>
+                <td>
+                  <input
+                    type="checkbox"
+                    checked={fila.activa}
+                    onChange={() => toggleActiva(fila)}
+                    disabled={actualizandoModalidad === fila.modalidad}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </EstadoLista>
     </div>
   );
 }

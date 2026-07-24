@@ -43,3 +43,35 @@ Vínculo ya es un contrato de trabajo en relación de dependencia reconocido com
 - Si se agrega una función nueva de gestión de Asistentes no listada acá, corresponde
   evaluar si aplica el mismo riesgo del art. 23 LCT y sumar su fila a esta tabla antes de
   activarla para una Prestadora real de Argentina.
+
+## Modalidad marketplace — riesgo invertido
+
+> Diseño completo en `docs/PRD_07_Modalidad_Marketplace.md` (2026-07-24). Acá solo la
+> tabla de advertencias que corresponde a esta jurisdicción — pendiente de revisión por un
+> abogado laboralista antes de una Prestadora real en esta modalidad, igual que el resto de
+> este documento (ver nota al inicio).
+
+En prestación directa el riesgo es que la Prestadora controle tanto al Asistente que
+parezca su empleadora. En marketplace el riesgo es el mismo principio del art. 23 LCT
+aplicado al revés: que sea **la plataforma**, no la Familia, quien ejerza ese control de
+forma agregada entre todas las Familias — mismo patrón que llevó a fallar en contra de
+Uber en el Reino Unido (Uber BV vs Aslam, 2021).
+
+Herramientas que la Familia opera sobre **su propio** Asistente contratado (horario,
+penalización, calificación) no generan este riesgo — es la Familia ejerciendo su rol de
+empleadora doméstica ya reconocido por la Ley de Personal de Casas Particulares (26.844),
+no la plataforma. El riesgo aparece solo cuando la decisión es de la plataforma, agregada
+entre todas las Familias:
+
+| Función | Texto de advertencia mostrado al activar |
+|---|---|
+| Ranking o puntaje calculado por la plataforma que decide si un Asistente sigue apareciendo ante cualquier Familia | Un ranking calculado por la plataforma que condiciona si el Asistente sigue visible para cualquier Familia puede interpretarse como la plataforma decidiendo su acceso al trabajo en general, un indicio de subordinación bajo el art. 23 de la LCT — mismo hecho que pesó en contra de Uber en el caso Aslam (Reino Unido, 2021). |
+| Consecuencia automática atada a la calificación agregada (ej. exclusión por debajo de un puntaje) | Atar una exclusión automática a la calificación agregada convierte la opinión de las Familias en una decisión algorítmica de la plataforma sobre el Asistente, un indicio de subordinación bajo el art. 23 de la LCT. |
+| Precio u horario fijado por la plataforma para todas las Familias por igual | Fijar precio u horario de forma centralizada, en vez de que cada Familia lo acuerde con su Asistente, es un indicio fuerte de subordinación bajo el art. 23 de la LCT. |
+| Exclusividad exigida por la plataforma | Exigir exclusividad reduce la libertad real del Asistente de trabajar para otros, elemento central para sostener autonomía y no dependencia (art. 23 LCT). |
+| Mediación de conflictos por la plataforma | Mediar activamente en conflictos entre Familia y Asistente puede interpretarse como dirección del vínculo, un indicio de subordinación bajo el art. 23 de la LCT. |
+
+No generan advertencia en marketplace (bajo riesgo): calificación por estrellas visible
+como opinión sin consecuencia automática, verificación de identidad/antecedentes, toggle de
+disponibilidad del Asistente, y las herramientas de horario/penalización/calificación
+cuando las opera la Familia sobre su propio vínculo.

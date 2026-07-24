@@ -517,6 +517,55 @@ panelConfiguracionRouter.patch('/politica-verificacion', async (req, res) => {
   res.json({ ok: true });
 });
 
+// --- Modalidades de negocio activas (PRD_08_Dashboard_Modalidades.md, aprobado 2026-07-24,
+//     primer corte "Base: tabla + menú + onboarding"). Activar/desactivar es exclusivo de
+//     admin_prestadora (este router ya lo exige vía requiereAdminOSuperior más arriba); la
+//     lectura para armar el menú de cualquier rol vive en panelCuentas.js /modalidades-activas
+//     (misma tabla, misma fuente única de verdad — CLAUDE.md §7 regla 12).
+//     'cooperativa' todavía no se ofrece acá: no tiene menú ni pantallas (PRD_08 §3.8), solo
+//     existe en el CHECK de la tabla para no requerir otra migración cuando se diseñe.
+const MODALIDADES_DISPONIBLES = ['directa', 'marketplace'];
+
+panelConfiguracionRouter.get('/modalidades', async (req, res) => {
+  const { data, error } = await supabase
+    .from('prestadora_modalidades')
+    .select('modalidad, activa')
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  if (error) return res.status(500).json({ error: error.message });
+
+  const porModalidad = Object.fromEntries((data || []).map((f) => [f.modalidad, f.activa]));
+  const modalidades = MODALIDADES_DISPONIBLES.map((modalidad) => ({
+    modalidad,
+    activa: porModalidad[modalidad] ?? false,
+  }));
+  res.json({ modalidades });
+});
+
+panelConfiguracionRouter.patch('/modalidades/:modalidad', async (req, res) => {
+  const { modalidad } = req.params;
+  if (!MODALIDADES_DISPONIBLES.includes(modalidad)) {
+    return res.status(400).json({ error: 'Modalidad desconocida' });
+  }
+  const { activa } = req.body;
+  if (typeof activa !== 'boolean') {
+    return res.status(400).json({ error: 'Falta indicar activa (boolean)' });
+  }
+  const ahora = new Date().toISOString();
+  const { error } = await supabase.from('prestadora_modalidades').upsert(
+    {
+      prestadora_id: req.usuarioPanel.prestadoraId,
+      modalidad,
+      activa,
+      ...(activa
+        ? { activada_por: req.usuarioPanel.id, activada_en: ahora }
+        : { desactivada_por: req.usuarioPanel.id, desactivada_en: ahora }),
+    },
+    { onConflict: 'prestadora_id,modalidad' }
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
 // --- Escalada a Coordinador: respaldo + intervalos de insistencia según premura
 //     (punto 5 de docs/PRD_06_WhatsApp_IA.md) ---
 panelConfiguracionRouter.get('/escalada-coordinador', async (req, res) => {

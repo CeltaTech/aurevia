@@ -83,24 +83,28 @@ export function Layout() {
           <NavLink to="/" end>
             {t.nav.dashboard}
           </NavLink>
-          <span className="panel-nav-grupo">{t.nav.grupo_plantel_asistentes}</span>
-          <NavLink to="/postulaciones">{t.nav.postulaciones}</NavLink>
-          <NavLink to="/solicitudes">{t.nav.solicitudes}</NavLink>
-          <NavLink to="/asistentes">{t.nav.asistentes}</NavLink>
-          <NavLink to="/documentacion">{t.nav.documentacion}</NavLink>
-          <NavLink to="/continuidad">{t.nav.continuidad}</NavLink>
+          {(tieneModalidad('directa') || tieneModalidad('marketplace')) && (
+            <>
+              <span className="panel-nav-grupo">{t.nav.grupo_plantel_asistentes}</span>
+              <NavLink to="/postulaciones">{t.nav.postulaciones}</NavLink>
+              <NavLink to="/solicitudes">{t.nav.solicitudes}</NavLink>
+              <NavLink to="/asistentes">{t.nav.asistentes}</NavLink>
+              <NavLink to="/documentacion">{t.nav.documentacion}</NavLink>
+              <NavLink to="/continuidad">{t.nav.continuidad}</NavLink>
+              <NavLink to="/verificacion-guardias">{t.nav.verificacion_guardias}</NavLink>
+            </>
+          )}
           {tieneModalidad('directa') && (
             <>
               <span className="panel-nav-grupo">{t.nav.grupo_prestacion_directa}</span>
               <NavLink to="/familias">{t.nav.familias}</NavLink>
               <NavLink to="/guardias">{t.nav.guardias}</NavLink>
-              <NavLink to="/comunicacion">{t.nav.comunicacion}</NavLink>
-              <NavLink to="/verificacion-guardias">{t.nav.verificacion_guardias}</NavLink>
               <NavLink to="/facturacion">{t.nav.facturacion}</NavLink>
               <NavLink to="/lista-precios">{t.nav.lista_precios}</NavLink>
               <NavLink to="/informes-obra-social">{t.nav.informes_obra_social}</NavLink>
             </>
           )}
+          <NavLink to="/comunicacion">{t.nav.comunicacion}</NavLink>
           {(esAdminOSuperior(usuario?.rol) || puede('importar_datos_masivos')) && (
             <NavLink to="/importacion">{t.nav.importacion}</NavLink>
           )}

@@ -31,6 +31,9 @@ import { Configuracion } from './pages/Configuracion';
 import { Importacion } from './pages/Importacion';
 import { InformesObraSocial } from './pages/InformesObraSocial';
 import { Auditoria } from './pages/Auditoria';
+import { MarketplaceFamilias } from './pages/marketplace/Familias';
+import { MarketplaceCalificaciones } from './pages/marketplace/Calificaciones';
+import { MarketplaceAuditoriaLegal } from './pages/marketplace/AuditoriaLegal';
 
 function App() {
   return (
@@ -74,6 +77,30 @@ function App() {
                     <Route path="admin-plataforma" element={<ProtectedRoute roles={['admin_plataforma']}><AdminPlataforma /></ProtectedRoute>} />
                     <Route path="configuracion" element={<ProtectedRoute soloAdmin><Configuracion /></ProtectedRoute>} />
                     <Route path="auditoria" element={<ProtectedRoute roles={['admin_prestadora', 'superadmin', 'admin_plataforma']}><Auditoria /></ProtectedRoute>} />
+                    <Route
+                      path="marketplace/familias"
+                      element={
+                        <ProtectedRoute roles={['admin_prestadora', 'coordinador', 'superadmin', 'admin_plataforma']}>
+                          <MarketplaceFamilias />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="marketplace/calificaciones"
+                      element={
+                        <ProtectedRoute roles={['admin_prestadora', 'coordinador', 'superadmin', 'admin_plataforma']}>
+                          <MarketplaceCalificaciones />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="marketplace/auditoria-legal"
+                      element={
+                        <ProtectedRoute roles={['admin_prestadora', 'coordinador', 'superadmin', 'admin_plataforma']}>
+                          <MarketplaceAuditoriaLegal />
+                        </ProtectedRoute>
+                      }
+                    />
                   </Route>
                 </Routes>
               </BrowserRouter>

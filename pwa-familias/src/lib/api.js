@@ -35,4 +35,7 @@ export const api = {
   calificar: (guardiaId, datos) => pedido(`/guardias/${guardiaId}/calificar`, { method: 'POST', body: JSON.stringify(datos) }),
   suscribirPush: (suscripcion) => pedido('/push/suscribir', { method: 'POST', body: JSON.stringify(suscripcion) }),
   desuscribirPush: (endpoint) => pedido('/push/suscribir', { method: 'DELETE', body: JSON.stringify({ endpoint }) }),
+  suscripcionMarketplace: (pacienteId) => pedido(`/suscripcion/${pacienteId}`),
+  generarQrCobro: (datos) => pedido('/qr-cobro', { method: 'POST', body: JSON.stringify(datos) }),
+  estadoQrCobro: (id) => pedido(`/qr-cobro/${id}`),
 };

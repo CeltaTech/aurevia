@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requiereRolFamilia } from '../middleware/requiereRolFamilia.js';
 import { supabase } from '../db/connection.js';
 import { resolverVitalesHabilitados } from '../utils/vitalesReferencia.js';
+import { generarTokenQrCobro } from '../utils/qrCobroEfectivo.js';
 
 export const appFamiliasRouter = Router();
 
@@ -381,4 +382,68 @@ appFamiliasRouter.delete('/push/suscribir', requiereRolFamilia, async (req, res)
   }
 
   res.json({ ok: true });
+});
+
+// ============================================================================
+// Suscripción marketplace + cobro en efectivo por QR (pendiente #85). El QR es la
+// alternativa a la carga manual del cobrador: la Familia lo genera desde su propio
+// dispositivo, de un solo uso y con vencimiento corto (10 min) — el canje ocurre siempre en
+// el Panel vía service_role, nunca como UPDATE directo desde acá.
+// ============================================================================
+
+appFamiliasRouter.get('/suscripcion/:pacienteId', requiereRolFamilia, async (req, res) => {
+  const { data, error } = await supabase
+    .from('suscripciones_marketplace')
+    .select('id, estado, monto_mensual, trial_fin, proximo_cobro, cancelada_en')
+    .eq('familia_id', req.usuarioFamilia.familiaId)
+    .eq('paciente_id', req.params.pacienteId)
+    .maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ suscripcion: data });
+});
+
+appFamiliasRouter.post('/qr-cobro', requiereRolFamilia, async (req, res) => {
+  const { suscripcion_id: suscripcionId } = req.body || {};
+  if (!suscripcionId) {
+    return res.status(400).json({ error: 'Falta suscripcion_id' });
+  }
+
+  const { data: suscripcion } = await supabase
+    .from('suscripciones_marketplace')
+    .select('id, familia_id, monto_mensual, proximo_cobro')
+    .eq('id', suscripcionId)
+    .eq('familia_id', req.usuarioFamilia.familiaId)
+    .maybeSingle();
+  if (!suscripcion) {
+    return res.status(404).json({ error: 'Suscripción no encontrada' });
+  }
+
+  const { token, expiraEn } = generarTokenQrCobro();
+  const { data, error } = await supabase
+    .from('qr_cobro_efectivo')
+    .insert({
+      suscripcion_id: suscripcion.id,
+      familia_id: req.usuarioFamilia.familiaId,
+      periodo: suscripcion.proximo_cobro || new Date().toISOString().slice(0, 10),
+      monto: suscripcion.monto_mensual,
+      token,
+      expira_en: expiraEn.toISOString(),
+    })
+    .select('id, token, expira_en, usado_en')
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+
+  res.json({ qr: data });
+});
+
+appFamiliasRouter.get('/qr-cobro/:id', requiereRolFamilia, async (req, res) => {
+  const { data, error } = await supabase
+    .from('qr_cobro_efectivo')
+    .select('id, expira_en, usado_en, cobro_id')
+    .eq('id', req.params.id)
+    .eq('familia_id', req.usuarioFamilia.familiaId)
+    .maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  if (!data) return res.status(404).json({ error: 'QR no encontrado' });
+  res.json({ qr: data });
 });

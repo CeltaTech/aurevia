@@ -104,6 +104,14 @@ export function Layout() {
               <NavLink to="/informes-obra-social">{t.nav.informes_obra_social}</NavLink>
             </>
           )}
+          {tieneModalidad('marketplace') && (
+            <>
+              <span className="panel-nav-grupo">{t.nav.grupo_marketplace}</span>
+              <NavLink to="/marketplace/familias">{t.nav.marketplace_familias}</NavLink>
+              <NavLink to="/marketplace/calificaciones">{t.nav.marketplace_calificaciones}</NavLink>
+              <NavLink to="/marketplace/auditoria-legal">{t.nav.marketplace_auditoria_legal}</NavLink>
+            </>
+          )}
           <NavLink to="/comunicacion">{t.nav.comunicacion}</NavLink>
           {(esAdminOSuperior(usuario?.rol) || puede('importar_datos_masivos')) && (
             <NavLink to="/importacion">{t.nav.importacion}</NavLink>

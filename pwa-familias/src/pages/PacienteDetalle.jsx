@@ -128,6 +128,9 @@ export default function PacienteDetalle() {
         <Link to={`/pacientes/${id}/asistente`} className="btn btn-secondary btn-full">
           {t.paciente.ver_asistente}
         </Link>
+        <Link to={`/pacientes/${id}/suscripcion`} className="btn btn-secondary btn-full">
+          {t.paciente.ver_suscripcion}
+        </Link>
       </div>
     </div>
   );

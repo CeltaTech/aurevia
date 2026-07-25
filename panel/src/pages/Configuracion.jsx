@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
+import { useModalidades } from '../context/ModalidadesContext';
 import { useConfirmarDestructivo } from '../context/TenantSessionContext';
 import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
@@ -26,6 +27,21 @@ async function llamarApi(path, opciones = {}) {
   return resultado;
 }
 
+async function llamarApiMarketplace(path, opciones = {}) {
+  const { data } = await supabase.auth.getSession();
+  const respuesta = await fetch(`${API_URL}/api/panel/marketplace${path}`, {
+    ...opciones,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${data.session?.access_token}`,
+      ...opciones.headers,
+    },
+  });
+  const resultado = await respuesta.json();
+  if (!respuesta.ok) throw new Error(resultado.error);
+  return resultado;
+}
+
 const TABS = ['empresa', 'modalidades', 'zonas', 'servicios', 'documentos', 'vitales', 'notificaciones', 'whatsapp', 'permisos'];
 const SIGNOS_VITALES = ['presion_sistolica', 'presion_diastolica', 'temperatura', 'saturacion', 'glucemia'];
 const ROLES_RELEVO = ['suplente', 'franquero', 'emergencia', 'familiar'];
@@ -34,11 +50,13 @@ const TIPOS_PERSONAL_EMERGENCIA = ['franquero', 'emergencia'];
 export function Configuracion() {
   const { t } = useLocale();
   const { usuario } = useAuth();
+  const { tieneModalidad } = useModalidades();
   const [tab, setTab] = useState('empresa');
 
   // Pestaña "seguridad" (toggle de MFA, ítem H del pendiente #30) solo para superadmin —
   // ni siquiera admin_plataforma, es uno de los roles que el toggle protege.
-  const tabs = usuario?.rol === 'superadmin' ? [...TABS, 'seguridad'] : TABS;
+  let tabs = tieneModalidad('marketplace') ? [...TABS, 'pasarela'] : TABS;
+  if (usuario?.rol === 'superadmin') tabs = [...tabs, 'seguridad'];
 
   return (
     <div>
@@ -67,6 +85,7 @@ export function Configuracion() {
         {tab === 'notificaciones' && <TabNotificaciones />}
         {tab === 'whatsapp' && <TabWhatsapp />}
         {tab === 'permisos' && <TabPermisos />}
+        {tab === 'pasarela' && tieneModalidad('marketplace') && <TabPasarela />}
         {tab === 'seguridad' && usuario?.rol === 'superadmin' && <TabSeguridad />}
       </div>
     </div>
@@ -1831,6 +1850,144 @@ function TabWhatsappEscaladaCoordinador() {
             <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
           </div>
         )}
+      </EstadoLista>
+    </div>
+  );
+}
+
+const PROVEEDORES_SIN_CREDENCIAL = ['efectivo_manual'];
+
+function TabPasarela() {
+  const { t } = useLocale();
+  const [pasarelas, setPasarelas] = useState([]);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [proveedorAbierto, setProveedorAbierto] = useState(null);
+  const [credencial, setCredencial] = useState('');
+  const [accionEnCurso, setAccionEnCurso] = useState(null);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const { pasarelas: filas } = await llamarApiMarketplace('/pasarela');
+      setPasarelas(filas);
+      setEstado('listo');
+    } catch (err) {
+      setError(err.message);
+      setEstado('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  async function activar(proveedor) {
+    setAccionEnCurso(proveedor);
+    setError(null);
+    try {
+      const requiereCredencial = !PROVEEDORES_SIN_CREDENCIAL.includes(proveedor);
+      await llamarApiMarketplace(`/pasarela/${proveedor}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ activo: true, credencial: requiereCredencial ? credencial || undefined : undefined }),
+      });
+      setCredencial('');
+      setProveedorAbierto(null);
+      await recargar();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setAccionEnCurso(null);
+    }
+  }
+
+  async function desactivar(proveedor) {
+    setAccionEnCurso(proveedor);
+    setError(null);
+    try {
+      await llamarApiMarketplace(`/pasarela/${proveedor}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ activo: false }),
+      });
+      await recargar();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setAccionEnCurso(null);
+    }
+  }
+
+  return (
+    <div>
+      <h2>{t.configuracion.pasarela_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.pasarela_explicacion}</p>
+      <EstadoLista estado={estado} error={error} vacio={pasarelas.length === 0} recargar={recargar}>
+        {error && <Alert variant="error">{error}</Alert>}
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{t.configuracion.pasarela_col_proveedor}</th>
+              <th>{t.configuracion.pasarela_col_estado}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {pasarelas.map((fila) => {
+              const requiereCredencial = !PROVEEDORES_SIN_CREDENCIAL.includes(fila.proveedor);
+              const abierta = proveedorAbierto === fila.proveedor;
+              return (
+                <Fragment key={fila.proveedor}>
+                  <tr>
+                    <td>{t.configuracion[`pasarela_${fila.proveedor}`]}</td>
+                    <td>{fila.activo ? t.configuracion.pasarela_activa : t.configuracion.pasarela_inactiva}</td>
+                    <td>
+                      {fila.activo ? (
+                        <Button
+                          variant="secondary"
+                          onClick={() => desactivar(fila.proveedor)}
+                          disabled={accionEnCurso === fila.proveedor}
+                        >
+                          {accionEnCurso === fila.proveedor ? t.configuracion.pasarela_desactivando : t.configuracion.pasarela_desactivar}
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() => {
+                            if (!requiereCredencial) {
+                              activar(fila.proveedor);
+                            } else {
+                              setProveedorAbierto(abierta ? null : fila.proveedor);
+                              setCredencial('');
+                            }
+                          }}
+                          disabled={accionEnCurso === fila.proveedor}
+                        >
+                          {t.configuracion.pasarela_activar}
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                  {abierta && requiereCredencial && !fila.activo && (
+                    <tr>
+                      <td colSpan={3}>
+                        <FormField
+                          label={t.configuracion.pasarela_credencial_cargar}
+                          name={`credencial-${fila.proveedor}`}
+                          type="password"
+                          value={credencial}
+                          onChange={(e) => setCredencial(e.target.value)}
+                        />
+                        <Button onClick={() => activar(fila.proveedor)} disabled={accionEnCurso === fila.proveedor}>
+                          {accionEnCurso === fila.proveedor ? t.comun.guardando : t.comun.guardar}
+                        </Button>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
       </EstadoLista>
     </div>
   );

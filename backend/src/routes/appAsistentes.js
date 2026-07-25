@@ -423,3 +423,51 @@ appAsistentesRouter.delete('/push/suscribir', requiereRolAsistente, async (req, 
 
   res.json({ ok: true });
 });
+
+// ============================================================================
+// Descargo del Asistente ante una calificación (pendiente #85, mitigante de diseño no
+// opcional del riesgo legal invertido en marketplace — docs/PRD_07_Modalidad_Marketplace.md
+// §5). Se carga una sola vez, nunca editable después (misma inmutabilidad que la propia
+// calificación) — la policy `asistente_carga_su_descargo` ya bloquea un segundo intento por
+// RLS, acá se valida antes también para devolver un mensaje legible.
+// ============================================================================
+
+appAsistentesRouter.get('/calificaciones', requiereRolAsistente, async (req, res) => {
+  const { data, error } = await supabase
+    .from('calificaciones_asistente')
+    .select('id, estrellas, comentario, visible_publica, descargo_asistente, descargo_en, created_at')
+    .eq('asistente_id', req.usuarioAsistente.id)
+    .order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ calificaciones: data });
+});
+
+appAsistentesRouter.patch('/calificaciones/:id/descargo', requiereRolAsistente, async (req, res) => {
+  const { descargo } = req.body || {};
+  if (!descargo || !descargo.trim()) {
+    return res.status(400).json({ error: 'Falta el texto del descargo' });
+  }
+
+  const { data: calificacion } = await supabase
+    .from('calificaciones_asistente')
+    .select('id, descargo_asistente')
+    .eq('id', req.params.id)
+    .eq('asistente_id', req.usuarioAsistente.id)
+    .maybeSingle();
+
+  if (!calificacion) {
+    return res.status(404).json({ error: 'Calificación no encontrada' });
+  }
+  if (calificacion.descargo_asistente) {
+    return res.status(409).json({ error: 'Ya cargaste un descargo para esta calificación, no puede editarse' });
+  }
+
+  const { error } = await supabase
+    .from('calificaciones_asistente')
+    .update({ descargo_asistente: descargo.trim(), descargo_en: new Date().toISOString() })
+    .eq('id', req.params.id)
+    .eq('asistente_id', req.usuarioAsistente.id);
+  if (error) return res.status(500).json({ error: error.message });
+
+  res.json({ ok: true });
+});

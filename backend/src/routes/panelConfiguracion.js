@@ -231,9 +231,13 @@ panelConfiguracionRouter.get('/whatsapp', async (req, res) => {
     .from('configuracion_whatsapp_prestadora')
     .select('prestadora_id, activo, numero_telefono, waba_id, phone_number_id, verificado_at, updated_at')
     .eq('prestadora_id', prestadoraId)
-    .single();
+    .maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ whatsapp: { ...data, token_cargado: Boolean(data) } });
+  res.json({
+    whatsapp: data
+      ? { ...data, token_cargado: true }
+      : { prestadora_id: prestadoraId, activo: false, numero_telefono: null, waba_id: null, phone_number_id: null, verificado_at: null, token_cargado: false },
+  });
 });
 
 panelConfiguracionRouter.patch('/whatsapp', async (req, res) => {
@@ -576,9 +580,22 @@ panelConfiguracionRouter.get('/escalada-coordinador', async (req, res) => {
     .from('configuracion_escalada_coordinador')
     .select('*')
     .eq('prestadora_id', prestadoraId)
-    .single();
+    .maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ escalada: data });
+  res.json({
+    escalada: data || {
+      prestadora_id: prestadoraId,
+      coordinador_backup_id: null,
+      minutos_antes_backup: 15,
+      umbrales_premura: [
+        { maximo_minutos: 60, intervalo_minutos: 10 },
+        { maximo_minutos: 240, intervalo_minutos: 30 },
+        { maximo_minutos: null, intervalo_minutos: 60 },
+      ],
+      fase_automatica_activa: false,
+      minutos_antes_fase_automatica: 120,
+    },
+  });
 });
 
 panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {

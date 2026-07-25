@@ -243,7 +243,7 @@ export function InformesObraSocial() {
   }
 
   async function handleValidar() {
-    const confirmado = confirmarDestructivo(t.informesObraSocial.confirmar_validar);
+    const confirmado = await confirmarDestructivo(t.informesObraSocial.confirmar_validar);
     if (!confirmado) return;
 
     setValidando(true);
@@ -275,7 +275,7 @@ export function InformesObraSocial() {
 
   async function handleConfirmarAnulacion(motivo) {
     const informe = informeAAnular;
-    const confirmado = confirmarDestructivo(t.informesObraSocial.confirmar_anular);
+    const confirmado = await confirmarDestructivo(t.informesObraSocial.confirmar_anular);
     if (!confirmado) return;
 
     setAnulandoId(informe.id);

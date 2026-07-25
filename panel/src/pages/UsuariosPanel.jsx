@@ -263,7 +263,7 @@ function EditarUsuarioPanel({ usuario, onClose, onActualizado }) {
   }
 
   async function handleDarDeBaja() {
-    const confirmado = confirmarDestructivo(t.usuarios_panel.confirmar_baja);
+    const confirmado = await confirmarDestructivo(t.usuarios_panel.confirmar_baja);
     if (!confirmado) return;
 
     setBorrando(true);

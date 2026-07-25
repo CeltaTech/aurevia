@@ -25,7 +25,7 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
   const [error, setError] = useState(null);
 
   async function handleIniciarVerificacion() {
-    const confirmado = confirmarDestructivo(t.postulaciones.confirmar_iniciar_verificacion);
+    const confirmado = await confirmarDestructivo(t.postulaciones.confirmar_iniciar_verificacion);
     if (!confirmado) return;
 
     setIniciandoVerificacion(true);
@@ -51,7 +51,7 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
 
   async function handleGuardar() {
     if (nuevoEstado !== postulacion.estado) {
-      const confirmado = confirmarDestructivo(t.postulaciones.confirmar_cambio_estado);
+      const confirmado = await confirmarDestructivo(t.postulaciones.confirmar_cambio_estado);
       if (!confirmado) return;
     }
 

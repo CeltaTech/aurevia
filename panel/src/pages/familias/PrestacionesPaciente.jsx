@@ -197,7 +197,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   }
 
   async function handleCerrarServicio() {
-    if (!confirmarDestructivo(t.prestaciones.confirmar_cierre_servicio)) return;
+    if (!(await confirmarDestructivo(t.prestaciones.confirmar_cierre_servicio))) return;
 
     setCerrandoServicio(true);
     setErrorCierre(null);
@@ -379,7 +379,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   }
 
   async function handleCerrarHospitalizacion() {
-    if (!confirmarDestructivo(t.prestaciones.confirmar_cierre_hospitalizacion)) return;
+    if (!(await confirmarDestructivo(t.prestaciones.confirmar_cierre_hospitalizacion))) return;
 
     setCerrandoHosp(true);
     setErrorHosp(null);

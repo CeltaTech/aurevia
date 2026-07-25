@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { useAuth } from './AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
 import { supabase } from '../lib/supabaseClient';
+import { Button } from '../components/ui/Button';
 
 const API_URL = import.meta.env.VITE_API_URL;
 const TenantSessionContext = createContext(null);
@@ -25,10 +26,26 @@ async function llamarApi(path, opciones = {}) {
 }
 
 export function TenantSessionProvider({ children }) {
+  const { t } = useLocale();
   const { usuario } = useAuth();
   const puedeTenerSesion = ['admin_plataforma', 'superadmin'].includes(usuario?.rol);
   const [sesion, setSesion] = useState(null);
   const ultimoHeartbeatRef = useRef(0);
+  const [mensajeConfirmacion, setMensajeConfirmacion] = useState(null);
+  const resolverConfirmacionRef = useRef(null);
+
+  const pedirConfirmacion = useCallback((mensaje) => {
+    return new Promise((resolve) => {
+      resolverConfirmacionRef.current = resolve;
+      setMensajeConfirmacion(mensaje);
+    });
+  }, []);
+
+  const resolverConfirmacion = useCallback((resultado) => {
+    resolverConfirmacionRef.current?.(resultado);
+    resolverConfirmacionRef.current = null;
+    setMensajeConfirmacion(null);
+  }, []);
 
   const recargar = useCallback(async () => {
     if (!puedeTenerSesion) {
@@ -88,8 +105,21 @@ export function TenantSessionProvider({ children }) {
   }, [recargar]);
 
   return (
-    <TenantSessionContext.Provider value={{ sesion, recargar, salir, renovar }}>
+    <TenantSessionContext.Provider value={{ sesion, recargar, salir, renovar, pedirConfirmacion }}>
       {children}
+      {mensajeConfirmacion !== null && (
+        <div className="panel-modal-fondo" onClick={() => resolverConfirmacion(false)}>
+          <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
+            <p>{mensajeConfirmacion}</p>
+            <div className="panel-modal-acciones">
+              <Button variant="secondary" onClick={() => resolverConfirmacion(false)}>
+                {t.comun.cancelar}
+              </Button>
+              <Button onClick={() => resolverConfirmacion(true)}>{t.comun.confirmar}</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </TenantSessionContext.Provider>
   );
 }
@@ -105,15 +135,15 @@ export function useTenantSession() {
 // persistente (item D) ya lo indica todo el tiempo, esto es el aviso puntual al ejecutar.
 export function useConfirmarDestructivo() {
   const { t } = useLocale();
-  const { sesion } = useTenantSession();
+  const { sesion, pedirConfirmacion } = useTenantSession();
 
   return useCallback(
     (mensaje) => {
       const advertencia = sesion
         ? t.prestadoras.confirmar_advertencia_tenant.replace('{prestadora}', sesion.prestadoras?.nombre_fantasia ?? '')
         : '';
-      return window.confirm(`${advertencia}${mensaje}`);
+      return pedirConfirmacion(`${advertencia}${mensaje}`);
     },
-    [sesion, t]
+    [sesion, t, pedirConfirmacion]
   );
 }

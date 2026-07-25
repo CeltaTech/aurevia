@@ -67,13 +67,13 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
     actualizar({ checkout_at: new Date().toISOString(), checkout_lat: lat, checkout_lng: lng, estado: 'completada' });
   }
 
-  function handleCancelar() {
-    if (!confirmarDestructivo(t.guardias.detalle.confirmar_cancelar)) return;
+  async function handleCancelar() {
+    if (!(await confirmarDestructivo(t.guardias.detalle.confirmar_cancelar))) return;
     actualizar({ estado: 'cancelada', cancelacion_origen: cancelacionOrigen, cancelacion_alcance: cancelacionAlcance });
   }
 
   async function handleMarcarAusente() {
-    if (!confirmarDestructivo(t.guardias.detalle.confirmar_ausente)) return;
+    if (!(await confirmarDestructivo(t.guardias.detalle.confirmar_ausente))) return;
     setError(null);
     setProcesando(true);
 
@@ -116,7 +116,7 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
   }
 
   async function handleRegistrarAvisoPrevio() {
-    if (!confirmarDestructivo(t.guardias.detalle.confirmar_aviso_previo)) return;
+    if (!(await confirmarDestructivo(t.guardias.detalle.confirmar_aviso_previo))) return;
     setError(null);
     setProcesando(true);
 

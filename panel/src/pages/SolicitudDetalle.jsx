@@ -24,7 +24,7 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
   const [errorConversion, setErrorConversion] = useState(null);
 
   async function handleConvertirEnFamilia() {
-    const confirmado = confirmarDestructivo(t.solicitudes.confirmar_convertir_familia);
+    const confirmado = await confirmarDestructivo(t.solicitudes.confirmar_convertir_familia);
     if (!confirmado) return;
 
     setConvirtiendo(true);
@@ -54,7 +54,7 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
 
   async function handleGuardar() {
     if (nuevoEstado !== (solicitud.estado || 'nueva') && nuevoEstado === 'cancelada') {
-      const confirmado = confirmarDestructivo(t.solicitudes.confirmar_cambio_estado);
+      const confirmado = await confirmarDestructivo(t.solicitudes.confirmar_cambio_estado);
       if (!confirmado) return;
     }
 

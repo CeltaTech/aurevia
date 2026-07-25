@@ -521,7 +521,7 @@ function TabZonas() {
   }
 
   async function borrar(zona) {
-    if (!confirmarDestructivo(t.configuracion.zonas_confirmar_borrar)) return;
+    if (!(await confirmarDestructivo(t.configuracion.zonas_confirmar_borrar))) return;
     setActualizandoZona(zona.id);
     try {
       await llamarApi(`/zonas/${zona.id}`, { method: 'DELETE' });
@@ -702,7 +702,7 @@ function TabServicios() {
   }
 
   async function borrar(fila) {
-    if (!confirmarDestructivo(t.configuracion.escalada_confirmar_borrar)) return;
+    if (!(await confirmarDestructivo(t.configuracion.escalada_confirmar_borrar))) return;
     setActualizandoId(fila.id);
     try {
       await llamarApi(`/escalada-relevo/${fila.id}`, { method: 'DELETE' });
@@ -842,7 +842,7 @@ function TabServiciosPersonalEmergencia() {
   }
 
   async function borrar(fila) {
-    if (!confirmarDestructivo(t.configuracion.personal_emergencia_confirmar_borrar)) return;
+    if (!(await confirmarDestructivo(t.configuracion.personal_emergencia_confirmar_borrar))) return;
     setActualizandoId(fila.id);
     try {
       await llamarApi(`/personal-emergencia/${fila.id}`, { method: 'DELETE' });
@@ -1616,7 +1616,7 @@ function TabWhatsappPlantillas() {
   }
 
   async function borrar(fila) {
-    if (!confirmarDestructivo(t.configuracion.whatsapp_plantillas_confirmar_borrar)) return;
+    if (!(await confirmarDestructivo(t.configuracion.whatsapp_plantillas_confirmar_borrar))) return;
     setActualizandoId(fila.id);
     try {
       await llamarApi(`/whatsapp/plantillas/${fila.id}`, { method: 'DELETE' });

@@ -22,7 +22,7 @@ export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada
 
   async function handleGuardar() {
     if (!esNuevo && Number(valorPrecio) !== Number(precio.precio)) {
-      const confirmado = confirmarDestructivo(t.lista_precios.confirmar_cambio_precio);
+      const confirmado = await confirmarDestructivo(t.lista_precios.confirmar_cambio_precio);
       if (!confirmado) return;
     }
 

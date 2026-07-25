@@ -253,7 +253,7 @@ function TenantDetalleModal({ tenant, onClose, onCambiado }) {
   }
 
   async function handleConfirmarPlan() {
-    if (!confirmarDestructivo(t.adminPlataforma.cambiar_plan_confirmar)) return;
+    if (!(await confirmarDestructivo(t.adminPlataforma.cambiar_plan_confirmar))) return;
     setAplicandoPlan(true);
     setErrorPlan(null);
     try {
@@ -525,7 +525,7 @@ function CambiosPrecioIASeccion() {
   }, [recargar]);
 
   async function handleConfirmar(cambio) {
-    if (!confirmarDestructivo(t.adminPlataforma.uso_ia_precio_confirmar)) return;
+    if (!(await confirmarDestructivo(t.adminPlataforma.uso_ia_precio_confirmar))) return;
     setResolviendo(cambio.id);
     try {
       await llamarApi(`/cambios-precio-ia/${cambio.id}/confirmar`, { method: 'POST' });

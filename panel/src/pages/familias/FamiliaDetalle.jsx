@@ -99,7 +99,7 @@ export function FamiliaDetalle() {
   }, [recargar, recargarCirculo]);
 
   async function quitarMiembroCirculo(usuarioId) {
-    if (!confirmarDestructivo(t.familias.circulo.quitar_confirmacion)) {
+    if (!(await confirmarDestructivo(t.familias.circulo.quitar_confirmacion))) {
       return;
     }
     setQuitandoUsuarioId(usuarioId);

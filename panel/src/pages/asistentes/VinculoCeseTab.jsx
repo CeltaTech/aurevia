@@ -80,7 +80,7 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
 
   async function confirmarCese() {
     if (resultado.requiereRevisionAbogado && !revisadoAbogado) return;
-    const confirmado = confirmarDestructivo(t.asistentes.cese.confirmar);
+    const confirmado = await confirmarDestructivo(t.asistentes.cese.confirmar);
     if (!confirmado) return;
 
     setGuardando(true);

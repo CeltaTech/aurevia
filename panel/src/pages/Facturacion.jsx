@@ -55,7 +55,7 @@ export function Facturacion() {
   const facturasDelPeriodo = useMemo(() => facturas.filter((f) => f.periodo === periodo), [facturas, periodo]);
 
   async function handleGenerar() {
-    const confirmado = confirmarDestructivo(t.facturacion.confirmar_generar);
+    const confirmado = await confirmarDestructivo(t.facturacion.confirmar_generar);
     if (!confirmado) return;
 
     setGenerando(true);

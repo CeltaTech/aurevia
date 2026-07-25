@@ -116,7 +116,7 @@ export function Continuidad() {
   }, []);
 
   async function resolverAlerta(alerta) {
-    if (!confirmarDestructivo(t.continuidad.confirmar_resolver_alerta)) return;
+    if (!(await confirmarDestructivo(t.continuidad.confirmar_resolver_alerta))) return;
     setActualizandoId(alerta.id);
     try {
       const { error: errorUpdate } = await supabase
@@ -298,7 +298,7 @@ function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto
   const esFamiliar = tipo === 'familiar';
 
   async function handleResolver() {
-    if (!confirmarDestructivo(t.continuidad.confirmar_resolver)) return;
+    if (!(await confirmarDestructivo(t.continuidad.confirmar_resolver))) return;
     setGuardando(true);
     setError(null);
     try {

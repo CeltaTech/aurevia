@@ -1,6 +1,11 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+// Parchea Express para reenviar al middleware de errores cualquier excepción/rechazo
+// dentro de un handler async — sin este import (Express 4 no lo hace solo), una excepción
+// no capturada en cualquiera de las rutas tumba el proceso entero (pendiente #91, causa
+// raíz del crash de QR_COBRO_SECRET, pendiente #90). Debe importarse antes de definir rutas.
+import 'express-async-errors';
 import { solicitudServicioRouter } from './routes/solicitudServicio.js';
 import { postulacionAsistenteRouter } from './routes/postulacionAsistente.js';
 import { panelNotificacionesRouter } from './routes/panelNotificaciones.js';
@@ -121,7 +126,26 @@ setInterval(() => {
   verificarPreciosIA().catch((err) => console.error('Error en verificación de precios de IA:', err.message));
 }, UN_DIA_MS);
 
+// Middleware de error único (pendiente #91) — punto único de verdad para toda excepción no
+// atrapada en cualquiera de las 129 rutas (Regla 12): nunca se expone el stack ni detalle
+// interno al cliente (CLAUDE.md §6), solo se loguea server-side.
+app.use((err, req, res, next) => {
+  console.error('Error no manejado en', req.method, req.originalUrl, ':', err);
+  res.status(err.status || 500).json({ error: err.message || 'Error interno' });
+});
+
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Backend escuchando en puerto ${PORT}`);
+});
+
+// Red de seguridad de último recurso a nivel de proceso: cubre errores fuera del ciclo
+// request/response de Express (ej. un rechazo en un job de setInterval sin su propio
+// .catch, o un error asíncrono disparado después de que la respuesta ya se envió). Solo
+// loguea — no tapa el problema, para no ocultar la causa raíz de un futuro pendiente #90.
+process.on('unhandledRejection', (reason) => {
+  console.error('unhandledRejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('uncaughtException:', err);
 });

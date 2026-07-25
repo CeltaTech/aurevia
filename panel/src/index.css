@@ -431,6 +431,19 @@ h2 {
   color: var(--naranja-alerta-texto);
 }
 
+.dashboard-metricas-desglose {
+  margin-top: 0.75rem;
+}
+
+.metrica-card-secundaria {
+  padding: 1rem 1.5rem;
+  background: var(--fondo-alt);
+}
+
+.metrica-card-secundaria .metrica-valor {
+  font-size: 1.5rem;
+}
+
 .metrica-valor {
   font-family: var(--font-display);
   font-size: 2rem;

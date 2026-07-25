@@ -39,6 +39,14 @@ async function obtenerUsuariosEquipo() {
   return resultado.usuarios;
 }
 
+// Reutiliza las mismas etiquetas ya traducidas del menú (Layout.jsx) en vez de crear un
+// namespace de i18n nuevo para el mismo concepto (Regla 12). 'cooperativa' no tiene label
+// todavía porque Configuracion.jsx tampoco la ofrece como activable (ver su comentario).
+const NOMBRE_MODALIDAD = {
+  directa: (t) => t.nav.grupo_prestacion_directa,
+  marketplace: (t) => t.nav.grupo_marketplace,
+};
+
 function esHoy(fechaIso) {
   const hoy = new Date();
   const fecha = new Date(fechaIso);
@@ -62,7 +70,8 @@ export function Dashboard() {
   const { t } = useLocale();
   const { usuario } = useAuth();
   const { sesion } = useTenantSession();
-  const { tieneModalidad, cargado: modalidadesCargadas } = useModalidades();
+  const { tieneModalidad, modalidades, cargado: modalidadesCargadas } = useModalidades();
+  const desgloseModalidadHabilitado = modalidades.length > 1;
   const esAdmin = esAdminOSuperior(usuario?.rol);
   // Admin_plataforma sin sesión de tenant activa no está "dentro" de ninguna Prestadora — no
   // hay contexto de configuración inicial que mostrar (ver requiereAdminOSuperior en
@@ -76,18 +85,23 @@ export function Dashboard() {
   const asistentes = useSupabaseTable(esAdmin ? 'asistentes' : 'asistentes_coordinador', { orderBy: 'created_at' });
   const familias = useSupabaseTable('familias', { orderBy: 'created_at' });
   const [ausentesSinRelevo, setAusentesSinRelevo] = useState(null);
+  const [ausentesPorModalidad, setAusentesPorModalidad] = useState(null);
   const [documentosPorVencer, setDocumentosPorVencer] = useState(null);
   const [errorAlertas, setErrorAlertas] = useState(null);
 
   const cargarAlertas = useCallback(async () => {
     if (!usuario?.prestadora_id) return;
     setAusentesSinRelevo(null);
+    setAusentesPorModalidad(null);
     setDocumentosPorVencer(null);
     setErrorAlertas(null);
 
-    const { count: countAusentes, error: errorAusentes } = await supabase
+    // Trae el canal (guardias.canal_modalidad) de cada incidente para poder desglosar por
+    // modalidad cuando la Prestadora tiene más de una activa (pendiente #85 ítem 3) sin
+    // repetir la consulta — un solo punto de verdad para el conteo total y el desglose.
+    const { data: filasAusentes, error: errorAusentes } = await supabase
       .from('incidentes_relevo')
-      .select('id', { count: 'exact', head: true })
+      .select('guardias!incidentes_relevo_entrante_tenant_fk(canal_modalidad)')
       .is('resuelto_at', null)
       .is('guardia_saliente_id', null);
 
@@ -124,7 +138,13 @@ export function Dashboard() {
       setErrorAlertas(t.comun.error_generico);
       return;
     }
-    setAusentesSinRelevo(countAusentes ?? 0);
+    const porModalidad = { directa: 0, marketplace: 0, cooperativa: 0 };
+    for (const fila of filasAusentes ?? []) {
+      const canal = fila.guardias?.canal_modalidad;
+      if (canal && canal in porModalidad) porModalidad[canal] += 1;
+    }
+    setAusentesSinRelevo(filasAusentes?.length ?? 0);
+    setAusentesPorModalidad(porModalidad);
     setDocumentosPorVencer(countDocumentos ?? 0);
   }, [usuario?.prestadora_id, esAdmin, t]);
 
@@ -247,6 +267,21 @@ export function Dashboard() {
               <span className="metrica-label">{t.dashboard.documentacion_por_vencer}</span>
             </Link>
           </div>
+          {desgloseModalidadHabilitado && ausentesPorModalidad && (
+            <div className="dashboard-metricas dashboard-metricas-desglose">
+              {modalidades.map((modalidad) => (
+                <div key={modalidad} className="metrica-card metrica-card-secundaria">
+                  <span className="metrica-valor">{ausentesPorModalidad[modalidad] ?? 0}</span>
+                  <span className="metrica-label">
+                    {t.dashboard.ausentes_sin_relevo_por_modalidad.replace(
+                      '{modalidad}',
+                      NOMBRE_MODALIDAD[modalidad]?.(t) ?? modalidad,
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </EstadoLista>
       </div>
     </div>

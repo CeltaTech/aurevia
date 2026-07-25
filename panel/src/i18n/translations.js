@@ -357,6 +357,7 @@ export const T = {
       asistentes_disponibles: 'Asistentes disponibles',
       familias_activas: 'Familias activas',
       ausentes_sin_relevo: 'Ausentes sin relevo previo',
+      ausentes_sin_relevo_por_modalidad: 'Ausentes sin relevo previo — {modalidad}',
       documentacion_por_vencer: 'Documentación por vencer',
     },
     onboarding: {
@@ -1504,6 +1505,7 @@ export const T = {
       asistentes_disponibles: 'Available Integral Assistants',
       familias_activas: 'Active families',
       ausentes_sin_relevo: 'Absences without prior relief',
+      ausentes_sin_relevo_por_modalidad: 'Absences without prior relief — {modalidad}',
       documentacion_por_vencer: 'Documentation about to expire',
     },
     onboarding: {
@@ -2651,6 +2653,7 @@ export const T = {
       asistentes_disponibles: 'Assistentes disponíveis',
       familias_activas: 'Famílias ativas',
       ausentes_sin_relevo: 'Ausências sem revezamento prévio',
+      ausentes_sin_relevo_por_modalidad: 'Ausências sem revezamento prévio — {modalidad}',
       documentacion_por_vencer: 'Documentação a vencer',
     },
     onboarding: {

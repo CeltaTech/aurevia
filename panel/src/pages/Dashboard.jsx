@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
 import { useTenantSession } from '../context/TenantSessionContext';
+import { useModalidades } from '../context/ModalidadesContext';
 import { esAdminOSuperior } from '../lib/roles';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
 import { EstadoLista } from '../components/layout/EstadoLista';
@@ -61,6 +62,7 @@ export function Dashboard() {
   const { t } = useLocale();
   const { usuario } = useAuth();
   const { sesion } = useTenantSession();
+  const { tieneModalidad, cargado: modalidadesCargadas } = useModalidades();
   const esAdmin = esAdminOSuperior(usuario?.rol);
   // Admin_plataforma sin sesión de tenant activa no está "dentro" de ninguna Prestadora — no
   // hay contexto de configuración inicial que mostrar (ver requiereAdminOSuperior en
@@ -172,6 +174,8 @@ export function Dashboard() {
       {mostrarOnboarding && (
         <OnboardingChecklist
           informativo={onboardingInformativo}
+          pasoModalidadHecho={tieneModalidad('directa') || tieneModalidad('marketplace')}
+          modalidadesCargadas={modalidadesCargadas}
           pasoAsistenteHecho={asistentes.filas.length > 0}
           pasoFamiliaHecho={familias.filas.length > 0}
           equipoEstado={equipoEstado}
@@ -256,6 +260,8 @@ export function Dashboard() {
 // Se oculta sola cuando los 3 pasos están completos, no tiene botón de "descartar" manual.
 function OnboardingChecklist({
   informativo,
+  pasoModalidadHecho,
+  modalidadesCargadas,
   pasoAsistenteHecho,
   pasoFamiliaHecho,
   equipoEstado,
@@ -265,7 +271,7 @@ function OnboardingChecklist({
 }) {
   const { t } = useLocale();
 
-  if (equipoEstado === 'cargando') {
+  if (equipoEstado === 'cargando' || !modalidadesCargadas) {
     return <p className="estado-cargando">{t.comun.cargando}</p>;
   }
 
@@ -281,6 +287,14 @@ function OnboardingChecklist({
   }
 
   const pasos = [
+    {
+      key: 'modalidad',
+      hecho: pasoModalidadHecho,
+      ruta: '/configuracion',
+      titulo: t.onboarding.paso_modalidad_titulo,
+      explicacion: t.onboarding.paso_modalidad_explicacion,
+      cta: t.onboarding.paso_modalidad_cta,
+    },
     {
       key: 'asistente',
       hecho: pasoAsistenteHecho,

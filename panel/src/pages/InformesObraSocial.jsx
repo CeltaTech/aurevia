@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { traducirValor } from '../i18n/valores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -97,7 +98,7 @@ function ContenidoInforme({ contenido, t }) {
                 <td>{g.hora_fin}</td>
                 <td>{g.modalidad}</td>
                 <td>{g.asistente_nombre || '—'}</td>
-                <td>{g.estado}</td>
+                <td>{traducirValor(t.guardias, `estado_${g.estado}`)}</td>
               </tr>
             ))}
           </tbody>

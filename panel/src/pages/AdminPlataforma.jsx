@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { useConfirmarDestructivo } from '../context/TenantSessionContext';
+import { traducirValor } from '../i18n/valores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -150,7 +151,9 @@ function TabLicenciatarias() {
                 <td>{tenant.nombre_fantasia}</td>
                 <td>{tenant.pais}</td>
                 <td>
-                  <span className={`badge badge-${tenant.estado}`}>{tenant.estado}</span>
+                  <span className={`badge badge-${tenant.estado}`}>
+                    {traducirValor(t.adminPlataforma, `estado_${tenant.estado}`)}
+                  </span>
                 </td>
                 <td>{tenant.plan?.nombre ?? t.adminPlataforma.sin_plan}</td>
                 <td>

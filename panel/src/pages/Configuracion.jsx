@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { traducirValor } from '../i18n/valores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -1656,8 +1657,8 @@ function TabWhatsappPlantillas() {
             {plantillas.map((p) => (
               <tr key={p.id}>
                 <td>{p.nombre_interno}</td>
-                <td>{p.categoria}</td>
-                <td>{t.configuracion[`whatsapp_plantillas_estado_${p.estado}`]}</td>
+                <td>{traducirValor(t.configuracion, `whatsapp_plantillas_categoria_${p.categoria}`)}</td>
+                <td>{traducirValor(t.configuracion, `whatsapp_plantillas_estado_${p.estado}`)}</td>
                 <td>{p.cuerpo_texto}</td>
                 <td>
                   {p.estado === 'borrador' && (
@@ -1712,7 +1713,7 @@ function NuevaPlantillaWhatsapp({ onClose, onCreada }) {
         <FormField label={t.configuracion.whatsapp_plantillas_col_nombre} name="nombre_interno" value={nombreInterno} onChange={(e) => setNombreInterno(e.target.value)} required />
         <FormField label={t.configuracion.whatsapp_plantillas_col_categoria} name="categoria" type="select" value={categoria} onChange={(e) => setCategoria(e.target.value)}>
           {CATEGORIAS_PLANTILLA.map((c) => (
-            <option key={c} value={c}>{c}</option>
+            <option key={c} value={c}>{traducirValor(t.configuracion, `whatsapp_plantillas_categoria_${c}`)}</option>
           ))}
         </FormField>
         <FormField label={t.configuracion.whatsapp_plantillas_col_cuerpo} name="cuerpo_texto" type="textarea" value={cuerpoTexto} onChange={(e) => setCuerpoTexto(e.target.value)} required />

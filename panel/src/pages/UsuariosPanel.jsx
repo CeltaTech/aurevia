@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { traducirValor } from '../i18n/valores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -212,7 +213,9 @@ function NuevoUsuarioPanel({ esSuperadmin, onClose, onCreado }) {
           <FormField label={t.usuarios_panel.campo_prestadora} name="prestadora_id" type="select" value={prestadoraId} onChange={(e) => setPrestadoraId(e.target.value)} required>
             <option value="">{t.usuarios_panel.prestadora_placeholder}</option>
             {prestadoras.map((p) => (
-              <option key={p.id} value={p.id}>{p.nombre_fantasia} ({p.estado})</option>
+              <option key={p.id} value={p.id}>
+                {p.nombre_fantasia} ({traducirValor(t.prestadoras, `estado_${p.estado}`)})
+              </option>
             ))}
           </FormField>
         )}

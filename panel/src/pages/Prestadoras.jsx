@@ -5,6 +5,7 @@ import { useTenantSession } from '../context/TenantSessionContext';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { traducirValor } from '../i18n/valores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -112,7 +113,7 @@ export function Prestadoras() {
             {prestadoras.map((p) => (
               <tr key={p.id}>
                 <td>{p.nombre_fantasia}</td>
-                <td>{p.estado}</td>
+                <td>{traducirValor(t.prestadoras, `estado_${p.estado}`)}</td>
                 <td>
                   <Button
                     variant="secondary"

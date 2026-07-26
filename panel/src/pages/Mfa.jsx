@@ -7,6 +7,8 @@ import { FormField } from '../components/ui/FormField';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 // Ítem H del pendiente #30 — enrolamiento (primera vez) o verificación (sesiones
 // siguientes) del segundo factor TOTP. Se llega acá solo si el toggle
 // configuracion_plataforma.mfa_admin_obligatorio está en ON y el rol es
@@ -21,6 +23,10 @@ export function Mfa() {
   const [codigo, setCodigo] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
+  const [modoRecuperacion, setModoRecuperacion] = useState(false);
+  const [codigoSolicitado, setCodigoSolicitado] = useState(false);
+  const [codigoRecuperacion, setCodigoRecuperacion] = useState('');
+  const [enviandoRecuperacion, setEnviandoRecuperacion] = useState(false);
 
   useEffect(() => {
     if (mfaEstado !== 'requiere_enrolamiento') return;
@@ -99,6 +105,104 @@ export function Mfa() {
     navigate('/login', { replace: true });
   }
 
+  // Pendiente #37 — recuperación por email cuando se perdió el dispositivo TOTP. Manda un
+  // código de un solo uso al email registrado del propio usuario (sin nada que anotar de
+  // antemano); al confirmarlo, el backend da de baja el factor perdido y refrescarMfa()
+  // lleva directo a "requiere_enrolamiento" para configurar un dispositivo nuevo.
+  async function handleSolicitarRecuperacion() {
+    setEnviandoRecuperacion(true);
+    setError(null);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const respuesta = await fetch(`${API_URL}/api/panel/mfa-recuperacion/solicitar`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${data.session?.access_token}` },
+      });
+      const resultado = await respuesta.json();
+      if (!respuesta.ok) throw new Error(resultado.error);
+      setCodigoSolicitado(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setEnviandoRecuperacion(false);
+    }
+  }
+
+  async function handleConfirmarRecuperacion(evento) {
+    evento.preventDefault();
+    setEnviandoRecuperacion(true);
+    setError(null);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const respuesta = await fetch(`${API_URL}/api/panel/mfa-recuperacion/confirmar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${data.session?.access_token}`,
+        },
+        body: JSON.stringify({ codigo: codigoRecuperacion }),
+      });
+      const resultado = await respuesta.json();
+      if (!respuesta.ok) throw new Error(resultado.error);
+      await refrescarMfa();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setEnviandoRecuperacion(false);
+    }
+  }
+
+  if (modoRecuperacion) {
+    return (
+      <div className="login-pantalla">
+        <form className="login-card" onSubmit={handleConfirmarRecuperacion}>
+          <h1>{t.auth.mfa_recuperacion_titulo}</h1>
+          <p className="login-subtitulo">{t.auth.mfa_recuperacion_explicacion}</p>
+
+          {error && <Alert variant="error">{error}</Alert>}
+
+          {!codigoSolicitado ? (
+            <Button type="button" onClick={handleSolicitarRecuperacion} disabled={enviandoRecuperacion}>
+              {enviandoRecuperacion ? t.auth.mfa_recuperacion_enviando : t.auth.mfa_recuperacion_enviar_codigo}
+            </Button>
+          ) : (
+            <>
+              <Alert variant="info">{t.auth.mfa_recuperacion_codigo_enviado}</Alert>
+              <FormField
+                label={t.auth.mfa_recuperacion_codigo}
+                name="codigoRecuperacion"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                required
+                value={codigoRecuperacion}
+                onChange={(e) => setCodigoRecuperacion(e.target.value)}
+              />
+              <Button type="submit" disabled={enviandoRecuperacion}>
+                {enviandoRecuperacion ? t.auth.mfa_verificando : t.auth.mfa_verificar}
+              </Button>
+            </>
+          )}
+
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setModoRecuperacion(false);
+              setCodigoSolicitado(false);
+              setError(null);
+            }}
+          >
+            {t.auth.mfa_recuperacion_volver}
+          </Button>
+          <Button type="button" variant="secondary" onClick={handleCancelar}>
+            {t.auth.mfa_cancelar}
+          </Button>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div className="login-pantalla">
       <form className="login-card" onSubmit={handleVerificar}>
@@ -127,6 +231,13 @@ export function Mfa() {
         <Button type="submit" disabled={enviando || !factorId}>
           {enviando ? t.auth.mfa_verificando : t.auth.mfa_verificar}
         </Button>
+
+        {mfaEstado === 'requiere_challenge' && (
+          <Button type="button" variant="secondary" onClick={() => setModoRecuperacion(true)}>
+            {t.auth.mfa_recuperacion_link}
+          </Button>
+        )}
+
         <Button type="button" variant="secondary" onClick={handleCancelar}>
           {t.auth.mfa_cancelar}
         </Button>

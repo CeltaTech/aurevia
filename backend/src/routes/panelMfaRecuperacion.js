@@ -44,7 +44,7 @@ function probarPuerto(port) {
       socket.destroy();
     });
     socket.on('error', (err) => {
-      resolve({ port, ok: false, error: err.message, ms: Date.now() - inicio });
+      resolve({ port, ok: false, error: err.message, code: err.code, ms: Date.now() - inicio });
     });
   });
 }

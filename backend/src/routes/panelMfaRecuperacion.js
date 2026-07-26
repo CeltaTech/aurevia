@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import net from 'net';
 import { supabase } from '../db/connection.js';
 import { solicitarCodigoRecuperacion, confirmarCodigoRecuperacion } from '../utils/mfaRecuperacionEmail.js';
 
@@ -28,31 +27,6 @@ async function requiereSesionBasica(req, res, next) {
 }
 
 panelMfaRecuperacionRouter.use(requiereSesionBasica);
-
-// DIAGNÓSTICO TEMPORAL (pendiente #37) — probar si Railway bloquea el egress a los
-// puertos SMTP salientes. Se elimina antes de cerrar el pendiente.
-function probarPuerto(port) {
-  return new Promise((resolve) => {
-    const inicio = Date.now();
-    const socket = net.createConnection({ host: 'smtp.gmail.com', port, timeout: 8000 });
-    socket.on('connect', () => {
-      resolve({ port, ok: true, ms: Date.now() - inicio });
-      socket.destroy();
-    });
-    socket.on('timeout', () => {
-      resolve({ port, ok: false, error: 'timeout', ms: Date.now() - inicio });
-      socket.destroy();
-    });
-    socket.on('error', (err) => {
-      resolve({ port, ok: false, error: err.message, code: err.code, ms: Date.now() - inicio });
-    });
-  });
-}
-
-panelMfaRecuperacionRouter.get('/_diag-smtp', async (req, res) => {
-  const resultados = await Promise.all([probarPuerto(465), probarPuerto(587), probarPuerto(25)]);
-  res.json({ resultados });
-});
 
 panelMfaRecuperacionRouter.post('/solicitar', async (req, res) => {
   try {

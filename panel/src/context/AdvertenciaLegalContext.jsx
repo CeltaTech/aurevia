@@ -6,10 +6,11 @@ import { Button } from '../components/ui/Button';
 
 const AdvertenciaLegalContext = createContext(null);
 
-// Infraestructura genérica del pendiente #51 (docs/PENDIENTES.md) / CLAUDE.md §3 — sin
-// ningún consumidor real todavía: ninguna función de gestión de Asistentes (rankings,
-// penalización de inasistencias, etc.) existe hoy como toggle en el producto. Cuando se
-// construya una de esas funciones, el toggle la envuelve así:
+// Infraestructura genérica del pendiente #51 (docs/PENDIENTES.md) / CLAUDE.md §3.
+// Primer consumidor real: Medicacion.jsx, función 'medicacion_via_sin_habilitacion' (aceptar
+// una indicación cuya vía requiere una habilitación que ningún Asistente asignado tiene
+// vigente). Cualquier función nueva de gestión de Asistentes (rankings, penalización de
+// inasistencias, etc.) se envuelve del mismo modo:
 //
 //   const { verificarAntesDeActivar } = useAdvertenciaLegal();
 //   const puedeActivar = await verificarAntesDeActivar(prestadoraId, 'rankings');

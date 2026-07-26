@@ -86,7 +86,7 @@ export async function borrarCuenta(userId, { prestadoraId, esSuperadmin = false 
 export async function crearAsistenteDirecto({
   nombre, telefono, email, dni, especialidades, zonas, estado,
   tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales,
-  prestadoraId, usuarioPanelId,
+  prestadoraId, usuarioPanelId, importacionId,
 }) {
   if (!nombre || !email) {
     throw new Error('Faltan datos obligatorios (nombre, email)');
@@ -116,28 +116,20 @@ export async function crearAsistenteDirecto({
       sueldo_basico: sueldo_basico || null,
       horas_semanales: horas_semanales || null,
       prestadora_id: prestadoraId,
+      importacion_id: importacionId || null,
+      pendiente_conformidad: Boolean(importacionId),
     });
     if (errorAsistente) throw new Error(errorAsistente.message);
 
-    const { data: prestadora, error: errorPrestadora } = await supabase
-      .from('prestadoras')
-      .select('politica_verificacion_alta_manual')
-      .eq('id', prestadoraId)
-      .single();
-    if (errorPrestadora) throw new Error(errorPrestadora.message);
-
-    const politica = prestadora.politica_verificacion_alta_manual;
-    if (politica === 'pendiente' || politica === 'aprobado') {
-      const filasVerificacion = ETAPAS_INCORPORACION.map((etapa) => ({
-        asistente_id: asistenteId,
-        etapa,
-        estado: politica === 'aprobado' ? 'aprobada' : 'pendiente',
-        revisado_por: politica === 'aprobado' ? usuarioPanelId : null,
-        completado_en: politica === 'aprobado' ? new Date().toISOString() : null,
-      }));
-      const { error: errorVerificaciones } = await supabase.from('verificaciones_asistente').insert(filasVerificacion);
-      if (errorVerificaciones) throw new Error(errorVerificaciones.message);
+    // Filas importadas quedan ocultas por RLS (pendiente_conformidad=true) hasta que la
+    // Prestadora las conforme — no tiene sentido correr acá la política de verificación de
+    // alta manual sobre una fila que todavía no es operable; ese paso corre recién al
+    // conformar el lote (panelImportacion.js /conformar, vía activarVerificacionAltaAsistente).
+    if (importacionId) {
+      return { asistenteId };
     }
+
+    await activarVerificacionAltaAsistente(asistenteId, prestadoraId, usuarioPanelId);
 
     return { asistenteId };
   } catch (error) {
@@ -147,6 +139,46 @@ export async function crearAsistenteDirecto({
     }
     throw error;
   }
+}
+
+// Extraída de crearAsistenteDirecto para que el alta manual (arriba) y la conformidad
+// post-importación (panelImportacion.js /conformar) apliquen exactamente la misma política
+// de verificación en vez de duplicarla (Regla 12, CLAUDE.md §7).
+export async function activarVerificacionAltaAsistente(asistenteId, prestadoraId, usuarioPanelId) {
+  const { data: prestadora, error: errorPrestadora } = await supabase
+    .from('prestadoras')
+    .select('politica_verificacion_alta_manual')
+    .eq('id', prestadoraId)
+    .single();
+  if (errorPrestadora) throw new Error(errorPrestadora.message);
+
+  const politica = prestadora.politica_verificacion_alta_manual;
+  if (politica === 'pendiente' || politica === 'aprobado') {
+    const filasVerificacion = ETAPAS_INCORPORACION.map((etapa) => ({
+      asistente_id: asistenteId,
+      etapa,
+      estado: politica === 'aprobado' ? 'aprobada' : 'pendiente',
+      revisado_por: politica === 'aprobado' ? usuarioPanelId : null,
+      completado_en: politica === 'aprobado' ? new Date().toISOString() : null,
+    }));
+    const { error: errorVerificaciones } = await supabase.from('verificaciones_asistente').insert(filasVerificacion);
+    if (errorVerificaciones) throw new Error(errorVerificaciones.message);
+  }
+}
+
+// Revierte un lote importado y rechazado por la Prestadora (panelImportacion.js /rechazar):
+// mismo desarmado que el catch de crearAsistenteDirecto/crearFamiliaDirecta, aplicado a
+// todas las filas que compartan `importacionId` en vez de a una sola fila recién creada.
+export async function revertirAsistenteImportado(asistenteId, prestadoraId) {
+  await supabase.from('verificaciones_asistente').delete().eq('asistente_id', asistenteId);
+  await supabase.from('asistentes').delete().eq('id', asistenteId);
+  await borrarCuenta(asistenteId, { prestadoraId });
+}
+
+export async function revertirFamiliaImportada(familiaId, prestadoraId) {
+  await supabase.from('pacientes').delete().eq('familia_id', familiaId);
+  await supabase.from('familias').delete().eq('id', familiaId);
+  await borrarCuenta(familiaId, { prestadoraId });
 }
 
 // Invita a una persona al círculo de cuidado de una Familia ya existente (Fase 5): crea su
@@ -203,7 +235,7 @@ export async function revocarMiembroCirculo(usuarioId, { prestadoraId, familiaId
 export async function crearFamiliaDirecta({
   nombreContacto, telefono, email, localidad, plan,
   nombrePaciente, domicilioPaciente, fechaNacimientoPaciente, nivelComplejidadPaciente, patologiasPaciente,
-  prestadoraId,
+  prestadoraId, importacionId,
 }) {
   if (!nombreContacto || !email || !nombrePaciente) {
     throw new Error('Faltan datos obligatorios (nombreContacto, email, nombrePaciente)');
@@ -238,7 +270,14 @@ export async function crearFamiliaDirecta({
 
     const { error: errorFamilia } = await supabase
       .from('familias')
-      .insert({ id: familiaId, solicitud_id: solicitudId, prestadora_id: prestadoraId, plan: plan || null });
+      .insert({
+        id: familiaId,
+        solicitud_id: solicitudId,
+        prestadora_id: prestadoraId,
+        plan: plan || null,
+        importacion_id: importacionId || null,
+        pendiente_conformidad: Boolean(importacionId),
+      });
     if (errorFamilia) throw new Error(errorFamilia.message);
 
     const { data: paciente, error: errorPaciente } = await supabase
@@ -251,6 +290,8 @@ export async function crearFamiliaDirecta({
         nivel_complejidad: nivelComplejidadPaciente || null,
         patologias: patologiasPaciente || [],
         prestadora_id: prestadoraId,
+        importacion_id: importacionId || null,
+        pendiente_conformidad: Boolean(importacionId),
       })
       .select()
       .single();

@@ -21,6 +21,41 @@ Convención: 🔴 No iniciado · 🟡 En progreso · 🟢 Completo y en producci
 
 ## Última tarea completada
 
+**2026-07-25: Pendiente #61 — rediseño en capas de la importación masiva (Panel), cerrado
+del todo.** El Desarrollador aprobó un diseño propio de varias capas en vez de la decisión
+binaria original del pendiente ("conexión externa" vs. "conforme con solo archivo"), con la
+premisa fija de nunca conectar directo a un sistema externo. **Capa 1 (formato conocido,
+sin IA)**: cualquier formato que `xlsx` ya sepa leer (autodetección por firma de archivo,
+sin código nuevo) más un parser nuevo de dump SQL estándar (`intentarParsearSQL`,
+`backend/src/utils/importacionIA.js`). **Capa 2 (juicio de viabilidad de IA)**: para
+archivos que no calzan con la Capa 1, `evaluarViabilidadIA` (mismo archivo) llama a Claude
+para decidir si el archivo es interpretable con certeza — rechaza con motivo explícito si
+no, nunca inventa columnas. El filtro de formato de `multer` en
+`backend/src/routes/panelImportacion.js` se sacó por completo (ya no restringe extensión,
+la cadena de capas decide). **Capa 3**: paso de revisión de mapeo humano ya existente
+(`/analizar` → `/confirmar`), sin cambios de fondo. **Capa 4 (freno humano nuevo, corregido
+a pedido del Desarrollador tras mi primera propuesta)**: las filas creadas por importación
+quedan ocultas e inoperables desde el instante de creación —
+`pendiente_conformidad=true` en `asistentes`/`familias`/`pacientes`, oculto por una política
+RLS **RESTRICTIVE** nueva (`oculta_pendientes_de_conformidad`, migración
+`importacion_conformidad_01` aplicada contra Supabase real con `NOTIFY pgrst` incluido) que
+se AND-ea sobre las ~5 políticas PERMISSIVE existentes de cada tabla sin tocarlas — hasta
+que la Prestadora conforma el resultado real ya creado (`GET /revision/:id` → `POST
+/conformar/:id`, nuevo en `panelImportacion.js`) o lo rechaza (`POST /rechazar/:id`, revierte
+el lote completo reutilizando el patrón de rollback de `crearCuentaConPerfil`/
+`borrarCuenta` vía dos helpers nuevos en `cuentasPanel.js`:
+`revertirAsistenteImportado`/`revertirFamiliaImportada`). Pantalla nueva "paso 4" en
+`panel/src/pages/Importacion.jsx` con tabla de resultado real y modal de confirmación de
+rechazo (reusa el patrón `panel-modal-fondo`/`panel-modal` de `Configuracion.jsx`, no
+`window.confirm`). **Capa 5**: columna `importacion_id` en las 3 tablas, trazabilidad
+puramente interna, nunca mostrada a la Prestadora. **Capa 6 (legal/T&C)**: diferida
+explícitamente para cuando el Desarrollador aborde los Términos y Condiciones del SaaS con
+asesoría legal. Verificado con una prueba funcional real de punta a punta (creación de fila
+pendiente → oculta → conformada visible → simulación de rechazo → revertida sin residuo,
+script temporal borrado sin dejar rastro). `node --check` de los 3 archivos backend
+modificados y `npx vite build` del Panel sin errores. i18n agregado en los 3 locales
+(es-AR/en/pt-BR). Ver detalle completo en pendiente #61 de `docs/PENDIENTES.md`.
+
 **2026-07-24 (madrugada): Avance autónomo nocturno autorizado explícitamente por el
 Desarrollador** ("me voy a dormir, fijate si algo de esto no depende de decisiones mías y
 resolvelo"). Se revisó `docs/PENDIENTES.md` completo, línea por línea (no de memoria, ver

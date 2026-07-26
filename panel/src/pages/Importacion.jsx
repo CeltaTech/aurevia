@@ -35,6 +35,9 @@ export function Importacion() {
   const [analisis, setAnalisis] = useState(null);
   const [mapeo, setMapeo] = useState({});
   const [resultado, setResultado] = useState(null);
+  const [revision, setRevision] = useState(null);
+  const [revisionFinal, setRevisionFinal] = useState(null);
+  const [confirmandoRechazo, setConfirmandoRechazo] = useState(false);
 
   if (cargado && !puede('importar_datos_masivos')) {
     return <Alert variant="error">{t.comun.sin_permiso || t.comun.error_generico}</Alert>;
@@ -93,12 +96,55 @@ export function Importacion() {
     }
   }
 
+  async function handleVerRevision() {
+    setCargando(true);
+    setError(null);
+    try {
+      const resultadoJson = await llamarApi(`/revision/${resultado.importacionId}`);
+      setRevision(resultadoJson);
+      setPaso(4);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  async function handleConformar() {
+    setCargando(true);
+    setError(null);
+    try {
+      await llamarApi(`/conformar/${resultado.importacionId}`, { method: 'POST' });
+      setRevisionFinal('conformada');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  async function handleRechazar() {
+    setConfirmandoRechazo(false);
+    setCargando(true);
+    setError(null);
+    try {
+      await llamarApi(`/rechazar/${resultado.importacionId}`, { method: 'POST' });
+      setRevisionFinal('rechazada');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setCargando(false);
+    }
+  }
+
   function handleReiniciar() {
     setPaso(1);
     setArchivo(null);
     setAnalisis(null);
     setMapeo({});
     setResultado(null);
+    setRevision(null);
+    setRevisionFinal(null);
     setError(null);
   }
 
@@ -119,7 +165,6 @@ export function Importacion() {
             label={t.importacion.paso1_archivo}
             name="archivo"
             type="file"
-            accept=".csv,.xlsx,.xls"
             onChange={(e) => setArchivo(e.target.files?.[0] || null)}
           />
           <Button type="submit" disabled={cargando}>
@@ -226,7 +271,98 @@ export function Importacion() {
             </Alert>
           )}
 
-          <Button onClick={handleReiniciar}>{t.importacion.nueva_importacion}</Button>
+          <Button variant="secondary" onClick={handleReiniciar} disabled={cargando}>
+            {t.importacion.nueva_importacion}
+          </Button>
+          {resultado.filasCreadas > 0 && (
+            <Button onClick={handleVerRevision} disabled={cargando}>
+              {cargando ? t.importacion.cargando_revision : t.importacion.revisar_resultado}
+            </Button>
+          )}
+        </div>
+      )}
+
+      {paso === 4 && revision && (
+        <div>
+          <h2>{t.importacion.paso4_titulo}</h2>
+          <p>{t.importacion.paso4_explicacion}</p>
+
+          {revisionFinal === 'conformada' && <Alert variant="success">{t.importacion.conformidad_exito}</Alert>}
+          {revisionFinal === 'rechazada' && <Alert variant="info">{t.importacion.rechazo_exito}</Alert>}
+
+          {!revisionFinal && (
+            <div style={{ overflowX: 'auto' }}>
+              <table>
+                <thead>
+                  <tr>
+                    {revision.lote.tipo === 'asistente' ? (
+                      <>
+                        <th>{t.importacion.campo_nombre}</th>
+                        <th>{t.importacion.campo_dni}</th>
+                        <th>{t.importacion.campo_email}</th>
+                        <th>{t.importacion.campo_telefono}</th>
+                      </>
+                    ) : (
+                      <>
+                        <th>{t.importacion.campo_nombrePaciente}</th>
+                        <th>{t.importacion.campo_domicilioPaciente}</th>
+                      </>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {revision.filas.map((fila) => (
+                    revision.lote.tipo === 'asistente' ? (
+                      <tr key={fila.id}>
+                        <td>{fila.nombre}</td>
+                        <td>{fila.dni}</td>
+                        <td>{fila.email}</td>
+                        <td>{fila.telefono}</td>
+                      </tr>
+                    ) : (
+                      (fila.pacientes || []).map((paciente) => (
+                        <tr key={paciente.id}>
+                          <td>{paciente.nombre}</td>
+                          <td>{paciente.domicilio}</td>
+                        </tr>
+                      ))
+                    )
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {!revisionFinal && (
+            <>
+              <Button variant="secondary" onClick={() => setConfirmandoRechazo(true)} disabled={cargando}>
+                {cargando ? t.importacion.rechazando : t.importacion.rechazar}
+              </Button>
+              <Button onClick={handleConformar} disabled={cargando}>
+                {cargando ? t.importacion.conformando : t.importacion.conformar}
+              </Button>
+            </>
+          )}
+          {revisionFinal && (
+            <Button onClick={handleReiniciar}>{t.importacion.nueva_importacion}</Button>
+          )}
+
+          {confirmandoRechazo && (
+            <div className="panel-modal-fondo" onClick={() => setConfirmandoRechazo(false)}>
+              <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
+                <h2>{t.importacion.rechazar}</h2>
+                <p>{t.importacion.confirmar_rechazo}</p>
+                <div className="panel-modal-acciones">
+                  <Button variant="secondary" onClick={() => setConfirmandoRechazo(false)} disabled={cargando}>
+                    {t.comun.cancelar}
+                  </Button>
+                  <Button onClick={handleRechazar} disabled={cargando}>
+                    {cargando ? t.importacion.rechazando : t.importacion.rechazar}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

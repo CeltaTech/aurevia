@@ -29,6 +29,10 @@ export const CAMPOS_IMPORTACION = {
   ],
 };
 
+// Capa 1 (formato conocido): cualquier formato que `xlsx` ya sepa leer — XLSX/XLSM/XLSB/XLS,
+// ODS, XML SpreadsheetML, CSV/TSV/TXT delimitado, DIF, SYLK, DBF, WK1/WK3 — se acepta sin
+// código nuevo, `XLSX.read` autodetecta el formato por firma de archivo, no hace falta un
+// flag por extensión.
 export function parsearArchivo(buffer, nombreArchivo) {
   // codepage 65001 (UTF-8) explícito: sin esto, un CSV en UTF-8 sin BOM (el caso normal al
   // exportar desde Excel/Sheets en español) se interpreta con acentos/ñ corrompidos —
@@ -41,6 +45,100 @@ export function parsearArchivo(buffer, nombreArchivo) {
   }
   const headers = Object.keys(filas[0]);
   return { headers, filas };
+}
+
+// Sigue dentro de Capa 1 (formato conocido, sin IA): dump SQL estándar de una tabla, del
+// tipo `INSERT INTO tabla (col1, col2, ...) VALUES (v1, v2, ...), (...), ...;` — lo que
+// exportan por defecto pgAdmin/phpMyAdmin/mysqldump con "solo datos". No interpreta CREATE
+// TABLE ni tipos — si el archivo no calza con este patrón devuelve null, sin lanzar error,
+// para que el caller seleccione la Capa 2 (juicio de viabilidad IA) en vez de fallar en seco.
+export function intentarParsearSQL(buffer) {
+  const texto = buffer.toString('utf8');
+  const regexInsert = /INSERT\s+INTO\s+[`"[\]\w.]+\s*\(([^)]+)\)\s*VALUES\s*([\s\S]+?);/gi;
+  const columnas = [];
+  const filas = [];
+
+  let matchInsert;
+  while ((matchInsert = regexInsert.exec(texto)) !== null) {
+    const headers = matchInsert[1].split(',').map((c) => c.trim().replace(/^[`"[]|[`"\]]$/g, ''));
+    if (columnas.length === 0) columnas.push(...headers);
+
+    const bloqueValores = matchInsert[2];
+    const regexTupla = /\(([^()]*)\)/g;
+    let matchTupla;
+    while ((matchTupla = regexTupla.exec(bloqueValores)) !== null) {
+      const valores = matchTupla[1]
+        .split(',')
+        .map((v) => v.trim().replace(/^'(.*)'$/s, '$1').replace(/''/g, "'"))
+        .map((v) => (v.toUpperCase() === 'NULL' ? '' : v));
+      if (valores.length !== headers.length) continue;
+      const fila = {};
+      headers.forEach((h, i) => { fila[h] = valores[i]; });
+      filas.push(fila);
+    }
+  }
+
+  if (columnas.length === 0 || filas.length === 0) return null;
+  return { headers: columnas, filas };
+}
+
+const SYSTEM_PROMPT_VIABILIDAD = `Sos un asistente que decide si un archivo, subido por una
+Prestadora de cuidado domiciliario a Aurevia para importación masiva de Asistentes o
+Familias/Pacientes, se puede interpretar como una tabla de datos con certeza suficiente de
+no producir una importación incorrecta. El archivo no es un Excel/CSV/planilla estándar ni
+un dump SQL reconocible (esos casos ya se resolvieron antes de llegar acá) — puede ser JSON,
+XML, texto de ancho fijo, u otro formato exportado por un sistema de terceros.
+
+Si NO podés garantizar con confianza razonable qué valor de cada fila corresponde a qué
+columna, marcá viable=false y explicá el motivo en una frase — nunca inventes una
+estructura de columnas que no esté claramente presente en la muestra.
+
+Respondé únicamente con un JSON de esta forma, sin texto adicional:
+{"viable": true|false, "motivo": "texto breve", "headers": ["col1", "col2", ...], "filas": [{"col1": "valor", ...}, ...]}
+Si viable=false, dejá "headers" y "filas" como arrays vacíos.`;
+
+// Capa 2: juicio de viabilidad de IA para formatos que no calzaron con la Capa 1 (ni
+// `xlsx` ni el parser de dump SQL). Fallback seguro ante falta de API key o respuesta
+// inválida: nunca inventa datos, rechaza la importación y pide un formato conocido.
+export async function evaluarViabilidadIA({ tipo, nombreArchivo, buffer, prestadoraId }) {
+  const anthropic = obtenerCliente();
+  if (!anthropic) {
+    return {
+      viable: false,
+      motivo: 'ANTHROPIC_API_KEY no configurada — subí el archivo en Excel, CSV o un dump SQL estándar',
+      headers: [],
+      filas: [],
+    };
+  }
+
+  const muestraTexto = buffer.toString('utf8').slice(0, 8000);
+  const mensaje = `Tipo de importación: ${tipo}
+Nombre del archivo: ${nombreArchivo}
+Contenido del archivo (puede estar truncado a los primeros 8000 caracteres):
+${muestraTexto}`;
+
+  const respuesta = await anthropic.messages.create({
+    model: MODELO,
+    max_tokens: 4000,
+    system: SYSTEM_PROMPT_VIABILIDAD,
+    messages: [{ role: 'user', content: mensaje }],
+  });
+
+  registrarUsoIA({ prestadoraId, modulo: 'importacion_viabilidad', modelo: MODELO, respuestaAnthropic: respuesta });
+
+  const texto = respuesta.content?.[0]?.type === 'text' ? respuesta.content[0].text : '';
+  try {
+    const parseado = JSON.parse(texto);
+    if (!parseado.viable) {
+      return { viable: false, motivo: parseado.motivo || 'La IA determinó que no es viable importar este archivo con certeza', headers: [], filas: [] };
+    }
+    if (!Array.isArray(parseado.headers) || !Array.isArray(parseado.filas) || parseado.filas.length === 0) {
+      return { viable: false, motivo: 'La IA no devolvió filas interpretables — probá con un formato conocido (Excel, CSV, dump SQL)', headers: [], filas: [] };
+    }
+    return { viable: true, motivo: parseado.motivo || '', headers: parseado.headers, filas: parseado.filas };
+  } catch {
+    return { viable: false, motivo: 'La IA no devolvió una respuesta válida — probá con un formato conocido (Excel, CSV, dump SQL)', headers: [], filas: [] };
+  }
 }
 
 const SYSTEM_PROMPT = `Sos un asistente que ayuda a mapear columnas de una planilla (Excel/CSV)

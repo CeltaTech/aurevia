@@ -63,6 +63,12 @@ export const T = {
       domicilio: 'Domicilio',
       patologias: 'Patologías',
     },
+    medicacion: {
+      ver_ordenes: 'Ver órdenes de medicación',
+      sin_ordenes: 'No hay órdenes de medicación vigentes para este Paciente que estés habilitado a administrar.',
+      desde: 'Desde',
+      hasta: 'Hasta',
+    },
     reporte: {
       titulo: 'Reporte Diario',
       texto_libre_label: '¿Cómo estuvo la guardia? Contanos con tus palabras',
@@ -181,6 +187,12 @@ export const T = {
       domicilio: 'Address',
       patologias: 'Conditions',
     },
+    medicacion: {
+      ver_ordenes: 'View medication orders',
+      sin_ordenes: 'There are no active medication orders for this Patient that you are qualified to administer.',
+      desde: 'From',
+      hasta: 'Until',
+    },
     reporte: {
       titulo: 'Daily Report',
       texto_libre_label: 'How did the shift go? Tell us in your own words',
@@ -298,6 +310,12 @@ export const T = {
       paciente: 'Paciente',
       domicilio: 'Endereço',
       patologias: 'Condições',
+    },
+    medicacion: {
+      ver_ordenes: 'Ver ordens de medicação',
+      sin_ordenes: 'Não há ordens de medicação vigentes para este Paciente que você esteja habilitado a administrar.',
+      desde: 'Desde',
+      hasta: 'Até',
     },
     reporte: {
       titulo: 'Relatório Diário',

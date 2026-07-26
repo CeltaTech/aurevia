@@ -12,7 +12,7 @@ async function pedido(ruta, opciones = {}) {
   const respuesta = await fetch(`${API_URL}/api/app-familias${ruta}`, {
     ...opciones,
     headers: {
-      ...(opciones.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(opciones.body && !(opciones.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
       Authorization: `Bearer ${token}`,
       ...opciones.headers,
     },
@@ -38,4 +38,6 @@ export const api = {
   suscripcionMarketplace: (pacienteId) => pedido(`/suscripcion/${pacienteId}`),
   generarQrCobro: (datos) => pedido('/qr-cobro', { method: 'POST', body: JSON.stringify(datos) }),
   estadoQrCobro: (id) => pedido(`/qr-cobro/${id}`),
+  indicacionesMedicacion: (pacienteId) => pedido(`/medicacion/${pacienteId}`),
+  crearIndicacionMedicacion: (pacienteId, formData) => pedido(`/medicacion/${pacienteId}`, { method: 'POST', body: formData }),
 };

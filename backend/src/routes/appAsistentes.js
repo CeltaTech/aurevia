@@ -86,7 +86,7 @@ appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
 appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) => {
   const { data, error } = await supabase
     .from('guardias')
-    .select('id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, checkin_at, checkout_at, checkout_bloqueado, pacientes(nombre, domicilio, lat, lng, patologias, medicacion_habitual)')
+    .select('id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, checkin_at, checkout_at, checkout_bloqueado, pacientes(id, nombre, domicilio, lat, lng, patologias)')
     .eq('id', req.params.id)
     .eq('asistente_id', req.usuarioAsistente.id)
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)

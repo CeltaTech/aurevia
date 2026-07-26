@@ -28,6 +28,7 @@ import { UsuariosPanel } from './pages/UsuariosPanel';
 import { Prestadoras } from './pages/Prestadoras';
 import { AdminPlataforma } from './pages/AdminPlataforma';
 import { Configuracion } from './pages/Configuracion';
+import { Medicacion } from './pages/Medicacion';
 import { Importacion } from './pages/Importacion';
 import { InformesObraSocial } from './pages/InformesObraSocial';
 import { Auditoria } from './pages/Auditoria';
@@ -63,6 +64,7 @@ function App() {
                     <Route path="asistentes/:id" element={<AsistenteDetalle />} />
                     <Route path="familias" element={<Familias />} />
                     <Route path="familias/:id" element={<FamiliaDetalle />} />
+                    <Route path="medicacion" element={<Medicacion />} />
                     <Route path="guardias" element={<Guardias />} />
                     <Route path="comunicacion" element={<Comunicacion />} />
                     <Route path="verificacion-guardias" element={<Evv />} />

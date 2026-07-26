@@ -75,3 +75,37 @@ No generan advertencia en marketplace (bajo riesgo): calificación por estrellas
 como opinión sin consecuencia automática, verificación de identidad/antecedentes, toggle de
 disponibilidad del Asistente, y las herramientas de horario/penalización/calificación
 cuando las opera la Familia sobre su propio vínculo.
+
+## Indicaciones de medicación — riesgo de mala praxis por falta de habilitación
+
+> Diseño completo en el pendiente #62 (`docs/PENDIENTES.md`). Acá solo la advertencia que
+> corresponde a esta jurisdicción — pendiente de revisión por un abogado antes de una
+> Prestadora real que active esta función, igual que el resto de este documento (ver nota
+> al inicio).
+
+El riesgo acá no es laboral (art. 23 LCT) sino de **ejercicio ilegal de una profesión de la
+salud / mala praxis**: ciertas vías de administración de medicación (por ejemplo,
+inyectables) requieren una habilitación profesional específica según la ley de ejercicio de
+la enfermería vigente (Ley 24.004 y su decreto reglamentario) — un/a Asistente sin matrícula
+de enfermero/a no puede aplicar una inyección aunque la Familia y la Prestadora estén de
+acuerdo. Si una Prestadora acepta una indicación de medicación y asigna la Guardia a un
+Asistente sin la habilitación requerida para esa vía, y ocurre un incidente, la Prestadora
+puede quedar expuesta a responsabilidad civil (mala praxis) y el propio Asistente a
+responsabilidad por ejercicio ilegal de la profesión.
+
+| Función | Texto de advertencia mostrado al activar |
+|---|---|
+| Aceptar una indicación de medicación cuya vía de administración requiere una habilitación (según `configuracion_habilitacion_via_medicacion` de la Prestadora) sin que ningún Asistente asignado al Paciente la tenga vigente | Ningún Asistente actualmente asignado a este Paciente cuenta con la habilitación profesional requerida para esta vía de administración (ej. aplicación de inyectables exige enfermero/a matriculado/a). Aceptar esta indicación sin asignar un Asistente habilitado puede generar responsabilidad por mala praxis ante un incidente. |
+
+Notas de aplicación (mismo principio que el resto del documento, `CLAUDE.md` §3):
+
+- La función nunca se bloquea: el Panel puede aceptar la indicación igual, la advertencia
+  solo informa el riesgo y queda auditada (`auditoria_advertencias_legales`).
+- El mapeo vía→habilitación requerida es configuración libre de cada Prestadora
+  (`configuracion_habilitacion_via_medicacion`, tab "Habilitación de medicación" en
+  Configuración del Panel) — este documento no fija qué vías requieren qué habilitación,
+  solo documenta el riesgo detrás de la advertencia que el sistema ya trae seedeada
+  (`inyectable → enfermero_matriculado`) como punto de partida, editable sin límite.
+- Si en el futuro se agrega una vía de administración nueva con riesgo legal propio no
+  cubierto por esta única advertencia, corresponde evaluarlo y, de aplicar, documentarlo acá
+  antes de activarlo para una Prestadora real de Argentina.

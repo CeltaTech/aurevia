@@ -384,6 +384,38 @@ CREATE TABLE pacientes (
 );
 ```
 
+**`medicacion_habitual` deprecado (pendiente #62, cerrado 2026-07-25).** Se dejó de escribir
+en esta columna. La "medicación habitual" que se muestra en Panel y PWAs se deriva ahora de
+`indicaciones_medicacion` (estado=`aceptada`, vigente a la fecha) — ver sección siguiente. El
+dato histórico ya cargado en esta columna no se borró, solo dejó de ser la fuente de verdad.
+
+## Módulo: Indicaciones de medicación y habilitaciones (pendiente #62, cerrado 2026-07-25)
+
+DDL completo, RLS y seed de advertencia legal en
+`backend/src/db/schema_indicaciones_medicacion_01.sql`. Resumen de las 3 tablas nuevas:
+
+- **`indicaciones_medicacion`** — una fila por indicación de medicación solicitada por la
+  Familia (medicamento/dosis/frecuencia/vía de administración/prescripción opcional/vigencia
+  desde-hasta), con `estado` (`pendiente`/`aceptada`/`rechazada`/`finalizada`) revisado por el
+  Panel. `via_administracion` es catálogo abierto (TEXT, sin CHECK) — Regla 1, `CLAUDE.md` §7.
+- **`habilitaciones_asistente`** — matrícula o título profesional vigente de un Asistente
+  (`tipo` catálogo abierto, ej. `enfermero_matriculado`), con vigencia desde-hasta y archivo
+  de evidencia opcional. Revocar no borra la fila: cierra `vigente_hasta` (mismo patrón que
+  `autorizaciones_monitoreo_paciente.vigente`).
+- **`configuracion_habilitacion_via_medicacion`** — mapeo por Prestadora de
+  vía de administración → tipo de habilitación requerida (nullable = sin requisito),
+  configurable libremente desde el Panel (Configuración → Habilitación de medicación), nunca
+  hardcodeado.
+
+Bucket privado `prescripciones-medicacion` (sin políticas de storage para roles no
+service_role, mismo patrón que `autorizaciones-monitoreo`). Advertencia legal asociada:
+`advertencias_legales` con `funcion_clave='medicacion_via_sin_habilitacion'` — ver
+`docs/legal/argentina.md`.
+
+Punto único de verdad (Regla 12, `CLAUDE.md` §7) para resolver "medicación vigente de un
+Paciente" y "¿puede este Asistente administrar esta vía?": `backend/src/utils/medicacionIndicaciones.js`,
+consumido por `appFamiliasMedicacion.js`, `panelMedicacion.js` y `appAsistentesMedicacion.js`.
+
 ## Tabla: guardias y Módulo 6 (Guardias) — reemplazado por el schema real, 2026-07-10
 
 **Esta sección quedó obsoleta como diseño-solo.** El DDL real, aplicado y verificado contra

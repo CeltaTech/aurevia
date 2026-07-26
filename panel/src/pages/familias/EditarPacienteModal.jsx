@@ -5,11 +5,6 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 
-function medicacionAFilas(medicacion) {
-  if (!Array.isArray(medicacion) || medicacion.length === 0) return [{ nombre: '', dosis: '', frecuencia: '' }];
-  return medicacion.map((m) => ({ nombre: m.nombre || '', dosis: m.dosis || '', frecuencia: m.frecuencia || '' }));
-}
-
 export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
   const { t } = useLocale();
   const [nombre, setNombre] = useState(paciente.nombre || '');
@@ -19,27 +14,13 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
   const [patologias, setPatologias] = useState((paciente.patologias || []).join(', '));
   const [obraSocial, setObraSocial] = useState(paciente.obra_social || '');
   const [numeroAfiliado, setNumeroAfiliado] = useState(paciente.numero_afiliado || '');
-  const [medicacion, setMedicacion] = useState(medicacionAFilas(paciente.medicacion_habitual));
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
-
-  function setMedicacionFila(i, campo, valor) {
-    setMedicacion((filas) => filas.map((f, idx) => (idx === i ? { ...f, [campo]: valor } : f)));
-  }
-
-  function agregarFilaMedicacion() {
-    setMedicacion((filas) => [...filas, { nombre: '', dosis: '', frecuencia: '' }]);
-  }
-
-  function quitarFilaMedicacion(i) {
-    setMedicacion((filas) => filas.filter((_, idx) => idx !== i));
-  }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
     setGuardando(true);
-    const medicacionLimpia = medicacion.filter((m) => m.nombre.trim());
     const { error: errorUpdate } = await supabase
       .from('pacientes')
       .update({
@@ -50,7 +31,6 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
         patologias: patologias.split(',').map((p) => p.trim()).filter(Boolean),
         obra_social: obraSocial || null,
         numero_afiliado: numeroAfiliado || null,
-        medicacion_habitual: medicacionLimpia.length ? medicacionLimpia : null,
       })
       .eq('id', paciente.id);
     setGuardando(false);
@@ -81,34 +61,6 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
           <FormField label={t.familias.editar_paciente.patologias} name="patologias" value={patologias} onChange={(e) => setPatologias(e.target.value)} />
           <FormField label={t.familias.editar_paciente.obra_social} name="obra_social" value={obraSocial} onChange={(e) => setObraSocial(e.target.value)} />
           <FormField label={t.familias.editar_paciente.numero_afiliado} name="numero_afiliado" value={numeroAfiliado} onChange={(e) => setNumeroAfiliado(e.target.value)} />
-
-          <label>{t.familias.editar_paciente.medicacion_habitual}</label>
-          {medicacion.map((fila, i) => (
-            <div key={i} className="panel-filtros">
-              <input
-                type="text"
-                placeholder={t.familias.editar_paciente.medicacion_nombre}
-                value={fila.nombre}
-                onChange={(e) => setMedicacionFila(i, 'nombre', e.target.value)}
-              />
-              <input
-                type="text"
-                placeholder={t.familias.editar_paciente.medicacion_dosis}
-                value={fila.dosis}
-                onChange={(e) => setMedicacionFila(i, 'dosis', e.target.value)}
-              />
-              <input
-                type="text"
-                placeholder={t.familias.editar_paciente.medicacion_frecuencia}
-                value={fila.frecuencia}
-                onChange={(e) => setMedicacionFila(i, 'frecuencia', e.target.value)}
-              />
-              <button type="button" onClick={() => quitarFilaMedicacion(i)}>×</button>
-            </div>
-          ))}
-          <Button variant="secondary" type="button" onClick={agregarFilaMedicacion}>
-            {t.familias.editar_paciente.agregar_medicacion}
-          </Button>
 
           <div className="panel-modal-acciones">
             <Button variant="secondary" type="button" onClick={onClose} disabled={guardando}>

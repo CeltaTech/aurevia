@@ -2,6 +2,7 @@ import { supabase } from '../db/connection.js';
 import { analizarAlertaIA } from './alertasIA.js';
 import { notificarCoordinador } from './whatsapp.js';
 import { enviarPushFamilia } from './push.js';
+import { medicacionVigenteDelPaciente } from './medicacionIndicaciones.js';
 
 const REPORTES_A_ANALIZAR = 7;
 
@@ -41,10 +42,14 @@ export async function revisarAlertasIA() {
 export async function analizarPaciente(pacienteId, prestadoraId) {
   const { data: paciente } = await supabase
     .from('pacientes')
-    .select('patologias, medicacion_habitual, familia_id')
+    .select('patologias, familia_id')
     .eq('id', pacienteId)
     .maybeSingle();
   if (!paciente) return;
+
+  // pacientes.medicacion_habitual queda deprecado (pendiente #62, docs/PENDIENTES.md): la
+  // IA analiza la medicación vigente real, derivada de indicaciones_medicacion.
+  const medicacionVigente = await medicacionVigenteDelPaciente(pacienteId);
 
   const { data: reportes, error: errorReportes } = await supabase
     .from('reportes')
@@ -58,7 +63,7 @@ export async function analizarPaciente(pacienteId, prestadoraId) {
   let resultado;
   try {
     resultado = await analizarAlertaIA(
-      { patologias: paciente.patologias, medicacionHabitual: paciente.medicacion_habitual },
+      { patologias: paciente.patologias, medicacionHabitual: medicacionVigente },
       reportes.map((r) => ({
         id: r.id,
         texto_libre: r.texto_libre,

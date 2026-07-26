@@ -42,7 +42,7 @@ async function llamarApiMarketplace(path, opciones = {}) {
   return resultado;
 }
 
-const TABS = ['empresa', 'modalidades', 'zonas', 'servicios', 'documentos', 'vitales', 'notificaciones', 'whatsapp', 'permisos'];
+const TABS = ['empresa', 'modalidades', 'zonas', 'servicios', 'documentos', 'vitales', 'habilitacion_medicacion', 'notificaciones', 'whatsapp', 'permisos'];
 const SIGNOS_VITALES = ['presion_sistolica', 'presion_diastolica', 'temperatura', 'saturacion', 'glucemia'];
 const ROLES_RELEVO = ['suplente', 'franquero', 'emergencia', 'familiar'];
 const TIPOS_PERSONAL_EMERGENCIA = ['franquero', 'emergencia'];
@@ -82,6 +82,7 @@ export function Configuracion() {
         {tab === 'servicios' && <TabServicios />}
         {tab === 'documentos' && <TabDocumentos />}
         {tab === 'vitales' && <TabVitales />}
+        {tab === 'habilitacion_medicacion' && <TabHabilitacionMedicacion />}
         {tab === 'notificaciones' && <TabNotificaciones />}
         {tab === 'whatsapp' && <TabWhatsapp />}
         {tab === 'permisos' && <TabPermisos />}
@@ -1313,6 +1314,149 @@ function TabVitales() {
           </tbody>
         </table>
       </EstadoLista>
+    </div>
+  );
+}
+
+function TabHabilitacionMedicacion() {
+  const { t } = useLocale();
+  const { usuario } = useAuth();
+  const confirmarDestructivo = useConfirmarDestructivo();
+  const [filas, setFilas] = useState([]);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [guardandoId, setGuardandoId] = useState(null);
+  const [nuevaVia, setNuevaVia] = useState('');
+  const [nuevoTipo, setNuevoTipo] = useState('');
+  const [agregando, setAgregando] = useState(false);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    const { data, error: errorConsulta } = await supabase
+      .from('configuracion_habilitacion_via_medicacion')
+      .select('*')
+      .eq('prestadora_id', usuario.prestadora_id)
+      .order('via_administracion');
+    if (errorConsulta) {
+      setError(errorConsulta.message);
+      setEstado('error');
+      return;
+    }
+    setFilas(data ?? []);
+    setEstado('listo');
+  }, [usuario.prestadora_id]);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  function set(id, valor) {
+    setFilas((fs) => fs.map((f) => (f.id === id ? { ...f, tipo_habilitacion_requerida: valor } : f)));
+  }
+
+  async function guardar(fila) {
+    setGuardandoId(fila.id);
+    setError(null);
+    const { error: errorUpdate } = await supabase
+      .from('configuracion_habilitacion_via_medicacion')
+      .update({ tipo_habilitacion_requerida: fila.tipo_habilitacion_requerida || null, updated_at: new Date().toISOString() })
+      .eq('id', fila.id);
+    setGuardandoId(null);
+    if (errorUpdate) {
+      setError(t.comun.error_generico);
+      return;
+    }
+    recargar();
+  }
+
+  async function agregar() {
+    setAgregando(true);
+    setError(null);
+    const { error: errorInsert } = await supabase.from('configuracion_habilitacion_via_medicacion').insert({
+      prestadora_id: usuario.prestadora_id,
+      via_administracion: nuevaVia,
+      tipo_habilitacion_requerida: nuevoTipo || null,
+    });
+    setAgregando(false);
+    if (errorInsert) {
+      setError(t.comun.error_generico);
+      return;
+    }
+    setNuevaVia('');
+    setNuevoTipo('');
+    recargar();
+  }
+
+  async function borrar(fila) {
+    if (!(await confirmarDestructivo(t.configuracion.habilitacion_medicacion_confirmar_borrar))) return;
+    setGuardandoId(fila.id);
+    setError(null);
+    const { error: errorDelete } = await supabase.from('configuracion_habilitacion_via_medicacion').delete().eq('id', fila.id);
+    setGuardandoId(null);
+    if (errorDelete) {
+      setError(t.comun.error_generico);
+      return;
+    }
+    recargar();
+  }
+
+  return (
+    <div>
+      <h2>{t.configuracion.habilitacion_medicacion_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.habilitacion_medicacion_explicacion}</p>
+      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
+      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && filas.length === 0} recargar={recargar} mensajeVacio={t.configuracion.habilitacion_medicacion_vacio}>
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{t.configuracion.habilitacion_medicacion_col_via}</th>
+              <th>{t.configuracion.habilitacion_medicacion_col_tipo}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map((fila) => (
+              <tr key={fila.id}>
+                <td>{fila.via_administracion}</td>
+                <td>
+                  <input
+                    type="text"
+                    value={fila.tipo_habilitacion_requerida || ''}
+                    placeholder={t.configuracion.habilitacion_medicacion_sin_requisito}
+                    onChange={(e) => set(fila.id, e.target.value)}
+                  />
+                </td>
+                <td>
+                  <button onClick={() => guardar(fila)} disabled={guardandoId === fila.id}>
+                    {guardandoId === fila.id ? t.comun.guardando : t.comun.guardar}
+                  </button>{' '}
+                  <button onClick={() => borrar(fila)} disabled={guardandoId === fila.id}>{t.comun.borrar}</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </EstadoLista>
+
+      <h2 style={{ marginTop: '1.5rem' }}>{t.configuracion.habilitacion_medicacion_nueva}</h2>
+      <FormField
+        label={t.configuracion.habilitacion_medicacion_col_via}
+        name="nueva_via"
+        value={nuevaVia}
+        onChange={(e) => setNuevaVia(e.target.value)}
+        placeholder={t.configuracion.habilitacion_medicacion_via_placeholder}
+      />
+      <FormField
+        label={t.configuracion.habilitacion_medicacion_col_tipo}
+        name="nuevo_tipo"
+        value={nuevoTipo}
+        onChange={(e) => setNuevoTipo(e.target.value)}
+        placeholder={t.configuracion.habilitacion_medicacion_sin_requisito}
+      />
+      <Button onClick={agregar} disabled={agregando || !nuevaVia}>
+        {agregando ? t.comun.guardando : t.configuracion.habilitacion_medicacion_agregar}
+      </Button>
     </div>
   );
 }

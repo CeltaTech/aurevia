@@ -7,13 +7,14 @@ import { supabase } from '../../lib/supabaseClient';
 import { PerfilTab } from './PerfilTab';
 import { VerificacionTab } from './VerificacionTab';
 import { CertificadoTab } from './CertificadoTab';
+import { HabilitacionesTab } from './HabilitacionesTab';
 import { VinculoCeseTab } from './VinculoCeseTab';
 import { SimuladorVinculoTab } from './SimuladorVinculoTab';
 import { ScoreRiesgoTab } from './ScoreRiesgoTab';
 import { AusenciasCoberturaTab } from './AusenciasCoberturaTab';
 import { ComunicacionTab } from './ComunicacionTab';
 
-const TABS = ['perfil', 'verificacion', 'certificado', 'vinculo_cese', 'simulador', 'score_riesgo', 'ausencias', 'comunicacion'];
+const TABS = ['perfil', 'verificacion', 'certificado', 'habilitaciones', 'vinculo_cese', 'simulador', 'score_riesgo', 'ausencias', 'comunicacion'];
 // Ausencias y Cobertura es operativo (tipo/fechas/sustituto), no datos laborales sensibles —
 // Coordinador ya tiene RLS de zona sobre "ausencias"/"guardias_cobertura" (schema_etapa2i.sql),
 // así que el tab estaba vetado en el frontend sin motivo, dejando una función habilitada en
@@ -78,6 +79,7 @@ export function AsistenteDetalle() {
         {tab === 'perfil' && <PerfilTab asistente={asistente} onActualizado={recargar} />}
         {tab === 'verificacion' && <VerificacionTab asistente={asistente} />}
         {tab === 'certificado' && <CertificadoTab asistente={asistente} />}
+        {tab === 'habilitaciones' && esAdmin && <HabilitacionesTab asistente={asistente} />}
         {tab === 'vinculo_cese' && esAdmin && <VinculoCeseTab asistente={asistente} onActualizado={recargar} />}
         {tab === 'simulador' && esAdmin && <SimuladorVinculoTab asistente={asistente} />}
         {tab === 'score_riesgo' && esAdmin && <ScoreRiesgoTab asistente={asistente} onActualizado={recargar} />}

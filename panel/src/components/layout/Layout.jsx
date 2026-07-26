@@ -98,6 +98,7 @@ export function Layout() {
             <>
               <span className="panel-nav-grupo">{t.nav.grupo_prestacion_directa}</span>
               <NavLink to="/familias">{t.nav.familias}</NavLink>
+              <NavLink to="/medicacion">{t.nav.medicacion}</NavLink>
               <NavLink to="/guardias">{t.nav.guardias}</NavLink>
               <NavLink to="/facturacion">{t.nav.facturacion}</NavLink>
               <NavLink to="/lista-precios">{t.nav.lista_precios}</NavLink>

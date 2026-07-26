@@ -40,6 +40,8 @@ export default function GuardiaActiva() {
   const [haciendoCheckin, setHaciendoCheckin] = useState(false);
   const [reportes, setReportes] = useState(null);
   const [mostrandoReportes, setMostrandoReportes] = useState(false);
+  const [ordenesMedicacion, setOrdenesMedicacion] = useState(null);
+  const [mostrandoMedicacion, setMostrandoMedicacion] = useState(false);
   const [tick, setTick] = useState(0);
   const [checkinPendiente, setCheckinPendiente] = useState(null); // { desde } o null
 
@@ -118,6 +120,22 @@ export default function GuardiaActiva() {
     }
   }
 
+  async function verOrdenesMedicacion() {
+    if (mostrandoMedicacion) {
+      setMostrandoMedicacion(false);
+      return;
+    }
+    setMostrandoMedicacion(true);
+    if (ordenesMedicacion === null) {
+      try {
+        const { ordenes } = await api.medicacionDelPaciente(guardia.paciente_id);
+        setOrdenesMedicacion(ordenes);
+      } catch {
+        setOrdenesMedicacion([]);
+      }
+    }
+  }
+
   if (error) return <div className="alert alert-error">{error}</div>;
   if (!guardia) return <div className="estado-cargando">{t.comun.cargando}</div>;
 
@@ -178,6 +196,27 @@ export default function GuardiaActiva() {
             <div key={r.id} className="guardia-card">
               <div className="guardia-card-detalle">{r.guardias?.fecha}</div>
               {r.observaciones && <p>{r.observaciones}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <button className="btn btn-secondary btn-full" onClick={verOrdenesMedicacion} style={{ marginTop: '1rem' }}>
+        {t.medicacion.ver_ordenes}
+      </button>
+
+      {mostrandoMedicacion && (
+        <div style={{ marginTop: '1rem' }}>
+          {ordenesMedicacion === null && <div className="estado-cargando">{t.comun.cargando}</div>}
+          {ordenesMedicacion?.length === 0 && <div className="estado-vacio">{t.medicacion.sin_ordenes}</div>}
+          {ordenesMedicacion?.map((o) => (
+            <div key={o.id} className="guardia-card">
+              <div className="guardia-card-detalle">
+                <strong>{o.medicamento}</strong> · {o.dosis} · {o.frecuencia} ({o.via_administracion})
+              </div>
+              <div className="guardia-card-detalle">
+                {t.medicacion.desde}: {o.fecha_desde} {o.fecha_hasta ? `— ${t.medicacion.hasta}: ${o.fecha_hasta}` : ''}
+              </div>
             </div>
           ))}
         </div>

@@ -39,3 +39,32 @@ panelConfiguracionPlataformaRouter.patch('/mfa', requiereSuperadmin, async (req,
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });
+
+// Pendiente #44 — umbral de Prestadoras certificadas a partir del cual se avisa el riesgo
+// del envío de emails desde una única cuenta Gmail compartida (docs/DECISION_EMAIL_ESCALA.md).
+// Configurable (CLAUDE.md §7 Regla 1) en vez de hardcodear el "6" que dio el Desarrollador.
+panelConfiguracionPlataformaRouter.get('/umbral-prestadoras', requiereSuperadmin, async (req, res) => {
+  const { data, error } = await supabase
+    .from('configuracion_plataforma')
+    .select('umbral_alerta_prestadoras, updated_at')
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ configuracion: data });
+});
+
+panelConfiguracionPlataformaRouter.patch('/umbral-prestadoras', requiereSuperadmin, async (req, res) => {
+  const { umbral_alerta_prestadoras } = req.body;
+  if (!Number.isInteger(umbral_alerta_prestadoras) || umbral_alerta_prestadoras < 1) {
+    return res.status(400).json({ error: 'umbral_alerta_prestadoras debe ser un entero mayor a 0' });
+  }
+  const { error } = await supabase
+    .from('configuracion_plataforma')
+    .update({
+      umbral_alerta_prestadoras,
+      actualizado_por: req.usuarioPanel.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', true);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});

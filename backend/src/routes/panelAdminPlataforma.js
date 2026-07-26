@@ -44,6 +44,12 @@ panelAdminPlataformaRouter.get('/resumen', async (req, res) => {
     .select('id, estado, fecha_alta');
   if (errorPrestadoras) return res.status(500).json({ error: errorPrestadoras.message });
 
+  const { data: configPlataforma, error: errorConfig } = await supabase
+    .from('configuracion_plataforma')
+    .select('umbral_alerta_prestadoras')
+    .single();
+  if (errorConfig) return res.status(500).json({ error: errorConfig.message });
+
   const { data: planesVigentes, error: errorPlanes } = await supabase
     .from('prestadora_planes')
     .select('prestadora_id, planes(precio)')
@@ -65,12 +71,21 @@ panelAdminPlataformaRouter.get('/resumen', async (req, res) => {
   const activas = prestadoras.filter((p) => p.estado === 'certificada').length;
   const nuevasEsteMes = prestadoras.filter((p) => p.fecha_alta && new Date(p.fecha_alta) >= inicioMes).length;
 
+  const umbralAlertaPrestadoras = configPlataforma.umbral_alerta_prestadoras;
+
   res.json({
     mrrTotal,
     prestadorasActivas: activas,
     prestadorasTotal: prestadoras.length,
     nuevasEsteMes,
     addonsContratados: addonsCount ?? 0,
+    // Pendiente #44 (docs/PENDIENTES.md): el envío de emails de todas las Prestadoras sale
+    // de una única cuenta Gmail compartida (backend/src/utils/email.js) con tope de 500/día
+    // — riesgo real recién a partir de cierto volumen de Prestadoras simultáneas, no antes.
+    // Se avisa al llegar/superar el umbral configurable (docs/DECISION_EMAIL_ESCALA.md
+    // tiene el detalle para decidir en ese momento), nunca antes.
+    umbralAlertaPrestadoras,
+    alertaLimiteEmailCompartido: activas >= umbralAlertaPrestadoras,
   });
 });
 

@@ -83,7 +83,15 @@ function TabResumen() {
   return (
     <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
       {datos && (
-        <div className="panel-kpis">
+        <>
+          {datos.alertaLimiteEmailCompartido && (
+            <Alert variant="warning">
+              {t.adminPlataforma.alerta_email_compartido.replace('{umbral}', datos.umbralAlertaPrestadoras)}
+              {' '}
+              <code>docs/DECISION_EMAIL_ESCALA.md</code>
+            </Alert>
+          )}
+          <div className="panel-kpis">
           <div className="panel-kpi-card">
             <div className="panel-kpi-valor">${datos.mrrTotal.toLocaleString('es-AR')}</div>
             <div className="panel-kpi-etiqueta">{t.adminPlataforma.kpi_mrr}</div>
@@ -100,7 +108,8 @@ function TabResumen() {
             <div className="panel-kpi-valor">{datos.addonsContratados}</div>
             <div className="panel-kpi-etiqueta">{t.adminPlataforma.kpi_addons}</div>
           </div>
-        </div>
+          </div>
+        </>
       )}
     </EstadoLista>
   );

@@ -1,16 +1,36 @@
+import dns from 'dns/promises';
 import nodemailer from 'nodemailer';
 import { supabase } from '../db/connection.js';
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  family: 4,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASSWORD,
-  },
-});
+const SMTP_HOST = 'smtp.gmail.com';
+
+// nodemailer 9.0.3 resuelve A y AAAA de smtp.gmail.com y elige una IP al azar entre
+// ambas (node_modules/nodemailer/lib/shared/index.js, formatDNSValue) sin comprobar si
+// la red tiene salida IPv6 real — la opción `family` del transporter no se usa en
+// ningún punto del código de nodemailer, fijarla no tiene efecto. En Railway la salida
+// IPv6 da ENETUNREACH, así que una fracción aleatoria de los envíos fallaba (pendiente
+// #37, detectado al verificar la recuperación de MFA por email). Se resuelve acá mismo
+// a una IPv4 y se pasa como host literal, con `servername` explícito para que el TLS
+// siga validando el certificado contra smtp.gmail.com.
+async function crearTransporter() {
+  let host = SMTP_HOST;
+  try {
+    const direcciones = await dns.resolve4(SMTP_HOST);
+    if (direcciones.length) host = direcciones[Math.floor(Math.random() * direcciones.length)];
+  } catch {
+    // Sin IPv4 resuelta, se cae al hostname (mismo comportamiento previo a este fix).
+  }
+  return nodemailer.createTransport({
+    host,
+    port: 465,
+    secure: true,
+    servername: SMTP_HOST,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASSWORD,
+    },
+  });
+}
 
 // Destinatarios configurables desde el Panel (Módulo 8 > Notificaciones) en vez de
 // hardcodeados. configuracion_notificaciones es por prestadora desde 2026-07-13
@@ -55,6 +75,7 @@ export async function enviarEmailCoordinador({ evento, prestadoraId, asunto, tex
   // saliente (credencial de infraestructura, no de negocio) — cada prestadora manda "desde"
   // esa cuenta hoy porque no existe (todavía) aprovisionamiento de SMTP propio por
   // licenciataria. El aislamiento real está en el destinatario, no en el remitente.
+  const transporter = await crearTransporter();
   await transporter.sendMail({
     from: process.env.SMTP_USER,
     to: destinatarios.join(', '),
@@ -67,6 +88,7 @@ export { configuracionEvento };
 
 export async function enviarEmail({ to, asunto, texto }) {
   if (!process.env.SMTP_USER) return;
+  const transporter = await crearTransporter();
   await transporter.sendMail({
     from: process.env.SMTP_USER,
     to,

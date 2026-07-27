@@ -1,6 +1,6 @@
 name: Verificar identidad del producto
 
-# El guardarraíl de la Etapa 0.5 (PLAN_SEPARACION_XEITRA.md): que cambiarle el nombre al
+# El guardarraíl de la Etapa 0.5 (PLAN_SEPARACION_CELTATECH.md): que cambiarle el nombre al
 # producto siga siendo editar un archivo y no una cacería por todo el repo. Falla el build si
 # alguien escribe el nombre a mano en vez de usar el marcador {{producto}}, o si las cuatro
 # copias de identidadProducto.js dejan de coincidir.

@@ -145,7 +145,7 @@ if (fallasLiteral.length > 0) {
     console.error(`    ${String(falla.numero).padStart(5)}  ${recorte}`);
   }
   console.error('\n  Usar el marcador {{producto}} (o {{productoCorto}} / {{dominio}}) y dejar que');
-  console.error('  identidadProducto.js lo resuelva. Ver PLAN_SEPARACION_XEITRA.md, Etapa 0.5.\n');
+  console.error('  identidadProducto.js lo resuelva. Ver PLAN_SEPARACION_CELTATECH.md, Etapa 0.5.\n');
 }
 
 if (fallasSincronia.length === 0 && fallasLiteral.length === 0) {

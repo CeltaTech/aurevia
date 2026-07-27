@@ -1,4 +1,4 @@
-# Prompt para Claude Code — Preparar el software para el modelo Xeitra / prestadora licenciataria
+# Prompt para Claude Code — Preparar el software para el modelo CeltaTech / prestadora licenciataria
 
 > Copiá y pegá este prompt completo como mensaje inicial en Claude Code, dentro del repositorio del software de gestión (Panel Admin / App Servicio). Ajustá las rutas y nombres de archivo del bloque "Contexto del repo" antes de enviarlo.
 
@@ -10,8 +10,8 @@ Hasta ahora, el software que estamos construyendo (Panel Admin + App de Servicio
 
 Esto está cambiando. Vamos a separar el negocio en dos empresas:
 
-1. **Xeitra** (nueva empresa, aún en formación): va a ser la dueña del software y va a licenciarlo como producto — no solo a esa prestadora original, sino potencialmente a **cualquier empresa prestadora de cuidado domiciliario**, dentro y fuera de la Argentina. Esa prestadora es su primer cliente, pero el software tiene que dejar de estar diseñado "para una sola prestadora" y pasar a estar diseñado "para cualquier prestadora que lo licencie".
-2. **La prestadora original** sigue con su negocio de cuidado domiciliario (modelo directo a familias y marketplace), y además vende un servicio de auditoría/certificación B2B a otras prestadoras — apoyado en la tecnología que le licencia Xeitra, pagando como cualquier otro cliente.
+1. **CeltaTech** (nueva empresa, aún en formación): va a ser la dueña del software y va a licenciarlo como producto — no solo a esa prestadora original, sino potencialmente a **cualquier empresa prestadora de cuidado domiciliario**, dentro y fuera de la Argentina. Esa prestadora es su primer cliente, pero el software tiene que dejar de estar diseñado "para una sola prestadora" y pasar a estar diseñado "para cualquier prestadora que lo licencie".
+2. **La prestadora original** sigue con su negocio de cuidado domiciliario (modelo directo a familias y marketplace), y además vende un servicio de auditoría/certificación B2B a otras prestadoras — apoyado en la tecnología que le licencia CeltaTech, pagando como cualquier otro cliente.
 
 **La consecuencia técnica central**: el sistema tiene que pasar de ser mono-tenant (una sola organización) a **multi-tenant real**, donde cada prestadora que licencia el software es un cliente aislado, con su propio personal, sus propios pacientes, y sin visibilidad de los datos de ningún otro cliente — incluida la prestadora original, que a estos efectos es "un cliente más" del sistema.
 
@@ -27,7 +27,7 @@ Cada **prestadora licenciataria** (llamalas "organización" o "tenant" en el mod
 
 - Su propio espacio de datos: personal certificado, pacientes, reportes, alertas, historial de auditoría — completamente aislado del de cualquier otra prestadora, incluida la prestadora original.
 - Aislamiento a **nivel de query / row-level security**, no solo de UI. Si en algún momento hay una auditoría regulatoria sobre cómo se manejan datos de salud de afiliados de una obra social, "el frontend no muestra lo que no debería" no es una respuesta aceptable.
-- Un plan de branding por tenant: el certificado con QR y la app que ve la familia del paciente deberían poder mostrar la marca de la prestadora licenciataria, no necesariamente la de la prestadora original ni la de Xeitra — esto es parte de lo que se vende (la prestadora quiere que su marca sea la que ve el cliente final, no la del proveedor de tecnología).
+- Un plan de branding por tenant: el certificado con QR y la app que ve la familia del paciente deberían poder mostrar la marca de la prestadora licenciataria, no necesariamente la de la prestadora original ni la de CeltaTech — esto es parte de lo que se vende (la prestadora quiere que su marca sea la que ve el cliente final, no la del proveedor de tecnología).
 
 ### 2. Modelo de datos — entidad `prestadoras` (u `organizaciones`), no un campo suelto
 
@@ -52,7 +52,7 @@ Esto se corrige respecto a una versión anterior de este prompt: **sí necesitam
 - Por persona de personal certificada activa.
 - Fee fijo mensual por prestadora (licencia plana).
 
-Tiene que generar, distinguir y emitir por separado **dos facturaciones que corren sobre la misma plataforma pero son de dos empresas distintas**: lo que le factura **Xeitra a la prestadora por la licencia del software**, y lo que **la prestadora original le factura a la prestadora por su servicio de auditoría/certificación** (cuando la prestadora original sea quien presta ese servicio a esa prestadora en particular). Esto incluye numeración y comprobantes separados por empresa emisora, no una sola factura combinada.
+Tiene que generar, distinguir y emitir por separado **dos facturaciones que corren sobre la misma plataforma pero son de dos empresas distintas**: lo que le factura **CeltaTech a la prestadora por la licencia del software**, y lo que **la prestadora original le factura a la prestadora por su servicio de auditoría/certificación** (cuando la prestadora original sea quien presta ese servicio a esa prestadora en particular). Esto incluye numeración y comprobantes separados por empresa emisora, no una sola factura combinada.
 
 ### 5. Soporte multi-idioma y multi-moneda — implementar ahora
 

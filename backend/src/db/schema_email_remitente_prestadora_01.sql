@@ -1,10 +1,10 @@
 -- Pendiente #18 (docs/PENDIENTES.md), candidato 8 — el remitente de notificaciones por email
--- era siempre la cuenta SMTP compartida de Xeitra (backend/src/utils/email.js, SMTP_USER/
+-- era siempre la cuenta SMTP compartida de CeltaTech (backend/src/utils/email.js, SMTP_USER/
 -- SMTP_PASSWORD globales), documentado incluso como "a propósito" en el comentario de
 -- enviarEmailCoordinador. Decisión del Desarrollador: cada Prestadora puede configurar sus
 -- propias credenciales SMTP reales (no un simple "From:" sin autenticación, que Gmail/Outlook
 -- marcarían como suplantación). Si una Prestadora no configura remitente propio, se sigue
--- usando el transporter compartido de Xeitra (sin romper nada para las que no lo configuren).
+-- usando el transporter compartido de CeltaTech (sin romper nada para las que no lo configuren).
 --
 -- Mismo patrón ya construido y en producción para el token de WhatsApp
 -- (configuracion_whatsapp_prestadora + guardar_token_whatsapp/leer_token_whatsapp,

@@ -1,7 +1,7 @@
 -- ============================================================================
 -- schema_multitenant_03.sql
 -- Cierre del pendiente #3 de docs/PENDIENTES.md ("Panel — tenant en inserts
--- directos"). Ver docs/PLAN_MULTITENANT_XEITRA.md sección 4.1.
+-- directos"). Ver docs/PLAN_MULTITENANT_CELTATECH.md sección 4.1.
 --
 -- El DEFAULT temporal de prestadora_id (schema_multitenant_02.sql:382-396) se
 -- puso porque el Panel insertaba directo a Supabase con la anon key sin que

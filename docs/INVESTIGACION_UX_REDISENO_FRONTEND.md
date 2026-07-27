@@ -140,7 +140,7 @@ preview muestra `g.modalidad` y `g.estado` **crudos**, sin pasar por diccionario
 traducción. Usa `window.prompt()` nativo del navegador para pedir el motivo de anulación
 (no un modal propio del sistema).
 
-**AdminPlataforma** — Título "Panel de Xeitra" (nombra a la empresa dueña del software, no
+**AdminPlataforma** — Título "Panel de CeltaTech" (nombra a la empresa dueña del software, no
 "Aurevia"). Tabs: Resumen, Licenciatarias, Planes y funciones, Facturación de licencias. El
 badge de estado de una Licenciataria muestra el valor crudo del enum como texto visible sin
 traducir. "Incluye" de un Plan junta claves de módulos crudas separadas por coma.
@@ -1059,7 +1059,7 @@ care-circle-portal, alayacare.com (Family Portal FAQ), connected-caregiver.helps
 circlecare.app, Kokorelias et al. 2022 (PMC8996302), caregiver.org/resource/
 siblings-and-caregiving, PMC10735373.
 
-### 5.4 UX de planes y precios (Xeitra ↔ Prestadora)
+### 5.4 UX de planes y precios (CeltaTech ↔ Prestadora)
 
 **Presentación de tiers**: SaaS de referencia (HubSpot, Salesforce) muestran funciones
 bloqueadas igual en el menú, con candado y tooltip que explica qué plan las desbloquea —

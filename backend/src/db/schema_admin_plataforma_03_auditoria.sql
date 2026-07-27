@@ -1,4 +1,4 @@
--- Ítem G del pendiente #30 (docs/PENDIENTES.md, docs/PLAN_MULTITENANT_XEITRA.md 3.4.1) — log
+-- Ítem G del pendiente #30 (docs/PENDIENTES.md, docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1) — log
 -- de auditoría de todo login/acción sensible de admin_plataforma dentro de una prestadora.
 --
 -- Cobertura elegida por el Desarrollador: completa, con triggers de base de datos —

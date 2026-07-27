@@ -14,7 +14,7 @@ function requiereAdminOSuperior(req, res, next) {
     return res.status(403).json({ error: 'Solo Admin o Superadmin puede editar la configuración' });
   }
   // admin_plataforma sin sesión de tenant activa no tiene ninguna prestadora sobre la que
-  // operar (docs/PLAN_MULTITENANT_XEITRA.md 3.4.1) — sin este corte explícito, prestadoraId
+  // operar (docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1) — sin este corte explícito, prestadoraId
   // llega `null` a las queries de abajo y `.eq('prestadora_id', null)` rompe contra Postgres
   // en vez de devolver un error controlado (mismo patrón que panelUsuarios.js:19-21).
   if (req.usuarioPanel.rol === 'admin_plataforma' && !req.usuarioPanel.prestadoraId) {

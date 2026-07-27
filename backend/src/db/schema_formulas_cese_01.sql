@@ -25,7 +25,7 @@ CREATE INDEX IF NOT EXISTS idx_escalas_jurisdiccion_tipo_vigencia
 -- Endurecer RLS: escalas_legales pasa de "admin_prestadora o superadmin" a
 -- "solo superadmin" — decisión confirmada explícitamente por el Desarrollador en esta
 -- sesión, mismo criterio ya usado en advertencias_legales (contenido legal curado por
--- Xeitra tras investigar la jurisdicción, nunca una decisión de una Prestadora individual).
+-- CeltaTech tras investigar la jurisdicción, nunca una decisión de una Prestadora individual).
 DROP POLICY IF EXISTS "admin_gestiona_escalas_legales" ON escalas_legales;
 CREATE POLICY "superadmin_gestiona_escalas_legales" ON escalas_legales
   FOR ALL USING (es_superadmin());

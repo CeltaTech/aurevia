@@ -26,11 +26,11 @@
 //      tiempo de ejecución.
 //
 // `codigo` es la única excepción: NO se cambia nunca. Es la clave técnica con la
-// que Xeitra identifica al producto y con la que se arman las claves de
+// que CeltaTech identifica al producto y con la que se arman las claves de
 // entitlements (`aurevia.pacientes.activos_max`). Renombrar la marca no toca un
-// solo dato guardado. Ver PLAN_SEPARACION_XEITRA.md, Etapa 0.5.
+// solo dato guardado. Ver PLAN_SEPARACION_CELTATECH.md, Etapa 0.5.
 //
-// A partir de la Etapa 3 la fuente de verdad de estos valores pasa a ser Xeitra y
+// A partir de la Etapa 3 la fuente de verdad de estos valores pasa a ser CeltaTech y
 // se replican por el mismo canal que los entitlements. Hasta entonces esta config
 // ES la fuente de verdad. Los puntos de consumo no cambian cuando eso pase.
 //
@@ -40,13 +40,13 @@
 //
 // Acá viven tres marcas distintas y no se mezclan nunca:
 //
-//   Xeitra      — la empresa. No la ve nadie dentro del producto.
+//   CeltaTech      — la empresa. No la ve nadie dentro del producto.
 //   Aurevia     — el producto. La ve quien trabaja EN la Prestadora
 //                 (Admin_prestadora, Coordinador) y sabe qué software usa.
 //   Prestadora  — la empresa que presta el cuidado. Es la única marca que
 //                 tiene sentido para una Familia o un Asistente.
 //
-// Una Familia contrató a la Prestadora, no a Xeitra, y probablemente no sepa
+// Una Familia contrató a la Prestadora, no a CeltaTech, y probablemente no sepa
 // que Aurevia existe. Mostrarle la marca del software donde espera la de su
 // Prestadora no es un detalle estético: le dice que su proveedor es otro.
 //
@@ -142,7 +142,7 @@ function validarIdentidad(identidad) {
   const problemas = [];
 
   if (!/^[a-z][a-z0-9_]*$/.test(identidad.codigo)) {
-    problemas.push(`codigo "${identidad.codigo}": solo minúsculas, dígitos y guión bajo, empezando por letra — es la clave técnica con la que Xeitra identifica al producto`);
+    problemas.push(`codigo "${identidad.codigo}": solo minúsculas, dígitos y guión bajo, empezando por letra — es la clave técnica con la que CeltaTech identifica al producto`);
   }
   if (!identidad.nombre || !identidad.nombre.trim()) {
     problemas.push('nombre: no puede estar vacío, es lo que ve la persona en pantalla');

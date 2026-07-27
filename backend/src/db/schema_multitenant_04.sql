@@ -1,6 +1,6 @@
 -- ============================================================================
 -- schema_multitenant_04.sql
--- Bloque 4 del plan (docs/PLAN_MULTITENANT_XEITRA.md, ver también
+-- Bloque 4 del plan (docs/PLAN_MULTITENANT_CELTATECH.md, ver también
 -- schema_multitenant_01.sql:9-11): reemplaza el singleton `configuracion_empresa`
 -- (fila única `id=1`, sin tenant) por `configuracion_prestadora`, con una fila
 -- por prestadora y RLS real vía current_tenant()/es_superadmin().

@@ -21,14 +21,14 @@
   no un extra opcional. Esto pesa a favor de priorizar antes de lo previsto algunos de los
   niveles de IA que `BUILD_ORDER.md` marca hoy como "Diferida" — a revisar caso por caso
   cuando se llegue a esa etapa, no se re-prioriza automáticamente sin evaluar cada nivel.
-- **Cambio societario (2026-07-09): el software pasa a ser propiedad de Xeitra**, que
+- **Cambio societario (2026-07-09): el software pasa a ser propiedad de CeltaTech**, que
   lo licencia como SaaS a cualquier prestadora de cuidado domiciliario. Cada prestadora
   licenciataria sigue con su propio negocio de cuidado domiciliario, y puede sumar un
   servicio B2B de auditoría/certificación a otras prestadoras. El plan técnico completo (entidad
-  `prestadoras`, aislamiento multi-tenant, roles nuevos, facturación dual Xeitra/prestadora,
+  `prestadoras`, aislamiento multi-tenant, roles nuevos, facturación dual CeltaTech/prestadora,
   i18n y multi-moneda desde el arranque, residencia de datos a futuro) está definido en
-  `docs/Prompt_Claude_Code_Xeitra_Multitenant.md` (dirección de arquitectura original) y su
-  ejecución viva se sigue en `docs/PLAN_MULTITENANT_XEITRA.md` — ver también `CLAUDE.md`.
+  `docs/Prompt_Claude_Code_CeltaTech_Multitenant.md` (dirección de arquitectura original) y su
+  ejecución viva se sigue en `docs/PLAN_MULTITENANT_CELTATECH.md` — ver también `CLAUDE.md`.
   **Estado real (verificado contra el código el 2026-07-24, no solo contra este documento):
   ya NO es mono-tenant, y los 4 Bloques del plan están cerrados.** Bloque 1 (aislamiento
   aditivo de datos: tabla `prestadoras` + `prestadora_id NOT NULL` en 15 tablas), Bloque 2
@@ -67,7 +67,7 @@ Ningún rol de Asistente/Familia debe tener acceso, ni siquiera de solo lectura,
 
 **Actualizado 2026-07-10:** el rol antes descripto acá como "Administrador de prestadora"
 (futuro) ya está implementado — es el mismo rol de la tabla de arriba, renombrado de
-`admin` a `admin_prestadora` (Bloque 2 de `docs/PLAN_MULTITENANT_XEITRA.md`), con acceso
+`admin` a `admin_prestadora` (Bloque 2 de `docs/PLAN_MULTITENANT_CELTATECH.md`), con acceso
 acotado a los datos de su propia prestadora y cero visibilidad de otras, verificado contra
 Supabase real. Lo único que sigue siendo futuro, no implementado, es un rol de solo lectura
 agregada para financiadores (obras sociales/prepagas) — no diseñar código para ese rol sin
@@ -244,8 +244,8 @@ construir cualquier flujo de cobro, esto necesita una decisión de negocio expl�
 - v1 (2026-07-07): primera versión, generada para poblar `Workspace/docs/` a partir de
   la lectura completa de la documentación del proyecto y separando lo vinculante de lo
   que no lo es.
-- v2 (2026-07-09): se documenta el cambio societario Xeitra / prestadora licenciataria y la dirección
-  de multi-tenancy futura (ver `docs/Prompt_Claude_Code_Xeitra_Multitenant.md`), sin
+- v2 (2026-07-09): se documenta el cambio societario CeltaTech / prestadora licenciataria y la dirección
+  de multi-tenancy futura (ver `docs/Prompt_Claude_Code_CeltaTech_Multitenant.md`), sin
   implementar nada todavía.
 - v3 (2026-07-10): barrido completo contra la realidad del código — Bloques 1-3 de
   multi-tenancy ya aplicados y verificados (rol `admin` renombrado a `admin_prestadora` en

@@ -35,7 +35,7 @@ async function crearTransporterCompartido() {
 // Pendiente #18 (docs/PENDIENTES.md), candidato 8 — cada Prestadora puede configurar sus
 // propias credenciales SMTP (configuracion_email_prestadora, backend/src/db/
 // schema_email_remitente_prestadora_01.sql), en vez de mandar siempre "desde" la cuenta
-// compartida de Xeitra. Si la Prestadora no configuró remitente propio (o no está activo),
+// compartida de CeltaTech. Si la Prestadora no configuró remitente propio (o no está activo),
 // se sigue usando el transporter compartido — sin romper nada para las que no lo configuren.
 async function crearTransporterPara(prestadoraId) {
   if (prestadoraId) {

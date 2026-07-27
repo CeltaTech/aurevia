@@ -41,7 +41,7 @@ Cada prestadora licenciataria del software es un tenant aislado. La única fila 
 datos de prueba/desarrollo con id `874f54d7-4383-4d54-8b9f-f51d02f0dd11` (nombre `Prestadora
 Demo`, caso de uso de desarrollo, sin contrato firmado — no tiene estatus de "primera
 prestadora" ni ningún otro privilegio de diseño). Ver
-`docs/PLAN_MULTITENANT_XEITRA.md` para el diseño completo y `backend/src/db/schema_multitenant_01.sql`/`schema_multitenant_02.sql` para el DDL real aplicado.
+`docs/PLAN_MULTITENANT_CELTATECH.md` para el diseño completo y `backend/src/db/schema_multitenant_01.sql`/`schema_multitenant_02.sql` para el DDL real aplicado.
 
 **Convención de FK tenant-segura (introducida con Módulo 6, aplicar a toda tabla nueva
 referenciada desde otra tabla con `prestadora_id`):** en vez de una FK simple al `id` de la
@@ -119,11 +119,11 @@ tenant (`requiereAdminPlataforma`, `backend/src/routes/panelSesionTenant.js`). V
 siguiente para el mecanismo completo.
 
 ## Roles `superadmin` / `admin_plataforma` y "modo dentro de una prestadora" (pendiente #30,
-## resuelto 2026-07-15 — diseño original en `docs/PLAN_MULTITENANT_XEITRA.md` 3.4/3.4.1)
+## resuelto 2026-07-15 — diseño original en `docs/PLAN_MULTITENANT_CELTATECH.md` 3.4/3.4.1)
 
 Modelo de 3 niveles: `admin_prestadora` (acotado a su propia `prestadora_id`, sin cambios),
 `superadmin` (rol técnico puro, único acceso permitido: la Organización Sandbox, nunca una
-Prestadora real), `admin_plataforma` (rol técnico-administrativo de Xeitra, `prestadora_id
+Prestadora real), `admin_plataforma` (rol técnico-administrativo de CeltaTech, `prestadora_id
 NULL` en su fila de `usuarios`, sin acceso a ninguna Prestadora salvo que abra
 explícitamente una sesión de "modo dentro de una prestadora", una por vez).
 
@@ -168,7 +168,7 @@ Infraestructura genérica para el mecanismo de advertencias legales de `CLAUDE.m
 software no bloquea ninguna función de gestión de Asistentes por motivos legales, solo
 advierte cuando hay un riesgo conocido en la jurisdicción de la Prestadora.
 
-- `advertencias_legales` — contenido curado por Xeitra (`superadmin`), una fila por
+- `advertencias_legales` — contenido curado por CeltaTech (`superadmin`), una fila por
   `(jurisdiccion, funcion_clave)`. `jurisdiccion` usa el mismo código que `prestadoras.pais`
   (ISO 3166-1 alpha-2). El texto humano-legible fuente vive en `docs/legal/<país>.md`. Sin
   fila para una jurisdicción/función = no se muestra advertencia (comportamiento correcto,
@@ -298,7 +298,7 @@ oficiales del sistema en vez de sus 8 etapas genéricas).
 **Actualizado 2026-07-10:** lo que esta nota describía como plan futuro ya está implementado
 — la tabla `prestadoras` existe y `prestadora_id` es `NOT NULL` en `asistentes` y en las
 otras 14 tablas listadas en la sección "Tabla: prestadoras" de arriba, aplicado y verificado
-contra Supabase real (Bloque 1 de `docs/PLAN_MULTITENANT_XEITRA.md`).
+contra Supabase real (Bloque 1 de `docs/PLAN_MULTITENANT_CELTATECH.md`).
 
 ## Tabla: verificaciones_asistente (Proceso de Incorporación de Asistentes — 5 etapas)
 

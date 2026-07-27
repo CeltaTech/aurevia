@@ -1,19 +1,19 @@
-# CLAUDE.md — Reglas no negociables del proyecto Aurevia / Xeitra
+# CLAUDE.md — Reglas no negociables del proyecto Aurevia / CeltaTech
 
 > Se lee primero, en cada sesión, antes de escribir una sola línea de código.
 > Este archivo refleja siempre el estado **vigente** de las reglas — se actualiza solo cuando una regla cambia. El historial de cómo se llegó a cada regla vive en `docs/claude_history.md` (ver §10), no acá.
 
 ## 1. Qué es esto
 
-**Xeitra** es la empresa tecnológica propietaria, desarrolladora y licenciante del software. Desarrolla productos SaaS propios, sin estar limitada a una industria específica.
+**CeltaTech** es la empresa tecnológica propietaria, desarrolladora y licenciante del software. Desarrolla productos SaaS propios, sin estar limitada a una industria específica.
 
-**Aurevia** es el primer producto de Xeitra: una plataforma SaaS de gestión para empresas dedicadas al cuidado de personas. Aurevia **no presta servicios de cuidado** — es la tecnología que permite a las Prestadoras administrar sus operaciones, equipos y relaciones operativas.
+**Aurevia** es el primer producto de CeltaTech: una plataforma SaaS de gestión para empresas dedicadas al cuidado de personas. Aurevia **no presta servicios de cuidado** — es la tecnología que permite a las Prestadoras administrar sus operaciones, equipos y relaciones operativas.
 
 Modelo de negocio:
-- Xeitra desarrolla, mantiene y evoluciona la plataforma.
+- CeltaTech desarrolla, mantiene y evoluciona la plataforma.
 - Las Prestadoras la usan mediante licencia SaaS.
 - Cada Prestadora opera en un entorno independiente, aislado del resto, desde el diseño inicial.
-- Ninguna Prestadora tiene relación especial con Xeitra ni trato privilegiado en el código.
+- Ninguna Prestadora tiene relación especial con CeltaTech ni trato privilegiado en el código.
 
 ## 2. Arquitectura multi-tenant (regla fundamental del producto)
 
@@ -66,10 +66,10 @@ Esta tabla se mantiene siempre en su versión **vigente** — sin notas de fecha
 
 | Usar siempre | Nunca decir |
 |---|---|
-| Xeitra | nombres anteriores de la empresa; "software de Xeitra" al referirse al producto |
+| CeltaTech | nombres anteriores de la empresa; "software de CeltaTech" al referirse al producto |
 | Aurevia | — |
-| Prestadora (sinónimo aceptado: "licenciataria", cuando el contexto es específicamente la relación de licenciamiento SaaS con Xeitra). Es el caso específico de un cliente de Xeitra que contrata Aurevia — no todo cliente de Xeitra es una Prestadora (podría contratar otro producto de Xeitra sin dedicarse al cuidado de personas; ver `ARQUITECTURA_NIVELES.md` en la raíz de Xeitra) | empresa cliente, organización comercial, empresa usuaria (fuera del sentido técnico del sistema) |
-| Cliente (a secas, únicamente cuando se habla desde la perspectiva de Xeitra/Nivel 1 sobre cualquier empresa que le contrata un producto, sea o no Aurevia) | usar dentro del contexto de Aurevia para referirse a la Familia o a la Prestadora — dentro de Aurevia esos dos roles siempre llevan su propio nombre, nunca "cliente" genérico |
+| Prestadora (sinónimo aceptado: "licenciataria", cuando el contexto es específicamente la relación de licenciamiento SaaS con CeltaTech). Es el caso específico de un cliente de CeltaTech que contrata Aurevia — no todo cliente de CeltaTech es una Prestadora (podría contratar otro producto de CeltaTech sin dedicarse al cuidado de personas; ver `ARQUITECTURA_NIVELES.md` en la raíz de CeltaTech) | empresa cliente, organización comercial, empresa usuaria (fuera del sentido técnico del sistema) |
+| Cliente (a secas, únicamente cuando se habla desde la perspectiva de CeltaTech/Nivel 1 sobre cualquier empresa que le contrata un producto, sea o no Aurevia) | usar dentro del contexto de Aurevia para referirse a la Familia o a la Prestadora — dentro de Aurevia esos dos roles siempre llevan su propio nombre, nunca "cliente" genérico |
 | Organización | entidad técnica multi-tenant — no confundir con "Prestadora" en texto de negocio |
 | Sandbox | empresa cliente, Prestadora real, organización comercial |
 | Asistente (cuidador/a, enfermero/a, etc.) | empleado/a, trabajador/a |
@@ -94,14 +94,14 @@ Esta tabla se mantiene siempre en su versión **vigente** — sin notas de fecha
 
 ## 5. Roles del sistema y control de acceso
 
-Separación estricta entre roles técnicos, administrativos y operativos. Ningún rol obtiene acceso implícito por pertenecer a Xeitra. Principio de mínimo privilegio siempre: cada rol solo los permisos que su función requiere, nunca por comodidad de desarrollo.
+Separación estricta entre roles técnicos, administrativos y operativos. Ningún rol obtiene acceso implícito por pertenecer a CeltaTech. Principio de mínimo privilegio siempre: cada rol solo los permisos que su función requiere, nunca por comodidad de desarrollo.
 
-**Superadmin** — rol técnico de Xeitra. Infraestructura, mantenimiento técnico, configuración global, soporte interno. No representa una Prestadora, no la opera comercialmente.
+**Superadmin** — rol técnico de CeltaTech. Infraestructura, mantenimiento técnico, configuración global, soporte interno. No representa una Prestadora, no la opera comercialmente.
 - **Restricción dura de acceso:** Superadmin tiene acceso de Panel **únicamente** a la Organización Sandbox. Vedado el acceso a datos de cualquier Prestadora real, sin excepción — ninguna tarea técnica lo justifica.
 - Si una tarea técnica requiere operar sobre una Prestadora real, se hace mediante **Admin_plataforma** en modo dentro de una Prestadora (con su banner, auditoría y límites de sesión — ver más abajo), nunca mediante Superadmin.
 - Login propio; MFA por TOTP disponible, activable/desactivable desde Configuración. Todo acceso queda auditado.
 
-**Admin_plataforma** — rol técnico-administrativo de Aurevia (perspectiva Xeitra). Gestiona cuentas de Prestadoras, configuración administrativa de la plataforma, procesos comerciales del SaaS, soporte autorizado. Login propio, mismo MFA opcional que Superadmin.
+**Admin_plataforma** — rol técnico-administrativo de Aurevia (perspectiva CeltaTech). Gestiona cuentas de Prestadoras, configuración administrativa de la plataforma, procesos comerciales del SaaS, soporte autorizado. Login propio, mismo MFA opcional que Superadmin.
 - **Modo dentro de una Prestadora:** para operar dentro de una Organización específica — una Prestadora por vez, sin visibilidad de otras mientras está activo.
   - banner visible con la Prestadora activa;
   - advertencia adicional antes de operaciones destructivas;
@@ -127,7 +127,7 @@ Separación estricta entre roles técnicos, administrativos y operativos. Ningú
 
 1. **Nunca hardcodear** texto visible, precios, honorarios, valores legales, reglas operativas ni datos de contacto — siempre desde configuración, base de datos o archivos de traducción.
    - **El nombre del producto y su marca entran en esta regla, sin excepción**: ni en texto visible, ni en el manifiesto de una PWA, ni en el `<title>` de un `index.html`, ni en el asunto de un email, ni en un prompt de IA, ni en el nombre de un producto de pasarela. Salen siempre de `src/config/identidadProducto.js`: marcador `{{producto}}` / `{{productoCorto}}` en archivos de traducción y en HTML, `IDENTIDAD.nombre` en código. Todo lo que **persiste** (nombre de una base IndexedDB, prefijo de un archivo de backup, clave de entitlement) usa `IDENTIDAD.codigo`, que no cambia nunca ni siquiera si la marca se renombra. Ese archivo existe cuatro veces —una por unidad desplegable, porque cada una se despliega sin acceso al resto del repo— y `scripts/verificar_identidad.mjs` verifica en cada push que las cuatro coincidan y que el nombre no esté escrito a mano en ningún lado.
-   - **Pero la marca del producto no es la marca de la Prestadora.** Acá hay tres marcas: **Xeitra** (la empresa, no la ve nadie dentro del producto), **Aurevia** (el producto, la ve quien trabaja *en* la Prestadora y sabe qué software usa) y **la Prestadora** (la que contrataron la Familia y el Asistente). En toda pantalla, email o notificación dirigida a una Familia o a un Asistente, **la marca principal es la de su Prestadora** — `prestadoras.nombre_fantasia`, leída del tenant de esa sesión —, nunca `identidadProducto.js`. El modelo es **co-branding** (decidido el 2026-07-27): el producto aparece solo en una línea discreta al pie, *"con la tecnología de {{producto}}"*, condicionada al entitlement `aurevia.marca.personalizada` — ese es el **único** uso admitido de `IDENTIDAD` en una superficie de Familia o Asistente. Hoy no se cumple: las dos PWA y el email de activación muestran la marca del producto como principal. Es anterior a esta regla y está registrado como pendiente `#95`; mientras siga abierto, **no agregar ningún uso nuevo de `IDENTIDAD` en `pwa-familias/` ni en `pwa-asistentes/`** fuera de esa línea al pie. Ver `docs/MARCA.md` §0.
+   - **Pero la marca del producto no es la marca de la Prestadora.** Acá hay tres marcas: **CeltaTech** (la empresa, no la ve nadie dentro del producto), **Aurevia** (el producto, la ve quien trabaja *en* la Prestadora y sabe qué software usa) y **la Prestadora** (la que contrataron la Familia y el Asistente). En toda pantalla, email o notificación dirigida a una Familia o a un Asistente, **la marca principal es la de su Prestadora** — `prestadoras.nombre_fantasia`, leída del tenant de esa sesión —, nunca `identidadProducto.js`. El modelo es **co-branding** (decidido el 2026-07-27): el producto aparece solo en una línea discreta al pie, *"con la tecnología de {{producto}}"*, condicionada al entitlement `aurevia.marca.personalizada` — ese es el **único** uso admitido de `IDENTIDAD` en una superficie de Familia o Asistente. Hoy no se cumple: las dos PWA y el email de activación muestran la marca del producto como principal. Es anterior a esta regla y está registrado como pendiente `#95`; mientras siga abierto, **no agregar ningún uso nuevo de `IDENTIDAD` en `pwa-familias/` ni en `pwa-asistentes/`** fuera de esa línea al pie. Ver `docs/MARCA.md` §0.
 2. **Multiidioma desde el día uno**: toda clave nueva se agrega simultáneamente en `es-AR`, `en`, `pt-BR`. No se construye una función en un solo idioma "para traducir después".
 3. **Todo componente que carga datos maneja 4 estados**: loading / error / vacío / listo.
 4. **Toda operación destructiva requiere confirmación explícita** (ver §6).
@@ -172,7 +172,7 @@ Todo lo histórico vive aparte, en `docs/claude_history.md`:
 
 ## 11. Antes de empezar un cambio grande de arquitectura
 
-Hay cambios que no son una tarea más — tocan la base de todo el sistema. Ejemplos: sumar un país nuevo con reglas distintas, lanzar otro producto de Xeitra, o cambiar cómo se guardan los datos centrales (la estructura de Organización).
+Hay cambios que no son una tarea más — tocan la base de todo el sistema. Ejemplos: sumar un país nuevo con reglas distintas, lanzar otro producto de CeltaTech, o cambiar cómo se guardan los datos centrales (la estructura de Organización).
 
 Para este tipo de cambios, el orden es siempre:
 

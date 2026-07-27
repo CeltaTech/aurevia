@@ -131,7 +131,7 @@ un aviso de "en construcción".
 - Importación (alta masiva de datos, aplica a cualquier modalidad)
 - Usuarios del Panel, Configuración, Auditoría (administración de la Prestadora en sí,
   `CLAUDE.md` §5 Admin_prestadora)
-- Prestadoras / Admin_plataforma (exclusivo de Xeitra, ya separado por rol — sin cambios,
+- Prestadoras / Admin_plataforma (exclusivo de CeltaTech, ya separado por rol — sin cambios,
   fuera del alcance de este rediseño que es sobre la vista de **Admin_prestadora**)
 
 ## 3. Vacíos y preguntas — respuesta directa a "¿estoy dejando algo afuera?"

@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS prestadora_modulos (
 );
 
 -- ============================================================================
--- 5. Facturas de licencia (lo que Xeitra le cobra a cada prestadora por usar Aurevia —
+-- 5. Facturas de licencia (lo que CeltaTech le cobra a cada prestadora por usar Aurevia —
 --    no confundir con las facturas que la prestadora le cobra a sus propias familias)
 -- ============================================================================
 

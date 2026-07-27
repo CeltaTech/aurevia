@@ -1,6 +1,6 @@
 # Marca del producto — qué archivos tienen que existir
 
-> Etapa 0.5 de `PLAN_SEPARACION_XEITRA.md`. Este documento es el **contrato**: la lista de
+> Etapa 0.5 de `PLAN_SEPARACION_CELTATECH.md`. Este documento es el **contrato**: la lista de
 > archivos que hay que entregar cuando la marca exista. Hoy **no existe ninguno** — no hay
 > isotipo ni logotipo diseñados, y no hay dominio registrado (confirmado por el Desarrollador
 > el 2026-07-27). Nada de lo que sigue está hecho.
@@ -9,16 +9,16 @@
 
 | Marca | Qué es | Quién la ve |
 |---|---|---|
-| **Xeitra** | La empresa dueña del software | Nadie, dentro del producto |
+| **CeltaTech** | La empresa dueña del software | Nadie, dentro del producto |
 | **Aurevia** | El producto | Quien trabaja **en** la Prestadora (Admin_prestadora, Coordinador) y sabe qué software usa |
 | **La Prestadora** | La empresa que presta el cuidado | La **Familia** y el **Asistente** |
 
 Todo este documento habla de la segunda. **No confundirla con la tercera.**
 
-Una Familia contrató a la Prestadora, no a Xeitra, y probablemente no sepa que Aurevia
+Una Familia contrató a la Prestadora, no a CeltaTech, y probablemente no sepa que Aurevia
 existe. Un Asistente trabaja para la Prestadora. Para los dos, la marca que tiene sentido es
 la de la Prestadora — `prestadoras.nombre_fantasia`, que existe en la base desde el diseño
-inicial y que `docs/PLAN_MULTITENANT_XEITRA.md:283` define textualmente como *"marca que ve
+inicial y que `docs/PLAN_MULTITENANT_CELTATECH.md:283` define textualmente como *"marca que ve
 la familia/paciente final"*.
 
 **La regla:** en toda pantalla, email o notificación dirigida a una Familia o a un Asistente,

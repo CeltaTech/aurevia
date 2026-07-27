@@ -13,7 +13,7 @@ function requiereAdminOSuperior(req, res, next) {
     return res.status(403).json({ error: 'Solo Admin o Superadmin puede gestionar usuarios del panel' });
   }
   // admin_plataforma sin sesión de tenant activa no tiene ninguna prestadora sobre la que
-  // operar (docs/PLAN_MULTITENANT_XEITRA.md 3.4.1) — sin este corte explícito, prestadoraId
+  // operar (docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1) — sin este corte explícito, prestadoraId
   // llega `null` a las queries de abajo y `.eq('prestadora_id', null)` rompe contra Postgres
   // en vez de devolver "sin permiso"/lista vacía.
   if (req.usuarioPanel.rol === 'admin_plataforma' && !req.usuarioPanel.prestadoraId) {
@@ -23,7 +23,7 @@ function requiereAdminOSuperior(req, res, next) {
 }
 
 // Roles que el solicitante tiene permitido crear/editar/borrar. admin_plataforma gestiona
-// cuentas de la prestadora en la que está adentro (docs/PLAN_MULTITENANT_XEITRA.md 3.4) — mismo
+// cuentas de la prestadora en la que está adentro (docs/PLAN_MULTITENANT_CELTATECH.md 3.4) — mismo
 // alcance que admin_prestadora, nunca cuentas de superadmin/admin_plataforma.
 function rolesGestionables(rolSolicitante) {
   if (rolSolicitante === 'superadmin') return ['admin_prestadora', 'coordinador', 'superadmin'];
@@ -65,7 +65,7 @@ panelUsuariosRouter.post('/', requiereRolPanel, requiereAdminOSuperior, async (r
 
   // Superadmin puede elegir el destino explícitamente al dar de alta admin_prestadora/
   // coordinador de cualquier licenciataria. Pero nunca para una cuenta superadmin nueva:
-  // esas quedan SIEMPRE ancladas a la sandbox (docs/PLAN_MULTITENANT_XEITRA.md 3.4) — permitir
+  // esas quedan SIEMPRE ancladas a la sandbox (docs/PLAN_MULTITENANT_CELTATECH.md 3.4) — permitir
   // el override acá dejaría a un superadmin asignarle a otro superadmin la prestadora_id de
   // una prestadora real, evadiendo el acotamiento aplicado en
   // schema_admin_plataforma_02_acotar_superadmin.sql. Admin_prestadora nunca puede elegir:

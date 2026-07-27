@@ -77,7 +77,7 @@ de este proyecto, con alcance distinto, no el que traía Money Suite):
 | `familia` | Sus pacientes, reportes y alertas de sus pacientes |
 
 **Nota (2026-07-10):** el rol se llamaba `admin` hasta el Bloque 2 de
-`docs/PLAN_MULTITENANT_XEITRA.md` — se renombró a `admin_prestadora` en dato y código (sin
+`docs/PLAN_MULTITENANT_CELTATECH.md` — se renombró a `admin_prestadora` en dato y código (sin
 transición pendiente, no queda ningún registro ni ruta con el valor `admin`) al pasar a
 multi-tenant real, para reflejar que su alcance quedó acotado a una sola prestadora. Ver
 glosario de `CLAUDE.md`.
@@ -91,7 +91,7 @@ El diseño de reemplazo (roles `superadmin` acotado a sandbox + `admin_plataform
 con el "modo dentro de una prestadora" — banner notorio, advertencia en acciones
 destructivas vía Regla 4 de `CLAUDE.md`, log de auditoría de todo login/acción sensible,
 timeout de 5 min de inactividad + tope de 60 min con aviso a los 50) está documentado
-completo en `docs/PLAN_MULTITENANT_XEITRA.md` sección 3.4/3.4.1. El mecanismo técnico de
+completo en `docs/PLAN_MULTITENANT_CELTATECH.md` sección 3.4/3.4.1. El mecanismo técnico de
 `current_tenant()` dinámico por sesión que ese modo requiere **todavía no está
 implementado** — solo el diseño está aprobado.
 
@@ -106,7 +106,7 @@ código/infra por fuera del Panel, no configuración de negocio dentro de él.
 
 **Nota (2026-07-13):** el código de abajo es el estado **actual** aplicado (Bloque 2) —
 `es_superadmin()` sigue siendo hoy un bypass total sin acotar. El diseño aprobado en
-`docs/PLAN_MULTITENANT_XEITRA.md` 3.4.1 reemplaza este comportamiento (sesión de tenant dinámica
+`docs/PLAN_MULTITENANT_CELTATECH.md` 3.4.1 reemplaza este comportamiento (sesión de tenant dinámica
 para `admin_plataforma`, `superadmin` acotado a la prestadora de prueba) pero **todavía no
 está implementado en código** — no asumir que las funciones de abajo ya reflejan el modelo
 nuevo.

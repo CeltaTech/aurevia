@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
 // Análogo a useEscalasLegales.js — trae las fórmulas de cese (pendiente #72) de la
-// jurisdicción de la Prestadora activa. Mismo criterio: contenido legal curado por Xeitra
+// jurisdicción de la Prestadora activa. Mismo criterio: contenido legal curado por CeltaTech
 // por país, nunca decidido por una Prestadora individual (CLAUDE.md §3).
 export function useFormulasCese(prestadoraId) {
   const [filas, setFilas] = useState([]);

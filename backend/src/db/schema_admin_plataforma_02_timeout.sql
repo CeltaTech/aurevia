@@ -1,4 +1,4 @@
--- Ítem D del pendiente #30 (docs/PENDIENTES.md, docs/PLAN_MULTITENANT_XEITRA.md 3.4.1) —
+-- Ítem D del pendiente #30 (docs/PENDIENTES.md, docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1) —
 -- timeout doble de la sesión de tenant de admin_plataforma: 5 min de inactividad (corte
 -- silencioso) + tope absoluto de 60 min (con aviso a los 50 y reconfirmación vía
 -- POST /api/panel/sesion-tenant/renovar, ver backend/src/routes/panelSesionTenant.js).

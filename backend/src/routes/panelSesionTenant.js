@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 
-// "Modo dentro de una prestadora" — pendiente #30, docs/PLAN_MULTITENANT_XEITRA.md 3.4.1.
+// "Modo dentro de una prestadora" — pendiente #30, docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1.
 // Exclusivo de admin_plataforma: entra a una prestadora licenciataria por vez, nunca
 // varias a la vez. El corte por 5 min de inactividad vive en requiereRolPanel.js (se
 // aplica en cada request, no solo acá).

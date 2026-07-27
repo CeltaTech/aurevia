@@ -1,6 +1,6 @@
--- Migración multi-tenant (Xeitra) — paso 01, Bloque 1 del kickoff de implementación
+-- Migración multi-tenant (CeltaTech) — paso 01, Bloque 1 del kickoff de implementación
 -- (docs/Documentos Obsoletos/Prompt_Claude_Code_Kickoff_Implementacion.md), pasos 1-4 de la sección 2 de
--- docs/PLAN_MULTITENANT_XEITRA.md: crear la entidad `prestadoras`, agregar `prestadora_id`
+-- docs/PLAN_MULTITENANT_CELTATECH.md: crear la entidad `prestadoras`, agregar `prestadora_id`
 -- (nullable → backfill → NOT NULL) a las tablas de negocio existentes.
 --
 -- Excluidas de este archivo (ver decisión del usuario, 2026-07-09):

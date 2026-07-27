@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 
 // Trae únicamente las escalas legales de la jurisdicción de la Prestadora activa (resuelta
 // vía prestadoras.pais, mismo patrón que AdvertenciaLegalContext.jsx:29-33) — pendiente #72.
-// escalas_legales es contenido legal curado por Xeitra por país, nunca una decisión de una
+// escalas_legales es contenido legal curado por CeltaTech por país, nunca una decisión de una
 // Prestadora individual (CLAUDE.md §3), por eso el filtro es siempre por jurisdicción, no
 // por prestadora_id. La resolución por fecha del hecho se hace después con
 // resolverEscalasVigentes, nunca acá.

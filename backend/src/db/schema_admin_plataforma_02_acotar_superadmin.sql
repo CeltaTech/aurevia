@@ -1,5 +1,5 @@
 -- Pendiente #30, ítem B — acota es_superadmin() a la prestadora sandbox, en vez de
--- bypass total (docs/PLAN_MULTITENANT_XEITRA.md 3.4: "Superadmin... Acceso de Panel
+-- bypass total (docs/PLAN_MULTITENANT_CELTATECH.md 3.4: "Superadmin... Acceso de Panel
 -- únicamente a una prestadora de prueba fija (sandbox) — vedado el acceso a cualquier
 -- prestadora real, ninguna tarea técnica lo justifica"). Kickoff dado por el
 -- Desarrollador el 2026-07-14 ("vamos con el pendiente 30", confirmado explícitamente

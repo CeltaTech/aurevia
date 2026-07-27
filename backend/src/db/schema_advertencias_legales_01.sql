@@ -9,7 +9,7 @@
 -- para cuando ese toggle se construya.
 
 -- ============================================================================
--- 1. Catálogo de advertencias por jurisdicción — contenido curado por Xeitra (superadmin),
+-- 1. Catálogo de advertencias por jurisdicción — contenido curado por CeltaTech (superadmin),
 --    nunca por la Prestadora. "jurisdiccion" usa el mismo código que prestadoras.pais (ISO
 --    3166-1 alpha-2, ej. 'AR') para poder cruzar directo sin tabla de mapeo aparte. El
 --    archivo fuente del contenido humano-legible vive en docs/legal/<país>.md (ver esa
@@ -34,7 +34,7 @@ CREATE POLICY "panel_lee_advertencias_legales" ON advertencias_legales
     EXISTS (SELECT 1 FROM usuarios u WHERE u.id = auth.uid() AND u.rol IN ('admin_prestadora', 'admin_plataforma', 'superadmin'))
   );
 
--- Escritura: solo superadmin — es contenido legal curado por Xeitra (mismo criterio que
+-- Escritura: solo superadmin — es contenido legal curado por CeltaTech (mismo criterio que
 -- escalas_legales), nunca una Prestadora decide su propio texto de advertencia.
 CREATE POLICY "superadmin_gestiona_advertencias_legales" ON advertencias_legales
   FOR ALL USING (es_superadmin());

@@ -3,7 +3,7 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 
 // Listado de prestadoras licenciatarias — pendiente #30, ítem I
-// (docs/PLAN_MULTITENANT_XEITRA.md 3.4.1). Solo admin_plataforma (para elegir a cuál
+// (docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1). Solo admin_plataforma (para elegir a cuál
 // entrar) y superadmin (para elegir la prestadora_id al dar de alta el primer
 // admin_prestadora de una prestadora nueva, pendiente #26) tienen uso legítimo de
 // esto — admin_prestadora/coordinador no ven otras prestadoras bajo ninguna

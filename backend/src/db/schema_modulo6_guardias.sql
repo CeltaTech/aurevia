@@ -1,5 +1,5 @@
 -- Módulo 6 (Guardias) — docs/PRD_02_Panel_Admin.md Módulo 6, diseñado en la sesión del
--- 2026-07-10 (ver docs/PLAN_MULTITENANT_XEITRA.md). Ejecutar una sola vez en el SQL Editor de
+-- 2026-07-10 (ver docs/PLAN_MULTITENANT_CELTATECH.md). Ejecutar una sola vez en el SQL Editor de
 -- Supabase, sobre la base ya migrada por schema_multitenant_02.sql (current_tenant() /
 -- es_superadmin() ya tienen que existir).
 --

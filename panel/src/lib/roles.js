@@ -4,10 +4,10 @@
 // usar este helper en vez de repetir la comparación.
 //
 // Rename admin → admin_prestadora completado (Bloque 2 del kickoff,
-// docs/PLAN_MULTITENANT_XEITRA.md 4.1): el dato en `usuarios.rol` ya dice
+// docs/PLAN_MULTITENANT_CELTATECH.md 4.1): el dato en `usuarios.rol` ya dice
 // 'admin_prestadora', no 'admin'.
 //
-// admin_plataforma (pendiente #30, docs/PLAN_MULTITENANT_XEITRA.md 3.4/3.4.1) suma acá
+// admin_plataforma (pendiente #30, docs/PLAN_MULTITENANT_CELTATECH.md 3.4/3.4.1) suma acá
 // desde 2026-07-14: administra cualquier prestadora, una a la vez, mientras tiene una
 // sesión activa en sesiones_tenant_admin_plataforma — RLS via current_tenant() se
 // encarga de que sin sesión activa no vea ninguna fila (COALESCE devuelve NULL).

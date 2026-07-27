@@ -1,7 +1,7 @@
 -- Pendiente #30, ítem H — MFA (TOTP) para superadmin/admin_plataforma, configurable
 -- on/off por el propio superadmin. Decisión revisada 2026-07-15 (ver CLAUDE.md, nota
 -- junto al glosario de Superadmin/Admin_plataforma): el diseño original de
--- docs/PLAN_MULTITENANT_XEITRA.md:416 pedía "obligatorio sin excepción" — el Desarrollador
+-- docs/PLAN_MULTITENANT_CELTATECH.md:416 pedía "obligatorio sin excepción" — el Desarrollador
 -- lo pisó explícitamente para no sumar fricción mientras el sistema todavía se pule.
 --
 -- Arranca en OFF (default false) — no se le fuerza MFA a nadie hasta que el propio

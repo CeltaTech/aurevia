@@ -1,6 +1,6 @@
 import { supabase } from '../db/connection.js';
 
-// Ítem D del pendiente #30 (docs/PLAN_MULTITENANT_XEITRA.md 3.4.1): tope de 5 min de
+// Ítem D del pendiente #30 (docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1): tope de 5 min de
 // inactividad dentro del "modo prestadora" — se corta en silencio, sin aviso previo,
 // distinto del tope absoluto de 60 min (que sí tiene aviso a los 50, ver panelSesionTenant.js).
 const INACTIVIDAD_LIMITE_MS = 5 * 60 * 1000;
@@ -69,7 +69,7 @@ export async function requiereRolPanel(req, res, next) {
 
   let prestadoraId = perfil.prestadora_id;
 
-  // admin_plataforma no tiene prestadora_id propia (docs/PLAN_MULTITENANT_XEITRA.md 3.4.1):
+  // admin_plataforma no tiene prestadora_id propia (docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1):
   // la resuelve acá, una vez, a partir de su sesión de tenant activa — así el resto de
   // las rutas reutiliza el mismo req.usuarioPanel.prestadoraId que ya usa admin_prestadora,
   // sin ningún branch específico de admin_plataforma en cada endpoint.

@@ -1,7 +1,7 @@
-# PLAN_MULTITENANT_XEITRA.md — Inventario + plan de migración a multi-tenant (Xeitra)
+# PLAN_MULTITENANT_CELTATECH.md — Inventario + plan de migración a multi-tenant (CeltaTech)
 
 > Responde a los 4 puntos de "Lo que sí te pedimos ahora" en
-> `docs/Prompt_Claude_Code_Xeitra_Multitenant.md`. Es un documento de **plan**, no de
+> `docs/Prompt_Claude_Code_CeltaTech_Multitenant.md`. Es un documento de **plan**, no de
 > implementación — ningún código de producto se tocó para escribir esto. No arrancar la
 > implementación de ninguna sección sin aprobación explícita del usuario, punto por punto
 > (hay varias decisiones de diseño con implicancias grandes marcadas explícitamente en la
@@ -76,7 +76,7 @@ con la nota: *"`prestadora_id` es la recomendación del documento original de mo
 `prestadoras` no se crea todavía — es un placeholder de FK para el futuro"*. Es decir, el
 proyecto ya había anticipado parcialmente esto (probablemente pensado para el caso más
 acotado "un Asistente que pertenece a una prestadora tercera dentro del negocio B2B de
-la prestadora original", no para el multi-tenancy completo de Xeitra). **Esta columna documentada nunca se
+la prestadora original", no para el multi-tenancy completo de CeltaTech). **Esta columna documentada nunca se
 aplicó contra Supabase real** — no existe en ningún `schema_etapa2*.sql` real. El diseño de
 la sección 3 de este documento la reutiliza pero le cambia el sentido: no es "un Asistente
 de una prestadora tercera dentro de la prestadora original", es "a qué prestadora licenciataria pertenece
@@ -101,7 +101,7 @@ habría que tocar: `backend/src/middleware/requiereRolPanel.js`,
 
 **Decisión de diseño que esto obliga a tomar (ver sección 4.1)**: ¿el rol `admin` de hoy
 pasa a estar acotado a su propia prestadora, y `superadmin` pasa a ser el único rol
-verdaderamente cross-tenant (el de Xeitra)? Esto es un cambio de semántica del rol
+verdaderamente cross-tenant (el de CeltaTech)? Esto es un cambio de semántica del rol
 `admin` existente, no solo un rol nuevo — hay que decidirlo antes de tocar código.
 
 ### 1.5 Hardcodeos de "la prestadora original como única organización posible" (estructurales, no solo marca)
@@ -159,7 +159,7 @@ diseño útil pero insuficiente, ya que resuelve un problema distinto: cumplimie
 trabajador, no de la prestadora que lo emplea). El diseño de tabla propuesto para esto está
 en la sección 3.3 más abajo.
 
-### 1.7 Facturación dual (Xeitra↔prestadora, prestadora original↔prestadora) — no existe ningún concepto de "emisor" hoy
+### 1.7 Facturación dual (CeltaTech↔prestadora, prestadora original↔prestadora) — no existe ningún concepto de "emisor" hoy
 
 Búsqueda explícita de `factura`, `emisor`, `billing`, `licencia` contra todo el repo: la
 única aparición de "licencia" en código real es `licencia GCBA` (habilitación sanitaria del
@@ -175,13 +175,13 @@ Relación con lo ya relevado en `lista_precios`/`prestaciones`/`paquetes_prestac
 - Estas tres tablas resuelven **cuánto le cobra la prestadora original a una Familia** por la prestación de
   cuidado (precio de lista → precio final con descuento, snapshot al momento de armarse). Es
   un concepto de negocio **totalmente distinto** al que pide el prompt: facturación B2B de
-  Xeitra/Prestadora hacia una **prestadora**, no de la prestadora original hacia una Familia. No hay ningún
+  CeltaTech/Prestadora hacia una **prestadora**, no de la prestadora original hacia una Familia. No hay ningún
   cruce de datos entre ambos hoy, y no debería haberlo — son dos facturaciones con
   contrapartes distintas (Familia vs. Prestadora).
 - Ninguna de las tres tablas tiene columna de moneda ni de emisor (ver 1.8).
 - No hace falta modificar estas tablas para resolver el punto 4 del prompt — son
   independientes. Lo que hace falta es **crear tablas nuevas** para la relación
-  Xeitra/Prestadora↔Prestadora, que no tiene ningún antecedente parcial en el esquema actual (a
+  CeltaTech/Prestadora↔Prestadora, que no tiene ningún antecedente parcial en el esquema actual (a
   diferencia del cumplimiento normativo, acá ni siquiera hay una pieza parcial como los campos de
   vencimiento de 1.6).
 
@@ -192,7 +192,7 @@ que hace falta:
   caso activo, por personal certificado, fee fijo) y con qué monto/moneda — hoy no existe
   ningún lugar donde esto se pudiera guardar, ni siquiera de forma genérica.
 - Una tabla de **comprobantes/facturas** con un campo explícito de **empresa emisora**
-  (`Xeitra` | `Prestadora`) y numeración propia por emisor — hoy no hay ningún concepto de emisor
+  (`CeltaTech` | `Prestadora`) y numeración propia por emisor — hoy no hay ningún concepto de emisor
   en absoluto, todo el sistema asume una sola parte que cobra.
 
 ### 1.8 Multi-moneda — confirmado: todos los montos asumen ARS implícito, sin columna de moneda
@@ -355,10 +355,10 @@ conflacionaba `superadmin` = "PLM cross-tenant sin límites" — ver nota de ree
   con herramientas propias del rol técnico, no impersonando un tenant vía UI. No es
   cross-tenant: no ve datos de ninguna prestadora real, ni siquiera en modo lectura.
 - **`admin_plataforma`** (rol nuevo, reemplaza lo que este documento llamaba antes
-  "`superadmin` = Xeitra"): administrativo de negocio real — control comercial/
+  "`superadmin` = CeltaTech"): administrativo de negocio real — control comercial/
   administrativo de toda la plataforma (todas las prestadoras licenciatarias). Nombre
   elegido deliberadamente **desacoplado de la razón social de la empresa dueña del software**
-  (no `admin_plm`, no ligado a "Xeitra") para que un cambio societario futuro no deje
+  (no `admin_plm`, no ligado a "CeltaTech") para que un cambio societario futuro no deje
   resabios de nombre en código/RLS/policies — coherente con la convención ya usada en el
   proyecto de decir "la plataforma", nunca el nombre propio de la empresa licenciante (ver
   `CLAUDE.md`, glosario, fila `Prestadora`). Puede entrar a una prestadora real **una a la
@@ -369,7 +369,7 @@ conflacionaba `superadmin` = "PLM cross-tenant sin límites" — ver nota de ree
   negocio.
 
 **Nota de reemplazo:** la versión anterior de este documento (hasta 2026-07-13) describía
-`superadmin` como "el rol de Xeitra... cross-tenant real, ve todas las prestadoras".
+`superadmin` como "el rol de CeltaTech... cross-tenant real, ve todas las prestadoras".
 Se descarta ese diseño: conflacionaba en un solo rol el acceso técnico (infra/código) con el
 acceso administrativo de negocio (comercial, todas las prestadoras), lo cual no tenía
 justificación técnica real para el primero y no tenía ningún límite de sesión/alcance para
@@ -467,7 +467,7 @@ sin acotar", que es exactamente lo que hay que dejar de asumir. Por eso la recom
 
 ```sql
 CREATE TYPE esquema_facturacion AS ENUM ('por_caso', 'por_personal', 'fee_fijo');
-CREATE TYPE empresa_emisora AS ENUM ('Xeitra', 'Prestadora');
+CREATE TYPE empresa_emisora AS ENUM ('CeltaTech', 'Prestadora');
 
 CREATE TABLE planes_facturacion (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -483,7 +483,7 @@ CREATE TABLE planes_facturacion (
 CREATE TABLE facturas (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   prestadora_id UUID NOT NULL REFERENCES prestadoras(id),
-  empresa_emisora empresa_emisora NOT NULL,  -- separa numeración/comprobantes Xeitra vs Prestadora
+  empresa_emisora empresa_emisora NOT NULL,  -- separa numeración/comprobantes CeltaTech vs Prestadora
   numero_comprobante TEXT NOT NULL,          -- secuencia propia por empresa_emisora
   periodo_desde DATE NOT NULL,
   periodo_hasta DATE NOT NULL,
@@ -505,7 +505,7 @@ tema legal/contable, no técnico).
 
 **Nota pendiente (2026-07-11, sin diseñar):** el Desarrollador propuso que el costo real de
 infraestructura compartida (Supabase/Vercel/Railway/backup — un solo proyecto/deploy/bucket
-para todas las prestadoras, ver `docs/Prompt_Claude_Code_Xeitra_Multitenant.md:66`) se mida por
+para todas las prestadoras, ver `docs/Prompt_Claude_Code_CeltaTech_Multitenant.md:66`) se mida por
 licencia y se refleje en el precio de cada una, en vez de fijar el mismo fee para todas
 independientemente de su volumen de uso. Hoy `esquema_facturacion` solo contempla
 `'por_caso' | 'por_personal' | 'fee_fijo'` — ninguno de los tres mide uso de infraestructura
@@ -605,20 +605,20 @@ no una migración aplicada.
    arquitectura original (nunca asumir una sola moneda).
 
 **Decisión (2026-07-11): toda cuenta/infraestructura nueva se abre a nombre de la prestadora original,
-no de Xeitra, hasta que se ejecute la migración multi-tenant.** Surgió al decidir a
+no de CeltaTech, hasta que se ejecute la migración multi-tenant.** Surgió al decidir a
 nombre de quién crear las cuentas nuevas de Cloudflare R2 y Backblaze B2 (pendiente #4 de
 `docs/PENDIENTES.md`). Fundamento: hoy toda la infraestructura existente (Supabase,
 Railway, Vercel — ver `No hacer commit/claves y contraseñas.txt`) ya está a nombre de
-la prestadora original; abrir cuentas nuevas a nombre de Xeitra mientras el resto sigue a nombre de la prestadora original
+la prestadora original; abrir cuentas nuevas a nombre de CeltaTech mientras el resto sigue a nombre de la prestadora original
 crearía una migración parcial no planificada — infraestructura repartida entre dos
-titulares sin que exista todavía el inventario/plan que `docs/Prompt_Claude_Code_Xeitra_Multitenant.md`
+titulares sin que exista todavía el inventario/plan que `docs/Prompt_Claude_Code_CeltaTech_Multitenant.md`
 exige como paso previo a tocar cualquier cosa de la migración real (ver también la sección
-"Sobre `docs/Prompt_Claude_Code_Xeitra_Multitenant.md`" de `CLAUDE.md`). Manteniendo un solo
+"Sobre `docs/Prompt_Claude_Code_CeltaTech_Multitenant.md`" de `CLAUDE.md`). Manteniendo un solo
 titular hasta ese momento, el día de la migración es "mover N cuentas de la prestadora original a
-Xeitra" de forma pareja, en vez de tener que reconciliar cuentas sueltas que quedaron
+CeltaTech" de forma pareja, en vez de tener que reconciliar cuentas sueltas que quedaron
 repartidas. Esta decisión aplica a **toda** cuenta/credencial nueva que se cree de acá en
 adelante, no solo a R2/B2 — se revierte únicamente cuando arranque formalmente la
-migración a Xeitra como titular de la infraestructura.
+migración a CeltaTech como titular de la infraestructura.
 
 ### 3.6 RLS: centralizar el chequeo de tenant en una función, no repetir la subquery
 
@@ -750,7 +750,7 @@ dejaría de tener sentido como nombre (¿admin de qué?). Dos caminos evaluados:
 
 - **(a)** Renombrar el rol existente `admin` → `admin_prestadora` en una migración de datos
   (`UPDATE usuarios SET rol = 'admin_prestadora' WHERE rol = 'admin'`), y reservar
-  `superadmin` para Xeitra cross-tenant.
+  `superadmin` para CeltaTech cross-tenant.
 - **(b)** Mantener `admin` como está (implícitamente escopeado a la prestadora vía RLS) y
   agregar `admin_prestadora` como alias/sinónimo solo para nomenclatura de negocio.
 
@@ -1134,7 +1134,7 @@ ejecuta el proceso.
 **Capa 2 — Independiente de la Capa 0: un Asistente puede traer certificaciones de otro
 origen.** Existan o no en el sistema de certificación propio de la prestadora actual, un
 Asistente puede tener certificados de:
-  (a) otra prestadora licenciataria del mismo sistema Xeitra (el Asistente ya certificado por
+  (a) otra prestadora licenciataria del mismo sistema CeltaTech (el Asistente ya certificado por
       la prestadora original se postula después a otra licenciataria que no certifica);
   (b) una entidad totalmente externa al sistema, sin verificación propia del software (un
       curso de enfermería, por ejemplo — dato declarado/adjunto, no emitido con QR propio).
@@ -1271,7 +1271,7 @@ este apartado es solo el primer paso.
 **Contexto inmediato:** el sitio público que existía hasta ahora (`sitio-web/`, proyecto
 Vercel `sitio-web`) fue dado de baja por completo el 2026-07-18 (`docs/PENDIENTES.md` #48)
 porque mostraba branding y contenido de la empresa anterior sin haberse actualizado nunca a
-Xeitra/Aurevia. Los archivos que se citan más abajo **ya no existen** en el árbol de
+CeltaTech/Aurevia. Los archivos que se citan más abajo **ya no existen** en el árbol de
 archivos actual ni en el historial de git (purgados a pedido explícito del Desarrollador) —
 se los menciona solo como referencia de qué forma tenían los hallazgos estructurales
 mientras existieron, útiles si el sitio nuevo retoma la misma arquitectura de base (Next.js
@@ -1299,7 +1299,7 @@ respondida todavía, ninguna acción tomada sobre esto):
 3. Verificación de propiedad y aprovisionamiento de certificado SSL cuando la Prestadora
    trae su propio dominio — en Vercel esto es soportado (`vercel domains add` con
    verificación DNS), pero falta decidir el flujo desde el Panel para que lo autogestione
-   la Prestadora sin intervención manual de Xeitra por cada alta.
+   la Prestadora sin intervención manual de CeltaTech por cada alta.
 4. Quién administra el contenido de cada sitio (Admin_prestadora vía un CMS dentro del
    Panel, con qué nivel de edición — solo config/textos vs. layout completo) — impacta
    directamente el diseño de `configuracion_prestadora` (sección 3.2) y probablemente
@@ -1336,7 +1336,7 @@ ver `docs/PENDIENTES.md` para el estado puntual de cada ítem restante.
 | Orden de reescritura de policies RLS existentes | Sección 2, paso 5 |
 | Diseño de la entidad `prestadoras` | Sección 3.1 |
 | Diseño del módulo de cumplimiento normativo documental (checklist, vencimientos, registro inmutable de verificación) | Sección 3.3 |
-| Diseño de facturación dual (plan de facturación por prestadora + comprobantes con emisor Xeitra/Prestadora y numeración propia) | Sección 3.5 |
+| Diseño de facturación dual (plan de facturación por prestadora + comprobantes con emisor CeltaTech/Prestadora y numeración propia) | Sección 3.5 |
 | Esquema de roles nuevo (`administrador de prestadora`, `financiador` contemplado sin implementar) | Sección 3.4 |
 | Columna de moneda en los 7 campos monetarios relevados | Sección 3.8 (los 6 restantes) + Sección 3.5 (facturación nueva) + Sección 3.7 (`escalas_legales`) |
 | `escalas_legales` — jurisdicción + moneda | Sección 3.7 |

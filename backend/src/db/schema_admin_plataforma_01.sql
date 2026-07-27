@@ -1,5 +1,5 @@
 -- Rol admin_plataforma + sesión de tenant dinámica — Fase 1 del pendiente #30
--- (docs/PENDIENTES.md, ver docs/PLAN_MULTITENANT_XEITRA.md 3.4/3.4.1). Kickoff dado
+-- (docs/PENDIENTES.md, ver docs/PLAN_MULTITENANT_CELTATECH.md 3.4/3.4.1). Kickoff dado
 -- explícitamente por el Desarrollador (2026-07-14): "vamos con el pendiente 30",
 -- alcance de esta fase acordado en la misma conversación (ítems A y C del desglose,
 -- aditivos — no toca ninguna policy existente ni el bypass actual de es_superadmin(),
@@ -9,7 +9,7 @@
 -- admin_plataforma es el rol administrativo de negocio de toda la plataforma (todas
 -- las prestadoras licenciatarias) — a diferencia de admin_prestadora/coordinador, no
 -- tiene una prestadora propia fija: elige a cuál entrar en cada sesión, una por vez,
--- bajo el "modo dentro de una prestadora" (docs/PLAN_MULTITENANT_XEITRA.md 3.4.1). Por
+-- bajo el "modo dentro de una prestadora" (docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1). Por
 -- eso usuarios.prestadora_id pasa a admitir NULL, pero solo para este rol — para
 -- cualquier otro rol existente (admin_prestadora/coordinador/asistente/familia/
 -- superadmin) prestadora_id NULL sigue estando prohibido, con un CHECK dedicado.
@@ -39,7 +39,7 @@ ALTER TABLE usuarios ADD CONSTRAINT usuarios_prestadora_id_solo_admin_plataforma
   CHECK (prestadora_id IS NOT NULL OR rol = 'admin_plataforma');
 
 -- ============================================================================
--- 2. Tabla de sesión de tenant (docs/PLAN_MULTITENANT_XEITRA.md 3.4.1)
+-- 2. Tabla de sesión de tenant (docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1)
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS sesiones_tenant_admin_plataforma (

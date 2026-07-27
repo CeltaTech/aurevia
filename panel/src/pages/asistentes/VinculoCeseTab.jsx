@@ -4,7 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useEmpresa } from '../../context/EmpresaContext';
 import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
 import { useEscalasLegales } from '../../hooks/useEscalasLegales';
-import { resolverEscalasVigentes } from '../../lib/escalasLegales';
+import { useFormulasCese } from '../../hooks/useFormulasCese';
+import { resolverEscalasVigentes, resolverFormulasVigentes } from '../../lib/escalasLegales';
 import { calcularCese } from '../../lib/calcularCese';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
@@ -40,7 +41,8 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
   const { usuario } = useAuth();
   const { empresa } = useEmpresa();
   const confirmarDestructivo = useConfirmarDestructivo();
-  const { filas: escalasCrudas, estado: estadoEscalas } = useEscalasLegales();
+  const { filas: escalasCrudas, estado: estadoEscalas, jurisdiccion } = useEscalasLegales(usuario.prestadora_id);
+  const { filas: formulasCrudas, estado: estadoFormulas } = useFormulasCese(usuario.prestadora_id);
   const [ceses, setCeses] = useState([]);
   const [estadoCeses, setEstadoCeses] = useState('cargando');
   const [errorCeses, setErrorCeses] = useState(null);
@@ -72,8 +74,11 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
   }, [asistente.id]);
 
   function calcular() {
-    const escalasResueltas = resolverEscalasVigentes(escalasCrudas, fechaCese);
-    const r = calcularCese({ asistente, fechaCese, causal, escalasLegales: escalasResueltas });
+    const escalasResueltas = resolverEscalasVigentes(escalasCrudas, fechaCese, jurisdiccion);
+    const formulasResueltas = resolverFormulasVigentes(formulasCrudas, fechaCese, jurisdiccion);
+    const r = calcularCese({
+      asistente, fechaCese, causal, escalasLegales: escalasResueltas, jurisdiccion, formulasLegales: formulasResueltas,
+    });
     setResultado(r);
     setRevisadoAbogado(false);
   }
@@ -181,7 +186,7 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
             ))}
           </FormField>
 
-          <Button variant="secondary" onClick={calcular} disabled={estadoEscalas !== 'listo'}>
+          <Button variant="secondary" onClick={calcular} disabled={estadoEscalas !== 'listo' || estadoFormulas !== 'listo'}>
             {t.asistentes.cese.calcular}
           </Button>
 

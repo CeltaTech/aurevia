@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useEscalasLegales } from '../../hooks/useEscalasLegales';
-import { resolverEscalasVigentes } from '../../lib/escalasLegales';
+import { useFormulasCese } from '../../hooks/useFormulasCese';
+import { resolverEscalasVigentes, resolverFormulasVigentes } from '../../lib/escalasLegales';
 import { calcularCese } from '../../lib/calcularCese';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { Alert } from '../../components/ui/Alert';
@@ -17,7 +18,7 @@ function fechaAltaHace(meses, hoy) {
 // Nunca se inventa un valor_hora/sueldo_basico de referencia acá (regla 1 de CLAUDE.md:
 // nunca hardcodear valores legales/monetarios) — si el Asistente no tiene el dato de base
 // cargado en su Perfil, la proyección para ese vínculo directamente no se puede calcular.
-function proyectarCosto(asistenteBase, tipoVinculo, escalasResueltas, hoy) {
+function proyectarCosto(asistenteBase, tipoVinculo, escalasResueltas, formulasResueltas, jurisdiccion, hoy) {
   const valorHora = asistenteBase.valor_hora ? Number(asistenteBase.valor_hora) : null;
   const horasSemanales = asistenteBase.horas_semanales ? Number(asistenteBase.horas_semanales) : null;
   const sueldoBasico = asistenteBase.sueldo_basico
@@ -37,7 +38,8 @@ function proyectarCosto(asistenteBase, tipoVinculo, escalasResueltas, hoy) {
     if (faltaDato) return { meses, montoDespidoSinCausa: null, faltaDato: true };
     const asistenteProyectado = { ...asistenteHipotetico, fecha_alta: fechaAltaHace(meses, hoy) };
     const r = calcularCese({
-      asistente: asistenteProyectado, fechaCese: hoy, causal: 'despido_sin_causa', escalasLegales: escalasResueltas,
+      asistente: asistenteProyectado, fechaCese: hoy, causal: 'despido_sin_causa',
+      escalasLegales: escalasResueltas, jurisdiccion, formulasLegales: formulasResueltas,
     });
     return { meses, montoDespidoSinCausa: r.montoTotal, faltaDato: false };
   });
@@ -45,17 +47,25 @@ function proyectarCosto(asistenteBase, tipoVinculo, escalasResueltas, hoy) {
 
 export function SimuladorVinculoTab({ asistente }) {
   const { t } = useLocale();
-  const { filas: escalasCrudas, estado, error, recargar } = useEscalasLegales();
+  const { filas: escalasCrudas, estado: estadoEscalas, error: errorEscalas, recargar: recargarEscalas, jurisdiccion } = useEscalasLegales(asistente.prestadora_id);
+  const { filas: formulasCrudas, estado: estadoFormulas, error: errorFormulas, recargar: recargarFormulas } = useFormulasCese(asistente.prestadora_id);
   const hoy = new Date().toISOString().slice(0, 10);
+
+  const estado = estadoEscalas === 'error' || estadoFormulas === 'error'
+    ? 'error'
+    : (estadoEscalas === 'listo' && estadoFormulas === 'listo' ? 'listo' : 'cargando');
+  const error = errorEscalas ?? errorFormulas;
+  const recargar = () => { recargarEscalas(); recargarFormulas(); };
 
   const proyecciones = useMemo(() => {
     if (estado !== 'listo') return null;
-    const escalasResueltas = resolverEscalasVigentes(escalasCrudas, hoy);
+    const escalasResueltas = resolverEscalasVigentes(escalasCrudas, hoy, jurisdiccion);
+    const formulasResueltas = resolverFormulasVigentes(formulasCrudas, hoy, jurisdiccion);
     return {
-      monotributo: proyectarCosto(asistente, 'monotributo', escalasResueltas, hoy),
-      dependencia: proyectarCosto(asistente, 'dependencia', escalasResueltas, hoy),
+      monotributo: proyectarCosto(asistente, 'monotributo', escalasResueltas, formulasResueltas, jurisdiccion, hoy),
+      dependencia: proyectarCosto(asistente, 'dependencia', escalasResueltas, formulasResueltas, jurisdiccion, hoy),
     };
-  }, [escalasCrudas, estado, asistente, hoy]);
+  }, [escalasCrudas, formulasCrudas, estado, jurisdiccion, asistente, hoy]);
 
   return (
     <div>

@@ -109,3 +109,56 @@ Notas de aplicación (mismo principio que el resto del documento, `CLAUDE.md` §
 - Si en el futuro se agrega una vía de administración nueva con riesgo legal propio no
   cubierto por esta única advertencia, corresponde evaluarlo y, de aplicar, documentarlo acá
   antes de activarlo para una Prestadora real de Argentina.
+
+## Fórmula de cálculo de cese
+
+> Diseño completo en el pendiente #72 (`docs/PENDIENTES.md`). La estructura descrita acá
+> vive como dato en `formulas_cese` (jurisdicción `AR`), interpretada genéricamente por
+> `panel/src/lib/calcularCese.js` — este documento describe en lenguaje humano lo que esas
+> filas codifican, no fija ningún valor nuevo. Pendiente de revisión por un abogado
+> laboralista, igual que el resto de este documento (ver nota al inicio).
+
+El cálculo de indemnización por cese de un Asistente en relación de dependencia depende de
+la causal del cese (art. 231/232/241/242/244/245/248/249 LCT, art. 92 bis para el período de
+prueba, arts. 178/182 para el agravamiento por embarazo o matrimonio). Cada causal compone
+uno o más de estos componentes:
+
+| Componente | Qué representa | Escala de la que depende (`escalas_legales`) |
+|---|---|---|
+| Preaviso sustitutivo | Días de preaviso adeudados, según antigüedad menor o mayor a 1 año | `preaviso_dias` (`menos_1_anio` / `mas_1_anio`) |
+| Indemnización por antigüedad | Meses de mejor remuneración por año de antigüedad, con tope y piso mínimo | `indemnizacion_antiguedad`, `tope_indemnizatorio`, `piso_minimo_indemnizacion`, `fraccion_computable_antiguedad` |
+| Integración del mes de despido | Días restantes hasta fin de mes calendario desde la fecha de cese | (aritmética de calendario, no depende de una escala) |
+| Agravamiento por embarazo/matrimonio | Meses adicionales de remuneración que se suman sobre la indemnización de un despido sin causa | `multiplicador_agravado` (`embarazo_matrimonio`) |
+| Verificación de período de prueba | Si la antigüedad está dentro de los días de período de prueba vigentes | `periodo_prueba_dias` |
+
+Composición por causal (Argentina):
+
+- **Renuncia**: sin monto a pagar por la Prestadora; solo informa el preaviso que el
+  Asistente le adeudaría a su empleador si correspondiera.
+- **Mutuo acuerdo** (art. 241 LCT): sin cálculo automático — el monto se define por acuerdo
+  entre las partes, el sistema solo lo registra.
+- **Período de prueba** (art. 92 bis LCT): sin indemnización si la antigüedad está dentro
+  del período de prueba vigente; si lo excede, exige revisión de abogado (probablemente
+  corresponda otra causal).
+- **Despido sin causa** (arts. 232/233/245 LCT): indemnización por antigüedad + preaviso
+  sustitutivo + integración del mes de despido.
+- **Despido por embarazo o matrimonio** (arts. 178/182 LCT): el resultado íntegro de despido
+  sin causa, más el agravamiento.
+- **Despido con justa causa** (art. 242 LCT) / **abandono de trabajo** (art. 244 LCT): sin
+  indemnización, pero exige revisión de abogado obligatoria antes de cerrar el registro.
+- **Muerte del trabajador** (art. 248 LCT) / **muerte del empleador** (art. 249 LCT): la
+  mitad de la indemnización por antigüedad; exige revisión de abogado en ambos casos. Muerte
+  del empleador solo aplica cuando el vínculo es de dependencia directa con la familia, no
+  con la Prestadora — el sistema lo advierte si no es así.
+
+Quedan fuera de este cálculo automático, en cualquier jurisdicción (no dependen de la ley de
+un país en particular): incapacidad absoluta, jubilación, fin de contrato comercial, muerte
+de la persona cuidada.
+
+### Sin fórmula cargada para una jurisdicción
+
+Si una Prestadora opera en un país sin fila en `formulas_cese` para la causal elegida, el
+sistema nunca aproxima con la fórmula de otro país (mismo principio que las advertencias de
+este documento, `CLAUDE.md` §3): devuelve `requiereRevisionAbogado: true`, sin monto
+calculado, y una advertencia indicando que la legislación de esa jurisdicción todavía no fue
+investigada.

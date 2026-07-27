@@ -1,13 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
-// Trae únicamente las escalas legales de la jurisdicción de la Prestadora activa (resuelta
-// vía prestadoras.pais, mismo patrón que AdvertenciaLegalContext.jsx:29-33) — pendiente #72.
-// escalas_legales es contenido legal curado por Xeitra por país, nunca una decisión de una
-// Prestadora individual (CLAUDE.md §3), por eso el filtro es siempre por jurisdicción, no
-// por prestadora_id. La resolución por fecha del hecho se hace después con
-// resolverEscalasVigentes, nunca acá.
-export function useEscalasLegales(prestadoraId) {
+// Análogo a useEscalasLegales.js — trae las fórmulas de cese (pendiente #72) de la
+// jurisdicción de la Prestadora activa. Mismo criterio: contenido legal curado por Xeitra
+// por país, nunca decidido por una Prestadora individual (CLAUDE.md §3).
+export function useFormulasCese(prestadoraId) {
   const [filas, setFilas] = useState([]);
   const [jurisdiccion, setJurisdiccion] = useState(null);
   const [estado, setEstado] = useState('cargando'); // cargando | error | listo
@@ -30,14 +27,14 @@ export function useEscalasLegales(prestadoraId) {
     }
     setJurisdiccion(prestadora.pais);
 
-    const { data, error: errorEscalas } = await supabase
-      .from('escalas_legales')
+    const { data, error: errorFormulas } = await supabase
+      .from('formulas_cese')
       .select('*')
       .eq('jurisdiccion', prestadora.pais)
       .order('vigencia_desde', { ascending: false });
 
-    if (errorEscalas) {
-      setError(errorEscalas.message);
+    if (errorFormulas) {
+      setError(errorFormulas.message);
       setEstado('error');
       return;
     }

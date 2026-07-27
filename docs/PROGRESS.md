@@ -21,6 +21,25 @@ Convención: 🔴 No iniciado · 🟡 En progreso · 🟢 Completo y en producci
 
 ## Última tarea completada
 
+**2026-07-27: Pendiente #72 — fórmula de cálculo de cese parametrizable por jurisdicción,
+cerrado.** El cálculo de indemnización de Asistentes (`panel/src/lib/calcularCese.js`) tenía
+la ESTRUCTURA de cálculo (no solo los valores) hardcodeada a la ley argentina, en un
+`switch(causal)` de JS. Plan aprobado (`CLAUDE.md` §11) tras directiva explícita del
+Desarrollador de parametrizar completamente Argentina (valores y fórmula) sin construir de
+antemano fórmulas de otros países. `escalas_legales` ganó columna `jurisdiccion` (backfill
+`AR`, RLS endurecida a solo `es_superadmin()` en escritura); tabla nueva `formulas_cese`
+(jurisdicción, causal, `definicion` JSONB con vocabulario cerrado de pasos + combinar,
+vigencia por fecha, mismo principio "sin fila = sin cálculo automático, nunca aproximar con
+la fórmula de otro país" que `advertencias_legales`), sembrada con las 9 causales de
+Argentina con los mismos valores que antes vivían en el switch. `calcularCese.js` reescrito
+como intérprete genérico de pasos; hooks `useEscalasLegales`/`useFormulasCese` filtran por
+la jurisdicción real de la Prestadora (`prestadoras.pais`); `VinculoCeseTab.jsx`/
+`SimuladorVinculoTab.jsx` actualizados. Sección nueva en `docs/legal/argentina.md`. Migración
+aplicada contra Supabase real y verificada por consulta directa a `pg_policies` +
+`get_advisors` (sin hallazgos nuevos). Test suite actualizado y en verde (mismos valores
+numéricos de antes del refactor, más un caso nuevo de jurisdicción sin fórmula cargada
+confirmando fail-closed). Pendiente: verificación funcional manual en Sandbox y commit+push.
+
 **2026-07-25: Pendiente #61 — rediseño en capas de la importación masiva (Panel), cerrado
 del todo.** El Desarrollador aprobó un diseño propio de varias capas en vez de la decisión
 binaria original del pendiente ("conexión externa" vs. "conforme con solo archivo"), con la

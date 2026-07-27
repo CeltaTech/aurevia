@@ -51,16 +51,28 @@
 // Prestadora no es un detalle estético: le dice que su proveedor es otro.
 //
 // REGLA: en toda pantalla, email o notificación dirigida a una Familia o a un
-// Asistente, la marca la pone la Prestadora —`prestadoras.nombre_fantasia`,
-// leída del tenant de esa sesión— y NUNCA IDENTIDAD. Este módulo es para las
-// superficies del producto: el Panel, y lo que es técnicamente del producto y
-// no de ninguna Prestadora en particular.
+// Asistente, la marca PRINCIPAL la pone la Prestadora —`prestadoras.nombre_
+// fantasia`, leída del tenant de esa sesión— y nunca IDENTIDAD. Este módulo es
+// para las superficies del producto: el Panel, y lo que es técnicamente del
+// producto y no de ninguna Prestadora en particular.
 //
-// Hoy eso NO se cumple: las dos PWA muestran el nombre del producto en su
-// encabezado y en las notificaciones push, y el email de activación —que se
-// manda solo a Familias y Asistentes— también. Es anterior a este archivo y
-// está registrado como pendiente #95 en docs/PENDIENTES.md. Mientras siga
-// abierto, no agregar ni un uso más de IDENTIDAD en las PWA.
+// El modelo es CO-BRANDING (decidido por el Desarrollador el 2026-07-27, no
+// marca blanca total): el producto sí aparece ante una Familia, pero solo en
+// una línea discreta al pie —"con la tecnología de {{producto}}"— que se apaga
+// con el entitlement `aurevia.marca.personalizada`. Ese es el ÚNICO uso
+// admitido de IDENTIDAD en una superficie de Familia o de Asistente.
+//
+// Hoy eso NO se cumple: las dos PWA muestran el nombre del producto como marca
+// principal en su encabezado y en las notificaciones push, y el email de
+// activación —que se manda solo a Familias y Asistentes— también. Es anterior a
+// este archivo y está registrado como pendiente #95 en docs/PENDIENTES.md.
+// Mientras siga abierto, no agregar ningún uso nuevo de IDENTIDAD en las PWA
+// fuera de esa línea al pie.
+//
+// Excepción decidida junto con el modelo: el nombre y el ícono de la PWA
+// instalada en el teléfono (manifiesto, <title>) SÍ llevan la marca del
+// producto. Hay un solo build para todas las Prestadoras y no puede ser de otro
+// modo sin un manifiesto dinámico por tenant.
 // ---------------------------------------------------------------------------
 
 export const IDENTIDAD = {

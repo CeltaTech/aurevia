@@ -22,12 +22,32 @@ inicial y que `docs/PLAN_MULTITENANT_XEITRA.md:283` define textualmente como *"m
 la familia/paciente final"*.
 
 **La regla:** en toda pantalla, email o notificación dirigida a una Familia o a un Asistente,
-la marca la pone la Prestadora, nunca `identidadProducto.js`.
+la marca **principal** la pone la Prestadora, nunca `identidadProducto.js`.
 
-**Hoy esa regla no se cumple** — las dos PWA muestran el nombre del producto y el email de
-activación también. Es anterior a la Etapa 0.5 y está registrado como **pendiente `#95`**.
+**El modelo es co-branding** — decidido por el Desarrollador el 2026-07-27, después de mirar
+qué hace la industria. No es marca blanca total: la marca de la Prestadora va primera y
+grande, y el producto queda en una línea discreta al pie, *"con la tecnología de
+{{producto}}"*. Esa línea es el **único** lugar donde la marca del producto puede aparecer
+ante una Familia o un Asistente, y se apaga con el entitlement `aurevia.marca.personalizada`
+— o sea que quitarla es una función paga, como en la mayoría del software vertical.
 
-Cuando se resuelva, la Prestadora va a necesitar sus propios archivos de marca (logo,
+Tres cosas que la decisión **descartó** explícitamente, para que nadie las reabra sin motivo:
+
+- **Nada de dominios propios por Prestadora.** Un `portal.laprestadora.com` por cliente
+  significa certificado por cliente y, sobre todo, que cada Prestadora configure SPF y DKIM en
+  su propio dominio para que sus emails no caigan en correo no deseado. Una Prestadora chica
+  no lo va a hacer. El remitente sigue siendo la infraestructura del producto; lo único que
+  cambia es el **nombre visible** del remitente.
+- **Nada de marca blanca total.** Si el producto es invisible, nadie sabe que existe.
+- **El nombre y el ícono de la PWA instalada se quedan con la marca del producto.** Hay un
+  solo build para todas las Prestadoras. Es el punto donde el límite técnico y el estándar de
+  la industria coinciden.
+
+**Hoy la regla no se cumple** — las dos PWA muestran el nombre del producto como marca
+principal, y el email de activación también. Es anterior a la Etapa 0.5 y está registrado como
+**pendiente `#95`**.
+
+Para implementarlo, la Prestadora va a necesitar sus propios archivos de marca (logo,
 colores), que la base **no tiene todavía**: `prestadoras` no tiene ni un campo de branding.
 Ese es otro contrato, distinto de este, y va a vivir en su propio documento.
 

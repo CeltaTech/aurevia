@@ -2,6 +2,13 @@
 
 > Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§10) — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
 
+## Regla 1, límite agregado: la marca del producto no es la de la Prestadora (2026-07-27)
+
+- **Antes:** la ampliación de la Regla 1 hecha ese mismo día decía que el nombre y la marca salen de `identidadProducto.js`, sin decir **dónde** corresponde mostrarlos. Leída sola, esa redacción autorizaba a poner la marca del producto en cualquier pantalla, incluidas las que ve una Familia.
+- **Ahora:** la regla distingue tres marcas —Xeitra (la empresa), Aurevia (el producto) y la Prestadora— y fija que toda pantalla, email o notificación dirigida a una Familia o a un Asistente lleva la marca de **su** Prestadora (`prestadoras.nombre_fantasia`, del tenant de la sesión), nunca `identidadProducto.js`. Mientras el pendiente `#95` siga abierto, queda prohibido agregar usos nuevos de `IDENTIDAD` en las dos PWA.
+- **Motivo:** lo señaló el Desarrollador al revisar la Etapa 0.5 — *"no confundamos la marca del software con la de la prestadora"*. Es correcto y verificable: una Familia contrató a la Prestadora, no a Xeitra, y probablemente no sepa que Aurevia existe. La intención ya estaba escrita desde el diseño inicial (`docs/PLAN_MULTITENANT_XEITRA.md:283` define `nombre_fantasia` como *"marca que ve la familia/paciente final (branding)"*) pero **nunca se implementó**: al 2026-07-27, `nombre_fantasia` tenía cero referencias en `pwa-familias/src` y en `pwa-asistentes/src`. La Etapa 0.5 no creó el problema, pero al reemplazar el literal `Aurevia` por `identidad.nombreCorto` en el encabezado de ambas PWA dejó consagrado en el código que ahí va la marca del software — que es justo lo que no va.
+- **No reintroducir:** la marca del producto en superficies de Familia o Asistente (encabezado de las PWA, título de notificación push, email de activación). Y no "arreglar" el pendiente `#95` codificando sin decisión previa: elegir entre marca blanca pura y co-branding es una decisión comercial de Xeitra, no técnica, y además `prestadoras` todavía no tiene ni un campo de marca (logo, colores) donde leerla.
+
 ## Regla 1 ampliada: el nombre del producto tampoco se hardcodea (2026-07-27)
 
 - **Antes:** la Regla 1 de §7 prohibía hardcodear texto visible, precios, valores legales y datos de contacto, pero no nombraba al producto. En la práctica el nombre se escribía a mano en todos lados y nadie lo consideraba una violación de la regla.

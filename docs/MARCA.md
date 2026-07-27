@@ -5,6 +5,32 @@
 > isotipo ni logotipo diseñados, y no hay dominio registrado (confirmado por el Desarrollador
 > el 2026-07-27). Nada de lo que sigue está hecho.
 
+## 0. Antes que nada: acá hay tres marcas, no una
+
+| Marca | Qué es | Quién la ve |
+|---|---|---|
+| **Xeitra** | La empresa dueña del software | Nadie, dentro del producto |
+| **Aurevia** | El producto | Quien trabaja **en** la Prestadora (Admin_prestadora, Coordinador) y sabe qué software usa |
+| **La Prestadora** | La empresa que presta el cuidado | La **Familia** y el **Asistente** |
+
+Todo este documento habla de la segunda. **No confundirla con la tercera.**
+
+Una Familia contrató a la Prestadora, no a Xeitra, y probablemente no sepa que Aurevia
+existe. Un Asistente trabaja para la Prestadora. Para los dos, la marca que tiene sentido es
+la de la Prestadora — `prestadoras.nombre_fantasia`, que existe en la base desde el diseño
+inicial y que `docs/PLAN_MULTITENANT_XEITRA.md:283` define textualmente como *"marca que ve
+la familia/paciente final"*.
+
+**La regla:** en toda pantalla, email o notificación dirigida a una Familia o a un Asistente,
+la marca la pone la Prestadora, nunca `identidadProducto.js`.
+
+**Hoy esa regla no se cumple** — las dos PWA muestran el nombre del producto y el email de
+activación también. Es anterior a la Etapa 0.5 y está registrado como **pendiente `#95`**.
+
+Cuando se resuelva, la Prestadora va a necesitar sus propios archivos de marca (logo,
+colores), que la base **no tiene todavía**: `prestadoras` no tiene ni un campo de branding.
+Ese es otro contrato, distinto de este, y va a vivir en su propio documento.
+
 ## 1. Los dos nombres, y por qué importa la diferencia
 
 | | Qué es | ¿Cambia si se renombra el producto? |

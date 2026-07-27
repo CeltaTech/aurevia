@@ -33,6 +33,34 @@
 // A partir de la Etapa 3 la fuente de verdad de estos valores pasa a ser Xeitra y
 // se replican por el mismo canal que los entitlements. Hasta entonces esta config
 // ES la fuente de verdad. Los puntos de consumo no cambian cuando eso pase.
+//
+// ===========================================================================
+// LO QUE ESTE ARCHIVO NO ES: LA MARCA DE LA PRESTADORA
+// ===========================================================================
+//
+// Acá viven tres marcas distintas y no se mezclan nunca:
+//
+//   Xeitra      — la empresa. No la ve nadie dentro del producto.
+//   Aurevia     — el producto. La ve quien trabaja EN la Prestadora
+//                 (Admin_prestadora, Coordinador) y sabe qué software usa.
+//   Prestadora  — la empresa que presta el cuidado. Es la única marca que
+//                 tiene sentido para una Familia o un Asistente.
+//
+// Una Familia contrató a la Prestadora, no a Xeitra, y probablemente no sepa
+// que Aurevia existe. Mostrarle la marca del software donde espera la de su
+// Prestadora no es un detalle estético: le dice que su proveedor es otro.
+//
+// REGLA: en toda pantalla, email o notificación dirigida a una Familia o a un
+// Asistente, la marca la pone la Prestadora —`prestadoras.nombre_fantasia`,
+// leída del tenant de esa sesión— y NUNCA IDENTIDAD. Este módulo es para las
+// superficies del producto: el Panel, y lo que es técnicamente del producto y
+// no de ninguna Prestadora en particular.
+//
+// Hoy eso NO se cumple: las dos PWA muestran el nombre del producto en su
+// encabezado y en las notificaciones push, y el email de activación —que se
+// manda solo a Familias y Asistentes— también. Es anterior a este archivo y
+// está registrado como pendiente #95 en docs/PENDIENTES.md. Mientras siga
+// abierto, no agregar ni un uso más de IDENTIDAD en las PWA.
 // ---------------------------------------------------------------------------
 
 export const IDENTIDAD = {

@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
+import { useAuth } from '../context/AuthContext';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
+import { useZonasCobertura } from '../hooks/useZonasCobertura';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { PostulacionDetalle } from './PostulacionDetalle';
 import { contieneCodigo, traducirCodigos } from '../lib/postulacionCodigos';
@@ -9,7 +11,13 @@ const ESTADOS = ['pendiente', 'en_revision', 'aprobado', 'rechazado'];
 
 export function Postulaciones() {
   const { t } = useLocale();
+  const { usuario } = useAuth();
   const { filas, estado, error, recargar } = useSupabaseTable('postulaciones');
+  const { filas: zonas } = useZonasCobertura(usuario.prestadora_id);
+  const zonasLabels = useMemo(
+    () => Object.fromEntries(zonas.map((z) => [z.codigo, z.nombre])),
+    [zonas],
+  );
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
   const [filtroEspecialidad, setFiltroEspecialidad] = useState('');
@@ -62,8 +70,8 @@ export function Postulaciones() {
         </select>
         <select value={filtroZona} onChange={(e) => setFiltroZona(e.target.value)}>
           <option value="">{t.postulaciones.filtro_zona}</option>
-          {Object.entries(t.postulaciones.zonas_labels).map(([codigo, label]) => (
-            <option key={codigo} value={codigo}>{label}</option>
+          {zonas.map((z) => (
+            <option key={z.codigo} value={z.codigo}>{z.nombre}</option>
           ))}
         </select>
         <select value={filtroDisponibilidad} onChange={(e) => setFiltroDisponibilidad(e.target.value)}>
@@ -92,7 +100,7 @@ export function Postulaciones() {
               <tr key={p.id}>
                 <td>{p.nombre}</td>
                 <td>{traducirCodigos(p.especialidades, t.postulaciones.especialidades_labels)}</td>
-                <td>{traducirCodigos(p.zonas, t.postulaciones.zonas_labels)}</td>
+                <td>{traducirCodigos(p.zonas, zonasLabels)}</td>
                 <td>{new Date(p.creado_en).toLocaleDateString()}</td>
                 <td>{t.postulaciones.situacion_fiscal_labels[p.situacion_fiscal] ?? p.situacion_fiscal}</td>
                 <td>

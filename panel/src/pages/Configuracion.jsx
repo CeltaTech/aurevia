@@ -575,7 +575,7 @@ function TabZonas() {
               <tr key={z.id}>
                 <td>{z.codigo}</td>
                 <td>{z.nombre}</td>
-                <td>{t.configuracion[`zonas_categoria_${z.categoria}`]}</td>
+                <td>{z.categoria}</td>
                 <td>
                   <input type="checkbox" checked={z.activa} onChange={() => toggleActiva(z)} disabled={actualizandoZona === z.id} />
                 </td>
@@ -599,7 +599,7 @@ function NuevaZona({ onClose, onCreada }) {
   const { t } = useLocale();
   const [codigo, setCodigo] = useState('');
   const [nombre, setNombre] = useState('');
-  const [categoria, setCategoria] = useState('caba');
+  const [categoria, setCategoria] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
 
@@ -623,11 +623,8 @@ function NuevaZona({ onClose, onCreada }) {
         {error && <Alert variant="error">{error}</Alert>}
         <FormField label={t.configuracion.zonas_col_codigo} name="codigo" value={codigo} onChange={(e) => setCodigo(e.target.value)} required />
         <FormField label={t.configuracion.zonas_col_nombre} name="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
-        <FormField label={t.configuracion.zonas_col_categoria} name="categoria" type="select" value={categoria} onChange={(e) => setCategoria(e.target.value)}>
-          <option value="caba">{t.configuracion.zonas_categoria_caba}</option>
-          <option value="gba">{t.configuracion.zonas_categoria_gba}</option>
-          <option value="otras">{t.configuracion.zonas_categoria_otras}</option>
-        </FormField>
+        <FormField label={t.configuracion.zonas_col_categoria} name="categoria" value={categoria} onChange={(e) => setCategoria(e.target.value)} required />
+        <p className="panel-explicacion">{t.configuracion.zonas_categoria_explicacion}</p>
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>
           <Button onClick={handleGuardar} disabled={guardando || !codigo || !nombre}>
@@ -810,6 +807,234 @@ function TabServicios() {
       )}
 
       <TabServiciosPersonalEmergencia />
+      <TabServiciosMotivosAvisoPrevio />
+      <TabServiciosEtapasIncorporacion />
+    </div>
+  );
+}
+
+function TabServiciosMotivosAvisoPrevio() {
+  const { t } = useLocale();
+  const [motivos, setMotivos] = useState([]);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [creandoNuevo, setCreandoNuevo] = useState(false);
+  const [nombreNuevo, setNombreNuevo] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const [actualizandoId, setActualizandoId] = useState(null);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const { motivos: filas } = await llamarApi('/motivos-aviso-previo');
+      setMotivos(filas);
+      setEstado('listo');
+    } catch (err) {
+      setError(err.message);
+      setEstado('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  async function toggleActivo(fila) {
+    setActualizandoId(fila.id);
+    try {
+      await llamarApi(`/motivos-aviso-previo/${fila.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ nombre: fila.nombre, activo: !fila.activo }),
+      });
+      recargar();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setActualizandoId(null);
+    }
+  }
+
+  async function crear() {
+    setGuardando(true);
+    setError(null);
+    try {
+      await llamarApi('/motivos-aviso-previo', { method: 'POST', body: JSON.stringify({ nombre: nombreNuevo }) });
+      setNombreNuevo('');
+      setCreandoNuevo(false);
+      recargar();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <div>
+      <h2>{t.configuracion.motivos_aviso_previo_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.motivos_aviso_previo_explicacion}</p>
+      {error && <Alert variant="error">{error}</Alert>}
+      <div className="panel-filtros">
+        <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.motivos_aviso_previo_nuevo}</Button>
+      </div>
+      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && motivos.length === 0} recargar={recargar}>
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{t.configuracion.motivos_aviso_previo_col_nombre}</th>
+              <th>{t.configuracion.documentos_tipos_col_activo}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {motivos.map((m) => (
+              <tr key={m.id}>
+                <td>{m.nombre}</td>
+                <td>
+                  <input type="checkbox" checked={m.activo} onChange={() => toggleActivo(m)} disabled={actualizandoId === m.id} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </EstadoLista>
+
+      {creandoNuevo && (
+        <div className="panel-modal-fondo" onClick={() => setCreandoNuevo(false)}>
+          <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>{t.configuracion.motivos_aviso_previo_nuevo}</h2>
+            <FormField label={t.configuracion.motivos_aviso_previo_col_nombre} name="nombre" value={nombreNuevo} onChange={(e) => setNombreNuevo(e.target.value)} required />
+            <div className="panel-modal-acciones">
+              <Button variant="secondary" onClick={() => setCreandoNuevo(false)} disabled={guardando}>{t.comun.cancelar}</Button>
+              <Button onClick={crear} disabled={guardando || !nombreNuevo}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TabServiciosEtapasIncorporacion() {
+  const { t } = useLocale();
+  const [etapas, setEtapas] = useState([]);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [creandoNueva, setCreandoNueva] = useState(false);
+  const [claveNueva, setClaveNueva] = useState('');
+  const [nombreNueva, setNombreNueva] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const [actualizandoId, setActualizandoId] = useState(null);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const { etapas: filas } = await llamarApi('/etapas-incorporacion');
+      setEtapas(filas);
+      setEstado('listo');
+    } catch (err) {
+      setError(err.message);
+      setEstado('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  async function toggleActiva(fila) {
+    setActualizandoId(fila.id);
+    try {
+      await llamarApi(`/etapas-incorporacion/${fila.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ nombre: fila.nombre, activa: !fila.activa }),
+      });
+      recargar();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setActualizandoId(null);
+    }
+  }
+
+  async function mover(fila, direccion) {
+    setActualizandoId(fila.id);
+    try {
+      await llamarApi(`/etapas-incorporacion/${fila.id}/mover`, { method: 'PATCH', body: JSON.stringify({ direccion }) });
+      recargar();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setActualizandoId(null);
+    }
+  }
+
+  async function crear() {
+    setGuardando(true);
+    setError(null);
+    try {
+      await llamarApi('/etapas-incorporacion', { method: 'POST', body: JSON.stringify({ clave: claveNueva, nombre: nombreNueva }) });
+      setClaveNueva('');
+      setNombreNueva('');
+      setCreandoNueva(false);
+      recargar();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <div>
+      <h2>{t.configuracion.etapas_incorporacion_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.etapas_incorporacion_explicacion}</p>
+      {error && <Alert variant="error">{error}</Alert>}
+      <div className="panel-filtros">
+        <Button onClick={() => setCreandoNueva(true)}>{t.configuracion.etapas_incorporacion_nueva}</Button>
+      </div>
+      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && etapas.length === 0} recargar={recargar}>
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{t.configuracion.etapas_incorporacion_col_orden}</th>
+              <th>{t.configuracion.etapas_incorporacion_col_nombre}</th>
+              <th>{t.configuracion.documentos_tipos_col_activo}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {etapas.map((e, i) => (
+              <tr key={e.id}>
+                <td>{e.orden}</td>
+                <td>{e.nombre}</td>
+                <td>
+                  <input type="checkbox" checked={e.activa} onChange={() => toggleActiva(e)} disabled={actualizandoId === e.id} />
+                </td>
+                <td>
+                  <button onClick={() => mover(e, 'arriba')} disabled={actualizandoId === e.id || i === 0}>↑</button>
+                  <button onClick={() => mover(e, 'abajo')} disabled={actualizandoId === e.id || i === etapas.length - 1}>↓</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </EstadoLista>
+
+      {creandoNueva && (
+        <div className="panel-modal-fondo" onClick={() => setCreandoNueva(false)}>
+          <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>{t.configuracion.etapas_incorporacion_nueva}</h2>
+            <FormField label={t.configuracion.etapas_incorporacion_col_clave} name="clave" value={claveNueva} onChange={(e) => setClaveNueva(e.target.value)} required />
+            <FormField label={t.configuracion.etapas_incorporacion_col_nombre} name="nombre" value={nombreNueva} onChange={(e) => setNombreNueva(e.target.value)} required />
+            <div className="panel-modal-acciones">
+              <Button variant="secondary" onClick={() => setCreandoNueva(false)} disabled={guardando}>{t.comun.cancelar}</Button>
+              <Button onClick={crear} disabled={guardando || !claveNueva || !nombreNueva}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1557,7 +1782,99 @@ function TabNotificaciones() {
         </table>
       </EstadoLista>
       <TabAvisoCese />
+      <TabEmailRemitente />
     </>
+  );
+}
+
+function TabEmailRemitente() {
+  const { t } = useLocale();
+  const [form, setForm] = useState(null);
+  const [password, setPassword] = useState('');
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+  const [guardado, setGuardado] = useState(false);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const { emailRemitente } = await llamarApi('/email-remitente');
+      setForm(emailRemitente);
+      setEstado('listo');
+    } catch (err) {
+      setError(err.message);
+      setEstado('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  function set(campo, valor) {
+    setForm((f) => ({ ...f, [campo]: valor }));
+    setGuardado(false);
+  }
+
+  async function guardar() {
+    setGuardando(true);
+    setError(null);
+    try {
+      await llamarApi('/email-remitente', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          activo: form.activo,
+          direccion_remitente: form.direccion_remitente,
+          usuario_smtp: form.usuario_smtp,
+          host: form.host,
+          puerto: form.puerto,
+          password: password || undefined,
+        }),
+      });
+      setPassword('');
+      setGuardado(true);
+      recargar();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <div>
+      <h2>{t.configuracion.email_remitente_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.email_remitente_explicacion}</p>
+      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+        {form && (
+          <div>
+            {error && <Alert variant="error">{error}</Alert>}
+            {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
+            <FormField
+              label={t.configuracion.email_remitente_activo}
+              name="activo"
+              type="checkbox"
+              checked={form.activo || false}
+              onChange={(e) => set('activo', e.target.checked)}
+            />
+            <FormField label={t.configuracion.email_remitente_direccion} name="direccion_remitente" value={form.direccion_remitente || ''} onChange={(e) => set('direccion_remitente', e.target.value)} />
+            <FormField label={t.configuracion.email_remitente_usuario_smtp} name="usuario_smtp" value={form.usuario_smtp || ''} onChange={(e) => set('usuario_smtp', e.target.value)} />
+            <FormField label={t.configuracion.email_remitente_host} name="host" value={form.host || ''} onChange={(e) => set('host', e.target.value)} />
+            <FormField label={t.configuracion.email_remitente_puerto} name="puerto" type="number" value={form.puerto || ''} onChange={(e) => set('puerto', Number(e.target.value))} />
+            <FormField
+              label={form.credencial_cargada ? t.configuracion.email_remitente_password_reemplazar : t.configuracion.email_remitente_password_cargar}
+              name="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+          </div>
+        )}
+      </EstadoLista>
+    </div>
   );
 }
 

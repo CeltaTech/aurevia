@@ -12,7 +12,7 @@ const SMTP_HOST = 'smtp.gmail.com';
 // #37, detectado al verificar la recuperación de MFA por email). Se resuelve acá mismo
 // a una IPv4 y se pasa como host literal, con `servername` explícito para que el TLS
 // siga validando el certificado contra smtp.gmail.com.
-async function crearTransporter() {
+async function crearTransporterCompartido() {
   let host = SMTP_HOST;
   try {
     const direcciones = await dns.resolve4(SMTP_HOST);
@@ -30,6 +30,43 @@ async function crearTransporter() {
       pass: process.env.SMTP_PASSWORD,
     },
   });
+}
+
+// Pendiente #18 (docs/PENDIENTES.md), candidato 8 — cada Prestadora puede configurar sus
+// propias credenciales SMTP (configuracion_email_prestadora, backend/src/db/
+// schema_email_remitente_prestadora_01.sql), en vez de mandar siempre "desde" la cuenta
+// compartida de Xeitra. Si la Prestadora no configuró remitente propio (o no está activo),
+// se sigue usando el transporter compartido — sin romper nada para las que no lo configuren.
+async function crearTransporterPara(prestadoraId) {
+  if (prestadoraId) {
+    const { data } = await supabase
+      .from('configuracion_email_prestadora')
+      .select('activo, usuario_smtp, direccion_remitente, host, puerto, credencial_secret_id')
+      .eq('prestadora_id', prestadoraId)
+      .maybeSingle();
+
+    if (data?.activo && data.credencial_secret_id) {
+      const { data: password } = await supabase.rpc('leer_credencial_smtp_prestadora', {
+        p_prestadora_id: prestadoraId,
+      });
+      if (password) {
+        return {
+          transporter: nodemailer.createTransport({
+            host: data.host,
+            port: data.puerto,
+            secure: data.puerto === 465,
+            auth: {
+              user: data.usuario_smtp || data.direccion_remitente,
+              pass: password,
+            },
+          }),
+          from: data.direccion_remitente || data.usuario_smtp,
+        };
+      }
+    }
+  }
+
+  return { transporter: await crearTransporterCompartido(), from: process.env.SMTP_USER };
 }
 
 // Destinatarios configurables desde el Panel (Módulo 8 > Notificaciones) en vez de
@@ -71,13 +108,9 @@ export async function enviarEmailCoordinador({ evento, prestadoraId, asunto, tex
   const destinatarios = await destinatariosEvento(evento, prestadoraId);
   if (destinatarios.length === 0) return;
 
-  // `from` sigue siendo la cuenta SMTP compartida a propósito: es un único relay de correo
-  // saliente (credencial de infraestructura, no de negocio) — cada prestadora manda "desde"
-  // esa cuenta hoy porque no existe (todavía) aprovisionamiento de SMTP propio por
-  // licenciataria. El aislamiento real está en el destinatario, no en el remitente.
-  const transporter = await crearTransporter();
+  const { transporter, from } = await crearTransporterPara(prestadoraId);
   await transporter.sendMail({
-    from: process.env.SMTP_USER,
+    from,
     to: destinatarios.join(', '),
     subject: asunto,
     text: texto,
@@ -86,11 +119,11 @@ export async function enviarEmailCoordinador({ evento, prestadoraId, asunto, tex
 
 export { configuracionEvento };
 
-export async function enviarEmail({ to, asunto, texto }) {
+export async function enviarEmail({ to, asunto, texto, prestadoraId }) {
   if (!process.env.SMTP_USER) return;
-  const transporter = await crearTransporter();
+  const { transporter, from } = await crearTransporterPara(prestadoraId);
   await transporter.sendMail({
-    from: process.env.SMTP_USER,
+    from,
     to,
     subject: asunto,
     text: texto,

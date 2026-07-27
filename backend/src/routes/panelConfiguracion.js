@@ -144,6 +144,85 @@ panelConfiguracionRouter.delete('/escalada-relevo/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
+// --- Servicios: etapas del Proceso de Incorporación de Asistentes, configurables por
+//     prestadora (pendiente #18 candidato 7, docs/PENDIENTES.md — ver
+//     backend/src/db/schema_etapas_incorporacion_01.sql). Alta/edición/reordenamiento
+//     desde el Panel; sin DELETE — se discontinúa con el toggle "activa" para no romper
+//     verificaciones_asistente ya existentes que referencian esa etapa. ---
+panelConfiguracionRouter.get('/etapas-incorporacion', async (req, res) => {
+  const prestadoraId = req.usuarioPanel.rol === 'superadmin' && req.query.prestadora_id
+    ? req.query.prestadora_id
+    : req.usuarioPanel.prestadoraId;
+  const { data, error } = await supabase
+    .from('etapas_incorporacion_asistente')
+    .select('*')
+    .eq('prestadora_id', prestadoraId)
+    .order('orden');
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ etapas: data });
+});
+
+panelConfiguracionRouter.post('/etapas-incorporacion', async (req, res) => {
+  const { clave, nombre } = req.body;
+  if (!clave || !nombre) return res.status(400).json({ error: 'Faltan clave o nombre' });
+  const { data: maxOrden, error: errorMax } = await supabase
+    .from('etapas_incorporacion_asistente')
+    .select('orden')
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .order('orden', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (errorMax) return res.status(500).json({ error: errorMax.message });
+  const { error } = await supabase
+    .from('etapas_incorporacion_asistente')
+    .insert({ clave, nombre, orden: (maxOrden?.orden ?? 0) + 1, prestadora_id: req.usuarioPanel.prestadoraId });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+panelConfiguracionRouter.patch('/etapas-incorporacion/:id', async (req, res) => {
+  const { nombre, activa } = req.body;
+  let query = supabase
+    .from('etapas_incorporacion_asistente')
+    .update({ nombre, activa })
+    .eq('id', req.params.id);
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  }
+  const { error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// Reordena una etapa moviéndola una posición hacia arriba o abajo — intercambia su
+// "orden" con el de la etapa vecina (misma prestadora).
+panelConfiguracionRouter.patch('/etapas-incorporacion/:id/mover', async (req, res) => {
+  const { direccion } = req.body;
+  if (direccion !== 'arriba' && direccion !== 'abajo') {
+    return res.status(400).json({ error: 'direccion debe ser "arriba" o "abajo"' });
+  }
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+  const { data: etapas, error: errorEtapas } = await supabase
+    .from('etapas_incorporacion_asistente')
+    .select('*')
+    .eq('prestadora_id', prestadoraId)
+    .order('orden');
+  if (errorEtapas) return res.status(500).json({ error: errorEtapas.message });
+
+  const indice = etapas.findIndex((e) => e.id === req.params.id);
+  if (indice === -1) return res.status(404).json({ error: 'Etapa no encontrada' });
+  const indiceVecino = direccion === 'arriba' ? indice - 1 : indice + 1;
+  if (indiceVecino < 0 || indiceVecino >= etapas.length) return res.json({ ok: true });
+
+  const actual = etapas[indice];
+  const vecino = etapas[indiceVecino];
+  const { error: errorSwap } = await supabase.rpc('intercambiar_orden_etapas_incorporacion', {
+    p_id_a: actual.id, p_orden_a: vecino.orden, p_id_b: vecino.id, p_orden_b: actual.orden,
+  });
+  if (errorSwap) return res.status(500).json({ error: errorSwap.message });
+  res.json({ ok: true });
+});
+
 // --- Servicios: personal de emergencia (roster de suplentes/franqueros/emergencia
 //     disponibles para el protocolo de continuidad de guardia, Parte 2 de Módulo 6) ---
 panelConfiguracionRouter.get('/personal-emergencia', async (req, res) => {
@@ -267,6 +346,54 @@ panelConfiguracionRouter.patch('/whatsapp', async (req, res) => {
   res.json({ ok: true });
 });
 
+// --- Email: remitente SMTP propio por Prestadora (pendiente #18 candidato 8, Supabase
+//     Vault, mismo patrón que /whatsapp — la contraseña nunca vuelve a mostrarse en el
+//     Panel una vez guardada) ---
+panelConfiguracionRouter.get('/email-remitente', async (req, res) => {
+  const prestadoraId = req.usuarioPanel.rol === 'superadmin' && req.query.prestadora_id
+    ? req.query.prestadora_id
+    : req.usuarioPanel.prestadoraId;
+  const { data, error } = await supabase
+    .from('configuracion_email_prestadora')
+    .select('prestadora_id, activo, direccion_remitente, usuario_smtp, host, puerto, verificado_at, updated_at, credencial_secret_id')
+    .eq('prestadora_id', prestadoraId)
+    .maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({
+    emailRemitente: data
+      ? { ...data, credencial_cargada: !!data.credencial_secret_id, credencial_secret_id: undefined }
+      : { prestadora_id: prestadoraId, activo: false, direccion_remitente: null, usuario_smtp: null, host: 'smtp.gmail.com', puerto: 465, verificado_at: null, credencial_cargada: false },
+  });
+});
+
+panelConfiguracionRouter.patch('/email-remitente', async (req, res) => {
+  const { activo, direccion_remitente, usuario_smtp, host, puerto, password } = req.body;
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+
+  const { error } = await supabase
+    .from('configuracion_email_prestadora')
+    .upsert({
+      prestadora_id: prestadoraId,
+      activo,
+      direccion_remitente,
+      usuario_smtp,
+      host: host || 'smtp.gmail.com',
+      puerto: puerto || 465,
+      updated_at: new Date().toISOString(),
+    });
+  if (error) return res.status(500).json({ error: error.message });
+
+  if (password) {
+    const { error: errorPassword } = await supabase.rpc('guardar_credencial_smtp_prestadora', {
+      p_prestadora_id: prestadoraId,
+      p_password: password,
+    });
+    if (errorPassword) return res.status(500).json({ error: errorPassword.message });
+  }
+
+  res.json({ ok: true });
+});
+
 // --- WhatsApp: plantillas de mensaje (requieren aprobación de Meta antes de poder
 //     usarse para un mensaje que la prestadora inicia) ---
 panelConfiguracionRouter.get('/whatsapp/plantillas', async (req, res) => {
@@ -359,6 +486,47 @@ panelConfiguracionRouter.patch('/documentos-tipo/plazo-aviso', async (req, res) 
     .from('prestadoras')
     .update({ dias_aviso_vencimiento_documentos: dias })
     .eq('id', req.usuarioPanel.prestadoraId);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// --- Catálogo de motivos de aviso previo de guardia, configurable por prestadora
+//     (pendiente #18 candidato 3, docs/PENDIENTES.md — ver
+//     backend/src/db/schema_motivos_aviso_previo_01.sql). Mismo patrón que
+//     /documentos-tipo. ---
+panelConfiguracionRouter.get('/motivos-aviso-previo', async (req, res) => {
+  const prestadoraId = req.usuarioPanel.rol === 'superadmin' && req.query.prestadora_id
+    ? req.query.prestadora_id
+    : req.usuarioPanel.prestadoraId;
+  const { data, error } = await supabase
+    .from('motivos_aviso_previo_guardia')
+    .select('*')
+    .eq('prestadora_id', prestadoraId)
+    .order('nombre');
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ motivos: data });
+});
+
+panelConfiguracionRouter.post('/motivos-aviso-previo', async (req, res) => {
+  const { nombre } = req.body;
+  if (!nombre) return res.status(400).json({ error: 'Falta nombre' });
+  const { error } = await supabase
+    .from('motivos_aviso_previo_guardia')
+    .insert({ nombre, prestadora_id: req.usuarioPanel.prestadoraId });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+panelConfiguracionRouter.patch('/motivos-aviso-previo/:id', async (req, res) => {
+  const { nombre, activo } = req.body;
+  let query = supabase
+    .from('motivos_aviso_previo_guardia')
+    .update({ nombre, activo })
+    .eq('id', req.params.id);
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  }
+  const { error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });

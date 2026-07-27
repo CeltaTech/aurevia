@@ -58,6 +58,7 @@ panelNotificacionesRouter.post('/postulante', requiereRolPanel, async (req, res)
       to: email,
       asunto: textos.asunto,
       texto: `${textos.saludo(nombre)}\n\n${textos[nuevoEstado]}\n\n${textos.firma}`,
+      prestadoraId: req.usuarioPanel.prestadoraId,
     });
     res.json({ ok: true });
   } catch (error) {

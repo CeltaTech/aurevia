@@ -164,18 +164,13 @@ panelCuentasRouter.post('/familia-directa', requiereRolPanel, requierePermiso('a
   }
 });
 
-const ETAPAS_INCORPORACION = [
-  'postulacion',
-  'verificacion_identidad',
-  'antecedentes_penales',
-  'entrevista',
-  'capacitacion',
-];
-
 // Inicia el Proceso de Incorporación de Asistentes (uso interno del Panel, ver glosario
 // de CLAUDE.md): crea la cuenta real de Asistente a partir de una postulación aprobada,
-// y registra las 5 etapas de verificacion_asistente.
-// La primera etapa ("postulacion") queda aprobada de entrada porque ya se cumplió.
+// y registra las etapas de verificacion_asistente configuradas por esa Prestadora
+// (pendiente #18 candidato 7, docs/PENDIENTES.md — cada Prestadora define su propio plan
+// de incorporación en etapas_incorporacion_asistente, ya no hay 5 etapas fijas para todas).
+// La primera etapa (menor "orden") queda aprobada de entrada porque ya se cumplió: es la
+// postulación misma, que ya pasó.
 panelCuentasRouter.post('/asistente', requiereRolPanel, requiereAdmin, async (req, res) => {
   const { postulacionId } = req.body;
   if (!postulacionId) {
@@ -222,12 +217,23 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, requiereAdmin, async (re
     });
     if (errorAsistente) throw new Error(errorAsistente.message);
 
-    const filasVerificacion = ETAPAS_INCORPORACION.map((etapa) => ({
+    const { data: etapas, error: errorEtapas } = await supabase
+      .from('etapas_incorporacion_asistente')
+      .select('clave')
+      .eq('prestadora_id', prestadoraId)
+      .eq('activa', true)
+      .order('orden');
+    if (errorEtapas) throw new Error(errorEtapas.message);
+    if (!etapas || etapas.length === 0) {
+      throw new Error('Esta Prestadora no tiene etapas de incorporación configuradas (Configuración > Servicios).');
+    }
+
+    const filasVerificacion = etapas.map(({ clave }, indice) => ({
       asistente_id: asistenteId,
-      etapa,
-      estado: etapa === 'postulacion' ? 'aprobada' : 'pendiente',
-      revisado_por: etapa === 'postulacion' ? req.usuarioPanel.id : null,
-      completado_en: etapa === 'postulacion' ? new Date().toISOString() : null,
+      etapa: clave,
+      estado: indice === 0 ? 'aprobada' : 'pendiente',
+      revisado_por: indice === 0 ? req.usuarioPanel.id : null,
+      completado_en: indice === 0 ? new Date().toISOString() : null,
     }));
     const { error: errorVerificaciones } = await supabase.from('verificaciones_asistente').insert(filasVerificacion);
     if (errorVerificaciones) throw new Error(errorVerificaciones.message);

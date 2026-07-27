@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
 import { useConfirmarDestructivo } from '../context/TenantSessionContext';
+import { useZonasCobertura } from '../hooks/useZonasCobertura';
 import { esAdminOSuperior } from '../lib/roles';
 import { traducirCodigos } from '../lib/postulacionCodigos';
 import { supabase } from '../lib/supabaseClient';
@@ -18,6 +19,11 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
   const { usuario } = useAuth();
   const confirmarDestructivo = useConfirmarDestructivo();
   const navigate = useNavigate();
+  const { filas: zonas } = useZonasCobertura(usuario.prestadora_id);
+  const zonasLabels = useMemo(
+    () => Object.fromEntries(zonas.map((z) => [z.codigo, z.nombre])),
+    [zonas],
+  );
   const [nuevoEstado, setNuevoEstado] = useState(postulacion.estado);
   const [nota, setNota] = useState(postulacion.nota_interna || '');
   const [guardando, setGuardando] = useState(false);
@@ -111,7 +117,7 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
           <dt>{t.postulaciones.col_especialidades}</dt>
           <dd>{traducirCodigos(postulacion.especialidades, t.postulaciones.especialidades_labels)}</dd>
           <dt>{t.postulaciones.col_zonas}</dt>
-          <dd>{traducirCodigos(postulacion.zonas, t.postulaciones.zonas_labels)}</dd>
+          <dd>{traducirCodigos(postulacion.zonas, zonasLabels)}</dd>
           <dt>{t.postulaciones.disponibilidad}</dt>
           <dd>{traducirCodigos(postulacion.disponibilidad, t.postulaciones.disponibilidad_labels)}</dd>
           <dt>{t.postulaciones.anios_experiencia}</dt>

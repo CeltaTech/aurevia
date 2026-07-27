@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { obtenerUbicacion } from '../../lib/ubicacion';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
+import { useMotivosAvisoPrevio } from '../../hooks/useMotivosAvisoPrevio';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
@@ -12,6 +13,7 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
   const { t } = useLocale();
   const { usuario } = useAuth();
   const confirmarDestructivo = useConfirmarDestructivo();
+  const { filas: motivosAvisoPrevio } = useMotivosAvisoPrevio(usuario.prestadora_id);
   const [medioTransporte, setMedioTransporte] = useState('');
   const [cancelacionOrigen, setCancelacionOrigen] = useState('');
   const [cancelacionAlcance, setCancelacionAlcance] = useState('');
@@ -251,10 +253,9 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
               onChange={(e) => setAvisoPrevioMotivo(e.target.value)}
             >
               <option value="">{t.guardias.nueva_guardia.elegir}</option>
-              <option value="salud">{t.guardias.detalle.aviso_previo_motivo_salud}</option>
-              <option value="transporte">{t.guardias.detalle.aviso_previo_motivo_transporte}</option>
-              <option value="familiar">{t.guardias.detalle.aviso_previo_motivo_familiar}</option>
-              <option value="otro">{t.guardias.detalle.aviso_previo_motivo_otro}</option>
+              {motivosAvisoPrevio.filter((m) => m.activo).map((m) => (
+                <option key={m.id} value={m.nombre}>{m.nombre}</option>
+              ))}
             </FormField>
             <Button
               variant="secondary"

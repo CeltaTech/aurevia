@@ -1,4 +1,5 @@
 import { precacheAndRoute } from 'workbox-precaching';
+import { IDENTIDAD } from './config/identidadProducto.js';
 
 precacheAndRoute(self.__WB_MANIFEST);
 
@@ -14,7 +15,7 @@ self.addEventListener('activate', (event) => {
 // asignada, mensajes del coordinador, recordatorios). El payload lo arma el backend
 // (backend/src/utils/push.js) como { titulo, cuerpo, url }.
 self.addEventListener('push', (event) => {
-  let datos = { titulo: 'Aurevia', cuerpo: '' };
+  let datos = { titulo: IDENTIDAD.nombreCorto, cuerpo: '' };
   try {
     datos = event.data.json();
   } catch {
@@ -22,7 +23,7 @@ self.addEventListener('push', (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(datos.titulo || 'Aurevia', {
+    self.registration.showNotification(datos.titulo || IDENTIDAD.nombreCorto, {
       body: datos.cuerpo || '',
       icon: '/favicon.svg',
       data: { url: datos.url || '/' },

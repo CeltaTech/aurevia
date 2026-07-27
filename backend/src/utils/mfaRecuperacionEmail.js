@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { supabase } from '../db/connection.js';
 import { enviarEmail } from './email.js';
+import { IDENTIDAD } from '../config/identidadProducto.js';
 
 // Pendiente #37 — recuperación de acceso por email cuando se pierde el dispositivo TOTP.
 const VIGENCIA_MINUTOS = 10;
@@ -36,7 +37,7 @@ export async function solicitarCodigoRecuperacion(usuarioId) {
 
   await enviarEmail({
     to: userData.user.email,
-    asunto: 'Código de recuperación de acceso — Aurevia',
+    asunto: `Código de recuperación de acceso — ${IDENTIDAD.nombre}`,
     texto: `Tu código de recuperación es ${codigo}. Vence en ${VIGENCIA_MINUTOS} minutos. Si no lo pediste vos, ignorá este email.`,
   });
 }

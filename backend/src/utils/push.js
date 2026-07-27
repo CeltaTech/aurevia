@@ -1,5 +1,6 @@
 import webpush from 'web-push';
 import { supabase } from '../db/connection.js';
+import { IDENTIDAD } from '../config/identidadProducto.js';
 
 let configurado = false;
 
@@ -8,7 +9,10 @@ function asegurarConfiguracion() {
   const publicKey = process.env.VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
   if (!publicKey || !privateKey) return false;
-  webpush.setVapidDetails('mailto:soporte@aurevia.app', publicKey, privateKey);
+  // "Subject" VAPID: la casilla a la que el servicio de push del navegador escribe si hay
+  // un problema con los envíos. Sale de la identidad del producto para que renombrarlo no
+  // implique buscarla acá; VAPID_SUBJECT permite pisarla por entorno sin tocar código.
+  webpush.setVapidDetails(process.env.VAPID_SUBJECT || `mailto:${IDENTIDAD.emailSoporte}`, publicKey, privateKey);
   configurado = true;
   return true;
 }

@@ -1,0 +1,28 @@
+name: Verificar identidad del producto
+
+# El guardarraíl de la Etapa 0.5 (PLAN_SEPARACION_XEITRA.md): que cambiarle el nombre al
+# producto siga siendo editar un archivo y no una cacería por todo el repo. Falla el build si
+# alguien escribe el nombre a mano en vez de usar el marcador {{producto}}, o si las cuatro
+# copias de identidadProducto.js dejan de coincidir.
+#
+# Corre en cada push y en cada pull request, sobre todo el repo — no filtra por rutas a
+# propósito: un hardcode puede aparecer en cualquier archivo, y ese es justamente el caso que
+# tiene que cazar. El script no tiene dependencias, así que no hay npm install.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verificar identidad del producto
+        run: node scripts/verificar_identidad.mjs

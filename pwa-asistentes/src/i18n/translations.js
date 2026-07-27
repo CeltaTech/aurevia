@@ -18,7 +18,7 @@ export const T = {
       cerrar_sesion: 'Cerrar sesión',
     },
     auth: {
-      titulo: 'Aurevia — Asistentes',
+      titulo: '{{producto}} — Asistentes',
       subtitulo: 'Ingresá con tu cuenta para ver tus guardias',
       email: 'Email',
       password: 'Contraseña',
@@ -142,7 +142,7 @@ export const T = {
       cerrar_sesion: 'Log out',
     },
     auth: {
-      titulo: 'Aurevia — Caregivers',
+      titulo: '{{producto}} — Caregivers',
       subtitulo: 'Sign in to see your shifts',
       email: 'Email',
       password: 'Password',
@@ -266,7 +266,7 @@ export const T = {
       cerrar_sesion: 'Sair',
     },
     auth: {
-      titulo: 'Aurevia — Cuidadores',
+      titulo: '{{producto}} — Cuidadores',
       subtitulo: 'Entre com sua conta para ver seus plantões',
       email: 'Email',
       password: 'Senha',

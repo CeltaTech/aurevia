@@ -3,6 +3,8 @@
 // Pago para cobro recurrente. La credencial guardada es el access_token de la cuenta
 // conectada de la Prestadora (obtenido por OAuth Connect, no una clave suelta).
 
+import { IDENTIDAD } from '../config/identidadProducto.js';
+
 const API_BASE = process.env.MERCADOPAGO_API_BASE || 'https://api.mercadopago.com';
 
 export async function crearSuscripcion({ credencial, suscripcionId, monto, familiaId }) {
@@ -13,7 +15,7 @@ export async function crearSuscripcion({ credencial, suscripcionId, monto, famil
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      reason: 'Suscripción Aurevia Marketplace',
+      reason: `Suscripción ${IDENTIDAD.nombre} Marketplace`,
       external_reference: suscripcionId,
       payer_email: undefined, // se completa en la ruta que llama, con el email real de la Familia
       auto_recurring: {

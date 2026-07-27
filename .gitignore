@@ -7,6 +7,11 @@ dist/
 Thumbs.db
 .playwright-mcp/
 
+# Estado local de la CLI de Vercel (projectId/orgId por app) — es de la máquina de quien
+# desarrolla, no del proyecto. Nunca estuvo versionado; se declara para que no aparezca
+# suelto en git status ni se cuele por error.
+.vercel/
+
 # Credenciales y datos sensibles — nunca commitear (regla 9 de CLAUDE.md)
 No hacer commit/
 

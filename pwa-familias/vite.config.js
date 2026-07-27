@@ -1,10 +1,21 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { IDENTIDAD, aplicarIdentidad } from './src/config/identidadProducto.js';
+
+// index.html no pasa por i18n ni por React — es lo primero que ve el navegador, antes de que
+// cargue nada. Sus marcadores {{producto}} se resuelven acá, en tiempo de compilación.
+function identidadEnHtml() {
+  return {
+    name: 'identidad-en-html',
+    transformIndexHtml: (html) => aplicarIdentidad(html),
+  };
+}
 
 export default defineConfig({
   plugins: [
     react(),
+    identidadEnHtml(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-192.png', 'icon-maskable-512.png'],
@@ -13,12 +24,16 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.js',
+      // El manifiesto se arma desde la identidad del producto: es lo que queda escrito bajo
+      // el ícono cuando alguien instala la PWA en su teléfono. El sufijo por app y la
+      // descripción son texto propio de esta app, no del producto, y siguen acá — el
+      // manifiesto se compila en un solo idioma y no pasa por i18n.
       manifest: {
-        name: 'Aurevia — Familias',
-        short_name: 'Aurevia',
-        description: 'App para que las Familias sigan el servicio de sus Pacientes en Aurevia',
-        theme_color: '#1a2744',
-        background_color: '#ffffff',
+        name: `${IDENTIDAD.nombre} — Familias`,
+        short_name: IDENTIDAD.nombreCorto,
+        description: `App para que las Familias sigan el servicio de sus Pacientes en ${IDENTIDAD.nombre}`,
+        theme_color: IDENTIDAD.colorPrimario,
+        background_color: IDENTIDAD.colorFondo,
         display: 'standalone',
         start_url: '/',
         icons: [

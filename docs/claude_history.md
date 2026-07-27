@@ -2,6 +2,13 @@
 
 > Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§10) — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
 
+## Regla 1 ampliada: el nombre del producto tampoco se hardcodea (2026-07-27)
+
+- **Antes:** la Regla 1 de §7 prohibía hardcodear texto visible, precios, valores legales y datos de contacto, pero no nombraba al producto. En la práctica el nombre se escribía a mano en todos lados y nadie lo consideraba una violación de la regla.
+- **Ahora:** el nombre del producto y su marca entran explícitamente en la Regla 1. Salen de `src/config/identidadProducto.js` — marcador `{{producto}}` en traducciones y HTML, `IDENTIDAD.nombre` en código, `IDENTIDAD.codigo` (inmutable) en todo lo que persiste. `scripts/verificar_identidad.mjs` lo verifica en cada push (`.github/workflows/verificar-identidad.yml`).
+- **Motivo:** el Desarrollador pidió que renombrar el producto fuera "una mera configuración que se desparrame sola" y no una recodificación por todos lados, incluidos logotipos e isotipos que todavía no se inventaron. Al medirlo, el problema ya estaba creciendo solo: el 2026-07-24 había 12 hardcodes documentados; el 2026-07-27, sin que nadie los agregara a propósito, el chequeo automático encontró 45. Tres de ellos no eran texto visible sino identificadores que **no deben** cambiar con la marca — el nombre de la base IndexedDB de la cola offline de la PWA de Asistentes (`aurevia-offline`), el prefijo de los archivos de backup, y el `subject` VAPID de las notificaciones push — y habrían roto datos guardados en el teléfono de cada Asistente si alguien hubiera hecho el renombre con un buscar-y-reemplazar. Eso justificó separar `codigo` (técnico, inmutable) de `nombre` (comercial, cambiable). Aprobado como Etapa 0.5 de `PLAN_SEPARACION_XEITRA.md` el 2026-07-27.
+- **No reintroducir:** el nombre del producto escrito a mano en cualquier archivo fuera de `identidadProducto.js`, ni un renombre hecho con buscar-y-reemplazar sobre todo el repo — eso es exactamente lo que rompe los identificadores persistidos. Tampoco agregar un archivo a la lista blanca de `verificar_identidad.mjs` para que deje de fallar: casi siempre la respuesta correcta es usar el marcador.
+
 ## §12 agregado: "Estado real por encima del documentado" (2026-07-23)
 
 - **Antes:** `CLAUDE.md` §12 tenía "Principio de certeza" (no afirmar algo sin haberlo comprobado en el momento), pero no decía explícitamente contra qué fuente comprobar cuando la pregunta es "¿esto ya está hecho/migrado?".

@@ -3,10 +3,12 @@ import { Outlet, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
 import { iniciarSincronizacionAutomatica } from '../lib/sincronizarCola';
+import { useIdentidad } from '../config/useIdentidad';
 
 export default function Layout() {
   const { logout } = useAuth();
   const { t } = useLocale();
+  const identidad = useIdentidad();
 
   // Reintento de check-in/reporte guardados sin señal — solo con sesión activa (Fase 9).
   useEffect(() => {
@@ -16,7 +18,7 @@ export default function Layout() {
   return (
     <div className="app-layout">
       <header className="app-header">
-        <h1>Aurevia</h1>
+        <h1>{identidad.nombreCorto}</h1>
         <button className="btn btn-secondary" onClick={logout} style={{ padding: '0.4rem 1rem', fontSize: '0.8rem' }}>
           {t.nav.cerrar_sesion}
         </button>

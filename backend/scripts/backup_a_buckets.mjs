@@ -4,6 +4,7 @@ import { unlink } from 'node:fs/promises';
 import { createGzip } from 'node:zlib';
 import { pipeline } from 'node:stream/promises';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { IDENTIDAD } from '../src/config/identidadProducto.js';
 
 function requireEnv(nombre) {
   const valor = process.env[nombre];
@@ -53,7 +54,9 @@ async function subirA(cliente, bucket, nombreArchivo, rutaLocal) {
 
 async function main() {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const nombreArchivo = `aurevia_backup_${timestamp}.sql.gz`;
+  // Se nombra por el código técnico del producto, no por su nombre comercial: si mañana la
+  // marca cambia, los backups viejos y los nuevos tienen que seguir compartiendo prefijo.
+  const nombreArchivo = `${IDENTIDAD.codigo}_backup_${timestamp}.sql.gz`;
   const rutaTemporal = `/tmp/${nombreArchivo}`;
 
   console.log('Generando dump de la base de datos...');

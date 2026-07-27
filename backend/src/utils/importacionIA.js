@@ -1,6 +1,7 @@
 import XLSX from 'xlsx';
 import Anthropic from '@anthropic-ai/sdk';
 import { registrarUsoIA } from './registrarUsoIA.js';
+import { IDENTIDAD } from '../config/identidadProducto.js';
 
 // Fase 3 del plan "Terminar la Etapa 2 (Panel)" (importación masiva de datos con IA).
 // Sigue el mismo patrón que backend/src/utils/iaWhatsapp.js: cliente de Anthropic con
@@ -83,7 +84,7 @@ export function intentarParsearSQL(buffer) {
 }
 
 const SYSTEM_PROMPT_VIABILIDAD = `Sos un asistente que decide si un archivo, subido por una
-Prestadora de cuidado domiciliario a Aurevia para importación masiva de Asistentes o
+Prestadora de cuidado domiciliario a ${IDENTIDAD.nombre} para importación masiva de Asistentes o
 Familias/Pacientes, se puede interpretar como una tabla de datos con certeza suficiente de
 no producir una importación incorrecta. El archivo no es un Excel/CSV/planilla estándar ni
 un dump SQL reconocible (esos casos ya se resolvieron antes de llegar acá) — puede ser JSON,
@@ -142,7 +143,7 @@ ${muestraTexto}`;
 }
 
 const SYSTEM_PROMPT = `Sos un asistente que ayuda a mapear columnas de una planilla (Excel/CSV)
-subida por una Prestadora de cuidado domiciliario a los campos internos del sistema Aurevia,
+subida por una Prestadora de cuidado domiciliario a los campos internos del sistema ${IDENTIDAD.nombre},
 para importar Asistentes (cuidadores) o Familias/Pacientes en forma masiva. Cada Prestadora
 nombra sus columnas distinto (puede venir en español, con abreviaturas, en otro orden, con
 columnas de más que no aplican). Tu tarea es proponer, para cada columna del archivo, a qué

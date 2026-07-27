@@ -126,6 +126,7 @@ Separación estricta entre roles técnicos, administrativos y operativos. Ningú
 ## 7. Reglas no negociables de desarrollo
 
 1. **Nunca hardcodear** texto visible, precios, honorarios, valores legales, reglas operativas ni datos de contacto — siempre desde configuración, base de datos o archivos de traducción.
+   - **El nombre del producto y su marca entran en esta regla, sin excepción**: ni en texto visible, ni en el manifiesto de una PWA, ni en el `<title>` de un `index.html`, ni en el asunto de un email, ni en un prompt de IA, ni en el nombre de un producto de pasarela. Salen siempre de `src/config/identidadProducto.js`: marcador `{{producto}}` / `{{productoCorto}}` en archivos de traducción y en HTML, `IDENTIDAD.nombre` en código. Todo lo que **persiste** (nombre de una base IndexedDB, prefijo de un archivo de backup, clave de entitlement) usa `IDENTIDAD.codigo`, que no cambia nunca ni siquiera si la marca se renombra. Ese archivo existe cuatro veces —una por unidad desplegable, porque cada una se despliega sin acceso al resto del repo— y `scripts/verificar_identidad.mjs` verifica en cada push que las cuatro coincidan y que el nombre no esté escrito a mano en ningún lado.
 2. **Multiidioma desde el día uno**: toda clave nueva se agrega simultáneamente en `es-AR`, `en`, `pt-BR`. No se construye una función en un solo idioma "para traducir después".
 3. **Todo componente que carga datos maneja 4 estados**: loading / error / vacío / listo.
 4. **Toda operación destructiva requiere confirmación explícita** (ver §6).

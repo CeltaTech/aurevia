@@ -3,7 +3,13 @@
 // IndexedDB en vez de Background Sync API (no soportada en Safari/iOS), reintento manual
 // al abrir/volver a la app.
 
-const DB_NOMBRE = 'aurevia-offline';
+import { IDENTIDAD } from '../config/identidadProducto.js';
+
+// Se nombra por el código técnico del producto, nunca por su nombre comercial: esta base
+// vive dentro del teléfono del Asistente y puede tener check-ins y Reportes esperando señal.
+// Si el nombre cambiara con la marca, la app abriría una base vacía y esos datos quedarían
+// huérfanos en el dispositivo, sin sincronizar y sin forma de recuperarlos.
+const DB_NOMBRE = `${IDENTIDAD.codigo}-offline`;
 const DB_VERSION = 1;
 const ALMACEN = 'cola';
 

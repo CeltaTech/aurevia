@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { supabase } from '../db/connection.js';
 import { enviarEmail } from './email.js';
+import { IDENTIDAD } from '../config/identidadProducto.js';
 
 const DIAS_VALIDEZ_TOKEN = 7;
 
@@ -14,16 +15,16 @@ function urlAppPorRol(rol) {
 function textosActivacionCuenta(nombre, link) {
   return {
     'es-AR': {
-      asunto: 'Activá tu cuenta en Aurevia',
-      texto: `Hola ${nombre},\n\nTe invitamos a activar tu cuenta en Aurevia para poder acceder desde tu celular.\n\nActivá tu cuenta acá (el link vence en ${DIAS_VALIDEZ_TOKEN} días):\n${link}\n\nSi no esperabas este email, podés ignorarlo.`,
+      asunto: `Activá tu cuenta en ${IDENTIDAD.nombre}`,
+      texto: `Hola ${nombre},\n\nTe invitamos a activar tu cuenta en ${IDENTIDAD.nombre} para poder acceder desde tu celular.\n\nActivá tu cuenta acá (el link vence en ${DIAS_VALIDEZ_TOKEN} días):\n${link}\n\nSi no esperabas este email, podés ignorarlo.`,
     },
     en: {
-      asunto: 'Activate your Aurevia account',
-      texto: `Hi ${nombre},\n\nYou've been invited to activate your Aurevia account so you can access it from your phone.\n\nActivate your account here (this link expires in ${DIAS_VALIDEZ_TOKEN} days):\n${link}\n\nIf you weren't expecting this email, you can ignore it.`,
+      asunto: `Activate your ${IDENTIDAD.nombre} account`,
+      texto: `Hi ${nombre},\n\nYou've been invited to activate your ${IDENTIDAD.nombre} account so you can access it from your phone.\n\nActivate your account here (this link expires in ${DIAS_VALIDEZ_TOKEN} days):\n${link}\n\nIf you weren't expecting this email, you can ignore it.`,
     },
     'pt-BR': {
-      asunto: 'Ative sua conta na Aurevia',
-      texto: `Olá ${nombre},\n\nVocê foi convidado a ativar sua conta na Aurevia para acessar pelo celular.\n\nAtive sua conta aqui (o link expira em ${DIAS_VALIDEZ_TOKEN} dias):\n${link}\n\nSe você não esperava este email, pode ignorá-lo.`,
+      asunto: `Ative sua conta na ${IDENTIDAD.nombre}`,
+      texto: `Olá ${nombre},\n\nVocê foi convidado a ativar sua conta na ${IDENTIDAD.nombre} para acessar pelo celular.\n\nAtive sua conta aqui (o link expira em ${DIAS_VALIDEZ_TOKEN} dias):\n${link}\n\nSe você não esperava este email, pode ignorá-lo.`,
     },
   };
 }

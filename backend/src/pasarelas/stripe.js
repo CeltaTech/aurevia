@@ -2,6 +2,8 @@
 // Stripe Billing (Customers + Subscriptions). La credencial guardada es el access_token de
 // la cuenta conectada de la Prestadora.
 
+import { IDENTIDAD } from '../config/identidadProducto.js';
+
 const API_BASE = process.env.STRIPE_API_BASE || 'https://api.stripe.com/v1';
 
 function form(objeto) {
@@ -18,7 +20,7 @@ export async function crearSuscripcion({ credencial, suscripcionId, monto, famil
     'currency': 'ars',
     'unit_amount': Math.round(monto * 100),
     'recurring[interval]': 'month',
-    'product_data[name]': 'Suscripción Aurevia Marketplace',
+    'product_data[name]': `Suscripción ${IDENTIDAD.nombre} Marketplace`,
   });
 
   const suscripcion = await llamar('/subscriptions', credencial, {

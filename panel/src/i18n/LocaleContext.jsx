@@ -1,5 +1,6 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useMemo, useState } from 'react';
 import { T, DEFAULT_LOCALE, LOCALES } from './translations';
+import { sustituirIdentidadProfundo } from '../config/identidadProducto.js';
 
 const LocaleContext = createContext(null);
 
@@ -17,7 +18,11 @@ export function LocaleProvider({ children }) {
     setLocaleState(nuevoLocale);
   }
 
-  const t = T[locale];
+  // Los textos nombran al producto con el marcador {{producto}} y se resuelve acá, una sola
+  // vez por idioma. Se hace en este punto —y no en cada componente— porque `t` se consume
+  // como objeto plano (t.auth.titulo), no como función t('auth.titulo'): así ningún punto
+  // de consumo cambia por esto. Ver src/config/identidadProducto.js.
+  const t = useMemo(() => sustituirIdentidadProfundo(T[locale]), [locale]);
 
   return (
     <LocaleContext.Provider value={{ locale, setLocale, t }}>

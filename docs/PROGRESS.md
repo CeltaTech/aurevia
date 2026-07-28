@@ -12,6 +12,15 @@
 > `PLAN_MULTITENANT_CELTATECH.md` y `Prompt_Claude_Code_CeltaTech_Multitenant.md`. El detalle
 > completo está en `../../../panel/docs/PROGRESS.md`.
 
+> **2026-07-28 — El repositorio se mudó a la cuenta de la empresa y pasó a privado.** Antes vivía
+> en la cuenta personal `BetoSP` y era público. Ahora es `CeltaTech/aurevia`, privado. La mudanza
+> conserva todo el historial y GitHub deja redirigiendo la dirección vieja, así que nada de lo que
+> apunte al nombre anterior se rompe. Ponerlo privado tampoco rompió nada: no había ni una copia,
+> ni un seguidor, ni un marcador afuera, y **ni Vercel ni Railway despliegan desde GitHub en este
+> proyecto** — los dos se despliegan a mano (ver `CLAUDE.md` §8 y la nota de Railway del 2026-07-09
+> más abajo en este mismo archivo). Lo único que hay que recordar: el remoto local ya quedó
+> apuntado a la dirección nueva. Si algún día hace falta volver a abrirlo al público, es un comando.
+
 ## Estado por etapa
 
 | Etapa | Descripción | Estado |

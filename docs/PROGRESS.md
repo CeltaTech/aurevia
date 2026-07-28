@@ -39,6 +39,40 @@
 > R2 y B2, y son más seguros que los nativos porque viven fuera de Supabase—, pero sí mantiene la
 > **pausa por inactividad**, que hay que resolver antes de la primera Prestadora real.
 
+> **2026-07-28 — La base de Aurevia por fin se puede reconstruir desde el repositorio.** Hasta
+> hoy no se podía, y esa era la deuda técnica más seria del proyecto. Había dos historiales y
+> ninguno servía: los 75 `.sql` sueltos de `backend/src/db/` son *intención* —lo que alguna vez se
+> quiso aplicar, sin saber qué corrió de verdad—, y las otras 75 anotaciones que Supabase guardaba
+> adentro de la base sí eran lo que efectivamente corrió, pero **existían en un solo lugar del
+> mundo**: dentro de una base en plan gratuito que se pausa sola. Ni juntando las dos alcanzaba,
+> porque la base se creó el 2026-07-07 y las anotaciones arrancan el 11: los primeros cuatro días
+> no quedaron escritos en ningún lado.
+>
+> La salida no fue rearmar la historia (era imposible) sino sacarle una **foto fiel al esquema real
+> de producción** y convertirla en la migración inicial:
+> `supabase/migrations/20260728163000_base_existente.sql` — 87 tablas, 182 políticas de seguridad,
+> 19 funciones, 41 disparadores. No es lo que alguien quiso hacer: es lo que hay.
+>
+> **Se comprobó, no se supuso.** Se levantó un Supabase vacío en la máquina, se corrió solo esa
+> foto y se comparó contra producción en nueve dimensiones —tablas, columnas, políticas,
+> funciones, disparadores, restricciones, índices, permisos de tabla y valores de los
+> enumerados—. Las nueve idénticas. Los permisos de tabla se miraron a propósito: es la clase de
+> defecto que rompió el panel de CeltaTech el 2026-07-27.
+>
+> Antes de tocar el historial de la base, esas 75 anotaciones se **rescataron a git**
+> (`supabase/historial_previo/`, con su `LEEME.md`). El orden importó: primero el rescate, después
+> la limpieza. Sacarlas de la base no tocó ni una tabla — es una libreta de apuntes, no la base.
+>
+> Con el sistema andando se aplicó el primer cambio de verdad por esta vía:
+> `20260728170000_quitar_plan_licencia.sql`, que elimina `prestadoras.plan_licencia`. Esa columna
+> era un texto libre sin ningún sistema detrás; qué plan contrató una Prestadora es asunto de
+> CeltaTech (Nivel 1), no de Aurevia (Nivel 2). Verificado contra producción después de aplicarlo:
+> la columna ya no está, siguen las 87 tablas, 182 políticas, 19 funciones y 41 disparadores, las
+> columnas pasaron de 852 a 851, y las 2 filas de `prestadoras` intactas.
+>
+> Las reglas quedaron escritas en `docs/MIGRACIONES.md`. La corta: **la base nunca se toca a
+> mano**, y `backend/src/db/` queda congelado (ver `backend/src/db/LEEME.md`).
+
 ## Estado por etapa
 
 | Etapa | Descripción | Estado |

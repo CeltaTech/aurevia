@@ -16,10 +16,15 @@
 > en la cuenta personal `BetoSP` y era público. Ahora es `CeltaTech/aurevia`, privado. La mudanza
 > conserva todo el historial y GitHub deja redirigiendo la dirección vieja, así que nada de lo que
 > apunte al nombre anterior se rompe. Ponerlo privado tampoco rompió nada: no había ni una copia,
-> ni un seguidor, ni un marcador afuera, y **ni Vercel ni Railway despliegan desde GitHub en este
-> proyecto** — los dos se despliegan a mano (ver `CLAUDE.md` §8 y la nota de Railway del 2026-07-09
-> más abajo en este mismo archivo). Lo único que hay que recordar: el remoto local ya quedó
+> ni un seguidor, ni un marcador afuera. Lo único que hay que recordar: el remoto local ya quedó
 > apuntado a la dirección nueva. Si algún día hace falta volver a abrirlo al público, es un comando.
+>
+> **Corrección del 2026-07-28 (misma fecha, más tarde).** Esta nota decía que "ni Vercel ni Railway
+> despliegan desde GitHub en este proyecto — los dos se despliegan a mano". **Para Railway es
+> falso.** El archivo `.github/workflows/deploy-backend.yml` se dispara solo con cada `push` a la
+> rama `main` que toque `backend/**`, y de hecho así se desplegó el backend hoy mismo (ver la
+> entrada de la Etapa 2 más abajo). O sea: **el backend se redespliega solo; el Panel y las dos
+> PWA no.** Para esos tres sigue haciendo falta el comando explícito, como dice `CLAUDE.md` §8.
 
 > **2026-07-28 — La base de datos también se mudó a la cuenta de la empresa.** El proyecto de
 > Supabase (`abcpmzfnnhpuiupmrsdi`) estaba en una cuenta vieja, la organización "Sendler"; ahora
@@ -89,6 +94,71 @@
 Convención: 🔴 No iniciado · 🟡 En progreso · 🟢 Completo y en producción.
 
 ## Última tarea completada
+
+**2026-07-28: Etapa 2 del plan de separación, paso 7 — el rol `admin_plataforma` sale de
+Aurevia. Aplicado a producción y verificado.** Aurevia era, sin quererlo, dos productos en un
+mismo sistema: la plataforma de gestión para Prestadoras, y adentro un panel comercial de la
+empresa que las factura. Ese segundo producto se fue a CeltaTech, que tiene su propio panel.
+Lo que quedó acá es solo Aurevia.
+
+Qué cambió, en concreto:
+
+- **El rol `admin_plataforma` ya no existe.** La base directamente lo rechaza: la restricción
+  `usuarios_rol_check` ahora lista cinco roles y ese no está. Se comprobó antes de tocar nada
+  que no hubiera ni un solo usuario con ese rol en producción, y después de aplicarlo que la
+  palabra `admin_plataforma` no aparezca **ni una vez** en todo el esquema `public` de la base
+  viva.
+- **La maquinaria de "entrar a una Prestadora" no se borró: se le cambió el dueño.** Antes era
+  el rol comercial el que podía meterse adentro de una Prestadora; ahora es Superadmin, y se
+  llama **sesión de soporte técnico**. Las dos tablas se renombraron para que el nombre diga la
+  verdad: `sesiones_tenant_admin_plataforma` → `sesiones_soporte_tecnico`, y
+  `auditoria_admin_plataforma` → `auditoria_soporte_tecnico`. La dirección web
+  `/api/panel/sesion-tenant` se dejó igual a propósito, para no romper lo que ya la usa.
+- **Un cambio que no se ve pero importa:** antes se auditaba "toda acción hecha por el rol
+  comercial"; ahora se audita "toda acción hecha **dentro de una sesión de soporte abierta**".
+  No es lo mismo. Un Superadmin trabajando en Sandbox, que es su lugar normal, no llena el
+  registro de auditoría de ruido; y en cambio todo lo que hace dentro de una Prestadora real
+  queda anotado sin excepción.
+- **Un solo lugar decide de quién son los datos que se ven.** La función SQL `current_tenant()`
+  define el orden —primero la sesión de soporte si está abierta, después la Organización propia—
+  y el middleware `requiereRolPanel.js` la refleja en vez de reinventarla (`CLAUDE.md` §7.12).
+
+Cómo se comprobó, en el momento y contra lo que está vivo (no contra el archivo de migración):
+
+- La migración `20260728210000_etapa2_aurevia_deja_de_ser_nivel_1.sql` figura aplicada en
+  `supabase migration list`.
+- Se bajó una foto del esquema de producción y otra del esquema local y se compararon: **cero
+  diferencias**, 5932 líneas cada una. Local es donde corre la prueba de 13 pasos, así que
+  producción quedó igual que lo probado.
+- Prueba nueva y permanente: `backend/scripts/test_etapa2_sesion_soporte.mjs`, 13
+  comprobaciones de punta a punta (que Superadmin se pueda crear sin Prestadora, que sin sesión
+  abierta el backend le cierre la puerta, que abra una, que la segunda quede rechazada, que
+  entre con la sesión abierta, que quede auditado el ingreso y la escritura, que cierre, y que
+  la base rechace el rol viejo). Trae un candado: si la dirección de la base no es la de la
+  máquina local, se aborta sola. No hay bandera para saltearlo, porque la prueba crea y borra
+  datos.
+- **Backend redesplegado a Railway**, y esta vez solo: el workflow "Deploy backend a Railway"
+  (run 30406749264) se disparó con el push. `GET /health` responde 200 y
+  `/api/panel/sesion-tenant` responde 401 (pide identificarse), que es lo correcto — no 500.
+- **Panel redesplegado a Vercel a mano** (`vercel --prod`, despliegue
+  `dpl_5AVuCK7DQuMApme9uGjStcNNXzDy`), porque el Panel no se despliega solo. Se verificó
+  descargando el paquete que sirve `https://aurevia-panel.vercel.app`: **cero menciones** de
+  `admin_plataforma` adentro. Sin este paso el Panel en vivo hubiera seguido buscando un rol que
+  ya no existe y la sesión de soporte no se hubiera podido abrir desde la pantalla.
+
+Documentación alineada en la misma tanda: `CLAUDE.md` §5, `docs/CONTEXT.md`,
+`docs/DATA_MODEL.md`, `docs/SECURITY.md` y `docs/PLAN_SEPARACION_CELTATECH.md`. En
+`SECURITY.md` se corrigieron además dos afirmaciones que estaban viejas desde el 2026-07-13
+(decía que la sesión de tenant "todavía no está implementada", y que `es_superadmin()` era un
+salvoconducto total de RLS; las dos dejaron de ser ciertas el 2026-07-15).
+
+Commits: `4030382` en `CeltaTech/aurevia` (31 archivos), `0ff1fed` en el repositorio `docs`.
+
+Quedó anotado un hallazgo que **no** es de la Etapa 2 pero que la Etapa 2 vuelve más
+importante: **pendiente #98**. Hay rutas del backend que buscan por identificador sin filtrar
+además por la Organización de quien pregunta (26 casos en cuentas, 6 en ausencias, y algunos
+más). Hoy no se filtra el dato de otra Prestadora por casualidad, sino porque la base lo tapa
+con RLS. Es una sola red de contención donde deberían ser dos. Ver `docs/PENDIENTES.md` #98.
 
 **2026-07-27: Pendiente #72 — fórmula de cálculo de cese parametrizable por jurisdicción,
 cerrado.** El cálculo de indemnización de Asistentes (`panel/src/lib/calcularCese.js`) tenía

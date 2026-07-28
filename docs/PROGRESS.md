@@ -10,7 +10,7 @@
 > columna ni dominio de correo** — se verificó antes de tocar nada que el nombre de la empresa no
 > apareciera en ningún identificador de Aurevia. Dos documentos cambiaron de nombre:
 > `PLAN_MULTITENANT_CELTATECH.md` y `Prompt_Claude_Code_CeltaTech_Multitenant.md`. El detalle
-> completo está en `../../celtatech/docs/PROGRESS.md`.
+> completo está en `../../../panel/docs/PROGRESS.md`.
 
 ## Estado por etapa
 

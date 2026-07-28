@@ -1,7 +1,11 @@
 node_modules/
 dist/
+# Cualquier archivo de variables de entorno, con una sola excepción declarada: el molde.
+# Antes decía `.env` y `.env.local` exactos, así que una variante como `.env.nube` se
+# habría subido con las claves reales adentro. Mismo arreglo que se hizo en el panel.
 .env
-.env.local
+.env.*
+!.env.example
 *.log
 .DS_Store
 Thumbs.db

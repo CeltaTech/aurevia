@@ -21,6 +21,24 @@
 > más abajo en este mismo archivo). Lo único que hay que recordar: el remoto local ya quedó
 > apuntado a la dirección nueva. Si algún día hace falta volver a abrirlo al público, es un comando.
 
+> **2026-07-28 — La base de datos también se mudó a la cuenta de la empresa.** El proyecto de
+> Supabase (`abcpmzfnnhpuiupmrsdi`) estaba en una cuenta vieja, la organización "Sendler"; ahora
+> pertenece a la organización **Celta Tech**, junto con la base del panel comercial. **No hay que
+> tocar nada:** el identificador del proyecto no cambia con la mudanza, así que la dirección de la
+> base, las claves, y todo lo configurado en Vercel y en Railway siguen igual. Cambia de quién es y
+> quién paga, no dónde está. No hubo corte de servicio.
+>
+> Se comprobó después de mudarlo, no se dio por hecho: el proyecto responde "sano", su dirección
+> pública sigue exigiendo clave, y se disparó a mano el respaldo diario
+> (`.github/workflows/backup-diario.yml`), que terminó bien y dejó el archivo en los **dos
+> depósitos**, R2 y B2, con el mismo tamaño exacto. Esa última prueba es la que importa: significa
+> que la base sigue siendo alcanzable con las mismas credenciales de siempre, después de la mudanza
+> del repositorio, del cambio a privado y de la mudanza de la base.
+>
+> Sigue en plan gratuito, igual que antes. Eso no lo deja sin respaldos —los suyos son propios, en
+> R2 y B2, y son más seguros que los nativos porque viven fuera de Supabase—, pero sí mantiene la
+> **pausa por inactividad**, que hay que resolver antes de la primera Prestadora real.
+
 ## Estado por etapa
 
 | Etapa | Descripción | Estado |

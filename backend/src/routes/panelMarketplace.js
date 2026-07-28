@@ -14,7 +14,7 @@ export const panelMarketplaceRouter = Router();
 panelMarketplaceRouter.use(requiereRolPanel);
 
 function requiereAdminOSuperior(req, res, next) {
-  if (!['admin_prestadora', 'coordinador', 'superadmin', 'admin_plataforma'].includes(req.usuarioPanel?.rol)) {
+  if (!['admin_prestadora', 'coordinador', 'superadmin'].includes(req.usuarioPanel?.rol)) {
     return res.status(403).json({ error: 'Rol sin permiso' });
   }
   if (!req.usuarioPanel.prestadoraId) {

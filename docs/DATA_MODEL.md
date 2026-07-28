@@ -85,21 +85,21 @@ todo insert nuevo debe declarar `prestadora_id` explícito. `guardias`/`series_g
 
 Extiende `auth.users` de Supabase. `prestadora_id` es `NOT NULL` desde el Bloque 1
 (`schema_multitenant_01.sql`) — ver deuda del `DEFAULT` arriba — **salvo para
-`admin_plataforma`**, único rol que puede tener `prestadora_id NULL` (constraint
-`usuarios_prestadora_id_solo_admin_plataforma_null`, ver más abajo).
+`superadmin`**, único rol que puede tener `prestadora_id NULL` (constraint
+`usuarios_prestadora_id_solo_superadmin_null`, ver más abajo).
 
 ```sql
 CREATE TABLE usuarios (
   id UUID REFERENCES auth.users PRIMARY KEY,
-  rol TEXT CHECK (rol IN ('superadmin','admin_prestadora','coordinador','asistente','familia','admin_plataforma')),
+  rol TEXT CHECK (rol IN ('admin_prestadora','coordinador','asistente','familia','superadmin')),
   prestadora_id UUID REFERENCES prestadoras(id),
   nombre TEXT,
   telefono TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-ALTER TABLE usuarios ADD CONSTRAINT usuarios_prestadora_id_solo_admin_plataforma_null
-  CHECK (prestadora_id IS NOT NULL OR rol = 'admin_plataforma');
+ALTER TABLE usuarios ADD CONSTRAINT usuarios_prestadora_id_solo_superadmin_null
+  CHECK (prestadora_id IS NOT NULL OR rol = 'superadmin');
 ```
 
 Nota (2026-07-10): el rol `admin` original fue renombrado a `admin_prestadora` en dato y
@@ -113,22 +113,27 @@ anterior de esta sección decía que `superadmin` "ve todas las prestadoras vía
 **Sandbox** exclusivamente (Regla dura de `CLAUDE.md` §5: "Superadmin tiene acceso de Panel
 únicamente a la Organización Sandbox"). `es_superadmin()` ya no es un bypass total de RLS:
 las policies que la usan siguen el patrón `(es_superadmin() AND prestadora_id =
-current_tenant()) OR (...)`, y `current_tenant()` para `superadmin` resuelve siempre a su
-propio `prestadora_id` (Sandbox) porque solo `admin_plataforma` puede abrir una sesión de
-tenant (`requiereAdminPlataforma`, `backend/src/routes/panelSesionTenant.js`). Ver sección
-siguiente para el mecanismo completo.
+current_tenant()) OR (...)`, y `current_tenant()` para `superadmin` resuelve a su propio
+`prestadora_id` (Sandbox) salvo que haya abierto una **sesión de soporte técnico**
+(`backend/src/routes/panelSesionTenant.js`). Ver sección siguiente para el mecanismo completo.
 
-## Roles `superadmin` / `admin_plataforma` y "modo dentro de una prestadora" (pendiente #30,
-## resuelto 2026-07-15 — diseño original en `docs/PLAN_MULTITENANT_CELTATECH.md` 3.4/3.4.1)
+## Rol `superadmin` y la sesión de soporte técnico (pendiente #30, resuelto 2026-07-15 —
+## diseño original en `docs/PLAN_MULTITENANT_CELTATECH.md` 3.4/3.4.1; re-apuntado a
+## `superadmin` el 2026-07-28 en la Etapa 2 de la separación CeltaTech/Aurevia)
 
-Modelo de 3 niveles: `admin_prestadora` (acotado a su propia `prestadora_id`, sin cambios),
-`superadmin` (rol técnico puro, único acceso permitido: la Organización Sandbox, nunca una
-Prestadora real), `admin_plataforma` (rol técnico-administrativo de CeltaTech, `prestadora_id
-NULL` en su fila de `usuarios`, sin acceso a ninguna Prestadora salvo que abra
-explícitamente una sesión de "modo dentro de una prestadora", una por vez).
+Modelo de 2 niveles: `admin_prestadora` (acotado a su propia `prestadora_id`, sin cambios) y
+`superadmin` (rol técnico de CeltaTech; su acceso ordinario es únicamente la Organización
+Sandbox, y para entrar a una Prestadora real tiene que abrir explícitamente una sesión de
+soporte técnico, una por vez, con banner, auditoría y vencimiento).
+
+Hasta el 2026-07-28 esta maquinaria era del rol comercial `admin_plataforma`. Ese rol se fue
+entero a CeltaTech (Nivel 1) y **ya no existe en Aurevia**: las dos tablas se renombraron
+(`sesiones_tenant_admin_plataforma` → `sesiones_soporte_tecnico`,
+`auditoria_admin_plataforma` → `auditoria_soporte_tecnico`) y el permiso pasó a `superadmin`.
+La maquinaria en sí no cambió. Ver `docs/PLAN_SEPARACION_CELTATECH.md`, Etapa 2, paso 7.
 
 ```sql
-CREATE TABLE sesiones_tenant_admin_plataforma (
+CREATE TABLE sesiones_soporte_tecnico (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   admin_id UUID NOT NULL REFERENCES usuarios(id),
   prestadora_id UUID NOT NULL REFERENCES prestadoras(id),
@@ -138,7 +143,7 @@ CREATE TABLE sesiones_tenant_admin_plataforma (
   salida_at TIMESTAMPTZ
 );
 
-CREATE TABLE auditoria_admin_plataforma (
+CREATE TABLE auditoria_soporte_tecnico (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   admin_id UUID NOT NULL REFERENCES usuarios(id),
   prestadora_id UUID REFERENCES prestadoras(id),
@@ -152,14 +157,22 @@ CREATE TABLE auditoria_admin_plataforma (
 ```
 
 `current_tenant()` (función Postgres) resuelve, en orden: (1) si hay una sesión vigente en
-`sesiones_tenant_admin_plataforma` para el `admin_plataforma` actual con `ultima_actividad_at
-> NOW() - 5 min` (timeout de inactividad), esa `prestadora_id`; (2) si no, el
-`usuarios.prestadora_id` propio (caso `admin_prestadora`/`superadmin`/etc). El tope absoluto
-de sesión (60 min, con aviso a los 50) y el resto de las reglas de UI (banner visible,
-advertencia extra antes de operaciones destructivas) están implementados en
+`sesiones_soporte_tecnico` para el `superadmin` actual con `ultima_actividad_at > NOW() - 5
+min` (timeout de inactividad), esa `prestadora_id`; (2) si no, el `usuarios.prestadora_id`
+propio (caso `admin_prestadora`/`superadmin` fuera de sesión/etc). **Ese orden de precedencia
+es el punto único de verdad** (`CLAUDE.md` §7.12): el middleware
+`backend/src/middleware/requiereRolPanel.js` lo refleja tal cual en JS en vez de inventar una
+segunda regla, para que la aplicación y la base nunca discrepen sobre en qué Prestadora está
+parado quien consulta.
+
+El tope absoluto de sesión (60 min, con aviso a los 50) y el resto de las reglas de UI (banner
+visible, advertencia extra antes de operaciones destructivas) están implementados en
 `panel/src/context/TenantSessionContext.jsx` y `backend/src/routes/panelSesionTenant.js`
-(`requiereAdminPlataforma`, único que puede crear/cerrar una fila de
-`sesiones_tenant_admin_plataforma`). RLS habilitada en ambas tablas.
+(`requiereSoporteTecnico`, único que puede crear/cerrar una fila de
+`sesiones_soporte_tecnico`). RLS habilitada en ambas tablas.
+
+La ruta HTTP se sigue llamando `/api/panel/sesion-tenant` a propósito: renombrarla obligaba a
+tocar el frontend sin ganar nada: el nombre viejo quedó solo en la dirección, no en los datos.
 
 ## Tablas: advertencias_legales / auditoria_advertencias_legales (pendiente #51, infraestructura
 ## resuelta 2026-07-18 — integración con un toggle real todavía pendiente)

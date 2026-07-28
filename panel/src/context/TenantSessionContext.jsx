@@ -28,7 +28,8 @@ async function llamarApi(path, opciones = {}) {
 export function TenantSessionProvider({ children }) {
   const { t } = useLocale();
   const { usuario } = useAuth();
-  const puedeTenerSesion = ['admin_plataforma', 'superadmin'].includes(usuario?.rol);
+  // Solo superadmin abre sesiones de soporte técnico dentro de una Prestadora (CLAUDE.md §5).
+  const puedeTenerSesion = usuario?.rol === 'superadmin';
   const [sesion, setSesion] = useState(null);
   const ultimoHeartbeatRef = useRef(0);
   const [mensajeConfirmacion, setMensajeConfirmacion] = useState(null);
@@ -131,7 +132,7 @@ export function useTenantSession() {
 }
 
 // Ítem F del pendiente #30: refuerza en el momento de cada confirmación destructiva
-// (Regla 4) que admin_plataforma está actuando dentro de una prestadora ajena — el banner
+// (Regla 4) que se está actuando dentro de una Prestadora ajena — el banner
 // persistente (item D) ya lo indica todo el tiempo, esto es el aviso puntual al ejecutar.
 export function useConfirmarDestructivo() {
   const { t } = useLocale();

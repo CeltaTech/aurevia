@@ -75,14 +75,14 @@ function App() {
                     <Route path="importacion" element={<Importacion />} />
                     <Route path="informes-obra-social" element={<InformesObraSocial />} />
                     <Route path="usuarios-panel" element={<ProtectedRoute soloAdmin><UsuariosPanel /></ProtectedRoute>} />
-                    <Route path="prestadoras" element={<ProtectedRoute roles={['admin_plataforma', 'superadmin']}><Prestadoras /></ProtectedRoute>} />
+                    <Route path="prestadoras" element={<ProtectedRoute roles={['superadmin']}><Prestadoras /></ProtectedRoute>} />
                     <Route path="costos-ia" element={<ProtectedRoute roles={['superadmin']}><CostosIA /></ProtectedRoute>} />
                     <Route path="configuracion" element={<ProtectedRoute soloAdmin><Configuracion /></ProtectedRoute>} />
-                    <Route path="auditoria" element={<ProtectedRoute roles={['admin_prestadora', 'superadmin', 'admin_plataforma']}><Auditoria /></ProtectedRoute>} />
+                    <Route path="auditoria" element={<ProtectedRoute roles={['admin_prestadora', 'superadmin']}><Auditoria /></ProtectedRoute>} />
                     <Route
                       path="marketplace/familias"
                       element={
-                        <ProtectedRoute roles={['admin_prestadora', 'coordinador', 'superadmin', 'admin_plataforma']}>
+                        <ProtectedRoute roles={['admin_prestadora', 'coordinador', 'superadmin']}>
                           <MarketplaceFamilias />
                         </ProtectedRoute>
                       }
@@ -90,7 +90,7 @@ function App() {
                     <Route
                       path="marketplace/calificaciones"
                       element={
-                        <ProtectedRoute roles={['admin_prestadora', 'coordinador', 'superadmin', 'admin_plataforma']}>
+                        <ProtectedRoute roles={['admin_prestadora', 'coordinador', 'superadmin']}>
                           <MarketplaceCalificaciones />
                         </ProtectedRoute>
                       }
@@ -98,7 +98,7 @@ function App() {
                     <Route
                       path="marketplace/auditoria-legal"
                       element={
-                        <ProtectedRoute roles={['admin_prestadora', 'coordinador', 'superadmin', 'admin_plataforma']}>
+                        <ProtectedRoute roles={['admin_prestadora', 'coordinador', 'superadmin']}>
                           <MarketplaceAuditoriaLegal />
                         </ProtectedRoute>
                       }

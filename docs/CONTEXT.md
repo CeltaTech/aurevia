@@ -37,9 +37,11 @@
   (filtrado de tenant en rutas backend con Service Role Key) y Bloque 4 (`configuracion_prestadora`
   reemplazando la configuración singleton — confirmado en `backend/src/routes/panelConfiguracion.js:34-41`
   — y hardcodeos de marca sacados de `generarDocumentoCese.js`/`calcularCese.js`) ya están
-  aplicados y verificados contra Supabase real. Desde entonces se sumó además el rol
-  `admin_plataforma` (administrativo cross-tenant, con modo "dentro de una Prestadora" —
-  ver `TenantSessionContext.jsx`), que va más allá de lo que pedía el Bloque 4. **Único
+  aplicados y verificados contra Supabase real. Desde entonces se sumó el modo "dentro de una
+  Prestadora" (ver `TenantSessionContext.jsx`), que va más allá de lo que pedía el Bloque 4;
+  nació con el rol comercial `admin_plataforma` y el 2026-07-28, en la Etapa 2 de la separación
+  CeltaTech/Aurevia, pasó a ser la **sesión de soporte técnico** de `superadmin` — el rol
+  comercial se fue entero a CeltaTech y ya no existe en Aurevia. **Único
   hardcodeo estructural que sigue abierto, a propósito**: el envío de emails sigue saliendo
   de una sola cuenta Gmail compartida entre todas las Prestadoras (`backend/src/utils/email.js`,
   `SMTP_USER`) — pendiente #44 en `docs/PENDIENTES.md`, con fecha de cierre exigida "antes
@@ -50,7 +52,7 @@
 
 | Rol | Dónde opera | Ve |
 |---|---|---|
-| Superadmin | Panel de administración (login propio, capa separada de Admin_prestadora) | Todo lo de Admin_prestadora en todas las prestadoras, más acceso técnico: cambios profundos de configuración, alta/baja de cosas que no es prudente que un Admin_prestadora sin ese nivel opere, interacción con IA para diagnóstico/corrección de errores |
+| Superadmin | Panel de administración (login propio, capa separada de Admin_prestadora) | Su propia Organización (Sandbox) y, abriendo una **sesión de soporte técnico**, una Prestadora real por vez con banner y auditoría. Además, acceso técnico: cambios profundos de configuración, alta/baja de cosas que no es prudente que un Admin_prestadora sin ese nivel opere, interacción con IA para diagnóstico/corrección de errores |
 | Admin_prestadora | Panel de administración | Todo el negocio de su propia prestadora (sin el acceso técnico de Superadmin, cero visibilidad de otras prestadoras) |
 | Coordinador | Panel de administración | Su zona asignada |
 | Asistente | PWA de Asistentes | Sus propias guardias, su perfil, su certificado |

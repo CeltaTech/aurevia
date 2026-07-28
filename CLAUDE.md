@@ -96,17 +96,18 @@ Esta tabla se mantiene siempre en su versión **vigente** — sin notas de fecha
 
 Separación estricta entre roles técnicos, administrativos y operativos. Ningún rol obtiene acceso implícito por pertenecer a CeltaTech. Principio de mínimo privilegio siempre: cada rol solo los permisos que su función requiere, nunca por comodidad de desarrollo.
 
-**Superadmin** — rol técnico de CeltaTech. Infraestructura, mantenimiento técnico, configuración global, soporte interno. No representa una Prestadora, no la opera comercialmente.
-- **Restricción dura de acceso:** Superadmin tiene acceso de Panel **únicamente** a la Organización Sandbox. Vedado el acceso a datos de cualquier Prestadora real, sin excepción — ninguna tarea técnica lo justifica.
-- Si una tarea técnica requiere operar sobre una Prestadora real, se hace mediante **Admin_plataforma** en modo dentro de una Prestadora (con su banner, auditoría y límites de sesión — ver más abajo), nunca mediante Superadmin.
-- Login propio; MFA por TOTP disponible, activable/desactivable desde Configuración. Todo acceso queda auditado.
+Aurevia tiene **tres** roles de Panel: Superadmin, Admin_prestadora y Coordinador. El rol comercial que antes existía acá, `Admin_plataforma`, **ya no existe en Aurevia**: la gestión comercial de las cuentas de Prestadoras es asunto de CeltaTech (Nivel 1) y vive en su propio panel. Ver `docs/PLAN_SEPARACION_CELTATECH.md`, Etapa 2.
 
-**Admin_plataforma** — rol técnico-administrativo de Aurevia (perspectiva CeltaTech). Gestiona cuentas de Prestadoras, configuración administrativa de la plataforma, procesos comerciales del SaaS, soporte autorizado. Login propio, mismo MFA opcional que Superadmin.
-- **Modo dentro de una Prestadora:** para operar dentro de una Organización específica — una Prestadora por vez, sin visibilidad de otras mientras está activo.
+**Superadmin** — rol técnico de CeltaTech. Infraestructura, mantenimiento técnico, configuración global, soporte interno. No representa una Prestadora, no la opera comercialmente.
+- **Restricción dura de acceso:** fuera de una sesión de soporte técnico, Superadmin tiene acceso de Panel **únicamente** a la Organización Sandbox. Vedado el acceso a datos de cualquier Prestadora real por la vía ordinaria, sin excepción.
+- Si una tarea técnica requiere operar sobre una Prestadora real, se hace **siempre** abriendo una **sesión de soporte técnico** (ver abajo), nunca por fuera de ella.
+- Login propio; MFA por TOTP disponible, activable/desactivable desde Configuración. Todo acceso queda auditado.
+- **Sesión de soporte técnico** — la única puerta de Superadmin hacia una Prestadora real. Una Prestadora por vez, sin visibilidad de otras mientras está activa.
   - banner visible con la Prestadora activa;
   - advertencia adicional antes de operaciones destructivas;
-  - log de auditoría de todo acceso y acción sensible;
+  - log de auditoría de todo acceso y acción sensible, en `auditoria_soporte_tecnico`;
   - timeout por inactividad: 5 min; tope absoluto de sesión: 60 min; aviso a los 50 min si sigue activa.
+  - El orden de precedencia —sesión de soporte abierta primero, Organización propia después— es el mismo en la base y en la aplicación: lo define la función SQL `current_tenant()` y el middleware `requiereRolPanel.js` la refleja, no la reinventa (§7.12).
 
 **Admin_prestadora** — administrador operativo, acotado exclusivamente a su propia Organización: usuarios internos, configuración operativa, roles, procesos y datos propios. Sin acceso a otras Prestadoras ni a configuración global del sistema.
 

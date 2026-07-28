@@ -1,9 +1,9 @@
-// Prueba puntual del ítem I del pendiente #30 (2026-07-14) — verifica de punta a punta:
-// GET /api/panel/prestadoras (admin_plataforma ve la lista), POST /sesion-tenant (entra),
-// 409 al intentar entrar de nuevo con sesión activa, POST /sesion-tenant/salir (sale), y
-// que superadmin también puede listar prestadoras (para el selector de UsuariosPanel.jsx,
-// pendiente #26). Corre contra el backend local (localhost:4000) — arrancar el server
-// antes de correr este script. Borra todo lo que crea al terminar.
+// Prueba puntual del ítem I del pendiente #30 (2026-07-14, reescrita el 2026-07-28 para la
+// Etapa 2) — verifica de punta a punta la sesión de soporte técnico: GET /api/panel/prestadoras
+// (superadmin ve la lista), POST /sesion-tenant (entra), 409 al intentar entrar de nuevo con
+// sesión activa, POST /sesion-tenant/salir (sale). Corre contra el backend local
+// (localhost:4000) — arrancar el server antes de correr este script. Borra todo lo que crea
+// al terminar.
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import { readFileSync } from 'fs';
@@ -16,8 +16,8 @@ const anonKey = panelEnv.match(/VITE_SUPABASE_ANON_KEY=(.+)/)[1].trim();
 const anon = createClient(process.env.SUPABASE_URL, anonKey);
 
 const SANDBOX_ID = '5d727437-a5ff-432f-b9f6-10015e61ffef';
-const EMAIL = 'alas.para.escribir.2026+adminplataforma.test.itemi@gmail.com';
-const PASSWORD = 'PruebaAdminPlataformaItemI2026!';
+const EMAIL = 'alas.para.escribir.2026+sesionsoporte.test@gmail.com';
+const PASSWORD = 'PruebaSesionSoporte2026!';
 
 let authUserId, prestaDummyId, token;
 
@@ -38,7 +38,7 @@ async function main() {
   authUserId = auth.user.id;
 
   const { error: errorUsuario } = await admin.from('usuarios').insert({
-    id: authUserId, rol: 'admin_plataforma', nombre: 'PRUEBA temporal — admin_plataforma item I',
+    id: authUserId, rol: 'superadmin', nombre: 'PRUEBA temporal — superadmin de soporte',
     prestadora_id: null,
   });
   if (errorUsuario) throw errorUsuario;
@@ -53,7 +53,7 @@ async function main() {
   const rLista = await fetch(`${API}/prestadoras`, { headers });
   const jLista = await rLista.json();
   console.log('1. GET /prestadoras status:', rLista.status, '— cantidad:', jLista.prestadoras?.length);
-  if (!rLista.ok) throw new Error('FALLO: admin_plataforma no pudo listar prestadoras: ' + jLista.error);
+  if (!rLista.ok) throw new Error('FALLO: superadmin no pudo listar prestadoras: ' + jLista.error);
   if (!jLista.prestadoras.some((p) => p.id === prestaDummyId)) throw new Error('FALLO: la prestadora dummy no aparece en la lista');
 
   // 2. Sesión inicial: sin sesión activa
@@ -95,7 +95,7 @@ async function main() {
 
 async function limpiar() {
   if (authUserId) {
-    await admin.from('sesiones_tenant_admin_plataforma').delete().eq('admin_id', authUserId);
+    await admin.from('sesiones_soporte_tecnico').delete().eq('admin_id', authUserId);
     await admin.from('usuarios').delete().eq('id', authUserId);
     await admin.auth.admin.deleteUser(authUserId);
   }

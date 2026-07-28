@@ -6,18 +6,17 @@ import { ACCIONES_PERMISOS } from '../utils/permisos.js';
 export const panelConfiguracionRouter = Router();
 
 // Módulo 8 (Configuración) es a nivel de toda la empresa — Coordinador no entra acá,
-// solo Admin/Superadmin (misma restricción que precios y escalas legales). admin_plataforma
-// sumado acá el 2026-07-15 (pendiente #36) — tenía el mismo nivel de acceso en el resto del
-// Panel (panelUsuarios.js) pero esta ruta se había quedado con la lista vieja.
+// solo Admin/Superadmin (misma restricción que precios y escalas legales).
 function requiereAdminOSuperior(req, res, next) {
-  if (!['admin_prestadora', 'superadmin', 'admin_plataforma'].includes(req.usuarioPanel?.rol)) {
+  if (!['admin_prestadora', 'superadmin'].includes(req.usuarioPanel?.rol)) {
     return res.status(403).json({ error: 'Solo Admin o Superadmin puede editar la configuración' });
   }
-  // admin_plataforma sin sesión de tenant activa no tiene ninguna prestadora sobre la que
-  // operar (docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1) — sin este corte explícito, prestadoraId
-  // llega `null` a las queries de abajo y `.eq('prestadora_id', null)` rompe contra Postgres
-  // en vez de devolver un error controlado (mismo patrón que panelUsuarios.js:19-21).
-  if (req.usuarioPanel.rol === 'admin_plataforma' && !req.usuarioPanel.prestadoraId) {
+  // Superadmin sin Organización propia y sin sesión de soporte abierta no tiene ninguna
+  // Prestadora sobre la que operar (docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1) — sin este corte
+  // explícito, prestadoraId llega `null` a las queries de abajo y `.eq('prestadora_id', null)`
+  // rompe contra Postgres en vez de devolver un error controlado (mismo patrón que
+  // panelUsuarios.js).
+  if (!req.usuarioPanel.prestadoraId) {
     return res.status(400).json({ error: 'Entrá a una prestadora antes de editar su configuración' });
   }
   next();

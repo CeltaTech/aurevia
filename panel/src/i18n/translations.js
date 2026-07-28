@@ -1063,7 +1063,7 @@ export const T = {
     },
     auditoria: {
       titulo: 'Auditoría',
-      explicacion: 'Registro de todo login y toda acción de admin_plataforma dentro de una prestadora — login, salida, renovación de sesión y cada mutación de datos.',
+      explicacion: 'Registro de todo login y toda acción de soporte técnico dentro de una Prestadora — login, salida, renovación de sesión y cada cambio de datos.',
       col_fecha: 'Fecha y hora',
       col_admin: 'Quién',
       col_prestadora: 'Prestadora',
@@ -2220,7 +2220,7 @@ export const T = {
     },
     auditoria: {
       titulo: 'Audit log',
-      explicacion: 'Record of every login and every admin_plataforma action inside a provider — login, logout, session renewal, and every data change.',
+      explicacion: 'Record of every login and every technical-support action inside a provider — login, logout, session renewal, and every data change.',
       col_fecha: 'Date and time',
       col_admin: 'Who',
       col_prestadora: 'Provider',
@@ -2828,7 +2828,7 @@ export const T = {
       categoria_cct: 'Categoria CCT 743/16',
       sueldo_basico: 'Salário base',
       valor_hora: 'Valor por hora',
-      horas_semanais: 'Horas semanais',
+      horas_semanales: 'Horas semanais',
       nuevo: {
         titulo: 'Novo Assistente',
         ayuda_estado: 'Este assistente será criado como ativo e não passará pelas etapas de verificação (identidade, antecedentes, entrevista, capacitação). Você pode alterar esse comportamento padrão em Configurações.',
@@ -3377,7 +3377,7 @@ export const T = {
     },
     auditoria: {
       titulo: 'Auditoria',
-      explicacion: 'Registro de todo login e toda ação de admin_plataforma dentro de uma prestadora — login, saída, renovação de sessão e cada mudança de dados.',
+      explicacion: 'Registro de todo login e toda ação de suporte técnico dentro de uma Prestadora — login, saída, renovação de sessão e cada mudança de dados.',
       col_fecha: 'Data e hora',
       col_admin: 'Quem',
       col_prestadora: 'Prestadora',

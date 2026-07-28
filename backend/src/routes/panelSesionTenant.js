@@ -2,32 +2,37 @@ import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 
-// "Modo dentro de una prestadora" — pendiente #30, docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1.
-// Exclusivo de admin_plataforma: entra a una prestadora licenciataria por vez, nunca
-// varias a la vez. El corte por 5 min de inactividad vive en requiereRolPanel.js (se
-// aplica en cada request, no solo acá).
+// Sesión de soporte técnico — pendiente #30, docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1.
+// Es la única puerta por la que superadmin entra a una Prestadora real: una por vez, nunca
+// varias a la vez, con banner visible, auditoría de todo y tope de tiempo. Fuera de esta
+// sesión, superadmin solo ve su propia Organización (Sandbox) — CLAUDE.md §5.
+// El corte por 5 min de inactividad vive en requiereRolPanel.js (se aplica en cada request,
+// no solo acá).
+// Etapa 2 de la separación CeltaTech / Aurevia (2026-07-28): esta maquinaria era de
+// admin_plataforma, el rol comercial que se fue entero a CeltaTech. No se borró — se
+// re-apuntó a superadmin y pasó a llamarse sesión de soporte técnico.
 export const panelSesionTenantRouter = Router();
 
 // Ítem G del pendiente #30: login/logout/renovación son la parte de "todo login" del log
 // de auditoría — se registran acá porque pasan por el backend (service role), no por RLS
-// directo (ver schema_admin_plataforma_03_auditoria.sql). No bloquea la respuesta al
+// directo (tabla auditoria_soporte_tecnico). No bloquea la respuesta al
 // frontend si falla: la auditoría no debe poder tumbar el flujo real de sesión.
 async function registrarAuditoria({ adminId, prestadoraId, tipoEvento, detalle }) {
-  const { error } = await supabase.from('auditoria_admin_plataforma').insert({
+  const { error } = await supabase.from('auditoria_soporte_tecnico').insert({
     admin_id: adminId,
     prestadora_id: prestadoraId,
     tipo_evento: tipoEvento,
     detalle: detalle || null,
   });
-  if (error) console.error('Error registrando auditoría admin_plataforma:', error.message);
+  if (error) console.error('Error registrando auditoría de soporte técnico:', error.message);
 }
 
 const SESION_DURACION_MS = 60 * 60 * 1000; // tope absoluto de 60 min, extendido por /renovar
 const INACTIVIDAD_LIMITE_MS = 5 * 60 * 1000; // debe coincidir con requiereRolPanel.js
 
-function requiereAdminPlataforma(req, res, next) {
-  if (req.usuarioPanel?.rol !== 'admin_plataforma') {
-    return res.status(403).json({ error: 'Solo admin_plataforma tiene modo dentro de una prestadora' });
+function requiereSoporteTecnico(req, res, next) {
+  if (req.usuarioPanel?.rol !== 'superadmin') {
+    return res.status(403).json({ error: 'Solo Superadmin puede abrir una sesión de soporte técnico dentro de una Prestadora' });
   }
   next();
 }
@@ -37,7 +42,7 @@ function requiereAdminPlataforma(req, res, next) {
 // inactividad, así el banner desaparece solo sin que el usuario tenga que hacer nada.
 async function buscarSesionVigenteYCerrarSiVencio(adminId) {
   const { data: sesion, error } = await supabase
-    .from('sesiones_tenant_admin_plataforma')
+    .from('sesiones_soporte_tecnico')
     .select('id, prestadora_id, entrada_at, expira_at, ultima_actividad_at, prestadoras(nombre_fantasia)')
     .eq('admin_id', adminId)
     .is('salida_at', null)
@@ -53,7 +58,7 @@ async function buscarSesionVigenteYCerrarSiVencio(adminId) {
   const vencioPorInactividad = ahora.getTime() - new Date(sesion.ultima_actividad_at).getTime() > INACTIVIDAD_LIMITE_MS;
 
   if (vencioPorTope || vencioPorInactividad) {
-    await supabase.from('sesiones_tenant_admin_plataforma').update({ salida_at: ahora.toISOString() }).eq('id', sesion.id);
+    await supabase.from('sesiones_soporte_tecnico').update({ salida_at: ahora.toISOString() }).eq('id', sesion.id);
     await registrarAuditoria({
       adminId,
       prestadoraId: sesion.prestadora_id,
@@ -65,7 +70,7 @@ async function buscarSesionVigenteYCerrarSiVencio(adminId) {
   return sesion;
 }
 
-panelSesionTenantRouter.get('/', requiereRolPanel, requiereAdminPlataforma, async (req, res) => {
+panelSesionTenantRouter.get('/', requiereRolPanel, requiereSoporteTecnico, async (req, res) => {
   try {
     const sesion = await buscarSesionVigenteYCerrarSiVencio(req.usuarioPanel.id);
     res.json({ sesion });
@@ -74,13 +79,13 @@ panelSesionTenantRouter.get('/', requiereRolPanel, requiereAdminPlataforma, asyn
   }
 });
 
-panelSesionTenantRouter.post('/actividad', requiereRolPanel, requiereAdminPlataforma, async (req, res) => {
+panelSesionTenantRouter.post('/actividad', requiereRolPanel, requiereSoporteTecnico, async (req, res) => {
   try {
     const sesion = await buscarSesionVigenteYCerrarSiVencio(req.usuarioPanel.id);
     if (!sesion) return res.json({ ok: true, sesion: null });
 
     const { error } = await supabase
-      .from('sesiones_tenant_admin_plataforma')
+      .from('sesiones_soporte_tecnico')
       .update({ ultima_actividad_at: new Date().toISOString() })
       .eq('id', sesion.id);
 
@@ -91,14 +96,14 @@ panelSesionTenantRouter.post('/actividad', requiereRolPanel, requiereAdminPlataf
   }
 });
 
-panelSesionTenantRouter.post('/', requiereRolPanel, requiereAdminPlataforma, async (req, res) => {
+panelSesionTenantRouter.post('/', requiereRolPanel, requiereSoporteTecnico, async (req, res) => {
   const { prestadora_id } = req.body;
   if (!prestadora_id) {
     return res.status(400).json({ error: 'Falta prestadora_id' });
   }
 
   const { data: sesionVigente } = await supabase
-    .from('sesiones_tenant_admin_plataforma')
+    .from('sesiones_soporte_tecnico')
     .select('id')
     .eq('admin_id', req.usuarioPanel.id)
     .is('salida_at', null)
@@ -115,7 +120,7 @@ panelSesionTenantRouter.post('/', requiereRolPanel, requiereAdminPlataforma, asy
 
   const ahora = new Date();
   const { data: sesion, error } = await supabase
-    .from('sesiones_tenant_admin_plataforma')
+    .from('sesiones_soporte_tecnico')
     .insert({
       admin_id: req.usuarioPanel.id,
       prestadora_id,
@@ -131,7 +136,7 @@ panelSesionTenantRouter.post('/', requiereRolPanel, requiereAdminPlataforma, asy
   res.json({ ok: true, sesion });
 });
 
-panelSesionTenantRouter.post('/renovar', requiereRolPanel, requiereAdminPlataforma, async (req, res) => {
+panelSesionTenantRouter.post('/renovar', requiereRolPanel, requiereSoporteTecnico, async (req, res) => {
   try {
     const sesion = await buscarSesionVigenteYCerrarSiVencio(req.usuarioPanel.id);
     if (!sesion) {
@@ -140,7 +145,7 @@ panelSesionTenantRouter.post('/renovar', requiereRolPanel, requiereAdminPlatafor
 
     const ahora = new Date();
     const { error } = await supabase
-      .from('sesiones_tenant_admin_plataforma')
+      .from('sesiones_soporte_tecnico')
       .update({
         ultima_actividad_at: ahora.toISOString(),
         expira_at: new Date(ahora.getTime() + SESION_DURACION_MS).toISOString(),
@@ -155,16 +160,16 @@ panelSesionTenantRouter.post('/renovar', requiereRolPanel, requiereAdminPlatafor
   }
 });
 
-panelSesionTenantRouter.post('/salir', requiereRolPanel, requiereAdminPlataforma, async (req, res) => {
+panelSesionTenantRouter.post('/salir', requiereRolPanel, requiereSoporteTecnico, async (req, res) => {
   const { data: sesionSaliente } = await supabase
-    .from('sesiones_tenant_admin_plataforma')
+    .from('sesiones_soporte_tecnico')
     .select('prestadora_id')
     .eq('admin_id', req.usuarioPanel.id)
     .is('salida_at', null)
     .maybeSingle();
 
   const { error } = await supabase
-    .from('sesiones_tenant_admin_plataforma')
+    .from('sesiones_soporte_tecnico')
     .update({ salida_at: new Date().toISOString() })
     .eq('admin_id', req.usuarioPanel.id)
     .is('salida_at', null);

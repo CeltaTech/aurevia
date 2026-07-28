@@ -1,4 +1,4 @@
-// Superadmin es un quinto rol real, distinto de Admin_prestadora (ver CLAUDE.md,
+// Superadmin es un rol real distinto de Admin_prestadora (ver CLAUDE.md §5,
 // docs/CONTEXT.md), pero tiene todo el acceso de Admin_prestadora más el técnico
 // (Módulo 8). Por eso cualquier chequeo que compara contra 'admin_prestadora' pasa a
 // usar este helper en vez de repetir la comparación.
@@ -7,12 +7,13 @@
 // docs/PLAN_MULTITENANT_CELTATECH.md 4.1): el dato en `usuarios.rol` ya dice
 // 'admin_prestadora', no 'admin'.
 //
-// admin_plataforma (pendiente #30, docs/PLAN_MULTITENANT_CELTATECH.md 3.4/3.4.1) suma acá
-// desde 2026-07-14: administra cualquier prestadora, una a la vez, mientras tiene una
-// sesión activa en sesiones_tenant_admin_plataforma — RLS via current_tenant() se
-// encarga de que sin sesión activa no vea ninguna fila (COALESCE devuelve NULL).
+// Etapa 2 de la separación CeltaTech / Aurevia (2026-07-28): acá también estaba
+// admin_plataforma, el rol comercial. Se fue entero a CeltaTech y ya no existe dentro de
+// Aurevia. Lo que hacía de técnico —entrar a una Prestadora real, una por vez— lo hace ahora
+// superadmin con una sesión de soporte técnico (sesiones_soporte_tecnico); RLS via
+// current_tenant() se encarga de que sin sesión abierta no vea más que su propia Organización.
 export function esAdminOSuperior(rol) {
-  return rol === 'admin_prestadora' || rol === 'superadmin' || rol === 'admin_plataforma';
+  return rol === 'admin_prestadora' || rol === 'superadmin';
 }
 
-export const ROLES_PANEL = ['admin_prestadora', 'coordinador', 'superadmin', 'admin_plataforma'];
+export const ROLES_PANEL = ['admin_prestadora', 'coordinador', 'superadmin'];

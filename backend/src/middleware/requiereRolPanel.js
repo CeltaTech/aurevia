@@ -1,25 +1,25 @@
 import { supabase } from '../db/connection.js';
 
 // Ítem D del pendiente #30 (docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1): tope de 5 min de
-// inactividad dentro del "modo prestadora" — se corta en silencio, sin aviso previo,
+// inactividad dentro de la sesión de soporte técnico — se corta en silencio, sin aviso previo,
 // distinto del tope absoluto de 60 min (que sí tiene aviso a los 50, ver panelSesionTenant.js).
 const INACTIVIDAD_LIMITE_MS = 5 * 60 * 1000;
 
 // Ítem G del pendiente #30: las mutaciones que pasan por rutas Express usan la service
 // role key (backend/src/db/connection.js) — sin JWT de usuario, así que los triggers de
-// auditoria_admin_plataforma (schema_admin_plataforma_03_auditoria.sql) no las ven, porque
-// auth.uid() da NULL dentro de un trigger disparado por una escritura con service role.
+// auditoria_soporte_tecnico no las ven, porque auth.uid() da NULL dentro de un trigger
+// disparado por una escritura con service role.
 // Se audita acá, a nivel de request, en vez de a nivel de tabla/fila.
 const METODOS_MUTACION = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
 async function registrarAuditoriaMutacionExpress({ adminId, prestadoraId, metodo, ruta }) {
-  const { error } = await supabase.from('auditoria_admin_plataforma').insert({
+  const { error } = await supabase.from('auditoria_soporte_tecnico').insert({
     admin_id: adminId,
     prestadora_id: prestadoraId,
     tipo_evento: 'mutacion',
     detalle: { metodo, ruta },
   });
-  if (error) console.error('Error registrando auditoría admin_plataforma (Express):', error.message);
+  if (error) console.error('Error registrando auditoría de soporte técnico (Express):', error.message);
 }
 
 // Ítem H del pendiente #30: decodifica el claim `aal` del JWT ya validado por
@@ -53,11 +53,11 @@ export async function requiereRolPanel(req, res, next) {
     .eq('id', userData.user.id)
     .single();
 
-  if (errorPerfil || !perfil || !['admin_prestadora', 'coordinador', 'superadmin', 'admin_plataforma'].includes(perfil.rol)) {
+  if (errorPerfil || !perfil || !['admin_prestadora', 'coordinador', 'superadmin'].includes(perfil.rol)) {
     return res.status(403).json({ error: 'Rol sin permiso' });
   }
 
-  if (['superadmin', 'admin_plataforma'].includes(perfil.rol)) {
+  if (perfil.rol === 'superadmin') {
     const { data: configPlataforma } = await supabase
       .from('configuracion_plataforma')
       .select('mfa_admin_obligatorio')
@@ -68,14 +68,19 @@ export async function requiereRolPanel(req, res, next) {
   }
 
   let prestadoraId = perfil.prestadora_id;
+  let dentroDeSesionSoporte = false;
 
-  // admin_plataforma no tiene prestadora_id propia (docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1):
-  // la resuelve acá, una vez, a partir de su sesión de tenant activa — así el resto de
-  // las rutas reutiliza el mismo req.usuarioPanel.prestadoraId que ya usa admin_prestadora,
-  // sin ningún branch específico de admin_plataforma en cada endpoint.
-  if (perfil.rol === 'admin_plataforma') {
+  // Etapa 2 de la separación CeltaTech / Aurevia (2026-07-28): la sesión de soporte técnico
+  // era exclusiva de admin_plataforma, el rol comercial que se fue a CeltaTech. Ahora es de
+  // superadmin, el rol técnico (CLAUDE.md §5).
+  // Superadmin sin sesión de soporte abierta sigue viendo únicamente su propia Organización
+  // (Sandbox, por su prestadora_id). Con sesión abierta, ve la Prestadora de esa sesión.
+  // Es exactamente el mismo orden de precedencia que la función SQL current_tenant(), que es
+  // el punto único de verdad para RLS (CLAUDE.md §7.12) — acá se replica para que el resto de
+  // las rutas reutilice el mismo req.usuarioPanel.prestadoraId sin branches por rol.
+  if (perfil.rol === 'superadmin') {
     const { data: sesion } = await supabase
-      .from('sesiones_tenant_admin_plataforma')
+      .from('sesiones_soporte_tecnico')
       .select('id, prestadora_id, expira_at, ultima_actividad_at')
       .eq('admin_id', userData.user.id)
       .is('salida_at', null)
@@ -99,20 +104,25 @@ export async function requiereRolPanel(req, res, next) {
     const esRutaPropiaDeSesion = req.baseUrl === '/api/panel/sesion-tenant';
     if (sesion && vigente && !esRutaPropiaDeSesion) {
       await supabase
-        .from('sesiones_tenant_admin_plataforma')
+        .from('sesiones_soporte_tecnico')
         .update({ ultima_actividad_at: ahora.toISOString() })
         .eq('id', sesion.id);
     }
 
-    prestadoraId = vigente ? sesion.prestadora_id : null;
+    if (vigente) {
+      prestadoraId = sesion.prestadora_id;
+      dentroDeSesionSoporte = true;
+    }
   }
 
-  req.usuarioPanel = { id: userData.user.id, rol: perfil.rol, prestadoraId };
+  req.usuarioPanel = { id: userData.user.id, rol: perfil.rol, prestadoraId, dentroDeSesionSoporte };
 
-  // La ruta de sesión de tenant (entrar/salir/renovar) ya audita login/logout/renovación
+  // La ruta de sesión de soporte (entrar/salir/renovar) ya audita login/logout/renovación
   // explícitamente (panelSesionTenant.js) — no duplicar acá como "mutacion" genérica.
+  // Solo se audita lo que pasa dentro de una Prestadora ajena: el trabajo de superadmin en su
+  // propia Organización (Sandbox) no genera registro de soporte.
   const esRutaPropiaDeSesion = req.baseUrl === '/api/panel/sesion-tenant';
-  if (perfil.rol === 'admin_plataforma' && prestadoraId && METODOS_MUTACION.includes(req.method) && !esRutaPropiaDeSesion) {
+  if (dentroDeSesionSoporte && METODOS_MUTACION.includes(req.method) && !esRutaPropiaDeSesion) {
     res.on('finish', () => {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         registrarAuditoriaMutacionExpress({

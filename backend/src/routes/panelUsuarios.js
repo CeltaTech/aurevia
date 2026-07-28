@@ -9,25 +9,20 @@ export const panelUsuariosRouter = Router();
 // Coordinadores. Superadmin además gestiona cuentas de Admin y de otros Superadmin (acceso
 // técnico del Módulo 8) — ver CLAUDE.md glosario y docs/CONTEXT.md.
 function requiereAdminOSuperior(req, res, next) {
-  if (!['admin_prestadora', 'superadmin', 'admin_plataforma'].includes(req.usuarioPanel?.rol)) {
+  if (!['admin_prestadora', 'superadmin'].includes(req.usuarioPanel?.rol)) {
     return res.status(403).json({ error: 'Solo Admin o Superadmin puede gestionar usuarios del panel' });
   }
-  // admin_plataforma sin sesión de tenant activa no tiene ninguna prestadora sobre la que
-  // operar (docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1) — sin este corte explícito, prestadoraId
-  // llega `null` a las queries de abajo y `.eq('prestadora_id', null)` rompe contra Postgres
-  // en vez de devolver "sin permiso"/lista vacía.
-  if (req.usuarioPanel.rol === 'admin_plataforma' && !req.usuarioPanel.prestadoraId) {
-    return res.status(400).json({ error: 'Entrá a una prestadora antes de gestionar sus usuarios' });
-  }
+  // Ojo: acá no se exige prestadoraId. Superadmin gestiona cuentas de cualquier Prestadora
+  // (acceso técnico, CLAUDE.md §5) y puede no tener Organización propia, así que las rutas de
+  // abajo ya saltean el filtro por prestadora cuando el rol es superadmin. Los pocos lugares
+  // que sí necesitan una Prestadora concreta —dar de alta una cuenta— lo verifican ellos
+  // mismos, en vez de bloquear la ruta entera.
   next();
 }
 
-// Roles que el solicitante tiene permitido crear/editar/borrar. admin_plataforma gestiona
-// cuentas de la prestadora en la que está adentro (docs/PLAN_MULTITENANT_CELTATECH.md 3.4) — mismo
-// alcance que admin_prestadora, nunca cuentas de superadmin/admin_plataforma.
+// Roles que el solicitante tiene permitido crear/editar/borrar.
 function rolesGestionables(rolSolicitante) {
   if (rolSolicitante === 'superadmin') return ['admin_prestadora', 'coordinador', 'superadmin'];
-  if (rolSolicitante === 'admin_plataforma') return ['admin_prestadora', 'coordinador'];
   return ['coordinador'];
 }
 
@@ -58,7 +53,7 @@ panelUsuariosRouter.post('/', requiereRolPanel, requiereAdminOSuperior, async (r
   }
 
   const rolPermitidos = rolesGestionables(req.usuarioPanel.rol);
-  const rolNuevo = ['superadmin', 'admin_plataforma'].includes(req.usuarioPanel.rol) ? (rol || 'coordinador') : 'coordinador';
+  const rolNuevo = req.usuarioPanel.rol === 'superadmin' ? (rol || 'coordinador') : 'coordinador';
   if (!rolPermitidos.includes(rolNuevo)) {
     return res.status(403).json({ error: 'No tenés permiso para crear cuentas con ese rol' });
   }
@@ -67,12 +62,18 @@ panelUsuariosRouter.post('/', requiereRolPanel, requiereAdminOSuperior, async (r
   // coordinador de cualquier licenciataria. Pero nunca para una cuenta superadmin nueva:
   // esas quedan SIEMPRE ancladas a la sandbox (docs/PLAN_MULTITENANT_CELTATECH.md 3.4) — permitir
   // el override acá dejaría a un superadmin asignarle a otro superadmin la prestadora_id de
-  // una prestadora real, evadiendo el acotamiento aplicado en
-  // schema_admin_plataforma_02_acotar_superadmin.sql. Admin_prestadora nunca puede elegir:
+  // una prestadora real, evadiendo ese acotamiento. Admin_prestadora nunca puede elegir:
   // sus cuentas nuevas siempre nacen en su propia prestadora.
   const prestadoraDestino = req.usuarioPanel.rol === 'superadmin' && prestadora_id && rolNuevo !== 'superadmin'
     ? prestadora_id
     : req.usuarioPanel.prestadoraId;
+
+  // Una cuenta que no es de superadmin necesita sí o sí una Prestadora: es lo que exige la
+  // restricción usuarios_prestadora_id_solo_superadmin_null en la base. Se corta acá con un
+  // mensaje entendible en vez de dejar que reviente contra Postgres.
+  if (!prestadoraDestino && rolNuevo !== 'superadmin') {
+    return res.status(400).json({ error: 'Entrá a una prestadora, o elegí una, antes de dar de alta la cuenta' });
+  }
 
   try {
     const { userId, passwordTemporal } = await crearCuentaConPerfil({

@@ -1,6 +1,8 @@
-// Prueba puntual del pendiente #36 (2026-07-15) — confirma que admin_plataforma, con sesión
-// de tenant activa, ya puede leer/editar Configuración sin el 403 que tenía antes del fix en
-// panelConfiguracion.js. Corre contra el backend local. Borra todo lo que crea al terminar.
+// Prueba puntual del pendiente #36 (2026-07-15, reescrita el 2026-07-28 para la Etapa 2) —
+// confirma que quien entra por una sesión de soporte técnico puede leer/editar Configuración
+// sin el 403 que tenía antes del fix en panelConfiguracion.js, y que sin sesión abierta y sin
+// Prestadora propia recibe un 400 entendible en vez de romper.
+// Corre contra el backend local. Borra todo lo que crea al terminar.
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import { readFileSync } from 'fs';
@@ -26,7 +28,7 @@ async function main() {
   authUserId = auth.user.id;
 
   const { error: errorUsuario } = await admin.from('usuarios').insert({
-    id: authUserId, rol: 'admin_plataforma', nombre: 'PRUEBA temporal — pendiente #36',
+    id: authUserId, rol: 'superadmin', nombre: 'PRUEBA temporal — pendiente #36',
   });
   if (errorUsuario) throw errorUsuario;
 
@@ -61,11 +63,11 @@ async function main() {
 
 async function limpiar() {
   if (authUserId) {
-    // el paso 2 (entrar a la prestadora) deja fila en sesiones_tenant_admin_plataforma y en
-    // auditoria_admin_plataforma — hay que borrarlas antes que el usuario o el delete de abajo
+    // el paso 2 (entrar a la Prestadora) deja fila en sesiones_soporte_tecnico y en
+    // auditoria_soporte_tecnico — hay que borrarlas antes que el usuario o el delete de abajo
     // falla en silencio por FK y deja el usuario de prueba huérfano (pasó en la corrida anterior).
-    await admin.from('sesiones_tenant_admin_plataforma').delete().eq('admin_id', authUserId);
-    await admin.from('auditoria_admin_plataforma').delete().eq('admin_id', authUserId);
+    await admin.from('sesiones_soporte_tecnico').delete().eq('admin_id', authUserId);
+    await admin.from('auditoria_soporte_tecnico').delete().eq('admin_id', authUserId);
     await admin.from('usuarios').delete().eq('id', authUserId);
     await admin.auth.admin.deleteUser(authUserId);
   }

@@ -69,8 +69,7 @@ de este proyecto, con alcance distinto, no el que traía Money Suite):
 
 | Rol | Alcance |
 |---|---|
-| `superadmin` | Técnico (código/infra/base de datos), sin carácter administrativo de negocio. Acceso de Panel únicamente a una prestadora de prueba fija (sandbox) — vedado el acceso a cualquier prestadora real, ninguna tarea técnica lo justifica. No es cross-tenant. Login propio, MFA obligatorio |
-| `admin_plataforma` | Administrativo de negocio de toda la plataforma (todas las prestadoras licenciatarias): comercial, administrativo, gestión de cuentas `admin_prestadora`. Entra a una prestadora real una a la vez, con sesión acotada en el tiempo — ver "modo dentro de una prestadora" abajo. Login propio, MFA obligatorio |
+| `superadmin` | Técnico (código/infra/base de datos), sin carácter administrativo de negocio. Su acceso ordinario de Panel es únicamente la prestadora de prueba fija (Sandbox). Para entrar a una prestadora real abre una **sesión de soporte técnico**: una por vez, acotada en el tiempo y auditada — ver abajo. Login propio, MFA obligatorio |
 | `admin_prestadora` | Todo el negocio de su propia prestadora (cero visibilidad de otras prestadoras) |
 | `coordinador` | Su zona asignada (familias, pacientes, guardias, Asistentes de esa zona), dentro de su propia prestadora |
 | `asistente` | Sus propias guardias, su perfil, su certificado |
@@ -91,44 +90,111 @@ El diseño de reemplazo (roles `superadmin` acotado a sandbox + `admin_plataform
 con el "modo dentro de una prestadora" — banner notorio, advertencia en acciones
 destructivas vía Regla 4 de `CLAUDE.md`, log de auditoría de todo login/acción sensible,
 timeout de 5 min de inactividad + tope de 60 min con aviso a los 50) está documentado
-completo en `docs/PLAN_MULTITENANT_CELTATECH.md` sección 3.4/3.4.1. El mecanismo técnico de
-`current_tenant()` dinámico por sesión que ese modo requiere **todavía no está
-implementado** — solo el diseño está aprobado.
+completo en `docs/PLAN_MULTITENANT_CELTATECH.md` sección 3.4/3.4.1.
 
-`admin_plataforma` es el único rol, además de `admin_prestadora`, con acceso de escritura a
+**Nota (2026-07-15, cierra la anterior):** el mecanismo se implementó — `current_tenant()`
+dinámico por sesión incluido. La nota de arriba decía "todavía no está implementado"; eso
+dejó de ser cierto en el pendiente #30.
+
+**Nota (2026-07-28, Etapa 2 de la separación CeltaTech/Aurevia — reemplaza a `admin_plataforma`
+en todo lo anterior):** el rol `admin_plataforma` **ya no existe en Aurevia**. Era el rol
+comercial, y lo comercial se fue entero a CeltaTech (Nivel 1). La maquinaria del "modo dentro
+de una prestadora" no se borró: se re-apuntó a `superadmin` y pasó a llamarse **sesión de
+soporte técnico** (tablas `sesiones_soporte_tecnico` y `auditoria_soporte_tecnico`, guardia
+`requiereSoporteTecnico` en `backend/src/routes/panelSesionTenant.js`). Todo lo que dice el
+párrafo anterior sobre banner, auditoría y límites de tiempo sigue vigente palabra por
+palabra; lo único que cambió es quién tiene la llave. Probado de punta a punta contra la base
+local con `backend/scripts/test_etapa2_sesion_soporte.mjs` (13 chequeos). Ver
+`docs/PLAN_SEPARACION_CELTATECH.md`, Etapa 2, paso 7.
+
+`superadmin` es el único rol, además de `admin_prestadora`, con acceso de escritura a
 configuración de sistema (planes/módulos activables, si se construye esa idea de
 `PRD_02_Panel_Admin.md` Módulo 8) y a cualquier herramienta de diagnóstico asistido por IA
 que se construya sobre logs/errores de la aplicación — no exponer esas herramientas a
-`admin_prestadora` ni a `coordinador`. `superadmin` no tiene este acceso: su alcance es
-código/infra por fuera del Panel, no configuración de negocio dentro de él.
+`admin_prestadora` ni a `coordinador`.
 
 ## Multi-tenancy — `current_tenant()` y `es_superadmin()` (Bloque 2, aplicado y verificado)
 
-**Nota (2026-07-13):** el código de abajo es el estado **actual** aplicado (Bloque 2) —
-`es_superadmin()` sigue siendo hoy un bypass total sin acotar. El diseño aprobado en
-`docs/PLAN_MULTITENANT_CELTATECH.md` 3.4.1 reemplaza este comportamiento (sesión de tenant dinámica
-para `admin_plataforma`, `superadmin` acotado a la prestadora de prueba) pero **todavía no
-está implementado en código** — no asumir que las funciones de abajo ya reflejan el modelo
-nuevo.
+**Nota (2026-07-28, corrige y reemplaza la nota anterior de esta sección):** la nota que
+estaba acá decía que `es_superadmin()` "sigue siendo hoy un bypass total sin acotar" y que la
+sesión de tenant dinámica "todavía no está implementada en código". Las dos cosas dejaron de
+ser ciertas en el pendiente #30 (2026-07-15) y quedaron escritas casi un mes de más. Estado
+real, verificado contra la base el 2026-07-28:
+
+- `current_tenant()` resuelve la sesión de soporte técnico primero y el `prestadora_id` propio
+  después (definición completa abajo, copiada de la base, no del diseño).
+- `es_superadmin()` no es un bypass: devuelve `TRUE` solo si el usuario es `superadmin` **y**,
+  cuando `configuracion_plataforma.mfa_admin_obligatorio` está en ON, además viene con segundo
+  factor verificado (`aal2`). Las policies la usan siempre junto al tenant
+  (`es_superadmin() AND prestadora_id = current_tenant()`), nunca sola.
+
+Desde la Etapa 2 (2026-07-28) la tabla que consulta `current_tenant()` se llama
+`sesiones_soporte_tecnico` y el rol habilitado es `superadmin` — antes eran
+`sesiones_tenant_admin_plataforma` y `admin_plataforma`.
 
 Toda policy de RLS escrita desde el Bloque 2 en adelante usa estas dos funciones SQL en vez
 de repetir el `EXISTS (SELECT ... FROM usuarios WHERE id = auth.uid() ...)` a mano:
 
 ```sql
-CREATE FUNCTION current_tenant() RETURNS UUID
+-- Copiado de la base el 2026-07-28 (pg_get_functiondef), no del diseño.
+CREATE OR REPLACE FUNCTION current_tenant() RETURNS UUID
   LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT prestadora_id FROM usuarios WHERE id = auth.uid();
+  SELECT COALESCE(
+    -- 1º: ¿hay una sesión de soporte técnico abierta y vigente? Entonces manda esa.
+    (SELECT s.prestadora_id FROM sesiones_soporte_tecnico s
+      WHERE s.admin_id = auth.uid()
+        AND s.salida_at IS NULL
+        AND s.expira_at > NOW()
+        AND s.ultima_actividad_at > NOW() - INTERVAL '5 minutes'
+      ORDER BY s.entrada_at DESC LIMIT 1),
+    -- 2º: si no, la Organización propia del usuario.
+    (SELECT prestadora_id FROM usuarios WHERE id = auth.uid())
+  )
 $$;
 
-CREATE FUNCTION es_superadmin() RETURNS BOOLEAN
-  LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT rol = 'superadmin' FROM usuarios WHERE id = auth.uid();
+CREATE OR REPLACE FUNCTION es_superadmin() RETURNS BOOLEAN
+  LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_mfa_obligatorio BOOLEAN;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND rol = 'superadmin') THEN
+    RETURN FALSE;
+  END IF;
+  SELECT mfa_admin_obligatorio INTO v_mfa_obligatorio FROM configuracion_plataforma LIMIT 1;
+  -- Con el segundo factor exigido, no alcanza con ser superadmin: hay que haberlo usado.
+  IF COALESCE(v_mfa_obligatorio, FALSE) THEN
+    RETURN (auth.jwt() ->> 'aal') = 'aal2';
+  END IF;
+  RETURN TRUE;
+END;
 $$;
 ```
 
-Toda tabla con `prestadora_id` debe filtrar por `prestadora_id = current_tenant() OR
-es_superadmin()` en sus policies — nunca solo por rol, sin el filtro de tenant, salvo que la
-tabla sea intencionalmente global (ej. `escalas_legales`, que no tiene `prestadora_id`).
+Toda tabla con `prestadora_id` debe filtrar por `prestadora_id = current_tenant()` en sus
+policies — nunca solo por rol, sin el filtro de tenant, salvo que la tabla sea
+intencionalmente global (ej. `escalas_legales`, que no tiene `prestadora_id`).
+
+**Regla: en toda tabla que tenga `prestadora_id`, `es_superadmin()` va con `AND`, nunca sola.**
+El patrón correcto es `(es_superadmin() AND prestadora_id = current_tenant()) OR (...)`: ser
+superadmin da un permiso *dentro* del tenant en el que uno está parado, no permiso para
+salirse de él. Una policy que diga solamente `USING (es_superadmin())` sobre una tabla con
+`prestadora_id` es un bypass cross-tenant.
+
+**Excepciones vigentes, contadas contra la base el 2026-07-28** (83 policies usan
+`es_superadmin()`; estas 5 la usan sola sobre una tabla que sí tiene `prestadora_id`):
+
+| Tabla | Policy | Por qué se acepta |
+|---|---|---|
+| `uso_ia` | `superadmin_lee_uso_ia` | Medición de consumo de IA (tokens y costo en USD por Prestadora). Es la contabilidad de CeltaTech sobre su propia factura de IA, no datos de la operación. Sin datos personales. |
+| `prestadora_modulos` | `superadmin_lee_prestadora_modulos` | Caché de qué módulos tiene licenciados cada Prestadora. Metadato de licenciamiento. |
+| `prestadora_modalidades` | `superadmin_lee_modalidades` | Ídem: qué modalidades tiene activadas cada Prestadora. |
+| `prestadora_pasarela_pago` | `superadmin_lee_pasarela` | Estado de conexión de la pasarela por Prestadora (proveedor y estado, sin credenciales). |
+| `auditoria_soporte_tecnico` | `superadmin_lee_toda_la_auditoria` | A propósito: el registro de auditoría se lee entero o no sirve como auditoría. |
+
+Ninguna de las cinco toca datos de Familias, Pacientes ni Asistentes — ver las columnas de
+esas tablas en `docs/DATA_MODEL.md`. **Si una tabla nueva necesita entrar en esta lista, no se
+agrega en silencio: se agrega acá con su motivo escrito.** Toda tabla con datos de la
+operación queda fuera, sin excepción.
 
 ## RLS — políticas obligatorias
 

@@ -11,9 +11,8 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 // Ítem H del pendiente #30 — enrolamiento (primera vez) o verificación (sesiones
 // siguientes) del segundo factor TOTP. Se llega acá solo si el toggle
-// configuracion_plataforma.mfa_admin_obligatorio está en ON y el rol es
-// superadmin/admin_plataforma (ver AuthContext.evaluarMfa) — cualquier otro caso, esta
-// página redirige de vuelta.
+// configuracion_plataforma.mfa_admin_obligatorio está en ON y el rol es superadmin
+// (ver AuthContext.evaluarMfa) — cualquier otro caso, esta página redirige de vuelta.
 export function Mfa() {
   const { t } = useLocale();
   const { session, usuario, mfaEstado, refrescarMfa, logout } = useAuth();

@@ -15,9 +15,9 @@ async function llamarApi(path) {
   return resultado;
 }
 
-// Ítem G del pendiente #30 — lectura del log de auditoría de admin_plataforma
-// (auditoria_admin_plataforma). Superadmin ve todo; admin_prestadora ve solo lo que pasó
-// dentro de su propia prestadora (filtro ya aplicado por el backend, no acá).
+// Ítem G del pendiente #30 — lectura del log de auditoría de las sesiones de soporte técnico
+// (auditoria_soporte_tecnico). Superadmin ve todo; admin_prestadora ve solo lo que pasó
+// dentro de su propia Prestadora (filtro ya aplicado por el backend, no acá).
 export function Auditoria() {
   const { t } = useLocale();
   const [eventos, setEventos] = useState([]);

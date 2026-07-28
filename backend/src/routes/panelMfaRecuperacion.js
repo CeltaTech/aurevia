@@ -2,8 +2,8 @@ import { Router } from 'express';
 import { supabase } from '../db/connection.js';
 import { solicitarCodigoRecuperacion, confirmarCodigoRecuperacion } from '../utils/mfaRecuperacionEmail.js';
 
-// Pendiente #37 — recuperación de acceso por email para superadmin/admin_plataforma que
-// pierde el dispositivo TOTP. A propósito NO usa requiereRolPanel: ese middleware exige
+// Pendiente #37 — recuperación de acceso por email para el superadmin que pierde el
+// dispositivo TOTP. A propósito NO usa requiereRolPanel: ese middleware exige
 // aal2 cuando mfa_admin_obligatorio está en ON, y quien llega acá es precisamente alguien
 // que todavía no pudo completar ese segundo factor (sesión aal1, ya autenticado con
 // contraseña). Alcanza con validar el token y el rol, sin exigir aal2.
@@ -18,7 +18,7 @@ async function requiereSesionBasica(req, res, next) {
   if (error || !userData?.user) return res.status(401).json({ error: 'No autorizado' });
 
   const { data: perfil } = await supabase.from('usuarios').select('rol').eq('id', userData.user.id).single();
-  if (!perfil || !['superadmin', 'admin_plataforma'].includes(perfil.rol)) {
+  if (!perfil || perfil.rol !== 'superadmin') {
     return res.status(403).json({ error: 'Rol sin permiso' });
   }
 

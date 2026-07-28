@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 
 const AuthContext = createContext(null);
 
-const ROLES_CON_MFA = ['superadmin', 'admin_plataforma'];
+const ROLES_CON_MFA = ['superadmin'];
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined);

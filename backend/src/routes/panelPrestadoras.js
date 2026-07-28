@@ -3,21 +3,21 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 
 // Listado de prestadoras licenciatarias — pendiente #30, ítem I
-// (docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1). Solo admin_plataforma (para elegir a cuál
-// entrar) y superadmin (para elegir la prestadora_id al dar de alta el primer
-// admin_prestadora de una prestadora nueva, pendiente #26) tienen uso legítimo de
-// esto — admin_prestadora/coordinador no ven otras prestadoras bajo ninguna
+// (docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1). Solo superadmin tiene uso legítimo de esto:
+// para elegir a cuál Prestadora entrar con una sesión de soporte técnico, y para elegir la
+// prestadora_id al dar de alta el primer admin_prestadora de una Prestadora nueva
+// (pendiente #26). Admin_prestadora/coordinador no ven otras Prestadoras bajo ninguna
 // circunstancia (CLAUDE.md glosario).
 export const panelPrestadorasRouter = Router();
 
-function requiereAdminPlataformaOSuperadmin(req, res, next) {
-  if (!['admin_plataforma', 'superadmin'].includes(req.usuarioPanel?.rol)) {
-    return res.status(403).json({ error: 'Solo admin_plataforma o superadmin puede ver la lista de prestadoras' });
+function requiereSuperadmin(req, res, next) {
+  if (req.usuarioPanel?.rol !== 'superadmin') {
+    return res.status(403).json({ error: 'Solo Superadmin puede ver la lista de Prestadoras' });
   }
   next();
 }
 
-panelPrestadorasRouter.get('/', requiereRolPanel, requiereAdminPlataformaOSuperadmin, async (req, res) => {
+panelPrestadorasRouter.get('/', requiereRolPanel, requiereSuperadmin, async (req, res) => {
   const { data, error } = await supabase
     .from('prestadoras')
     .select('id, nombre_fantasia, estado')

@@ -59,6 +59,7 @@ const DIRECTORIOS_IGNORADOS = new Set([
   '.claude',
   '.playwright-mcp',
   '.vercel',        // estado local de la CLI de Vercel, no es código del producto
+  '.temp',          // ídem, pero de la CLI de Supabase (supabase/.temp) — está en .gitignore
   'dist',
   'build',
   'coverage',

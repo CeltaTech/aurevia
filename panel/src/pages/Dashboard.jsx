@@ -73,12 +73,14 @@ export function Dashboard() {
   const { tieneModalidad, modalidades, cargado: modalidadesCargadas } = useModalidades();
   const desgloseModalidadHabilitado = modalidades.length > 1;
   const esAdmin = esAdminOSuperior(usuario?.rol);
-  // Admin_plataforma sin sesión de tenant activa no está "dentro" de ninguna Prestadora — no
-  // hay contexto de configuración inicial que mostrar (ver requiereAdminOSuperior en
-  // panelUsuarios.js, mismo criterio). Admin_prestadora/superadmin siempre tienen su propia
-  // Prestadora (Sandbox en el caso de superadmin).
-  const mostrarOnboarding = esAdmin && (usuario?.rol !== 'admin_plataforma' || sesion !== null);
-  const onboardingInformativo = usuario?.rol === 'admin_plataforma';
+  // Sin Prestadora propia y sin sesión de soporte abierta no se está "dentro" de ninguna
+  // Prestadora — no hay contexto de configuración inicial que mostrar (mismo criterio que
+  // panelUsuarios.js). Admin_prestadora siempre tiene la suya, y superadmin normalmente la
+  // Sandbox.
+  const mostrarOnboarding = esAdmin && (Boolean(usuario?.prestadora_id) || sesion !== null);
+  // Entrando por una sesión de soporte técnico, la configuración inicial es de la Prestadora
+  // visitada, no de quien mira: se muestra solo para informar, sin invitar a completarla.
+  const onboardingInformativo = sesion !== null;
   const postulaciones = useSupabaseTable('postulaciones');
   const solicitudes = useSupabaseTable('solicitudes');
   // Coordinador consulta la vista sin vínculo laboral/score de riesgo — ver schema_etapa2i.sql.

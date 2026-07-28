@@ -53,8 +53,8 @@ export function Configuracion() {
   const { tieneModalidad } = useModalidades();
   const [tab, setTab] = useState('empresa');
 
-  // Pestaña "seguridad" (toggle de MFA, ítem H del pendiente #30) solo para superadmin —
-  // ni siquiera admin_plataforma, es uno de los roles que el toggle protege.
+  // Pestaña "seguridad" (toggle de MFA, ítem H del pendiente #30) solo para superadmin, que
+  // es justamente el rol que el toggle protege.
   let tabs = tieneModalidad('marketplace') ? [...TABS, 'pasarela'] : TABS;
   if (usuario?.rol === 'superadmin') tabs = [...tabs, 'seguridad'];
 

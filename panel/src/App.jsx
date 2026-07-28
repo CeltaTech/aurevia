@@ -26,7 +26,7 @@ import { Continuidad } from './pages/Continuidad';
 import { ListaPrecios } from './pages/ListaPrecios';
 import { UsuariosPanel } from './pages/UsuariosPanel';
 import { Prestadoras } from './pages/Prestadoras';
-import { AdminPlataforma } from './pages/AdminPlataforma';
+import { CostosIA } from './pages/CostosIA';
 import { Configuracion } from './pages/Configuracion';
 import { Medicacion } from './pages/Medicacion';
 import { Importacion } from './pages/Importacion';
@@ -76,7 +76,7 @@ function App() {
                     <Route path="informes-obra-social" element={<InformesObraSocial />} />
                     <Route path="usuarios-panel" element={<ProtectedRoute soloAdmin><UsuariosPanel /></ProtectedRoute>} />
                     <Route path="prestadoras" element={<ProtectedRoute roles={['admin_plataforma', 'superadmin']}><Prestadoras /></ProtectedRoute>} />
-                    <Route path="admin-plataforma" element={<ProtectedRoute roles={['admin_plataforma']}><AdminPlataforma /></ProtectedRoute>} />
+                    <Route path="costos-ia" element={<ProtectedRoute roles={['superadmin']}><CostosIA /></ProtectedRoute>} />
                     <Route path="configuracion" element={<ProtectedRoute soloAdmin><Configuracion /></ProtectedRoute>} />
                     <Route path="auditoria" element={<ProtectedRoute roles={['admin_prestadora', 'superadmin', 'admin_plataforma']}><Auditoria /></ProtectedRoute>} />
                     <Route

@@ -119,7 +119,7 @@ export function Layout() {
           )}
           {esAdminOSuperior(usuario?.rol) && <NavLink to="/usuarios-panel">{t.nav.usuarios_panel}</NavLink>}
           {['admin_plataforma', 'superadmin'].includes(usuario?.rol) && <NavLink to="/prestadoras">{t.nav.prestadoras}</NavLink>}
-          {usuario?.rol === 'admin_plataforma' && <NavLink to="/admin-plataforma">{t.nav.admin_plataforma}</NavLink>}
+          {usuario?.rol === 'superadmin' && <NavLink to="/costos-ia">{t.nav.costos_ia}</NavLink>}
           {esAdminOSuperior(usuario?.rol) && <NavLink to="/configuracion">{t.nav.configuracion}</NavLink>}
           {['admin_prestadora', 'superadmin', 'admin_plataforma'].includes(usuario?.rol) && <NavLink to="/auditoria">{t.nav.auditoria}</NavLink>}
         </nav>

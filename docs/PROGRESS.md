@@ -4,6 +4,36 @@
 > Este archivo refleja el estado real del código, no el estado deseado — si algo no está
 > hecho, dice 🔴 No iniciado, aunque haya PRD escrito para eso.
 
+> **2026-07-28 — El producto pasó a llamarse Careonys** (antes Aurevia), por decisión del
+> Desarrollador. El nombre nuevo sale del dominio `careonys.com`, que registró ese día: "aurevia"
+> estaba ocupado en las once terminaciones de dominio que se probaron, así que no había forma de
+> tener dominio propio con ese nombre. **El cambio se hizo editando un solo archivo**
+> (`backend/src/config/identidadProducto.js`) y corriendo `scripts/sincronizar_identidad.mjs`,
+> que lo copia a las otras tres unidades — ningún texto visible tenía el nombre escrito a mano,
+> todo sale de los marcadores `{{producto}}` / `{{productoCorto}}` / `{{dominio}}` que se
+> resuelven al ejecutar. Es exactamente para lo que se hizo la Etapa 0.5. **Lo que no cambia, a
+> propósito:** la clave técnica `codigo: 'aurevia'` y las claves de entitlements que se arman con
+> ella (`aurevia.pacientes.activos_max`), porque son identificadores ya guardados y no marca —
+> por eso el barrido distinguió mayúsculas ("Aurevia" en prosa se reemplazó, "aurevia" en
+> minúscula quedó intacto). **El renombre no tocó un solo dato guardado ni una sola migración.**
+> Alcance: 169 apariciones en 43 archivos. Verificado y desplegado el mismo día: las tres
+> aplicaciones en vivo muestran el nombre nuevo y ninguna muestra el viejo. **Todavía dicen
+> "aurevia" y se mudan aparte**: la carpeta `productos/aurevia`, el repositorio, el servicio
+> `aurevia-backend` de Railway y las direcciones prestadas de Vercel. El detalle del criterio
+> está en `docs/claude_history.md`.
+>
+> **2026-07-29 — Decidido dónde van a vivir los despliegues: Cloudflare Pages, no Vercel.** Las
+> tres aplicaciones que hoy están en la cuenta personal de Vercel se mudan a Cloudflare Pages,
+> que ya tiene la cuenta y los dominios de la empresa, cuesta $0 y admite uso comercial. Se
+> comprobó que lo que se despliega es estático puro (3,6 MB entre las tres, sin nada que se
+> ejecute en el servidor), así que no se pierde ninguna función; el backend sigue en Railway, con
+> la IA adentro. La cuenta personal de Vercel queda libre para uso particular del Desarrollador.
+> Nada de esto está hecho todavía — el motivo, los números y el orden obligatorio para no romper
+> los enlaces de los correos de activación están en el pendiente #99 de `docs/PENDIENTES.md`.
+> En paralelo se levantó el mapa completo de dominios y correo (pendiente #100): los tres
+> dominios `.ar` comprados en NIC.ar están sin delegar, y el producto todavía no tiene ninguna
+> casilla de correo propia.
+
 > **2026-07-27 — La empresa pasó a llamarse CeltaTech** (antes Xeitra), por decisión del
 > Desarrollador. El renombre se aplicó en todo el repositorio: comentarios, referencias a
 > documentos y textos visibles del Panel en los tres idiomas. **No cambió ninguna tabla, rol,

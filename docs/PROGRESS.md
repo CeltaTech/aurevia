@@ -95,6 +95,56 @@ Convención: 🔴 No iniciado · 🟡 En progreso · 🟢 Completo y en producci
 
 ## Última tarea completada
 
+**2026-07-28 (más tarde): se cerró la puerta de atrás del pendiente #98 — ahora el Panel filtra
+siempre por Prestadora.** Al terminar el paso 7 de la Etapa 2 apareció un problema serio, que no
+lo causó ese paso pero que ese paso volvió importante: el rol técnico `superadmin` podía leer y
+escribir datos de cualquier Prestadora **sin abrir la sesión de soporte técnico**, y por lo tanto
+sin dejar rastro auditado.
+
+Por qué pasaba, en palabras simples. Las pantallas del Panel no consultan la base con las
+credenciales de quien está usando el sistema (que activarían el candado automático de la base,
+la RLS), sino con una clave de servicio que ese candado no frena. Entonces el aislamiento entre
+Prestadoras quedaba a cargo del código, escrito a mano en cada consulta, siempre con la misma
+forma: *"si el rol no es superadmin, filtrá por Prestadora"*. Leído al revés: **si el rol era
+superadmin, no se filtraba nada**. Mientras la puerta auditada pertenecía a otro rol
+(`admin_plataforma`, el comercial) las dos cosas convivían; desde que la puerta auditada es de
+`superadmin`, la puerta con registro y la puerta sin registro eran del mismo rol, y nada empujaba
+a usar la primera.
+
+Qué se hizo:
+
+- **Un único lugar donde se decide el filtro**, como exige `CLAUDE.md` §7.12, en vez de la misma
+  condición copiada archivo por archivo: `backend/src/middleware/alcancePrestadora.js`. Tiene
+  tres piezas: `acotarAPrestadora()`, que agrega siempre el filtro y **rompe** si no hay
+  Organización activa (antes, en ese caso, devolvía todo); `exigirOrganizacionActiva`, una guardia
+  de ruta que corta antes de llegar a la base con un mensaje entendible ("Entrá a una prestadora
+  antes de operar sobre sus datos"); y `acotarAUsuariosDelPanel()`, la **única excepción**, porque
+  las cuentas de superadmin no pertenecen a ninguna Prestadora y un filtro liso escondería al
+  propio equipo técnico de sí mismo.
+- **29 ramas por rol borradas**, contadas sobre el cambio real: 17 en `panelConfiguracion.js`,
+  6 en `panelCuentas.js`, 4 en `panelUsuarios.js`, 1 en `panelAusencias.js` y 1 en
+  `panelVitalesAutorizacion.js`.
+- **Dos atajos que permitían elegir Prestadora a mano, eliminados**: el parámetro
+  `?prestadora_id=` de las consultas (antes de sacarlo se buscó en todo el repositorio y ningún
+  cliente lo usaba) y el selector de Prestadora del alta de usuarios del Panel
+  (`panel/src/pages/UsuariosPanel.jsx`), reemplazado por un aviso traducido a los tres idiomas.
+  Ahora una cuenta nueva nace siempre en la Organización en la que se está trabajando; para crear
+  la de otra Prestadora hay que entrar con una sesión de soporte, que deja registro.
+- **Una sutileza que casi se rompe sin querer**: el alta de una cuenta *superadmin* nueva se
+  ancla a la Organización propia de quien la crea (la Sandbox), **no** a la Prestadora de la
+  sesión de soporte que pueda estar abierta. Para poder distinguir una cosa de la otra,
+  `requiereRolPanel.js` ahora expone también `organizacionPropiaId` además de `prestadoraId`.
+
+Cómo se comprobó: `node --check` limpio en los 7 archivos de backend y `npm run build` limpio en
+el Panel; y la prueba de punta a punta `backend/scripts/test_etapa2_sesion_soporte.mjs` se amplió
+de 13 a 17 chequeos. Los 4 nuevos crean **una segunda Prestadora en la que nunca se entra** y
+confirman que sin sesión abierta no se llega a ningún dato, que desde adentro de la primera no se
+ven ni se borran los datos de la segunda, y que el alta ignora la Prestadora que venga escrita en
+el pedido. Corrida contra la base local: **los 17 en verde**. La prueba borra todo lo que crea y
+se niega a arrancar si la base no es la local, sin bandera para saltearlo.
+
+---
+
 **2026-07-28: Etapa 2 del plan de separación, paso 7 — el rol `admin_plataforma` sale de
 Aurevia. Aplicado a producción y verificado.** Aurevia era, sin quererlo, dos productos en un
 mismo sistema: la plataforma de gestión para Prestadoras, y adentro un panel comercial de la

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
+import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { supabase } from '../db/connection.js';
 import { ACCIONES_PERMISOS } from '../utils/permisos.js';
 
@@ -11,25 +12,17 @@ function requiereAdminOSuperior(req, res, next) {
   if (!['admin_prestadora', 'superadmin'].includes(req.usuarioPanel?.rol)) {
     return res.status(403).json({ error: 'Solo Admin o Superadmin puede editar la configuración' });
   }
-  // Superadmin sin Organización propia y sin sesión de soporte abierta no tiene ninguna
-  // Prestadora sobre la que operar (docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1) — sin este corte
-  // explícito, prestadoraId llega `null` a las queries de abajo y `.eq('prestadora_id', null)`
-  // rompe contra Postgres en vez de devolver un error controlado (mismo patrón que
-  // panelUsuarios.js).
-  if (!req.usuarioPanel.prestadoraId) {
-    return res.status(400).json({ error: 'Entrá a una prestadora antes de editar su configuración' });
-  }
   next();
 }
 
-panelConfiguracionRouter.use(requiereRolPanel, requiereAdminOSuperior);
+// El corte por "no hay Organización activa" lo pone exigirOrganizacionActiva, compartido con el
+// resto de los routers (CLAUDE.md §7.12) — antes esta misma condición estaba escrita acá a mano.
+panelConfiguracionRouter.use(requiereRolPanel, requiereAdminOSuperior, exigirOrganizacionActiva);
 
 // --- Datos de la prestadora (configuracion_prestadora, ver schema_multitenant_04.sql —
 //     reemplaza el singleton configuracion_empresa: cada prestadora tiene su propia fila) ---
 panelConfiguracionRouter.get('/empresa', async (req, res) => {
-  const prestadoraId = req.usuarioPanel.rol === 'superadmin' && req.query.prestadora_id
-    ? req.query.prestadora_id
-    : req.usuarioPanel.prestadoraId;
+  const prestadoraId = req.usuarioPanel.prestadoraId;
   const { data, error } = await supabase
     .from('configuracion_prestadora')
     .select('*')
@@ -52,9 +45,7 @@ panelConfiguracionRouter.patch('/empresa', async (req, res) => {
 // --- Zonas de cobertura ---
 panelConfiguracionRouter.get('/zonas', async (req, res) => {
   let query = supabase.from('zonas_cobertura').select('*').order('orden');
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  }
+  query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ zonas: data });
@@ -78,9 +69,7 @@ panelConfiguracionRouter.patch('/zonas/:id', async (req, res) => {
     .from('zonas_cobertura')
     .update({ nombre, categoria, activa, orden })
     .eq('id', req.params.id);
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  }
+  query = acotarAPrestadora(query, req.usuarioPanel);
   const { error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
@@ -88,9 +77,7 @@ panelConfiguracionRouter.patch('/zonas/:id', async (req, res) => {
 
 panelConfiguracionRouter.delete('/zonas/:id', async (req, res) => {
   let query = supabase.from('zonas_cobertura').delete().eq('id', req.params.id);
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  }
+  query = acotarAPrestadora(query, req.usuarioPanel);
   const { error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
@@ -99,9 +86,7 @@ panelConfiguracionRouter.delete('/zonas/:id', async (req, res) => {
 // --- Servicios: escalada de relevo (protocolo de continuidad de guardia) ---
 panelConfiguracionRouter.get('/escalada-relevo', async (req, res) => {
   let query = supabase.from('configuracion_escalada_relevo').select('*').order('nivel');
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  }
+  query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ niveles: data });
@@ -125,9 +110,7 @@ panelConfiguracionRouter.patch('/escalada-relevo/:id', async (req, res) => {
     .from('configuracion_escalada_relevo')
     .update({ nivel, minutos_demora, orden_prioridad, plantilla_mensaje })
     .eq('id', req.params.id);
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  }
+  query = acotarAPrestadora(query, req.usuarioPanel);
   const { error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
@@ -135,9 +118,7 @@ panelConfiguracionRouter.patch('/escalada-relevo/:id', async (req, res) => {
 
 panelConfiguracionRouter.delete('/escalada-relevo/:id', async (req, res) => {
   let query = supabase.from('configuracion_escalada_relevo').delete().eq('id', req.params.id);
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  }
+  query = acotarAPrestadora(query, req.usuarioPanel);
   const { error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
@@ -149,9 +130,7 @@ panelConfiguracionRouter.delete('/escalada-relevo/:id', async (req, res) => {
 //     desde el Panel; sin DELETE — se discontinúa con el toggle "activa" para no romper
 //     verificaciones_asistente ya existentes que referencian esa etapa. ---
 panelConfiguracionRouter.get('/etapas-incorporacion', async (req, res) => {
-  const prestadoraId = req.usuarioPanel.rol === 'superadmin' && req.query.prestadora_id
-    ? req.query.prestadora_id
-    : req.usuarioPanel.prestadoraId;
+  const prestadoraId = req.usuarioPanel.prestadoraId;
   const { data, error } = await supabase
     .from('etapas_incorporacion_asistente')
     .select('*')
@@ -185,9 +164,7 @@ panelConfiguracionRouter.patch('/etapas-incorporacion/:id', async (req, res) => 
     .from('etapas_incorporacion_asistente')
     .update({ nombre, activa })
     .eq('id', req.params.id);
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  }
+  query = acotarAPrestadora(query, req.usuarioPanel);
   const { error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
@@ -229,9 +206,7 @@ panelConfiguracionRouter.get('/personal-emergencia', async (req, res) => {
     .from('personal_emergencia')
     .select('id, asistente_id, tipo, activo, created_at, asistentes(nombre)')
     .order('created_at', { ascending: false });
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  }
+  query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ personal: data });
@@ -252,9 +227,7 @@ panelConfiguracionRouter.post('/personal-emergencia', async (req, res) => {
 panelConfiguracionRouter.patch('/personal-emergencia/:id', async (req, res) => {
   const { activo } = req.body;
   let query = supabase.from('personal_emergencia').update({ activo }).eq('id', req.params.id);
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  }
+  query = acotarAPrestadora(query, req.usuarioPanel);
   const { error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
@@ -262,9 +235,7 @@ panelConfiguracionRouter.patch('/personal-emergencia/:id', async (req, res) => {
 
 panelConfiguracionRouter.delete('/personal-emergencia/:id', async (req, res) => {
   let query = supabase.from('personal_emergencia').delete().eq('id', req.params.id);
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  }
+  query = acotarAPrestadora(query, req.usuarioPanel);
   const { error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
@@ -276,9 +247,7 @@ panelConfiguracionRouter.delete('/personal-emergencia/:id', async (req, res) => 
 // evento, compartida sin darse cuenta por todas las prestadoras licenciatarias.
 panelConfiguracionRouter.get('/notificaciones', async (req, res) => {
   let query = supabase.from('configuracion_notificaciones').select('*').order('evento');
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  }
+  query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ notificaciones: data });
@@ -290,9 +259,7 @@ panelConfiguracionRouter.patch('/notificaciones/:evento', async (req, res) => {
     .from('configuracion_notificaciones')
     .update({ emails, activo, whatsapp_activo, notificar_familia })
     .eq('evento', req.params.evento);
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  }
+  query = acotarAPrestadora(query, req.usuarioPanel);
   const { error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
@@ -302,9 +269,7 @@ panelConfiguracionRouter.patch('/notificaciones/:evento', async (req, res) => {
 //     backend/src/db/schema_whatsapp_ia_01.sql secciones 1-2 — el token nunca vuelve a
 //     mostrarse en el Panel una vez guardado) ---
 panelConfiguracionRouter.get('/whatsapp', async (req, res) => {
-  const prestadoraId = req.usuarioPanel.rol === 'superadmin' && req.query.prestadora_id
-    ? req.query.prestadora_id
-    : req.usuarioPanel.prestadoraId;
+  const prestadoraId = req.usuarioPanel.prestadoraId;
   const { data, error } = await supabase
     .from('configuracion_whatsapp_prestadora')
     .select('prestadora_id, activo, numero_telefono, waba_id, phone_number_id, verificado_at, updated_at')
@@ -349,9 +314,7 @@ panelConfiguracionRouter.patch('/whatsapp', async (req, res) => {
 //     Vault, mismo patrón que /whatsapp — la contraseña nunca vuelve a mostrarse en el
 //     Panel una vez guardada) ---
 panelConfiguracionRouter.get('/email-remitente', async (req, res) => {
-  const prestadoraId = req.usuarioPanel.rol === 'superadmin' && req.query.prestadora_id
-    ? req.query.prestadora_id
-    : req.usuarioPanel.prestadoraId;
+  const prestadoraId = req.usuarioPanel.prestadoraId;
   const { data, error } = await supabase
     .from('configuracion_email_prestadora')
     .select('prestadora_id, activo, direccion_remitente, usuario_smtp, host, puerto, verificado_at, updated_at, credencial_secret_id')
@@ -397,9 +360,7 @@ panelConfiguracionRouter.patch('/email-remitente', async (req, res) => {
 //     usarse para un mensaje que la prestadora inicia) ---
 panelConfiguracionRouter.get('/whatsapp/plantillas', async (req, res) => {
   let query = supabase.from('plantillas_whatsapp').select('*').order('created_at', { ascending: false });
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  }
+  query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ plantillas: data });
@@ -428,9 +389,7 @@ panelConfiguracionRouter.patch('/whatsapp/plantillas/:id', async (req, res) => {
     .from('plantillas_whatsapp')
     .update({ cuerpo_texto, estado, meta_template_id, motivo_rechazo, updated_at: new Date().toISOString() })
     .eq('id', req.params.id);
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  }
+  query = acotarAPrestadora(query, req.usuarioPanel);
   const { error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
@@ -438,9 +397,7 @@ panelConfiguracionRouter.patch('/whatsapp/plantillas/:id', async (req, res) => {
 
 panelConfiguracionRouter.delete('/whatsapp/plantillas/:id', async (req, res) => {
   let query = supabase.from('plantillas_whatsapp').delete().eq('id', req.params.id);
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  }
+  query = acotarAPrestadora(query, req.usuarioPanel);
   const { error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
@@ -453,9 +410,7 @@ panelConfiguracionRouter.delete('/whatsapp/plantillas/:id', async (req, res) => 
 //     porque el backend usa la service role key y aplica el mismo scoping por prestadora que
 //     el resto de este archivo. ---
 panelConfiguracionRouter.get('/documentos-tipo', async (req, res) => {
-  const prestadoraId = req.usuarioPanel.rol === 'superadmin' && req.query.prestadora_id
-    ? req.query.prestadora_id
-    : req.usuarioPanel.prestadoraId;
+  const prestadoraId = req.usuarioPanel.prestadoraId;
 
   const [{ data: tipos, error: errorTipos }, { data: prestadora, error: errorPrestadora }] = await Promise.all([
     supabase.from('tipos_documento_asistente').select('*').eq('prestadora_id', prestadoraId).order('nombre'),
@@ -494,9 +449,7 @@ panelConfiguracionRouter.patch('/documentos-tipo/plazo-aviso', async (req, res) 
 //     backend/src/db/schema_motivos_aviso_previo_01.sql). Mismo patrón que
 //     /documentos-tipo. ---
 panelConfiguracionRouter.get('/motivos-aviso-previo', async (req, res) => {
-  const prestadoraId = req.usuarioPanel.rol === 'superadmin' && req.query.prestadora_id
-    ? req.query.prestadora_id
-    : req.usuarioPanel.prestadoraId;
+  const prestadoraId = req.usuarioPanel.prestadoraId;
   const { data, error } = await supabase
     .from('motivos_aviso_previo_guardia')
     .select('*')
@@ -522,9 +475,7 @@ panelConfiguracionRouter.patch('/motivos-aviso-previo/:id', async (req, res) => 
     .from('motivos_aviso_previo_guardia')
     .update({ nombre, activo })
     .eq('id', req.params.id);
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  }
+  query = acotarAPrestadora(query, req.usuarioPanel);
   const { error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
@@ -535,9 +486,7 @@ panelConfiguracionRouter.patch('/motivos-aviso-previo/:id', async (req, res) => 
 //     que /documentos-tipo/plazo-aviso: valor en "prestadoras", expuesto acá para reusar el
 //     scoping por prestadora ya resuelto en este router. ---
 panelConfiguracionRouter.get('/guardias/horizonte-generacion', async (req, res) => {
-  const prestadoraId = req.usuarioPanel.rol === 'superadmin' && req.query.prestadora_id
-    ? req.query.prestadora_id
-    : req.usuarioPanel.prestadoraId;
+  const prestadoraId = req.usuarioPanel.prestadoraId;
   const { data, error } = await supabase
     .from('prestadoras')
     .select('dias_generacion_series_guardia')
@@ -566,9 +515,7 @@ panelConfiguracionRouter.patch('/guardias/horizonte-generacion', async (req, res
 //     al validar el check-in) y backend/src/utils/ausenciaAutomatica.js (uso de
 //     minutos_tolerancia_checkin y activo). ---
 panelConfiguracionRouter.get('/ausencia-automatica', async (req, res) => {
-  const prestadoraId = req.usuarioPanel.rol === 'superadmin' && req.query.prestadora_id
-    ? req.query.prestadora_id
-    : req.usuarioPanel.prestadoraId;
+  const prestadoraId = req.usuarioPanel.prestadoraId;
   const { data, error } = await supabase
     .from('configuracion_ausencia_automatica')
     .select('activo, minutos_tolerancia_checkin, metros_tolerancia_checkin')
@@ -606,9 +553,7 @@ panelConfiguracionRouter.patch('/documentos-tipo/:id', async (req, res) => {
     .from('tipos_documento_asistente')
     .update({ nombre, requiere_vencimiento, activo })
     .eq('id', req.params.id);
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  }
+  query = acotarAPrestadora(query, req.usuarioPanel);
   const { error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
@@ -740,9 +685,7 @@ panelConfiguracionRouter.patch('/modalidades/:modalidad', async (req, res) => {
 // --- Escalada a Coordinador: respaldo + intervalos de insistencia según premura
 //     (punto 5 de docs/PRD_06_WhatsApp_IA.md) ---
 panelConfiguracionRouter.get('/escalada-coordinador', async (req, res) => {
-  const prestadoraId = req.usuarioPanel.rol === 'superadmin' && req.query.prestadora_id
-    ? req.query.prestadora_id
-    : req.usuarioPanel.prestadoraId;
+  const prestadoraId = req.usuarioPanel.prestadoraId;
   const { data, error } = await supabase
     .from('configuracion_escalada_coordinador')
     .select('*')

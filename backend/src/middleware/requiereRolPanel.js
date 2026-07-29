@@ -115,7 +115,18 @@ export async function requiereRolPanel(req, res, next) {
     }
   }
 
-  req.usuarioPanel = { id: userData.user.id, rol: perfil.rol, prestadoraId, dentroDeSesionSoporte };
+  // `prestadoraId` es la Organización sobre la que se está trabajando ahora (la de la sesión de
+  // soporte si hay una abierta). `organizacionPropiaId` es la Organización a la que pertenece la
+  // cuenta en sí, que no cambia al entrar a una Prestadora. Casi todo el código quiere la
+  // primera; la segunda hace falta en el único lugar donde importa de quién es la cuenta y no
+  // dónde está parada: al dar de alta otra cuenta superadmin (panelUsuarios.js).
+  req.usuarioPanel = {
+    id: userData.user.id,
+    rol: perfil.rol,
+    prestadoraId,
+    organizacionPropiaId: perfil.prestadora_id,
+    dentroDeSesionSoporte,
+  };
 
   // La ruta de sesión de soporte (entrar/salir/renovar) ya audita login/logout/renovación
   // explícitamente (panelSesionTenant.js) — no duplicar acá como "mutacion" genérica.

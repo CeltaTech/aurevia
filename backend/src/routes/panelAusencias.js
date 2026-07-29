@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
+import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { supabase } from '../db/connection.js';
 
 export const panelAusenciasRouter = Router();
@@ -31,9 +32,7 @@ function clienteR2() {
 
 async function ausenciaDeLaPrestadora(ausenciaId, usuarioPanel) {
   let query = supabase.from('ausencias').select('id, prestadora_id, asistente_id').eq('id', ausenciaId);
-  if (usuarioPanel.rol !== 'superadmin') {
-    query = query.eq('prestadora_id', usuarioPanel.prestadoraId);
-  }
+  query = acotarAPrestadora(query, usuarioPanel);
   const { data } = await query.maybeSingle();
   return data;
 }
@@ -48,6 +47,7 @@ function manejarErrorMulter(err, req, res, next) {
 panelAusenciasRouter.post(
   '/:id/certificado',
   requiereRolPanel,
+  exigirOrganizacionActiva,
   upload.single('archivo'),
   manejarErrorMulter,
   async (req, res) => {
@@ -96,7 +96,7 @@ panelAusenciasRouter.post(
   },
 );
 
-panelAusenciasRouter.get('/:id/certificado-url', requiereRolPanel, async (req, res) => {
+panelAusenciasRouter.get('/:id/certificado-url', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
   const ausencia = await ausenciaDeLaPrestadora(req.params.id, req.usuarioPanel);
   if (!ausencia) {
     return res.status(404).json({ error: 'Ausencia no encontrada' });

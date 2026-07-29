@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
+import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { supabase } from '../db/connection.js';
 
 export const panelVitalesAutorizacionRouter = Router();
@@ -26,9 +27,7 @@ function manejarErrorMulter(err, req, res, next) {
 
 async function pacienteDeLaPrestadora(pacienteId, usuarioPanel) {
   let query = supabase.from('pacientes').select('id, prestadora_id').eq('id', pacienteId);
-  if (usuarioPanel.rol !== 'superadmin') {
-    query = query.eq('prestadora_id', usuarioPanel.prestadoraId);
-  }
+  query = acotarAPrestadora(query, usuarioPanel);
   const { data } = await query.maybeSingle();
   return data;
 }
@@ -41,6 +40,7 @@ async function pacienteDeLaPrestadora(pacienteId, usuarioPanel) {
 panelVitalesAutorizacionRouter.post(
   '/:pacienteId/archivo',
   requiereRolPanel,
+  exigirOrganizacionActiva,
   upload.single('archivo'),
   manejarErrorMulter,
   async (req, res) => {
@@ -67,7 +67,7 @@ panelVitalesAutorizacionRouter.post(
   }
 );
 
-panelVitalesAutorizacionRouter.get('/:pacienteId/archivo-url', requiereRolPanel, async (req, res) => {
+panelVitalesAutorizacionRouter.get('/:pacienteId/archivo-url', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
   const paciente = await pacienteDeLaPrestadora(req.params.pacienteId, req.usuarioPanel);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });

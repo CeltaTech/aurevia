@@ -7,7 +7,6 @@ import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
-import { traducirValor } from '../i18n/valores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -24,16 +23,6 @@ async function llamarApi(path, opciones = {}) {
   const resultado = await respuesta.json();
   if (!respuesta.ok) throw new Error(resultado.error);
   return resultado;
-}
-
-async function listarPrestadoras() {
-  const { data } = await supabase.auth.getSession();
-  const respuesta = await fetch(`${API_URL}/api/panel/prestadoras`, {
-    headers: { Authorization: `Bearer ${data.session?.access_token}` },
-  });
-  const resultado = await respuesta.json();
-  if (!respuesta.ok) throw new Error(resultado.error);
-  return resultado.prestadoras;
 }
 
 export function UsuariosPanel() {
@@ -136,16 +125,9 @@ function NuevoUsuarioPanel({ esSuperadmin, onClose, onCreado }) {
   const [telefono, setTelefono] = useState('');
   const [zonas, setZonas] = useState('');
   const [rol, setRol] = useState('coordinador');
-  const [prestadoraId, setPrestadoraId] = useState('');
-  const [prestadoras, setPrestadoras] = useState([]);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
   const [creado, setCreado] = useState(null);
-
-  useEffect(() => {
-    if (!esSuperadmin) return;
-    listarPrestadoras().then(setPrestadoras).catch((err) => setError(err.message));
-  }, [esSuperadmin]);
 
   async function handleGuardar() {
     setGuardando(true);
@@ -159,10 +141,6 @@ function NuevoUsuarioPanel({ esSuperadmin, onClose, onCreado }) {
           nombre,
           telefono,
           rol: rolFinal,
-          // prestadora_id solo tiene sentido para admin_prestadora/coordinador — una
-          // cuenta superadmin nueva siempre nace en la sandbox, el backend ignora este
-          // campo en ese caso (backend/src/routes/panelUsuarios.js).
-          prestadora_id: esSuperadmin && rolFinal !== 'superadmin' ? prestadoraId || undefined : undefined,
           zonas: zonas.split(',').map((z) => z.trim()).filter(Boolean),
         }),
       });
@@ -209,22 +187,19 @@ function NuevoUsuarioPanel({ esSuperadmin, onClose, onCreado }) {
             <option value="superadmin">{t.usuarios_panel.rol_superadmin}</option>
           </FormField>
         )}
-        {esSuperadmin && rol === 'admin_prestadora' && (
-          <FormField label={t.usuarios_panel.campo_prestadora} name="prestadora_id" type="select" value={prestadoraId} onChange={(e) => setPrestadoraId(e.target.value)} required>
-            <option value="">{t.usuarios_panel.prestadora_placeholder}</option>
-            {prestadoras.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre_fantasia} ({traducirValor(t.prestadoras, `estado_${p.estado}`)})
-              </option>
-            ))}
-          </FormField>
+        {/* Antes acá había un selector de Prestadora. Se sacó al cerrar el pendiente #98
+            (2026-07-28): la cuenta nueva nace siempre en la Organización en la que se está
+            trabajando, y para crear la de otra Prestadora hay que entrar con una sesión de
+            soporte técnico, que deja registro. El selector permitía saltearse ese registro. */}
+        {esSuperadmin && rol !== 'superadmin' && (
+          <p className="panel-explicacion">{t.usuarios_panel.aviso_organizacion_activa}</p>
         )}
         <FormField label={t.usuarios_panel.col_telefono} name="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
         <FormField label={t.usuarios_panel.col_zonas} name="zonas" value={zonas} onChange={(e) => setZonas(e.target.value)} placeholder={t.usuarios_panel.zonas_placeholder} />
         <p className="panel-explicacion">{t.usuarios_panel.aviso_password_temporal}</p>
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>
-          <Button onClick={handleGuardar} disabled={guardando || !email || !nombre || (esSuperadmin && rol === 'admin_prestadora' && !prestadoraId)}>
+          <Button onClick={handleGuardar} disabled={guardando || !email || !nombre}>
             {guardando ? t.comun.guardando : t.comun.guardar}
           </Button>
         </div>

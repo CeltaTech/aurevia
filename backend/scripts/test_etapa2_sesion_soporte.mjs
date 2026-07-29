@@ -49,7 +49,7 @@ const anon = createClient(API_URL, ANON_KEY);
 const EMAIL = 'prueba.etapa2@local.celtatech.com';
 const PASSWORD = 'local-dev-1234';
 
-let authUserId, prestadoraId;
+let authUserId, prestadoraId, prestadoraIdB, coladoId;
 const fallos = [];
 
 function chequear(n, ok, detalle) {
@@ -121,9 +121,61 @@ async function main() {
   const rCfg2 = await fetch(`${API}/configuracion/empresa`, { headers: h });
   chequear('12. y Configuración vuelve a cortar con 400', rCfg2.status === 400, 'status ' + rCfg2.status);
 
+  // -------------------------------------------------------------------------
+  // Pendiente #98 (cerrado el 2026-07-28): que la sesión de soporte no sea
+  // optativa. Antes, superadmin veía y tocaba datos de cualquier Prestadora sin
+  // abrir ninguna sesión, porque el filtro por Organización tenía escrita la
+  // excepción `if (rol !== 'superadmin')` en 40 lugares. Estos chequeos usan una
+  // SEGUNDA Prestadora, la B, en la que nunca se entra.
+  // -------------------------------------------------------------------------
+  const { data: pB, error: ePB } = await admin.from('prestadoras').insert({
+    razon_social: 'PRUEBA local Etapa 2 B', nombre_fantasia: 'PRUEBA local B', pais: 'AR', estado: 'prospecto',
+  }).select('id').single();
+  if (ePB) throw ePB;
+  prestadoraIdB = pB.id;
+  await admin.from('configuracion_prestadora').insert({ prestadora_id: prestadoraIdB, nombre: 'PRUEBA local B' });
+  const { data: zB } = await admin.from('zonas_cobertura').insert({
+    prestadora_id: prestadoraIdB, codigo: 'PRBB', nombre: 'Zona secreta de la Prestadora B', categoria: 'principal',
+  }).select('id').single();
+
+  const rZonasSinSesion = await fetch(`${API}/configuracion/zonas`, { headers: h });
+  chequear('13. sin sesión abierta, no se llega a ningún dato de ninguna Prestadora (400)',
+    rZonasSinSesion.status === 400, 'status ' + rZonasSinSesion.status);
+
+  // se vuelve a entrar, pero a la Prestadora A: la B tiene que seguir invisible
+  await fetch(`${API}/sesion-tenant`, { method: 'POST', headers: h, body: JSON.stringify({ prestadora_id: prestadoraId }) });
+
+  const rZonasA = await fetch(`${API}/configuracion/zonas`, { headers: h });
+  const jZonasA = await rZonasA.json();
+  const veLaDeB = (jZonasA.zonas ?? jZonasA ?? []).some?.((z) => z.prestadora_id === prestadoraIdB);
+  chequear('14. dentro de la Prestadora A no se ven las zonas de la B', rZonasA.status === 200 && !veLaDeB,
+    'status ' + rZonasA.status);
+
+  await fetch(`${API}/configuracion/zonas/${zB.id}`, { method: 'DELETE', headers: h });
+  const { data: zBSigue } = await admin.from('zonas_cobertura').select('id').eq('id', zB.id).maybeSingle();
+  chequear('15. tampoco se puede borrar una zona de la B desde adentro de la A', Boolean(zBSigue),
+    zBSigue ? 'la fila sigue ahí' : 'LA BORRÓ');
+
+  // el atajo viejo: mandar la Prestadora destino en el cuerpo del pedido
+  const emailCol = 'prueba.etapa2.colado@local.celtatech.com';
+  const rColado = await fetch(`${API}/usuarios`, {
+    method: 'POST', headers: h,
+    body: JSON.stringify({ email: emailCol, nombre: 'Colado', rol: 'coordinador', prestadora_id: prestadoraIdB }),
+  });
+  const jColado = await rColado.json();
+  coladoId = jColado.id;
+  const { data: colado } = coladoId
+    ? await admin.from('usuarios').select('prestadora_id').eq('id', coladoId).maybeSingle()
+    : { data: null };
+  chequear('16. el alta ignora la Prestadora que venga en el pedido y usa la de la sesión',
+    rColado.status === 200 && colado?.prestadora_id === prestadoraId,
+    colado ? 'quedó en ' + (colado.prestadora_id === prestadoraId ? 'la A, correcto' : 'OTRA') : 'no se creó');
+
+  await fetch(`${API}/sesion-tenant/salir`, { method: 'POST', headers: h });
+
   // el rol viejo ya no existe: la base tiene que rechazarlo
   const { error: eViejo } = await admin.from('usuarios').update({ rol: 'admin_plataforma' }).eq('id', authUserId);
-  chequear('13. la base rechaza el rol admin_plataforma', Boolean(eViejo), eViejo ? 'rechazado como corresponde' : 'LO ACEPTÓ');
+  chequear('17. la base rechaza el rol admin_plataforma', Boolean(eViejo), eViejo ? 'rechazado como corresponde' : 'LO ACEPTÓ');
 }
 
 async function limpiar() {
@@ -133,10 +185,15 @@ async function limpiar() {
     await admin.from('usuarios').delete().eq('id', authUserId);
     await admin.auth.admin.deleteUser(authUserId);
   }
-  if (prestadoraId) {
-    await admin.from('zonas_cobertura').delete().eq('prestadora_id', prestadoraId);
-    await admin.from('configuracion_prestadora').delete().eq('prestadora_id', prestadoraId);
-    await admin.from('prestadoras').delete().eq('id', prestadoraId);
+  if (coladoId) {
+    await admin.from('usuarios').delete().eq('id', coladoId);
+    await admin.auth.admin.deleteUser(coladoId);
+  }
+  for (const pid of [prestadoraId, prestadoraIdB]) {
+    if (!pid) continue;
+    await admin.from('zonas_cobertura').delete().eq('prestadora_id', pid);
+    await admin.from('configuracion_prestadora').delete().eq('prestadora_id', pid);
+    await admin.from('prestadoras').delete().eq('id', pid);
   }
   console.log('\nDatos de prueba borrados.');
 }
@@ -145,6 +202,6 @@ main()
   .catch((e) => { console.error('\nSE CORTÓ:', e.message); fallos.push('excepción: ' + e.message); })
   .then(limpiar)
   .then(() => {
-    console.log(fallos.length ? `\nRESULTADO: ${fallos.length} fallo(s): ${fallos.join(' | ')}` : '\nRESULTADO: los 13 chequeos pasaron.');
+    console.log(fallos.length ? `\nRESULTADO: ${fallos.length} fallo(s): ${fallos.join(' | ')}` : '\nRESULTADO: los 17 chequeos pasaron.');
     process.exit(fallos.length ? 1 : 0);
   });

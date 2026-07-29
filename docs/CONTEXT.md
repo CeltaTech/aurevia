@@ -1,4 +1,4 @@
-# CONTEXT.md — Contexto técnico de Aurevia
+# CONTEXT.md — Contexto técnico de Careonys
 
 > Versión de trabajo para generación de código. Condensa los documentos originales de contexto
 > y prompt maestro (históricos), quitando el contenido que no afecta decisiones de código
@@ -40,8 +40,8 @@
   aplicados y verificados contra Supabase real. Desde entonces se sumó el modo "dentro de una
   Prestadora" (ver `TenantSessionContext.jsx`), que va más allá de lo que pedía el Bloque 4;
   nació con el rol comercial `admin_plataforma` y el 2026-07-28, en la Etapa 2 de la separación
-  CeltaTech/Aurevia, pasó a ser la **sesión de soporte técnico** de `superadmin` — el rol
-  comercial se fue entero a CeltaTech y ya no existe en Aurevia. **Único
+  CeltaTech/Careonys, pasó a ser la **sesión de soporte técnico** de `superadmin` — el rol
+  comercial se fue entero a CeltaTech y ya no existe en Careonys. **Único
   hardcodeo estructural que sigue abierto, a propósito**: el envío de emails sigue saliendo
   de una sola cuenta Gmail compartida entre todas las Prestadoras (`backend/src/utils/email.js`,
   `SMTP_USER`) — pendiente #44 en `docs/PENDIENTES.md`, con fecha de cierre exigida "antes

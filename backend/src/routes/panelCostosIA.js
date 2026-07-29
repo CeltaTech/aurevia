@@ -2,10 +2,10 @@ import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 
-// Etapa 2 de la separación CeltaTech / Aurevia (2026-07-28, docs/ETAPA_2_INVENTARIO.md §5):
+// Etapa 2 de la separación CeltaTech / Careonys (2026-07-28, docs/ETAPA_2_INVENTARIO.md §5):
 // este bloque venía adentro de panelAdminPlataforma.js, que era el panel comercial del SaaS.
 // Ese panel se fue entero — planes, licencias y facturación son de CeltaTech (Nivel 1), no de
-// Aurevia. Pero el costo de IA no es comercial: no factura ni fija ningún precio de venta, mide
+// Careonys. Pero el costo de IA no es comercial: no factura ni fija ningún precio de venta, mide
 // un costo de infraestructura y vigila que el precio oficial del proveedor no cambie sin que
 // nadie se entere. Eso es mantenimiento técnico de la plataforma = superadmin (CLAUDE.md §5).
 //

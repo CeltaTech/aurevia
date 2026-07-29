@@ -96,8 +96,8 @@ completo en `docs/PLAN_MULTITENANT_CELTATECH.md` sección 3.4/3.4.1.
 dinámico por sesión incluido. La nota de arriba decía "todavía no está implementado"; eso
 dejó de ser cierto en el pendiente #30.
 
-**Nota (2026-07-28, Etapa 2 de la separación CeltaTech/Aurevia — reemplaza a `admin_plataforma`
-en todo lo anterior):** el rol `admin_plataforma` **ya no existe en Aurevia**. Era el rol
+**Nota (2026-07-28, Etapa 2 de la separación CeltaTech/Careonys — reemplaza a `admin_plataforma`
+en todo lo anterior):** el rol `admin_plataforma` **ya no existe en Careonys**. Era el rol
 comercial, y lo comercial se fue entero a CeltaTech (Nivel 1). La maquinaria del "modo dentro
 de una prestadora" no se borró: se re-apuntó a `superadmin` y pasó a llamarse **sesión de
 soporte técnico** (tablas `sesiones_soporte_tecnico` y `auditoria_soporte_tecnico`, guardia

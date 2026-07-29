@@ -43,7 +43,7 @@ panelConfiguracionPlataformaRouter.patch('/mfa', requiereSuperadmin, async (req,
 // Acá vivían GET y PATCH /umbral-prestadoras (pendiente #44): el umbral de Prestadoras
 // certificadas a partir del cual se avisaba el riesgo de mandar todos los emails desde una
 // única cuenta Gmail compartida (docs/DECISION_EMAIL_ESCALA.md). Se fueron en la Etapa 2 de la
-// separación CeltaTech / Aurevia (2026-07-28) junto con la columna
+// separación CeltaTech / Careonys (2026-07-28) junto con la columna
 // configuracion_plataforma.umbral_alerta_prestadoras: contar cuántas Prestadoras hay
 // contratadas es un dato del negocio de CeltaTech, no del producto. Ninguna pantalla del Panel
 // los consumía (verificado en docs/ETAPA_2_INVENTARIO.md §4).

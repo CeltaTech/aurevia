@@ -1263,7 +1263,7 @@ este documento.
 ### 5.9 Sitio público propio por Prestadora, con dominio propio — **idea nueva, solo inventario, sin plan aprobado**
 
 Pedido del Desarrollador (2026-07-18): cada Prestadora debería poder tener su propio sitio
-público con su propio dominio, todo gestionado desde Aurevia, "de una forma aún a
+público con su propio dominio, todo gestionado desde Careonys, "de una forma aún a
 determinar". Explícitamente autorizado **investigar y documentar, no implementar** —
 sigue el proceso del §11 de `CLAUDE.md` (inventario → plan aprobado → recién ahí código);
 este apartado es solo el primer paso.
@@ -1271,7 +1271,7 @@ este apartado es solo el primer paso.
 **Contexto inmediato:** el sitio público que existía hasta ahora (`sitio-web/`, proyecto
 Vercel `sitio-web`) fue dado de baja por completo el 2026-07-18 (`docs/PENDIENTES.md` #48)
 porque mostraba branding y contenido de la empresa anterior sin haberse actualizado nunca a
-CeltaTech/Aurevia. Los archivos que se citan más abajo **ya no existen** en el árbol de
+CeltaTech/Careonys. Los archivos que se citan más abajo **ya no existen** en el árbol de
 archivos actual ni en el historial de git (purgados a pedido explícito del Desarrollador) —
 se los menciona solo como referencia de qué forma tenían los hallazgos estructurales
 mientras existieron, útiles si el sitio nuevo retoma la misma arquitectura de base (Next.js
@@ -1294,7 +1294,7 @@ respondida todavía, ninguna acción tomada sobre esto):
    independiente por Prestadora? La primera opción es la que escala a "cientos de
    Prestadoras" sin rediseño (pregunta obligatoria del §2 de `CLAUDE.md`); la segunda no.
 2. Dominio propio de la Prestadora (ej. `www.prestadora-x.com.ar`, que la Prestadora ya
-   posea o compre) vs. subdominio de Aurevia (ej. `prestadora-x.aurevia.app`) como default
+   posea o compre) vs. subdominio de Careonys (ej. `prestadora-x.aurevia.app`) como default
    más simple mientras no haya dominio propio — probablemente ambas opciones coexistiendo.
 3. Verificación de propiedad y aprovisionamiento de certificado SSL cuando la Prestadora
    trae su propio dominio — en Vercel esto es soportado (`vercel domains add` con
@@ -1308,7 +1308,7 @@ respondida todavía, ninguna acción tomada sobre esto):
    mismo principio de la Regla 5.5 de `CLAUDE.md`, aplicado ahora a un dominio público en
    lugar de datos operativos internos.
 
-**Registrado como pendiente #49 en `docs/PENDIENTES.md`** (crear el sitio real de Aurevia,
+**Registrado como pendiente #49 en `docs/PENDIENTES.md`** (crear el sitio real de Careonys,
 hoy en espera intencional) y esta sección queda como el punto de partida cuando el
 Desarrollador decida avanzar con la versión por-Prestadora — no antes.
 

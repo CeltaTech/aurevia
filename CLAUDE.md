@@ -1,4 +1,4 @@
-# CLAUDE.md — Reglas no negociables del proyecto Aurevia / CeltaTech
+# CLAUDE.md — Reglas no negociables del proyecto Careonys / CeltaTech
 
 > Se lee primero, en cada sesión, antes de escribir una sola línea de código.
 > Este archivo refleja siempre el estado **vigente** de las reglas — se actualiza solo cuando una regla cambia. El historial de cómo se llegó a cada regla vive en `docs/claude_history.md` (ver §10), no acá.
@@ -7,7 +7,7 @@
 
 **CeltaTech** es la empresa tecnológica propietaria, desarrolladora y licenciante del software. Desarrolla productos SaaS propios, sin estar limitada a una industria específica.
 
-**Aurevia** es el primer producto de CeltaTech: una plataforma SaaS de gestión para empresas dedicadas al cuidado de personas. Aurevia **no presta servicios de cuidado** — es la tecnología que permite a las Prestadoras administrar sus operaciones, equipos y relaciones operativas.
+**Careonys** es el primer producto de CeltaTech: una plataforma SaaS de gestión para empresas dedicadas al cuidado de personas. Careonys **no presta servicios de cuidado** — es la tecnología que permite a las Prestadoras administrar sus operaciones, equipos y relaciones operativas.
 
 Modelo de negocio:
 - CeltaTech desarrolla, mantiene y evoluciona la plataforma.
@@ -17,7 +17,7 @@ Modelo de negocio:
 
 ## 2. Arquitectura multi-tenant (regla fundamental del producto)
 
-Aurevia es multi-tenant real desde el origen — no un sistema mono-empresa adaptado después. La entidad técnica que aísla datos es la **Organización** (una Organización = una Prestadora).
+Careonys es multi-tenant real desde el origen — no un sistema mono-empresa adaptado después. La entidad técnica que aísla datos es la **Organización** (una Organización = una Prestadora).
 
 Toda funcionalidad nueva debe garantizar:
 - aislamiento total de datos entre Organizaciones (aplicación **y** base de datos, nunca solo frontend);
@@ -26,7 +26,7 @@ Toda funcionalidad nueva debe garantizar:
 - cero accesos cruzados, ni siquiera accidentales;
 - escalabilidad a cientos/miles de Prestadoras sin rediseño estructural.
 
-**Pregunta de diseño obligatoria ante cualquier decisión técnica:** *"¿Esto funciona correctamente cuando existan cientos de Prestadoras usando Aurevia simultáneamente?"* — no "¿funciona para una empresa?".
+**Pregunta de diseño obligatoria ante cualquier decisión técnica:** *"¿Esto funciona correctamente cuando existan cientos de Prestadoras usando Careonys simultáneamente?"* — no "¿funciona para una empresa?".
 
 **Configuración sobre programación:** una diferencia entre Prestadoras es una característica de negocio, no una excusa para código duplicado, versiones especiales o excepciones individuales. Se resuelve con configuración (parámetros, permisos, textos, reglas operativas).
 
@@ -52,7 +52,7 @@ Mecánica:
 
 **Fuente de las advertencias:** tabla configurable (jurisdicción → función → texto de advertencia), nunca hardcodeada — coherente con la Regla 1 (§7) y con §2.
 
-**Condición antes de lanzar en un país nuevo:** antes de habilitar Aurevia para una Prestadora real de un país determinado, debe existir el documento legal de esa jurisdicción en `docs/legal/<país>.md` — aunque sea mínimo. No hace falta tenerlo completo, pero sí que exista como archivo antes de dar de alta la primera Prestadora real de ese país. Es una condición de proceso, no una validación técnica bloqueante del software.
+**Condición antes de lanzar en un país nuevo:** antes de habilitar Careonys para una Prestadora real de un país determinado, debe existir el documento legal de esa jurisdicción en `docs/legal/<país>.md` — aunque sea mínimo. No hace falta tenerlo completo, pero sí que exista como archivo antes de dar de alta la primera Prestadora real de ese país. Es una condición de proceso, no una validación técnica bloqueante del software.
 
 **Autonomía del Asistente (modalidad marketplace):** disponible siempre, independiente de estos toggles — ver condiciones de la guardia ofrecida, decidir participación, gestionar disponibilidad, mantener independencia operativa.
 
@@ -67,9 +67,9 @@ Esta tabla se mantiene siempre en su versión **vigente** — sin notas de fecha
 | Usar siempre | Nunca decir |
 |---|---|
 | CeltaTech | nombres anteriores de la empresa; "software de CeltaTech" al referirse al producto |
-| Aurevia | — |
-| Prestadora (sinónimo aceptado: "licenciataria", cuando el contexto es específicamente la relación de licenciamiento SaaS con CeltaTech). Es el caso específico de un cliente de CeltaTech que contrata Aurevia — no todo cliente de CeltaTech es una Prestadora (podría contratar otro producto de CeltaTech sin dedicarse al cuidado de personas; ver `ARQUITECTURA_NIVELES.md` en la raíz de CeltaTech) | empresa cliente, organización comercial, empresa usuaria (fuera del sentido técnico del sistema) |
-| Cliente (a secas, únicamente cuando se habla desde la perspectiva de CeltaTech/Nivel 1 sobre cualquier empresa que le contrata un producto, sea o no Aurevia) | usar dentro del contexto de Aurevia para referirse a la Familia o a la Prestadora — dentro de Aurevia esos dos roles siempre llevan su propio nombre, nunca "cliente" genérico |
+| Careonys | "Aurevia", el nombre anterior del producto. Única excepción: la clave técnica `codigo: 'aurevia'` de `identidadProducto.js` y las claves de entitlements que se arman con ella (`aurevia.pacientes.activos_max`), que son inmutables por diseño y **no** se renombran |
+| Prestadora (sinónimo aceptado: "licenciataria", cuando el contexto es específicamente la relación de licenciamiento SaaS con CeltaTech). Es el caso específico de un cliente de CeltaTech que contrata Careonys — no todo cliente de CeltaTech es una Prestadora (podría contratar otro producto de CeltaTech sin dedicarse al cuidado de personas; ver `ARQUITECTURA_NIVELES.md` en la raíz de CeltaTech) | empresa cliente, organización comercial, empresa usuaria (fuera del sentido técnico del sistema) |
+| Cliente (a secas, únicamente cuando se habla desde la perspectiva de CeltaTech/Nivel 1 sobre cualquier empresa que le contrata un producto, sea o no Careonys) | usar dentro del contexto de Careonys para referirse a la Familia o a la Prestadora — dentro de Careonys esos dos roles siempre llevan su propio nombre, nunca "cliente" genérico |
 | Organización | entidad técnica multi-tenant — no confundir con "Prestadora" en texto de negocio |
 | Sandbox | empresa cliente, Prestadora real, organización comercial |
 | Asistente (cuidador/a, enfermero/a, etc.) | empleado/a, trabajador/a |
@@ -96,7 +96,7 @@ Esta tabla se mantiene siempre en su versión **vigente** — sin notas de fecha
 
 Separación estricta entre roles técnicos, administrativos y operativos. Ningún rol obtiene acceso implícito por pertenecer a CeltaTech. Principio de mínimo privilegio siempre: cada rol solo los permisos que su función requiere, nunca por comodidad de desarrollo.
 
-Aurevia tiene **tres** roles de Panel: Superadmin, Admin_prestadora y Coordinador. El rol comercial que antes existía acá, `Admin_plataforma`, **ya no existe en Aurevia**: la gestión comercial de las cuentas de Prestadoras es asunto de CeltaTech (Nivel 1) y vive en su propio panel. Ver `docs/PLAN_SEPARACION_CELTATECH.md`, Etapa 2.
+Careonys tiene **tres** roles de Panel: Superadmin, Admin_prestadora y Coordinador. El rol comercial que antes existía acá, `Admin_plataforma`, **ya no existe en Careonys**: la gestión comercial de las cuentas de Prestadoras es asunto de CeltaTech (Nivel 1) y vive en su propio panel. Ver `docs/PLAN_SEPARACION_CELTATECH.md`, Etapa 2.
 
 **Superadmin** — rol técnico de CeltaTech. Infraestructura, mantenimiento técnico, configuración global, soporte interno. No representa una Prestadora, no la opera comercialmente.
 - **Restricción dura de acceso:** fuera de una sesión de soporte técnico, Superadmin tiene acceso de Panel **únicamente** a la Organización Sandbox. Vedado el acceso a datos de cualquier Prestadora real por la vía ordinaria, sin excepción.
@@ -128,12 +128,12 @@ Aurevia tiene **tres** roles de Panel: Superadmin, Admin_prestadora y Coordinado
 
 1. **Nunca hardcodear** texto visible, precios, honorarios, valores legales, reglas operativas ni datos de contacto — siempre desde configuración, base de datos o archivos de traducción.
    - **El nombre del producto y su marca entran en esta regla, sin excepción**: ni en texto visible, ni en el manifiesto de una PWA, ni en el `<title>` de un `index.html`, ni en el asunto de un email, ni en un prompt de IA, ni en el nombre de un producto de pasarela. Salen siempre de `src/config/identidadProducto.js`: marcador `{{producto}}` / `{{productoCorto}}` en archivos de traducción y en HTML, `IDENTIDAD.nombre` en código. Todo lo que **persiste** (nombre de una base IndexedDB, prefijo de un archivo de backup, clave de entitlement) usa `IDENTIDAD.codigo`, que no cambia nunca ni siquiera si la marca se renombra. Ese archivo existe cuatro veces —una por unidad desplegable, porque cada una se despliega sin acceso al resto del repo— y `scripts/verificar_identidad.mjs` verifica en cada push que las cuatro coincidan y que el nombre no esté escrito a mano en ningún lado.
-   - **Pero la marca del producto no es la marca de la Prestadora.** Acá hay tres marcas: **CeltaTech** (la empresa, no la ve nadie dentro del producto), **Aurevia** (el producto, la ve quien trabaja *en* la Prestadora y sabe qué software usa) y **la Prestadora** (la que contrataron la Familia y el Asistente). En toda pantalla, email o notificación dirigida a una Familia o a un Asistente, **la marca principal es la de su Prestadora** — `prestadoras.nombre_fantasia`, leída del tenant de esa sesión —, nunca `identidadProducto.js`. El modelo es **co-branding** (decidido el 2026-07-27): el producto aparece solo en una línea discreta al pie, *"con la tecnología de {{producto}}"*, condicionada al entitlement `aurevia.marca.personalizada` — ese es el **único** uso admitido de `IDENTIDAD` en una superficie de Familia o Asistente. Hoy no se cumple: las dos PWA y el email de activación muestran la marca del producto como principal. Es anterior a esta regla y está registrado como pendiente `#95`; mientras siga abierto, **no agregar ningún uso nuevo de `IDENTIDAD` en `pwa-familias/` ni en `pwa-asistentes/`** fuera de esa línea al pie. Ver `docs/MARCA.md` §0.
+   - **Pero la marca del producto no es la marca de la Prestadora.** Acá hay tres marcas: **CeltaTech** (la empresa, no la ve nadie dentro del producto), **Careonys** (el producto, la ve quien trabaja *en* la Prestadora y sabe qué software usa) y **la Prestadora** (la que contrataron la Familia y el Asistente). En toda pantalla, email o notificación dirigida a una Familia o a un Asistente, **la marca principal es la de su Prestadora** — `prestadoras.nombre_fantasia`, leída del tenant de esa sesión —, nunca `identidadProducto.js`. El modelo es **co-branding** (decidido el 2026-07-27): el producto aparece solo en una línea discreta al pie, *"con la tecnología de {{producto}}"*, condicionada al entitlement `aurevia.marca.personalizada` — ese es el **único** uso admitido de `IDENTIDAD` en una superficie de Familia o Asistente. Hoy no se cumple: las dos PWA y el email de activación muestran la marca del producto como principal. Es anterior a esta regla y está registrado como pendiente `#95`; mientras siga abierto, **no agregar ningún uso nuevo de `IDENTIDAD` en `pwa-familias/` ni en `pwa-asistentes/`** fuera de esa línea al pie. Ver `docs/MARCA.md` §0.
 2. **Multiidioma desde el día uno**: toda clave nueva se agrega simultáneamente en `es-AR`, `en`, `pt-BR`. No se construye una función en un solo idioma "para traducir después".
 3. **Todo componente que carga datos maneja 4 estados**: loading / error / vacío / listo.
 4. **Toda operación destructiva requiere confirmación explícita** (ver §6).
 5. **Todo botón que dispara una operación se deshabilita mientras está en curso** — nunca doble envío.
-6. **CSS/diseño visual solo con el sistema de diseño de Aurevia** — nunca colores, tipografías o estilos inventados fuera de la paleta.
+6. **CSS/diseño visual solo con el sistema de diseño de Careonys** — nunca colores, tipografías o estilos inventados fuera de la paleta.
 7. **Nunca exponer información sensible** en logs, URLs o mensajes públicos (ver §6).
 8. **RLS estricta** en cada tabla nueva, con Organización asociada cuando corresponda (ver §6).
 9. **Git**: commit + push tras cada conjunto de cambios coherente. Mensajes en español, formato `tipo: descripción breve` (`feat:`, `fix:`, `docs:`, etc.). Nunca subir `.env`, credenciales ni datos reales.

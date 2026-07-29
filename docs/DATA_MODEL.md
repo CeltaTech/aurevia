@@ -119,7 +119,7 @@ current_tenant()) OR (...)`, y `current_tenant()` para `superadmin` resuelve a s
 
 ## Rol `superadmin` y la sesión de soporte técnico (pendiente #30, resuelto 2026-07-15 —
 ## diseño original en `docs/PLAN_MULTITENANT_CELTATECH.md` 3.4/3.4.1; re-apuntado a
-## `superadmin` el 2026-07-28 en la Etapa 2 de la separación CeltaTech/Aurevia)
+## `superadmin` el 2026-07-28 en la Etapa 2 de la separación CeltaTech/Careonys)
 
 Modelo de 2 niveles: `admin_prestadora` (acotado a su propia `prestadora_id`, sin cambios) y
 `superadmin` (rol técnico de CeltaTech; su acceso ordinario es únicamente la Organización
@@ -127,7 +127,7 @@ Sandbox, y para entrar a una Prestadora real tiene que abrir explícitamente una
 soporte técnico, una por vez, con banner, auditoría y vencimiento).
 
 Hasta el 2026-07-28 esta maquinaria era del rol comercial `admin_plataforma`. Ese rol se fue
-entero a CeltaTech (Nivel 1) y **ya no existe en Aurevia**: las dos tablas se renombraron
+entero a CeltaTech (Nivel 1) y **ya no existe en Careonys**: las dos tablas se renombraron
 (`sesiones_tenant_admin_plataforma` → `sesiones_soporte_tecnico`,
 `auditoria_admin_plataforma` → `auditoria_soporte_tecnico`) y el permiso pasó a `superadmin`.
 La maquinaria en sí no cambió. Ver `docs/PLAN_SEPARACION_CELTATECH.md`, Etapa 2, paso 7.

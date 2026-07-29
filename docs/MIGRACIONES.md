@@ -1,4 +1,4 @@
-# Migraciones — cómo se cambia la base de datos de Aurevia
+# Migraciones — cómo se cambia la base de datos de Careonys
 
 > Regla corta: **la base nunca se toca a mano.** Todo cambio de esquema es un archivo nuevo en
 > `supabase/migrations/`, y la base se puede reconstruir desde cero corriendo esos archivos en
@@ -9,7 +9,7 @@ Vigente desde el **2026-07-28**. Es el paso 2 de la Etapa 0 de
 
 ## 1. Qué pasaba antes, y por qué había que arreglarlo
 
-Hasta el 2026-07-28 la base de Aurevia **no se podía reconstruir desde el repositorio**. Había
+Hasta el 2026-07-28 la base de Careonys **no se podía reconstruir desde el repositorio**. Había
 dos historiales distintos, y ninguno de los dos servía:
 
 - **`backend/src/db/*.sql` — 75 archivos sueltos.** Son *intención*: lo que en algún momento se
@@ -127,7 +127,7 @@ volver a cero y aplicar todo de nuevo:
 supabase db reset
 ```
 
-Los puertos locales de Aurevia son los `544xx` (API en 54421, base en 54422, Studio en 54423),
+Los puertos locales de Careonys son los `544xx` (API en 54421, base en 54422, Studio en 54423),
 distintos a propósito de los del panel de CeltaTech, para que los dos puedan estar levantados al
 mismo tiempo sin pisarse. Están fijados en `supabase/config.toml`.
 

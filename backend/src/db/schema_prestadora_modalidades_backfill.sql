@@ -1,4 +1,4 @@
--- Backfill de schema_prestadora_modalidades.sql: Aurevia hasta hoy (2026-07-24) solo operaba
+-- Backfill de schema_prestadora_modalidades.sql: Careonys hasta hoy (2026-07-24) solo operaba
 -- en modalidad de prestación directa. Sin esta fila, todas las Prestadoras existentes (Sandbox
 -- incluida) verían el menú del Panel vacío apenas se conecte el frontend a la tabla nueva,
 -- porque "ninguna modalidad activa por defecto" (PRD_08_Dashboard_Modalidades.md §3.2) es una

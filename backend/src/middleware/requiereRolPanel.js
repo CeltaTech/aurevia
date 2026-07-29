@@ -70,7 +70,7 @@ export async function requiereRolPanel(req, res, next) {
   let prestadoraId = perfil.prestadora_id;
   let dentroDeSesionSoporte = false;
 
-  // Etapa 2 de la separación CeltaTech / Aurevia (2026-07-28): la sesión de soporte técnico
+  // Etapa 2 de la separación CeltaTech / Careonys (2026-07-28): la sesión de soporte técnico
   // era exclusiva de admin_plataforma, el rol comercial que se fue a CeltaTech. Ahora es de
   // superadmin, el rol técnico (CLAUDE.md §5).
   // Superadmin sin sesión de soporte abierta sigue viendo únicamente su propia Organización

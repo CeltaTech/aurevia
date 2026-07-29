@@ -15,7 +15,7 @@ normal, no Workspace) tiene un tope de **500 emails/día**, compartido entre tod
 Prestadoras a la vez, no por Prestadora.
 
 Esto contradice la pregunta de diseño obligatoria de `CLAUDE.md` §2 ("¿esto funciona
-correctamente cuando existan cientos de Prestadoras usando Aurevia simultáneamente?") a
+correctamente cuando existan cientos de Prestadoras usando Careonys simultáneamente?") a
 partir de cierto volumen. El aislamiento de **destinatarios** ya es correcto por
 Prestadora (`destinatariosEvento()` nunca cruza el email de contacto de una Prestadora
 con otra) — el cuello de botella es el **remitente/relay compartido**, no los destinatarios.

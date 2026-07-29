@@ -10,12 +10,12 @@
 | Marca | Qué es | Quién la ve |
 |---|---|---|
 | **CeltaTech** | La empresa dueña del software | Nadie, dentro del producto |
-| **Aurevia** | El producto | Quien trabaja **en** la Prestadora (Admin_prestadora, Coordinador) y sabe qué software usa |
+| **Careonys** | El producto | Quien trabaja **en** la Prestadora (Admin_prestadora, Coordinador) y sabe qué software usa |
 | **La Prestadora** | La empresa que presta el cuidado | La **Familia** y el **Asistente** |
 
 Todo este documento habla de la segunda. **No confundirla con la tercera.**
 
-Una Familia contrató a la Prestadora, no a CeltaTech, y probablemente no sepa que Aurevia
+Una Familia contrató a la Prestadora, no a CeltaTech, y probablemente no sepa que Careonys
 existe. Un Asistente trabaja para la Prestadora. Para los dos, la marca que tiene sentido es
 la de la Prestadora — `prestadoras.nombre_fantasia`, que existe en la base desde el diseño
 inicial y que `docs/PLAN_MULTITENANT_CELTATECH.md:283` define textualmente como *"marca que ve

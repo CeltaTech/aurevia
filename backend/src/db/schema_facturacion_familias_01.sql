@@ -10,7 +10,7 @@
 -- económico).
 --
 -- No confundir con facturas_licencia (schema_admin_plataforma_06_planes_modulos.sql) — esa
--- es lo que CeltaTech le cobra a la Prestadora por usar Aurevia; esta es lo que la Prestadora
+-- es lo que CeltaTech le cobra a la Prestadora por usar Careonys; esta es lo que la Prestadora
 -- le cobra a su propia Familia por el servicio de cuidado.
 --
 -- Ejecutar una sola vez en el SQL Editor de Supabase (o vía MCP). Ya aplicado en vivo el

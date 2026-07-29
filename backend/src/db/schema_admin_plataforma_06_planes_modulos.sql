@@ -25,7 +25,7 @@
 -- Ejecutar una sola vez en el SQL Editor de Supabase (o vía MCP).
 
 -- ============================================================================
--- 1. Catálogo de módulos (la lista de funciones que existen en Aurevia)
+-- 1. Catálogo de módulos (la lista de funciones que existen en Careonys)
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS catalogo_modulos (
@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS prestadora_modulos (
 );
 
 -- ============================================================================
--- 5. Facturas de licencia (lo que CeltaTech le cobra a cada prestadora por usar Aurevia —
+-- 5. Facturas de licencia (lo que CeltaTech le cobra a cada prestadora por usar Careonys —
 --    no confundir con las facturas que la prestadora le cobra a sus propias familias)
 -- ============================================================================
 

@@ -1,7 +1,7 @@
 # Riesgo legal — México
 
 > **Placeholder — sin investigar todavía.** Este archivo existe únicamente para cumplir la
-> condición de proceso de `CLAUDE.md` §3: "antes de habilitar Aurevia para una Prestadora
+> condición de proceso de `CLAUDE.md` §3: "antes de habilitar Careonys para una Prestadora
 > real de un país determinado, debe existir el documento legal de esa jurisdicción... aunque
 > sea mínimo." Hoy no tiene contenido real — no se investigó todavía la legislación de
 > México.

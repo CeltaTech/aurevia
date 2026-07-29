@@ -146,7 +146,7 @@ panelCuentasRouter.post('/familia', requiereRolPanel, exigirOrganizacionActiva, 
 });
 
 // Alta manual de Familia+Paciente (sin Solicitud previa) — cubre el caso de una
-// Prestadora que llega a Aurevia con una cartera de familias ya en atención.
+// Prestadora que llega a Careonys con una cartera de familias ya en atención.
 // Se crea igual una fila de `solicitudes` (canal 'alta_manual') para que el contacto
 // de la Familia siga viviendo en un único lugar (evita reproducir el bug de contacto
 // en blanco que tenían las Familias sembradas sin solicitud vinculada).
@@ -256,7 +256,7 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
 });
 
 // Alta manual de Asistente (sin Postulación previa) — cubre el caso de una Prestadora
-// que llega a Aurevia con un equipo que ya venía trabajando desde antes. Entra activo
+// que llega a Careonys con un equipo que ya venía trabajando desde antes. Entra activo
 // por defecto y, a diferencia de /asistente, no genera filas en `verificaciones_asistente`
 // (equivalente al default 'omitir' del pendiente #18 — política de verificación por
 // prestadora; la Fase 2 de este trabajo suma la configuración para cambiar este comportamiento).

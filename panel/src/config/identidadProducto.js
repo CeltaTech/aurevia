@@ -27,7 +27,8 @@
 //
 // `codigo` es la única excepción: NO se cambia nunca. Es la clave técnica con la
 // que CeltaTech identifica al producto y con la que se arman las claves de
-// entitlements (`aurevia.pacientes.activos_max`). Renombrar la marca no toca un
+// entitlements (`aurevia.pacientes.activos_max`) — por eso siguen diciendo
+// `aurevia` aunque la marca ya sea Careonys. Renombrar la marca no toca un
 // solo dato guardado. Ver PLAN_SEPARACION_CELTATECH.md, Etapa 0.5.
 //
 // A partir de la Etapa 3 la fuente de verdad de estos valores pasa a ser CeltaTech y
@@ -41,13 +42,13 @@
 // Acá viven tres marcas distintas y no se mezclan nunca:
 //
 //   CeltaTech      — la empresa. No la ve nadie dentro del producto.
-//   Aurevia     — el producto. La ve quien trabaja EN la Prestadora
+//   Careonys    — el producto. La ve quien trabaja EN la Prestadora
 //                 (Admin_prestadora, Coordinador) y sabe qué software usa.
 //   Prestadora  — la empresa que presta el cuidado. Es la única marca que
 //                 tiene sentido para una Familia o un Asistente.
 //
 // Una Familia contrató a la Prestadora, no a CeltaTech, y probablemente no sepa
-// que Aurevia existe. Mostrarle la marca del software donde espera la de su
+// que Careonys existe. Mostrarle la marca del software donde espera la de su
 // Prestadora no es un detalle estético: le dice que su proveedor es otro.
 //
 // REGLA: en toda pantalla, email o notificación dirigida a una Familia o a un
@@ -77,26 +78,31 @@
 
 export const IDENTIDAD = {
   // Clave técnica inmutable. Nunca se renombra ni se traduce (ver cabecera).
+  // Sigue diciendo 'aurevia' a propósito, aunque la marca hoy sea Careonys: es
+  // justamente lo que este campo promete. Cambiarlo invalidaría todas las claves
+  // de entitlements ya guardadas (`aurevia.pacientes.activos_max`).
   codigo: 'aurevia',
 
   // Nombre comercial completo. Resuelve el marcador {{producto}}.
-  nombre: 'Aurevia',
+  nombre: 'Careonys',
 
   // Nombre corto para espacios reducidos: título de PWA instalada bajo el ícono,
   // encabezado móvil, notificación push. Resuelve {{productoCorto}}.
   // Límite práctico: 12 caracteres — Android trunca el short_name más largo.
-  nombreCorto: 'Aurevia',
+  nombreCorto: 'Careonys',
 
   // Lo que la persona ve en el resumen de su tarjeta. Campo propio, NO derivado
   // del nombre: Stripe lo limita a 22 caracteres y no acepta acentos ni símbolos.
   // Si el nombre comercial no entra o lleva acentos, este campo se escribe aparte.
-  descriptorPago: 'AUREVIA',
+  descriptorPago: 'CAREONYS',
 
   // Dominio propio, sin protocolo ni barra final. Resuelve {{dominio}}.
-  // Vacío hoy: no hay dominio registrado (confirmado por el Desarrollador el
-  // 2026-07-27). Las URLs de las apps siguen viniendo de variables de entorno
-  // (PWA_ASISTENTES_URL, PWA_FAMILIAS_URL) — este campo es para texto visible.
-  dominio: '',
+  // Registrado por el Desarrollador el 2026-07-28 y delegado a Cloudflare
+  // (`anna`/`otto.ns.cloudflare.com`). Todavía no tiene ningún registro cargado,
+  // así que hoy no responde: este campo es para texto visible, no para armar
+  // URLs. Las URLs de las apps siguen viniendo de variables de entorno
+  // (PWA_ASISTENTES_URL, PWA_FAMILIAS_URL) hasta que se hagan apuntar acá.
+  dominio: 'careonys.com',
 
   // Remitente que se muestra en los emails salientes. Vacío = se usa el que ya
   // trae el transporte SMTP (backend/src/utils/email.js). Es solo el nombre
@@ -107,10 +113,11 @@ export const IDENTIDAD = {
   // Casilla de contacto de la marca. Hoy la usa el "subject" VAPID de las
   // notificaciones push (backend/src/utils/push.js): la dirección a la que el
   // servicio de push del navegador escribe si hay un problema con los envíos.
-  // ATENCIÓN: el dominio aurevia.app NO está registrado — esta casilla no
-  // existe todavía y no recibe nada. Queda acá, tal como estaba, para no
-  // cambiar el comportamiento actual; se corrige cuando haya dominio.
-  emailSoporte: 'soporte@aurevia.app',
+  // ATENCIÓN: careonys.com sí está registrado, pero todavía no tiene correo
+  // configurado — esta casilla no recibe nada por ahora. Es igual mejor que lo
+  // que había antes (soporte@aurevia.app, sobre un dominio que ni siquiera
+  // estaba registrado). Queda pendiente darle de alta el correo de verdad.
+  emailSoporte: 'soporte@careonys.com',
 
   // Colores del manifiesto de las PWA y del sistema de diseño.
   colorPrimario: '#1a2744',
@@ -158,7 +165,7 @@ function validarIdentidad(identidad) {
     problemas.push(`descriptorPago "${identidad.descriptorPago}": no puede llevar acentos ni caracteres fuera de ASCII imprimible — las pasarelas los rechazan o los mutilan`);
   }
   if (identidad.dominio && /^https?:\/\/|\/$/.test(identidad.dominio)) {
-    problemas.push(`dominio "${identidad.dominio}": sin protocolo y sin barra final (ej. "aurevia.com")`);
+    problemas.push(`dominio "${identidad.dominio}": sin protocolo y sin barra final (ej. "careonys.com")`);
   }
 
   if (problemas.length > 0) {

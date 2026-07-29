@@ -8,7 +8,7 @@ import { supabase } from '../db/connection.js';
 // sesión, superadmin solo ve su propia Organización (Sandbox) — CLAUDE.md §5.
 // El corte por 5 min de inactividad vive en requiereRolPanel.js (se aplica en cada request,
 // no solo acá).
-// Etapa 2 de la separación CeltaTech / Aurevia (2026-07-28): esta maquinaria era de
+// Etapa 2 de la separación CeltaTech / Careonys (2026-07-28): esta maquinaria era de
 // admin_plataforma, el rol comercial que se fue entero a CeltaTech. No se borró — se
 // re-apuntó a superadmin y pasó a llamarse sesión de soporte técnico.
 export const panelSesionTenantRouter = Router();

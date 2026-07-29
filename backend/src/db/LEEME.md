@@ -13,7 +13,7 @@ saber, mirándolos, cuáles se aplicaron de verdad, cuáles quedaron a medias y 
 pisados por otro posterior. No están ordenados por fecha ni numerados. Con ellos la base no se
 puede reconstruir.
 
-Desde el **2026-07-28** Aurevia tiene sistema de migraciones. Todo cambio de esquema va a:
+Desde el **2026-07-28** Careonys tiene sistema de migraciones. Todo cambio de esquema va a:
 
 ```
 supabase/migrations/AAAAMMDDHHMMSS_descripcion.sql

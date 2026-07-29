@@ -6,7 +6,7 @@ import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { useConfirmarDestructivo } from '../context/TenantSessionContext';
 
-// Etapa 2 de la separación CeltaTech / Aurevia (2026-07-28, docs/ETAPA_2_INVENTARIO.md §5):
+// Etapa 2 de la separación CeltaTech / Careonys (2026-07-28, docs/ETAPA_2_INVENTARIO.md §5):
 // estas dos secciones venían adentro de AdminPlataforma.jsx, el panel comercial del SaaS.
 // Ese panel se fue entero: planes, licenciatarias y facturación son de CeltaTech, no de este
 // producto. El costo de IA se queda porque no es comercial — mide un costo de infraestructura

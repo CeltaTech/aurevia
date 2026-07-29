@@ -1,4 +1,4 @@
-# Investigación UX — Rediseño del frontend de Aurevia
+# Investigación UX — Rediseño del frontend de Careonys
 
 > Documento de referencia. Reúne, en un solo lugar, el relevamiento completo de las tres
 > aplicaciones actuales (Panel, PWA Asistentes, PWA Familias) y la investigación de
@@ -141,7 +141,7 @@ traducción. Usa `window.prompt()` nativo del navegador para pedir el motivo de 
 (no un modal propio del sistema).
 
 **AdminPlataforma** — Título "Panel de CeltaTech" (nombra a la empresa dueña del software, no
-"Aurevia"). Tabs: Resumen, Licenciatarias, Planes y funciones, Facturación de licencias. El
+"Careonys"). Tabs: Resumen, Licenciatarias, Planes y funciones, Facturación de licencias. El
 badge de estado de una Licenciataria muestra el valor crudo del enum como texto visible sin
 traducir. "Incluye" de un Plan junta claves de módulos crudas separadas por coma.
 
@@ -171,7 +171,7 @@ seguridad" / "Verificación en dos pasos".
 
 Rutas en `pwa-asistentes/src/App.jsx`. Nav inferior fija: "Mis Guardias" / "Mi Perfil".
 
-**Login** — Título "Aurevia — Asistentes". Campos: Email, Contraseña. Error: "Email o
+**Login** — Título "Careonys — Asistentes". Campos: Email, Contraseña. Error: "Email o
 contraseña incorrectos."
 
 **Mis Guardias** (`MisGuardias.jsx`) — Título "Mis Guardias". Cada tarjeta: nombre del
@@ -207,7 +207,7 @@ tabla de base de datos.
 
 Rutas en `pwa-familias/src/App.jsx`.
 
-**Login** — Título "Aurevia — Familias".
+**Login** — Título "Careonys — Familias".
 
 **Mis Pacientes** — Título "Mis Pacientes". Si hay un solo Paciente, redirige directo a su
 pantalla. Vacío: "No hay Pacientes vinculados a tu cuenta todavía."
@@ -354,27 +354,27 @@ de campo vacío).
 - El manejo explícito de objeciones de costo/compromiso en la propia home (no escondido en
   FAQ) es un patrón que separa a los mejores del resto.
 
-### 2.3 Qué significa esto para Aurevia — primeras ideas (a validar en el plan)
+### 2.3 Qué significa esto para Careonys — primeras ideas (a validar en el plan)
 
-1. **Reporte de transparencia anual** (patrón Papa): dado que Aurevia ya tiene el eje
+1. **Reporte de transparencia anual** (patrón Papa): dado que Careonys ya tiene el eje
    legal/auditoría como pilar (`CLAUDE.md` §3 y §6), un reporte público de transparencia
    ("cómo verificamos a los Asistentes", "cómo se audita el aislamiento de datos entre
    Prestadoras") sería un diferencial de confianza que ninguna Prestadora argentina ni
    internacional relevada tiene hoy.
-2. **El sitio de Aurevia es B2B** (le vende a Prestadoras, no directamente a Familias) —
+2. **El sitio de Careonys es B2B** (le vende a Prestadoras, no directamente a Familias) —
    por eso la bifurcación de navegación clásica "necesito cuidado / quiero trabajar
-   cuidando" no aplica igual: la bifurcación real de Aurevia sería más parecida a "sos una
+   cuidando" no aplica igual: la bifurcación real de Careonys sería más parecida a "sos una
    Prestadora evaluando la plataforma" vs. "sos Familia/Asistente de una Prestadora que ya
-   usa Aurevia" — y dentro de la landing de cada Prestadora (el sitio público que consuma
+   usa Careonys" — y dentro de la landing de cada Prestadora (el sitio público que consuma
    datos vía API, ver pendiente #70 de `docs/PENDIENTES.md`), ahí sí aplicaría la
    bifurcación clásica cuidado/trabajo, como en Cuidarlos.
 3. **Autoevaluación corta antes del formulario de contacto** (patrón Comfort
-   Keepers/Visiting Angels), trasladable al proceso de venta de Aurevia a una Prestadora
+   Keepers/Visiting Angels), trasladable al proceso de venta de Careonys a una Prestadora
    nueva ("¿cuántos Asistentes gestionás hoy? ¿en qué herramienta?").
 4. **Nombrar casos reales con nombre, ciudad y cifra concreta**, nunca testimonios
-   genéricos — aplicable tanto al sitio de Aurevia (casos de Prestadoras) como al futuro
+   genéricos — aplicable tanto al sitio de Careonys (casos de Prestadoras) como al futuro
    sitio de cada Prestadora (casos de Familias/Asistentes).
-5. **Balance local/nacional** (patrón Interim HealthCare): comunicar que Aurevia funciona
+5. **Balance local/nacional** (patrón Interim HealthCare): comunicar que Careonys funciona
    igual para una Prestadora de cualquier provincia, con las mismas garantías de
    aislamiento — coherente con la arquitectura multi-tenant real ya construida (`CLAUDE.md`
    §2), transformando una garantía técnica en argumento de marketing genuino.
@@ -414,7 +414,7 @@ riesgo de quedar sin cubrir?"), nunca el estado técnico interno del registro:
 - **Alertas agrupadas en el dashboard**, no solo en el calendario: turnos abiertos,
   llegadas tarde/ausencias, y un widget específico de "Compliance" (CareSmartz360) que
   muestra qué cuidador tiene qué documento por vencer en los próximos 30 días — equivalente
-  directo al módulo de Documentación de Asistentes de Aurevia.
+  directo al módulo de Documentación de Asistentes de Careonys.
 - **Matching asistido**: el coordinador no filtra una lista de Asistentes a mano — el
   sistema sugiere 3-5 candidatos rankeados según habilidades, disponibilidad y distancia
   (AlayaCare, AxisCare, CareSmartz360).
@@ -432,7 +432,7 @@ riesgo de quedar sin cubrir?"), nunca el estado técnico interno del registro:
   color/layout viene de texto descriptivo del propio marketing o de fichas de terceros, no
   de la imagen en sí.
 
-**Aplicación concreta a Aurevia:**
+**Aplicación concreta a Careonys:**
 - **Guardias**: semáforo de 3 estados (sin cubrir=rojo / cubierta pero pendiente de
   confirmar=ámbar / cubierta y confirmada=verde), mapeado a un enum de negocio propio,
   nunca al valor crudo de la columna `estado`. Vista de grilla/calendario como pantalla
@@ -494,7 +494,7 @@ tiempo real ni de detalle del formulario de reporte.
   patrón "mapa + notificación de llegada + chat" es exactamente lo que le falta a la
   mayoría de las apps de home care, que solo notifican eventos puntuales.
 
-**Aplicación concreta a Aurevia:**
+**Aplicación concreta a Careonys:**
 - Reemplazar los placeholders crudos `presion`/`temperatura`/`saturacion`/`glucemia`
   (`pwa-asistentes/src/pages/ReporteDiario.jsx`) por etiquetas en español natural y, donde
   el dato lo permita, un indicador visual de color (verde/amarillo/rojo) según rango
@@ -517,7 +517,7 @@ aesthetic-mood-trackers, jmir.org/2023/1/e41189 (Emoji Faces Pain Scale), Wikipe
 
 ### 3.3 Principios de UX para adultos mayores y usuarios en momentos de estrés
 
-Los usuarios reales de Aurevia no son un público neutro: los Asistentes muchas veces tienen
+Los usuarios reales de Careonys no son un público neutro: los Asistentes muchas veces tienen
 baja alfabetización digital y usan la app mientras están trabajando (a una mano, con
 interrupciones); las Familias están, en muchos casos, atravesando angustia por la salud de
 un ser querido, y a veces son personas mayores ellas mismas.
@@ -565,7 +565,7 @@ Content Collective) y Calm Technology (Amber Case, Calm Tech Institute):
   la cantidad.
 - Solo el 18% de 44 apps de cuidadores analizadas cubre bien información + comunicación
   familiar + interacción cuidador-paciente a la vez — oportunidad de diferenciación real
-  para Aurevia.
+  para Careonys.
 
 **Aplicación concreta:**
 
@@ -692,14 +692,14 @@ convergente (no solo de una fuente):
 
 Investigación de cómo resuelven SaaS B2B (Notion, HubSpot, Shopify) y software específico
 de home care (AlayaCare, AxisCare, CareSmartz360) el primer uso de una cuenta nueva —
-relevante porque hoy Aurevia no tiene ningún flujo de bienvenida pensado para una
+relevante porque hoy Careonys no tiene ningún flujo de bienvenida pensado para una
 Prestadora recién dada de alta.
 
 **Patrón dominante en SaaS B2B horizontal**: preguntar intención al arrancar (rol, tamaño
 de organización, para qué se va a usar) para adaptar qué se muestra primero, y un
 **checklist visible de tareas** (no un asistente modal de pantalla completa que bloquea
 todo) — permite salir y volver sin perder el lugar, y muestra progreso real. El primer paso
-del checklist debe ser el que genera valor real (para Aurevia, probablemente cargar el
+del checklist debe ser el que genera valor real (para Careonys, probablemente cargar el
 primer Paciente o el primer Asistente), no el más fácil de pedir desde el producto —
 invitar a otro usuario del equipo llega después, no como paso 1.
 
@@ -724,14 +724,14 @@ como hito de cierre.
 con contenido que es a la vez demo y checklist), pero cuando es inevitable, la regla es
 texto específico ("todavía no cargaste ningún Paciente", nunca "sin datos"), ilustración de
 marca coherente, y un único CTA — no varias opciones que generen fatiga de decisión. Si
-Aurevia usara datos de ejemplo para no mostrar una pantalla vacía, deberían ser
+Careonys usara datos de ejemplo para no mostrar una pantalla vacía, deberían ser
 evidentemente ficticios y generados dentro de esa misma Organización nueva, nunca copiados
 de Sandbox ni de otra Prestadora — coherente con `CLAUDE.md` §6 y con el aislamiento
 multi-tenant.
 
 **Antipatrones a evitar**: tours largos que enseñan la interfaz en vez de dejar lograr algo
 útil en los primeros 30-60 segundos; volcar todas las opciones de configuración en un solo
-paso; y, el más relevante para Aurevia dado que tiene roles muy distintos (Superadmin,
+paso; y, el más relevante para Careonys dado que tiene roles muy distintos (Superadmin,
 Admin_plataforma, Admin_prestadora): **asumir un solo flujo de onboarding para todos los
 roles** es de los errores más caros documentados en B2B SaaS — cada rol necesita su propia
 ruta de activación, nunca la misma pantalla de bienvenida.
@@ -763,7 +763,7 @@ tolerancia (ej. 7 días) para que el dato offline llegue antes de considerarse f
 cumplimiento, y como respaldo total tienen una línea telefónica para marcar entrada/salida
 por voz cuando no hay ni GPS ni señal.
 
-**Limitación técnica importante para Aurevia (PWA, no app nativa)**: la Background Sync API
+**Limitación técnica importante para Careonys (PWA, no app nativa)**: la Background Sync API
 del navegador —que permite reintentar el envío solo en segundo plano— **no está soportada
 en Safari, ni en macOS ni en iOS**, y no se espera que llegue pronto; solo funciona en
 navegadores Chromium (Chrome, Edge, Samsung Internet). Como es esperable que buena parte de
@@ -810,20 +810,20 @@ en el momento del servicio (Uber, Rappi) invierten en verificación continua (bi
 vivo) pero comunican poco visualmente al usuario final. Plataformas donde la confianza se
 decide *antes* del encuentro (Airbnb, Care.com) sí muestran una insignia permanente en el
 perfil, porque ahí la persona elige con quién reservar/contratar antes de conocerla — este
-segundo caso es el que aplica a Aurevia (la Familia decide confiar en un Asistente antes de
+segundo caso es el que aplica a Careonys (la Familia decide confiar en un Asistente antes de
 que entre a su casa).
 
 **Airbnb**: insignia roja "Identity verified" junto a la foto, clickeable, que explica qué
 se verificó exactamente — y los anfitriones no verificados directamente quedan ocultos si
 el huésped filtra por "verificados". **Care.com**: tras aprobar su verificación de
 antecedentes, el perfil muestra el estado (completado/verificado) pero **nunca el contenido
-del reporte** — este es el patrón más directamente aplicable a Aurevia: mostrar el resultado
+del reporte** — este es el patrón más directamente aplicable a Careonys: mostrar el resultado
 binario de la verificación, nunca el detalle sensible.
 
 **Hallazgo relevante — hueco de mercado**: ningún software de gestión de home care
 (AxisCare, AlayaCare) muestra hoy una insignia de verificación visible a la Familia en su
 portal — ese patrón es fuerte en marketplaces de consumo (Airbnb, Care.com) pero está
-prácticamente ausente en el software de gestión del propio rubro de Aurevia. Es una
+prácticamente ausente en el software de gestión del propio rubro de Careonys. Es una
 oportunidad de diferenciación real, no solo una función más.
 
 **Evidencia de investigación seria sobre cuándo un sello de confianza funciona o falla**:
@@ -831,7 +831,7 @@ un estudio de Stanford citado encontró que un sello de seguridad **desconocido 
 verificable redujo la confianza en 12%** comparado con no mostrar ningún sello — el usuario
 penaliza una insignia que no puede confirmar en ningún lado. Principios prácticos
 consolidados: el sello debe ser clickeable/escaneable hacia una fuente real de
-verificación (exactamente lo que hace el QR de Aurevia), ubicado cerca de la decisión
+verificación (exactamente lo que hace el QR de Careonys), ubicado cerca de la decisión
 relevante (cerca del nombre/foto del Asistente, no en un footer), y nunca con afirmaciones
 vagas ("100% seguro") sin decir qué se verificó específicamente.
 
@@ -841,11 +841,11 @@ que el QR actúa como puntero dinámico a una página de verificación (nunca em
 sensible en el QR mismo), la página muestra estado + qué se verificó + fecha, se actualiza
 en el servidor (si se revoca la verificación, el mismo QR deja de mostrar "verificado"), y
 nunca expone datos personales completos — exactamente el diseño ya previsto para la página
-pública de Aurevia (`docs/PRD_04_05_App_Servicio.md:142-153`).
+pública de Careonys (`docs/PRD_04_05_App_Servicio.md:142-153`).
 
 **Error a evitar señalado explícitamente por Airbnb en su propia documentación**: ser
 explícitos en que la insignia "solo significa que la persona proveyó información que fue
-validada", no una garantía de comportamiento — Aurevia debería ser igual de clara en su
+validada", no una garantía de comportamiento — Careonys debería ser igual de clara en su
 página pública sobre el alcance exacto de "Certificado de Aptitud" (qué evaluó la
 Prestadora, qué no), para no generar una falsa sensación de seguridad.
 
@@ -858,7 +858,7 @@ verificacovid.scsalud.es.
 
 ### 4.4 WhatsApp como canal de comunicación principal
 
-Aurevia ya tiene notificaciones push (con las limitaciones conocidas en iPhone) y un módulo
+Careonys ya tiene notificaciones push (con las limitaciones conocidas en iPhone) y un módulo
 de envío de WhatsApp para escalada de alertas ya construido. Se investigó si conviene
 apoyarse más en WhatsApp como canal central para avisos a Asistentes y Familias, dado que en
 Argentina es el canal de comunicación dominante.
@@ -881,7 +881,7 @@ activos, mientras que una app específica depende de que ese permiso esté conce
 
 **Cómo funciona técnicamente**: la API oficial de WhatsApp Business abre una "ventana de
 servicio" de 24 horas cada vez que el usuario escribe primero, durante la cual se puede
-mandar cualquier mensaje libre. Fuera de esa ventana (un aviso que Aurevia inicia sin que el
+mandar cualquier mensaje libre. Fuera de esa ventana (un aviso que Careonys inicia sin que el
 Asistente/Familia haya escrito antes), solo se puede usar una plantilla pre-aprobada por
 Meta — las plantillas de la categoría "utility" (confirmaciones, recordatorios, alertas de
 cuenta) encajan directo con nuestros casos de uso ("confirmar guardia", "Ausente sin relevo
@@ -901,11 +901,11 @@ aviso; avisos rutinarios (ej. "reporte diario ya enviado") por push/email primer
 WhatsApp solo como respaldo si el push falla, para no generar costo en cada aviso de rutina.
 
 **Limitación honesta de esta investigación**: no se encontró ningún competidor directo de
-Aurevia (softwares de gestión de cuidadores en Argentina o el resto de Latinoamérica) que
+Careonys (softwares de gestión de cuidadores en Argentina o el resto de Latinoamérica) que
 documente públicamente su propia arquitectura de notificaciones — la recomendación de
 patrón híbrido es una hipótesis razonable a partir de evidencia de otros rubros, no un hecho
 ya demostrado en el sector, y debería confirmarse con datos propios de uso real una vez que
-Aurevia tenga Asistentes/Familias usando el sistema.
+Careonys tenga Asistentes/Familias usando el sistema.
 
 Fuentes: latinspots.com/noticia/pedidosya-confirma-los-pedidos-por-whatsapp,
 neuqueninforma.gob.ar (turnos por WhatsApp Jujuy/Neuquén), smsmode.com/en/
@@ -964,9 +964,9 @@ alcanzar.
 
 **Marco legal argentino**: existe la Ley 26.653 (accesibilidad web, 2010), reglamentada por
 el Decreto 656/2019 y la Disposición ONTI 6/2019. Su aplicabilidad a un software B2B como
-Aurevia es ambigua — el texto de la ley habla de "empresas que presten servicios públicos",
+Careonys es ambigua — el texto de la ley habla de "empresas que presten servicios públicos",
 y no se encontró jurisprudencia ni interpretación oficial que confirme si un SaaS de
-gestión como Aurevia queda alcanzado. También existe la Ley 26.378 (ratifica la Convención
+gestión como Careonys queda alcanzado. También existe la Ley 26.378 (ratifica la Convención
 de la ONU sobre discapacidad), que fija un marco general de derechos pero no un estándar
 técnico específico con sanciones. **Esto es una pregunta legal abierta, no resuelta por
 esta investigación** — si se quiere formalizar, corresponde documentarla en
@@ -975,10 +975,10 @@ esta investigación** — si se quiere formalizar, corresponde documentarla en
 **Hallazgo competitivo**: ningún competidor de home care relevado en las Partes 2/3
 publica un VPAT/ACR (Voluntary Product Accessibility Template / Accessibility Conformance
 Report — documento estándar de la industria SaaS para declarar el nivel de conformidad de
-accesibilidad ante compradores empresariales). Es un hueco real que Aurevia podría llenar
+accesibilidad ante compradores empresariales). Es un hueco real que Careonys podría llenar
 como diferenciador ante Prestadoras que evalúan varias plataformas.
 
-**Aplicación concreta a Aurevia**: revisar contraste real de la paleta `oklch()` de
+**Aplicación concreta a Careonys**: revisar contraste real de la paleta `oklch()` de
 `docs/DESIGN_SYSTEM.md` contra el mínimo 4.5:1; sumar una alternativa por teclado/botón a
 la reasignación por drag-and-drop de `GuardiasGrid.jsx` (hoy depende exclusivamente del
 gesto de arrastre); auditar que los íconos-sin-texto detectados en la Parte 1 tengan al
@@ -1001,7 +1001,7 @@ guardias (EVV).
 **Patrón de separación de roles confirmado en los 4 productos relevados**: el panel del
 dueño/directivo es **siempre una pantalla separada** del panel operativo del Coordinador —
 nunca el mismo panel "con más detalle" para quien tiene más permisos. Esto encaja
-directamente con los roles que Aurevia ya diferencia (Superadmin, Admin_plataforma,
+directamente con los roles que Careonys ya diferencia (Superadmin, Admin_plataforma,
 Admin_prestadora, Coordinador) y con el hallazgo ya registrado en memoria de que el panel
 de Admin_plataforma no debe mostrar el día a día operativo.
 
@@ -1012,7 +1012,7 @@ de números; sparklines/flechas de tendencia junto al número del indicador, no 
 solo; toda alerta de anomalía necesita contexto (línea base, hace cuánto que pasa, próximo
 paso sugerido), nunca solo "esta métrica bajó X%" sin explicar qué hacer con ese dato.
 
-**Aplicación concreta a Aurevia**: el panel de Admin_plataforma necesita, como mínimo, tres
+**Aplicación concreta a Careonys**: el panel de Admin_plataforma necesita, como mínimo, tres
 bloques por Prestadora — estado de pago, uso real versus plan contratado, y una señal de
 riesgo/salud de cuenta — sin mostrar el día a día operativo (ausencias, incidentes), que ya
 está fuera de su alcance según lo ya documentado en memoria. El Dashboard actual de
@@ -1026,7 +1026,7 @@ paddle.com/resources/customer-health-score, chargebee.com/customer-retention.
 
 ### 5.3 Coordinación entre varios familiares del mismo Paciente
 
-El patrón dominante en el software de cuidado domiciliario comparable a Aurevia (no en
+El patrón dominante en el software de cuidado domiciliario comparable a Careonys (no en
 apps de comunidad tipo CaringBridge) es un **círculo de cuidado con roles diferenciados
 por familiar**, nunca una cuenta compartida: cada familiar tiene su propio login, y la
 Prestadora (no un familiar) es quien controla quién entra y con qué nivel de acceso —
@@ -1049,7 +1049,7 @@ digitalmente la misma pelea que ya existe fuera de la app.
 parentesco (ej. "un nieto ve menos que un hijo") — hoy se resuelve manualmente vía
 configuración de rol, no por inferencia de vínculo familiar.
 
-**Aplicación concreta a Aurevia**: diseñar el acceso de PWA Familias como un círculo de
+**Aplicación concreta a Careonys**: diseñar el acceso de PWA Familias como un círculo de
 cuidado por Paciente, con roles asignables por la Prestadora (no autoservicio entre
 familiares), y un único set de reportes/alertas visible según el rol asignado — nunca una
 cuenta "familia" genérica compartida por contraseña.
@@ -1091,7 +1091,7 @@ asientos/uso sin aviso previo, cambios de plan sin preview, letra chica de compr
 anual que no aparece en la tabla comparativa. El principio transversal: la confianza se
 rompe cuando el costo real aparece *después* de la decisión del usuario, nunca antes.
 
-**Aplicación concreta a Aurevia**: el panel de Admin_plataforma (`AdminPlataforma.jsx`,
+**Aplicación concreta a Careonys**: el panel de Admin_plataforma (`AdminPlataforma.jsx`,
 tab "Planes y funciones") debería incorporar preview de cambio de plan antes de aplicarlo
 sobre una Prestadora, y el bloque de score/riesgo de cuenta ya recomendado en 5.2 — nunca
 aplicar un cambio de plan sin mostrar antes qué funciones se pierden/ganan.
@@ -1130,7 +1130,7 @@ salud familiar (tipo selector de dependiente en portales de salud), el patrón e
 un **selector de contexto** que cambia el Paciente activo y filtra el resto de la pantalla
 por él — no confirmado como estándar del rubro, es inferencia razonada.
 
-**Aplicación concreta a Aurevia**: en `PacienteDetalle.jsx` (PWA Familias), agregar un
+**Aplicación concreta a Careonys**: en `PacienteDetalle.jsx` (PWA Familias), agregar un
 selector de Paciente activo cuando la Familia tiene más de uno vinculado (hoy la pantalla
 "Mis Pacientes" ya redirige directo si hay uno solo — falta el caso de selección entre
 varios); modelar honorarios de guardia compartida como adicional por Paciente extra, nunca
@@ -1174,13 +1174,13 @@ cuanto se marca la salida del Asistente hacia el hospital, en vez de esperar a q
 note la guardia descubierta.
 
 **Zona gris de responsabilidad civil**: no se encontró fuente directa sobre seguro/ART del
-Asistente al pasar de domicilio a institución (caso exacto de Aurevia) — es un vacío real
+Asistente al pasar de domicilio a institución (caso exacto de Careonys) — es un vacío real
 de evidencia. Por analogía razonable, el empleador legal sigue siendo la Prestadora, pero
 el cambio de entorno introduce reglas internas del sanatorio que la póliza podría no
 contemplar — candidato a advertencia legal configurable (no bloqueante) en
 `docs/legal/argentina.md`, coherente con el mecanismo ya definido en `CLAUDE.md` §3.
 
-**Aplicación concreta a Aurevia**: modelar "Hospitalización" como entidad propia vinculada
+**Aplicación concreta a Careonys**: modelar "Hospitalización" como entidad propia vinculada
 al Paciente (fecha de inicio/fin, institución, motivo) que al activarse pausa las guardias
 domiciliarias programadas de ese Paciente; permitir abrir opcionalmente un tipo de Guardia
 "Acompañamiento hospitalario" cuando corresponda; disparar automáticamente el flujo de
@@ -1232,10 +1232,10 @@ tiempo libre para procesar, y check-ins de seguimiento del equipo.
 **Vacío de industria confirmado, no solo de esta búsqueda**: no existe un estándar
 documentado de aviso previo formal al Asistente cuando el caso de su Paciente se cierra por
 razones ajenas a su desempeño (a diferencia del cierre de vínculo Prestadora-Asistente, que
-sí tiene proceso propio en Aurevia vía "Vínculo/Cese"). Es una oportunidad real de que
-Aurevia se diferencie con una práctica propia bien documentada.
+sí tiene proceso propio en Careonys vía "Vínculo/Cese"). Es una oportunidad real de que
+Careonys se diferencie con una práctica propia bien documentada.
 
-**Aplicación concreta a Aurevia**: sumar un catálogo configurable de causales de "Cese de
+**Aplicación concreta a Careonys**: sumar un catálogo configurable de causales de "Cese de
 servicio" a `PrestacionesPaciente.jsx` (hoy solo tiene el bloque de cierre sin motivo
 estructurado), separando estado de motivo igual que AlayaCare; tratar el archivado como
 retención con plazo configurable por jurisdicción (nunca borrado), reutilizando el mismo
@@ -1266,7 +1266,7 @@ ahrq.gov/cahps/surveys-guidance/home.
    necesita estado de pago, uso versus plan contratado y una señal de riesgo de cuenta por
    Prestadora — ningún ángulo de esta ronda contradice esa conclusión, todos la refuerzan.
 4. **La comunicación en momentos sensibles (cierre de caso, fallecimiento, internación) es
-   un hueco de industria, no solo de Aurevia** — hay más evidencia académica de que las
+   un hueco de industria, no solo de Careonys** — hay más evidencia académica de que las
    familias sienten estos momentos mal comunicados que de soluciones de producto ya
    resueltas por la competencia, lo que abre una oportunidad de diferenciación genuina en
    vez de solo "alcanzar" un estándar ya resuelto por otros.

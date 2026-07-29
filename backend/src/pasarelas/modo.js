@@ -1,5 +1,5 @@
 // Adaptador Modo — la Prestadora se da de alta como comercio directamente en el portal de
-// Modo (fuera de Aurevia) y pega acá la clave de API resultante (mecanismo de clave manual,
+// Modo (fuera de Careonys) y pega acá la clave de API resultante (mecanismo de clave manual,
 // no hay OAuth Connect). El cobro es push: la Familia escanea el QR de pago que Modo genera
 // y transfiere — no existe un objeto "suscripción" recurrente en Modo, cada período se
 // resuelve como un cobro independiente que el webhook confirma.

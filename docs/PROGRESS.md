@@ -47,6 +47,26 @@
 > direcciones de las PWA en Railway, comprobarlo con un correo de activación real y recién
 > entonces borrar lo de Vercel — el orden está en el pendiente #99 y no es opcional.
 
+> **2026-07-30 — Quedó decidido cómo se va a avisar que un Asistente llega tarde, y por qué eso
+> obliga a publicar la aplicación de Asistentes en la tienda.** No se escribió código: es una
+> conversación de diseño, escrita entera en el pendiente #101 para no rehacerla. Lo importante en
+> tres líneas. **Primero:** una aplicación web instalable no alcanza para seguir a alguien mientras
+> viaja con el teléfono en el bolsillo y la pantalla apagada — eso solo lo puede hacer una
+> aplicación de tienda, así que el seguimiento del trayecto, por sí solo, obliga a publicarla. La
+> de Familias no necesita nada de eso y puede seguir como está. **Segundo:** el Desarrollador puso
+> el objetivo que manda sobre todo lo demás — *si un Asistente no va a llegar, la Prestadora tiene
+> que enterarse cuanto antes para poder cubrir la guardia*. O sea que lo que hay que medir no es
+> qué tan sólida queda la prueba, sino **cuántos minutos de anticipación da el sistema**. **Tercero,
+> y es la vuelta que cambia todo:** en vez de vigilar dónde está la persona, el sistema se apoya en
+> lo que ella hace — apretar "salgo ahora", avisar "voy demorado" —. Así, apagar el GPS no le sirve
+> de nada a quien quiera esquivar el control (lo que falta es el botón apretado, no el punto en el
+> mapa), y el registro deja de ser vigilancia para pasar a ser la coartada del Asistente cuando el
+> colectivo se rompió de verdad. La Familia ve *"María llega alrededor de las 14:45"*, nunca un mapa
+> con María moviéndose. **Y una advertencia que hay que mirar antes de construir nada:** los 21
+> documentos legales de `docs/legal/` no dicen una sola palabra sobre ubicación de personas
+> (comprobado ese día, cero apariciones), y el propio esquema tiene el freno escrito. Es el
+> pendiente #102 y bloquea activar el seguimiento con Asistentes reales en cualquier país.
+
 > **2026-07-27 — La empresa pasó a llamarse CeltaTech** (antes Xeitra), por decisión del
 > Desarrollador. El renombre se aplicó en todo el repositorio: comentarios, referencias a
 > documentos y textos visibles del Panel en los tres idiomas. **No cambió ninguna tabla, rol,

@@ -33,6 +33,19 @@
 > En paralelo se levantó el mapa completo de dominios y correo (pendiente #100): los tres
 > dominios `.ar` comprados en NIC.ar están sin delegar, y el producto todavía no tiene ninguna
 > casilla de correo propia.
+>
+> **2026-07-30 — Las tres aplicaciones ya están arriba en Cloudflare Pages.** Se hizo lo decidido
+> el día anterior. El Desarrollador creó un token de API acotado (solo puede tocar Pages y el DNS,
+> nada más) y guardó la llave en la caja fuerte; de ahí en adelante la subida fue por línea de
+> comandos, sin que él tuviera que entrar a ninguna pantalla. Quedaron en
+> `careonys-panel.pages.dev`, `careonys-familias.pages.dev` y `careonys-asistentes.pages.dev`.
+> **Comprobado en vivo:** las tres abren; una dirección inventada devuelve el `index.html` en vez
+> de un error, que era la duda principal de la mudanza; en la aplicación de Familias cargan el
+> código, los estilos, el manifiesto y el service worker, se ve la pantalla de ingreso con la
+> marca nueva y el navegador no reporta ningún error. **Vercel no se tocó: los tres despliegues
+> viejos siguen funcionando.** Falta enganchar los dominios de `careonys.com`, repuntar las dos
+> direcciones de las PWA en Railway, comprobarlo con un correo de activación real y recién
+> entonces borrar lo de Vercel — el orden está en el pendiente #99 y no es opcional.
 
 > **2026-07-27 — La empresa pasó a llamarse CeltaTech** (antes Xeitra), por decisión del
 > Desarrollador. El renombre se aplicó en todo el repositorio: comentarios, referencias a

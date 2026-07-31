@@ -89,6 +89,28 @@
 > base y la vuelta completa por la aplicación: preguntar, decir que no, cambiar de opinión,
 > retirar), y sin dejar una sola fila de prueba atrás. Es el pendiente #102.
 
+> **2026-07-31 — Las tres aplicaciones ya tienen dirección propia en `careonys.com`.** Hasta ayer
+> vivían en direcciones prestadas de Cloudflare, del estilo `careonys-panel.pages.dev`. Ahora cada
+> una tiene la suya, elegida por el Desarrollador: **`gestion.careonys.com`** para el Panel,
+> **`familias.careonys.com`** para la aplicación de la Familia y **`asistentes.careonys.com`** para
+> la de la Asistente. Se hizo todo desde la línea de comandos, sin entrar a ninguna página web.
+> **Un detalle que costó descubrir y conviene no volver a descubrir:** decirle a Cloudflare "esta
+> dirección es de esta aplicación" **no alcanza** — hay que crear además, a mano, el cartel de DNS
+> que dice a dónde va cada nombre. Sin ese cartel las tres direcciones se quedan en "pendiente"
+> para siempre, sin ningún mensaje de error que lo explique. Una vez creados los carteles, tardaron
+> unos dos minutos en encenderse. **Comprobado desde afuera, no supuesto:** las tres contestan bien
+> por HTTPS y cada una muestra la aplicación que le corresponde. En Railway, que es donde vive el
+> motor del sistema, se cambiaron las dos direcciones que van dentro del correo de bienvenida, para
+> que apunten a las nuevas; el motor se reinició y volvió a contestar. **La raíz `careonys.com`,
+> pelada, se dejó vacía a propósito:** ahí va la página pública del producto, que todavía no existe.
+> No se la redirigió al Panel porque habría que deshacerlo después y porque acostumbraría a la gente
+> a que la puerta de entrada de Careonys sea una pantalla de ingreso. **Hallazgo de paso, anotado
+> como pendiente #104:** el único documento que describe esa página pública (`PRD_01_Sitio_Web.md`)
+> quedó viejo — describe un sitio que le vende servicios de cuidado a las familias, que es lo que
+> hace una Prestadora, no Careonys. Hay que reescribirlo antes de construir nada ahí. Es el
+> pendiente #99, que queda a un solo paso de cerrarse: falta comprobar un correo de activación real
+> antes de borrar lo viejo de Vercel.
+
 > **2026-07-27 — La empresa pasó a llamarse CeltaTech** (antes Xeitra), por decisión del
 > Desarrollador. El renombre se aplicó en todo el repositorio: comentarios, referencias a
 > documentos y textos visibles del Panel en los tres idiomas. **No cambió ninguna tabla, rol,

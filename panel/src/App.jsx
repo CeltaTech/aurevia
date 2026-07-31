@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { LocaleProvider } from './i18n/LocaleContext';
+import { PreferenciasVistaProvider } from './context/PreferenciasVistaContext';
 import { AuthProvider } from './context/AuthContext';
 import { EmpresaProvider } from './context/EmpresaContext';
 import { PermisosProvider } from './context/PermisosContext';
@@ -18,6 +19,8 @@ import { AsistenteDetalle } from './pages/asistentes/AsistenteDetalle';
 import { Familias } from './pages/Familias';
 import { FamiliaDetalle } from './pages/familias/FamiliaDetalle';
 import { Guardias } from './pages/Guardias';
+import { Reportes } from './pages/Reportes';
+import { Alertas } from './pages/Alertas';
 import { Comunicacion } from './pages/Comunicacion';
 import { Evv } from './pages/Evv';
 import { Facturacion } from './pages/Facturacion';
@@ -39,6 +42,9 @@ import { MarketplaceAuditoriaLegal } from './pages/marketplace/AuditoriaLegal';
 function App() {
   return (
     <LocaleProvider>
+      {/* El tema y la densidad van bien afuera, envolviendo todo: valen también para la
+          pantalla de ingreso, que está fuera del Layout. */}
+      <PreferenciasVistaProvider>
       <EmpresaProvider>
         <AuthProvider>
           <PermisosProvider>
@@ -66,6 +72,8 @@ function App() {
                     <Route path="familias/:id" element={<FamiliaDetalle />} />
                     <Route path="medicacion" element={<Medicacion />} />
                     <Route path="guardias" element={<Guardias />} />
+                    <Route path="reportes" element={<Reportes />} />
+                    <Route path="alertas" element={<Alertas />} />
                     <Route path="comunicacion" element={<Comunicacion />} />
                     <Route path="verificacion-guardias" element={<Evv />} />
                     <Route path="facturacion" element={<Facturacion />} />
@@ -112,6 +120,7 @@ function App() {
           </PermisosProvider>
         </AuthProvider>
       </EmpresaProvider>
+      </PreferenciasVistaProvider>
     </LocaleProvider>
   );
 }

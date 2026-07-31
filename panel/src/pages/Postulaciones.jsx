@@ -2,10 +2,12 @@ import { useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
+import { useFiltros } from '../hooks/useFiltros';
 import { useZonasCobertura } from '../hooks/useZonasCobertura';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { PostulacionDetalle } from './PostulacionDetalle';
 import { contieneCodigo, traducirCodigos } from '../lib/postulacionCodigos';
+import { claseBadge } from '../lib/tonos';
 
 const ESTADOS = ['pendiente', 'en_revision', 'aprobado', 'rechazado'];
 
@@ -18,30 +20,26 @@ export function Postulaciones() {
     () => Object.fromEntries(zonas.map((z) => [z.codigo, z.nombre])),
     [zonas],
   );
-  const [busqueda, setBusqueda] = useState('');
-  const [filtroEstado, setFiltroEstado] = useState('');
-  const [filtroEspecialidad, setFiltroEspecialidad] = useState('');
-  const [filtroZona, setFiltroZona] = useState('');
-  const [filtroDisponibilidad, setFiltroDisponibilidad] = useState('');
+  const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '', estado: '', especialidad: '', zona: '', disponibilidad: '' });
   const [seleccionada, setSeleccionada] = useState(null);
 
   const filasFiltradas = useMemo(() => {
     return filas.filter((p) => {
       const coincideBusqueda =
-        !busqueda ||
-        p.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-        p.email?.toLowerCase().includes(busqueda.toLowerCase()) ||
-        p.telefono?.toLowerCase().includes(busqueda.toLowerCase());
-      const coincideEstado = !filtroEstado || p.estado === filtroEstado;
+        !f.busqueda ||
+        p.nombre?.toLowerCase().includes(f.busqueda.toLowerCase()) ||
+        p.email?.toLowerCase().includes(f.busqueda.toLowerCase()) ||
+        p.telefono?.toLowerCase().includes(f.busqueda.toLowerCase());
+      const coincideEstado = !f.estado || p.estado === f.estado;
       return (
         coincideBusqueda &&
         coincideEstado &&
-        contieneCodigo(p.especialidades, filtroEspecialidad) &&
-        contieneCodigo(p.zonas, filtroZona) &&
-        contieneCodigo(p.disponibilidad, filtroDisponibilidad)
+        contieneCodigo(p.especialidades, f.especialidad) &&
+        contieneCodigo(p.zonas, f.zona) &&
+        contieneCodigo(p.disponibilidad, f.disponibilidad)
       );
     });
-  }, [filas, busqueda, filtroEstado, filtroEspecialidad, filtroZona, filtroDisponibilidad]);
+  }, [filas, f]);
 
   return (
     <div>
@@ -51,10 +49,10 @@ export function Postulaciones() {
         <input
           type="text"
           placeholder={t.comun.buscar}
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
+          value={f.busqueda}
+          onChange={(e) => set('busqueda', e.target.value)}
         />
-        <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
+        <select value={f.estado} onChange={(e) => set('estado', e.target.value)}>
           <option value="">{t.comun.todos}</option>
           {ESTADOS.map((e) => (
             <option key={e} value={e}>
@@ -62,19 +60,19 @@ export function Postulaciones() {
             </option>
           ))}
         </select>
-        <select value={filtroEspecialidad} onChange={(e) => setFiltroEspecialidad(e.target.value)}>
+        <select value={f.especialidad} onChange={(e) => set('especialidad', e.target.value)}>
           <option value="">{t.postulaciones.filtro_especialidad}</option>
           {Object.entries(t.postulaciones.especialidades_labels).map(([codigo, label]) => (
             <option key={codigo} value={codigo}>{label}</option>
           ))}
         </select>
-        <select value={filtroZona} onChange={(e) => setFiltroZona(e.target.value)}>
+        <select value={f.zona} onChange={(e) => set('zona', e.target.value)}>
           <option value="">{t.postulaciones.filtro_zona}</option>
           {zonas.map((z) => (
             <option key={z.codigo} value={z.codigo}>{z.nombre}</option>
           ))}
         </select>
-        <select value={filtroDisponibilidad} onChange={(e) => setFiltroDisponibilidad(e.target.value)}>
+        <select value={f.disponibilidad} onChange={(e) => set('disponibilidad', e.target.value)}>
           <option value="">{t.postulaciones.filtro_disponibilidad}</option>
           {Object.entries(t.postulaciones.disponibilidad_labels).map(([codigo, label]) => (
             <option key={codigo} value={codigo}>{label}</option>
@@ -82,7 +80,7 @@ export function Postulaciones() {
         </select>
       </div>
 
-      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && filasFiltradas.length === 0} recargar={recargar}>
+      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && filasFiltradas.length === 0} recargar={recargar} filtrado={hayFiltros} onLimpiarFiltros={limpiar}>
         <table className="panel-tabla">
           <thead>
             <tr>
@@ -104,7 +102,7 @@ export function Postulaciones() {
                 <td>{new Date(p.creado_en).toLocaleDateString()}</td>
                 <td>{t.postulaciones.situacion_fiscal_labels[p.situacion_fiscal] ?? p.situacion_fiscal}</td>
                 <td>
-                  <span className={`badge badge-${p.estado}`}>{t.postulaciones[`estado_${p.estado}`]}</span>
+                  <span className={claseBadge(p.estado)}>{t.postulaciones[`estado_${p.estado}`]}</span>
                 </td>
                 <td>
                   <button onClick={() => setSeleccionada(p)}>{t.comun.ver_detalle}</button>

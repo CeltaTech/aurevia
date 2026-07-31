@@ -53,7 +53,9 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
     .order('fecha', { ascending: true });
   if (errorGuardias) throw new Error(errorGuardias.message);
 
-  const asistenteIds = [...new Set((guardias || []).map((g) => g.asistente_id))];
+  // .filter(Boolean) porque una guardia puede estar sin cubrir: sin este filtro el NULL
+  // llega al .in('id', …) contra una columna uuid y la consulta revienta con un 500.
+  const asistenteIds = [...new Set((guardias || []).map((g) => g.asistente_id).filter(Boolean))];
   const nombresAsistente = {};
   if (asistenteIds.length > 0) {
     const { data: usuariosAsistentes } = await supabase

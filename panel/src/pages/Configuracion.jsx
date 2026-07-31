@@ -9,6 +9,7 @@ import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { traducirValor } from '../i18n/valores';
+import { SIGNOS_VITALES } from '../lib/signosVitales';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -43,7 +44,6 @@ async function llamarApiMarketplace(path, opciones = {}) {
 }
 
 const TABS = ['empresa', 'modalidades', 'zonas', 'servicios', 'documentos', 'vitales', 'habilitacion_medicacion', 'notificaciones', 'whatsapp', 'permisos'];
-const SIGNOS_VITALES = ['presion_sistolica', 'presion_diastolica', 'temperatura', 'saturacion', 'glucemia'];
 const ROLES_RELEVO = ['suplente', 'franquero', 'emergencia', 'familiar'];
 const TIPOS_PERSONAL_EMERGENCIA = ['franquero', 'emergencia'];
 

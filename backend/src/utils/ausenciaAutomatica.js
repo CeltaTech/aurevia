@@ -24,11 +24,16 @@ export async function revisarAusenciasAutomaticas() {
   const ahora = new Date();
 
   for (const { prestadora_id: prestadoraId, minutos_tolerancia_checkin: minutosTolerancia } of configuraciones) {
+    // `.not('asistente_id', 'is', null)` no es un detalle: una guardia sin cubrir también
+    // llega a su hora sin que nadie marque llegada, pero eso no es una ausencia — no hay
+    // nadie que haya faltado. Sin este filtro, cada hueco de la agenda se marcaría como
+    // "Ausente sin relevo previo", que es la alerta más grave del sistema, contra nadie.
     const { data: guardias, error: errorGuardias } = await supabase
       .from('guardias')
       .select('id, paciente_id, fecha, hora_inicio')
       .eq('prestadora_id', prestadoraId)
       .eq('estado', 'programada')
+      .not('asistente_id', 'is', null)
       .is('checkin_at', null);
 
     if (errorGuardias) {

@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
+import { claseBadge } from '../../lib/tonos';
 import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
@@ -70,7 +71,7 @@ export function CertificadoTab({ asistente }) {
         {certificado ? (
           <div className="panel-card-verificacion">
             <p>
-              <span className={`badge ${certificado.activo ? 'badge-aprobado' : 'badge-rechazado'}`}>
+              <span className={claseBadge(certificado.activo ? 'activo' : 'inactivo')}>
                 {certificado.activo ? t.asistentes.certificado.estado_activo : t.asistentes.certificado.estado_inactivo}
               </span>
             </p>

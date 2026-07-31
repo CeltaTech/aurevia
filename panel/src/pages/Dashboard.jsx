@@ -382,7 +382,7 @@ function OnboardingChecklist({
               <span className="onboarding-paso-explicacion">{paso.explicacion}</span>
             </div>
             {paso.hecho ? (
-              <span className="badge badge-aprobado">{t.onboarding.paso_completado}</span>
+              <span className="badge badge-exito">{t.onboarding.paso_completado}</span>
             ) : (
               !informativo && (
                 <Link to={paso.ruta} className="btn btn-secondary">

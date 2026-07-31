@@ -8,6 +8,7 @@ import { useFormulasCese } from '../../hooks/useFormulasCese';
 import { resolverEscalasVigentes, resolverFormulasVigentes } from '../../lib/escalasLegales';
 import { calcularCese } from '../../lib/calcularCese';
 import { supabase } from '../../lib/supabaseClient';
+import { TONO, claseBadgeTono } from '../../lib/tonos';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
@@ -153,9 +154,9 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
                 <td>{c.monto_total !== null ? `$${Number(c.monto_total).toLocaleString('es-AR')}` : '—'}</td>
                 <td>
                   {c.revisado_por_abogado ? (
-                    <span className="badge badge-completada">{t.comun.si}</span>
+                    <span className={claseBadgeTono(TONO.EXITO)}>{t.comun.si}</span>
                   ) : (
-                    <span className="badge badge-en_revision">{t.comun.no}</span>
+                    <span className={claseBadgeTono(TONO.ATENCION)}>{t.comun.no}</span>
                   )}
                 </td>
                 <td>

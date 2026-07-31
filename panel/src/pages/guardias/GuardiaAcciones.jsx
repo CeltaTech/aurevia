@@ -8,6 +8,7 @@ import { useMotivosAvisoPrevio } from '../../hooks/useMotivosAvisoPrevio';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
+import { COBERTURA, claveTextoCobertura, coberturaDeGuardia } from '../../lib/cobertura';
 
 export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose, onActualizada }) {
   const { t } = useLocale();
@@ -140,12 +141,32 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
     onClose();
   }
 
-  const puedeRegistrarSalida = guardia.estado === 'programada' && !guardia.salida_checkin_at;
-  const puedeRegistrarLlegada = guardia.estado === 'programada' && !guardia.checkin_at;
-  const muestraCheckout = guardia.estado === 'activa' && !guardia.checkout_at;
+  // Publicar la guardia como disponible para que un Asistente la tome, o dejar de ofrecerla.
+  // Solo tiene sentido mientras no haya nadie asignado.
+  function handlePublicar() {
+    actualizar({ ofrecida_at: new Date().toISOString(), ofrecida_por: usuario.id });
+  }
+
+  function handleDespublicar() {
+    actualizar({ ofrecida_at: null, ofrecida_por: null });
+  }
+
+  // La cobertura es una pregunta aparte del estado de la guardia: "¿hay alguien que la
+  // haga?", no "¿en qué momento de su vida está?". Sale del punto único de verdad
+  // (lib/cobertura.js) para que ninguna pantalla la vuelva a deducir por su cuenta.
+  const cobertura = coberturaDeGuardia(guardia);
+  const tieneAsistente = cobertura === COBERTURA.CUBIERTA;
+
+  // Sin Asistente asignado no hay nada que registrar: nadie sale de su casa, nadie llega,
+  // nadie se retira y nadie faltó. La base también lo impide, pero mostrar botones que van a
+  // fallar es peor que no mostrarlos.
+  const puedeRegistrarSalida = tieneAsistente && guardia.estado === 'programada' && !guardia.salida_checkin_at;
+  const puedeRegistrarLlegada = tieneAsistente && guardia.estado === 'programada' && !guardia.checkin_at;
+  const muestraCheckout = tieneAsistente && guardia.estado === 'activa' && !guardia.checkout_at;
   const puedeCancelar = guardia.estado === 'programada' || guardia.estado === 'activa';
-  const puedeMarcarAusente = guardia.estado === 'programada';
+  const puedeMarcarAusente = tieneAsistente && guardia.estado === 'programada';
   const puedeReasignar = guardia.estado === 'programada' || guardia.estado === 'ausente';
+  const puedeOfrecer = !tieneAsistente && guardia.estado === 'programada';
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
@@ -160,7 +181,7 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
           <dt>{t.guardias.detalle.horario}</dt>
           <dd>{guardia.hora_inicio} – {guardia.hora_fin}</dd>
           <dt>{t.guardias.detalle.asistente}</dt>
-          <dd>{guardia.asistente_nombre}</dd>
+          <dd>{tieneAsistente ? guardia.asistente_nombre : t.guardias[claveTextoCobertura(guardia)]}</dd>
           <dt>{t.guardias.detalle.paciente}</dt>
           <dd>{guardia.paciente_nombre}</dd>
           <dt>{t.guardias.detalle.modalidad}</dt>
@@ -168,6 +189,25 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
           <dt>{t.guardias.detalle.estado}</dt>
           <dd>{t.guardias[`estado_${guardia.estado}`]}</dd>
         </dl>
+
+        {puedeOfrecer && (
+          <div className="panel-resultado-calculo">
+            {cobertura === COBERTURA.OFRECIDA ? (
+              <>
+                <p className="panel-explicacion">
+                  {t.guardias.publicada_el.replace('{fecha}', new Date(guardia.ofrecida_at).toLocaleString())}
+                </p>
+                <Button variant="secondary" onClick={handleDespublicar} disabled={procesando}>
+                  {t.guardias.despublicar}
+                </Button>
+              </>
+            ) : (
+              <Button variant="secondary" onClick={handlePublicar} disabled={procesando}>
+                {procesando ? t.guardias.publicando : t.guardias.publicar}
+              </Button>
+            )}
+          </div>
+        )}
 
         {puedeRegistrarSalida && (
           <div className="panel-resultado-calculo">

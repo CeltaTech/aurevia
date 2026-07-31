@@ -78,7 +78,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
     if (!esSerie) {
       const { error: errorInsert } = await supabase.from('guardias').insert({
         prestadora_id: usuario.prestadora_id,
-        asistente_id: asistenteId,
+        asistente_id: asistenteId || null,
         paciente_id: pacienteId,
         fecha,
         hora_inicio: horaInicio,
@@ -98,7 +98,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
       .from('series_guardias')
       .insert({
         prestadora_id: usuario.prestadora_id,
-        asistente_id: asistenteId,
+        asistente_id: asistenteId || null,
         paciente_id: pacienteId,
         dias_semana: diasSemana,
         hora_inicio: horaInicio,
@@ -120,7 +120,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
     const filasGuardias = fechas.map((f) => ({
       prestadora_id: usuario.prestadora_id,
       serie_id: serie.id,
-      asistente_id: asistenteId,
+      asistente_id: asistenteId || null,
       paciente_id: pacienteId,
       fecha: f,
       hora_inicio: horaInicio,
@@ -155,19 +155,22 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
             onChange={(e) => setEsSerie(e.target.checked)}
           />
 
+          {/* El Asistente dejó de ser obligatorio: una guardia puede crearse sin nadie todavía.
+              Es el caso más común de una Prestadora — se sabe que el martes hay que cubrir a
+              este Paciente antes de saber quién lo va a hacer. */}
           <FormField
             label={t.guardias.nueva_guardia.asistente}
             name="asistente_id"
             type="select"
-            required
             value={asistenteId}
             onChange={(e) => setAsistenteId(e.target.value)}
           >
-            <option value="">{t.guardias.nueva_guardia.elegir}</option>
+            <option value="">{t.guardias.nueva_guardia.sin_asistente}</option>
             {asistentes.map((a) => (
               <option key={a.id} value={a.id}>{a.nombre}</option>
             ))}
           </FormField>
+          <p className="panel-explicacion">{t.guardias.nueva_guardia.sin_asistente_ayuda}</p>
 
           <FormField
             label={t.guardias.nueva_guardia.paciente}

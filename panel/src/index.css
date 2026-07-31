@@ -1,7 +1,22 @@
 :root {
   font: 16px/145% var(--font-body);
   color: var(--texto-principal);
-  background: var(--fondo-alt);
+  background: var(--fondo-app);
+  /* `color-scheme` le avisa al navegador de qué modo está el Panel. Sin esto, las piezas que
+     dibuja el navegador y no nosotros —la barra de desplazamiento, el calendario que se abre
+     al tocar una fecha, la lista de un desplegable— se siguen viendo blancas en modo oscuro.
+     `light dark` significa: soportamos los dos, elegí según lo que esté puesto. */
+  color-scheme: light dark;
+}
+
+/* Cuando la persona eligió el modo a mano, se le dice al navegador cuál es, así sus piezas
+   propias acompañan la elección y no la preferencia de la computadora. */
+:root[data-tema='claro'] {
+  color-scheme: light;
+}
+
+:root[data-tema='oscuro'] {
+  color-scheme: dark;
 }
 
 * {
@@ -14,14 +29,14 @@ body {
 
 h1 {
   font-family: var(--font-display);
-  color: var(--azul-oscuro);
+  color: var(--texto-titulo);
   font-size: 1.75rem;
   margin: 0 0 1.25rem;
 }
 
 h2 {
   font-family: var(--font-display);
-  color: var(--azul-oscuro);
+  color: var(--texto-titulo);
   font-size: 1.35rem;
   margin: 0 0 1rem;
 }
@@ -55,7 +70,7 @@ h2 {
 
 .btn-primary {
   background: var(--azul-medio);
-  color: #FFFFFF !important;
+  color: var(--texto-sobre-color) !important;
 }
 
 .btn-secondary {
@@ -92,7 +107,7 @@ h2 {
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--borde-card);
   border-radius: 8px;
-  background: #FFFFFF;
+  background: var(--superficie);
   color: var(--texto-principal);
 }
 
@@ -122,22 +137,25 @@ h2 {
   font-weight: 500;
 }
 
+/* Las tres alertas salen de los mismos tonos de señal que los carteles de estado, para que
+   "rojo" quiera decir lo mismo en toda la pantalla. Ver `src/lib/tonos.js`. */
 .alert-error {
-  background: var(--rojo-peligro-bg);
+  background: var(--tono-critico-fondo);
   border-left: 4px solid var(--rojo-peligro);
-  color: oklch(0.4 0.15 25);
+  color: var(--tono-critico-texto);
 }
 
 .alert-info {
-  background: var(--fondo-alt);
+  background: var(--tono-info-fondo);
   border-left: 4px solid var(--azul-medio);
-  color: var(--azul-oscuro);
+  color: var(--tono-info-texto);
 }
 
+/* Antes esta alerta era naranja sobre naranja y prácticamente no se leía. */
 .alert-warning {
-  background: var(--naranja-alerta);
-  border-left: 4px solid var(--naranja-alerta-texto);
-  color: var(--naranja-alerta-texto);
+  background: var(--tono-atencion-fondo);
+  border-left: 4px solid var(--naranja-alerta);
+  color: var(--tono-atencion-texto);
 }
 
 /* ---------- Login ---------- */
@@ -147,11 +165,11 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--azul-oscuro);
+  background: var(--barra-fondo);
 }
 
 .login-card {
-  background: #FFFFFF;
+  background: var(--superficie);
   padding: 2.5rem;
   border-radius: 16px;
   width: 100%;
@@ -180,8 +198,8 @@ h2 {
 
 .panel-sidebar {
   width: 232px;
-  background: var(--azul-oscuro);
-  color: #FFFFFF;
+  background: var(--barra-fondo);
+  color: var(--barra-texto);
   padding: 1.5rem 1rem;
   flex-shrink: 0;
 }
@@ -203,7 +221,7 @@ h2 {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--barra-texto-tenue);
   padding: 0.75rem 0.75rem 0.15rem 1.5rem;
 }
 
@@ -213,19 +231,19 @@ h2 {
 
 .panel-sidebar nav a {
   position: relative;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--barra-texto);
   text-decoration: none;
   padding: 0.6rem 0.75rem 0.6rem 1.5rem;
   border-radius: 8px;
 }
 
 .panel-sidebar nav a:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #FFFFFF;
+  background: var(--barra-hover);
+  color: var(--barra-texto-activo);
 }
 
 .panel-sidebar nav a.active {
-  color: #FFFFFF;
+  color: var(--barra-texto-activo);
   font-weight: 600;
 }
 
@@ -255,7 +273,7 @@ h2 {
   gap: 1rem;
   padding: 0.75rem 1.5rem;
   background: var(--naranja-alerta);
-  color: #FFFFFF;
+  color: var(--texto-sobre-color);
   font-weight: 600;
   font-size: 0.9rem;
   position: sticky;
@@ -270,7 +288,7 @@ h2 {
 }
 
 .banner-sesion-tenant-salir {
-  background: #FFFFFF;
+  background: var(--superficie);
   border: none;
   color: var(--naranja-alerta-texto);
   border-radius: 999px;
@@ -299,14 +317,46 @@ h2 {
   justify-content: flex-end;
   gap: 1rem;
   padding: 1rem 1.5rem;
-  background: #FFFFFF;
+  background: var(--superficie);
   border-bottom: 1px solid var(--borde-card);
 }
 
 .panel-usuario {
   margin-right: auto;
   font-weight: 600;
-  color: var(--azul-oscuro);
+  color: var(--texto-titulo);
+}
+
+/* Las tres preferencias personales del encabezado: idioma, tema y densidad. Son elecciones
+   de quien mira la pantalla, no datos de la Prestadora, así que van juntas y discretas. */
+.panel-preferencias {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.panel-preferencias select {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--borde-card);
+  border-radius: 8px;
+  background: var(--superficie);
+  color: var(--texto-principal);
+}
+
+/* Rótulo que existe solo para los lectores de pantalla: sin él, tres desplegables seguidos
+   sin nombre son tres cajas sin sentido para quien no ve la pantalla. */
+.solo-lectores-pantalla {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .panel-logout {
@@ -331,7 +381,7 @@ h2 {
 /* ---------- Checklist de configuración inicial (onboarding) ---------- */
 
 .onboarding-checklist {
-  background: #FFFFFF;
+  background: var(--superficie);
   border: 1px solid var(--borde-card);
   border-radius: 12px;
   padding: 1.25rem 1.5rem;
@@ -418,7 +468,7 @@ h2 {
 }
 
 .metrica-card {
-  background: #FFFFFF;
+  background: var(--superficie);
   border: 1px solid var(--borde-card);
   border-radius: 12px;
   padding: 1.5rem;
@@ -454,7 +504,7 @@ h2 {
   font-family: var(--font-display);
   font-size: 2rem;
   font-weight: 700;
-  color: var(--azul-oscuro);
+  color: var(--texto-titulo);
 }
 
 .metrica-label {
@@ -475,7 +525,7 @@ h2 {
 .dashboard-seccion-titulo {
   font-family: var(--font-display);
   font-size: 1.15rem;
-  color: var(--azul-oscuro);
+  color: var(--texto-titulo);
   margin: 0;
 }
 
@@ -494,7 +544,7 @@ h2 {
 }
 
 .lista-tarjeta {
-  background: #FFFFFF;
+  background: var(--superficie);
   border: 1px solid var(--borde-card);
   border-radius: 12px;
   padding: 1.25rem;
@@ -512,7 +562,7 @@ h2 {
 
 .lista-tarjeta-titulo {
   font-weight: 600;
-  color: var(--azul-oscuro);
+  color: var(--texto-titulo);
   font-size: 1.05rem;
   margin: 0;
 }
@@ -562,6 +612,17 @@ h2 {
   flex: 1;
 }
 
+/* ---------- Los cuatro estados de una lista ----------
+   Cargando, error, vacío y listo (`CLAUDE.md` §7 regla 3). El vacío son en realidad DOS
+   situaciones distintas, y hasta acá el Panel las trataba igual:
+
+     · "todavía no hay nada"      → nunca se cargó un solo dato. La salida es crear el primero.
+     · "el filtro no encontró nada" → hay datos, pero el filtro los tapó todos. La salida es
+                                      sacar el filtro, no crear nada.
+
+   Mostrar el mismo cartel en los dos casos hace que alguien crea que perdió los datos
+   cuando en realidad tiene un filtro puesto. Ver `components/layout/EstadoLista.jsx`. */
+
 .estado-cargando,
 .estado-vacio {
   padding: 2rem;
@@ -574,31 +635,74 @@ h2 {
   flex-direction: column;
   align-items: center;
   gap: 0.75rem;
+  padding: 1.5rem;
+  background: var(--superficie-hundida);
+  border: 1px dashed var(--borde-card);
+  border-radius: 12px;
 }
 
 .estado-vacio-bloque .estado-vacio {
   padding-bottom: 0;
 }
 
+.estado-vacio-titulo {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--texto-titulo);
+  margin: 0;
+}
+
+/* Una barra que gira mientras se cargan los datos. Es preferible a la palabra "Cargando"
+   sola: se entiende sin leer, y en un idioma que no sea el propio también. */
+.estado-cargando::before {
+  content: '';
+  display: block;
+  width: 22px;
+  height: 22px;
+  margin: 0 auto 0.75rem;
+  border: 2px solid var(--borde-card);
+  border-top-color: var(--azul-medio);
+  border-radius: 50%;
+  animation: panel-girar 0.8s linear infinite;
+}
+
+@keyframes panel-girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .panel-tabla {
   width: 100%;
   border-collapse: collapse;
-  background: #FFFFFF;
+  background: var(--superficie);
   border-radius: 12px;
   overflow: hidden;
 }
 
+/* El alto y el tamaño de letra de cada renglón salen de la densidad que eligió la persona
+   en el encabezado. Ver `src/context/PreferenciasVistaContext.jsx`. */
 .panel-tabla th,
 .panel-tabla td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--fondo-alt);
+  padding: var(--densidad-fila-y) 1rem;
+  border-bottom: 1px solid var(--borde-card);
   text-align: left;
-  font-size: 0.9rem;
+  font-size: var(--densidad-fila-texto);
+}
+
+.panel-tabla tbody tr:hover {
+  background: var(--superficie-hover);
 }
 
 .panel-tabla th {
-  background: var(--fondo-alt);
-  color: var(--azul-oscuro);
+  background: var(--superficie-hundida);
+  color: var(--texto-titulo);
+}
+
+/* Los números se leen mucho peor cuando cada dígito tiene un ancho distinto: las columnas
+   de importes y de cantidades dejan de estar alineadas. Esto los hace todos del mismo ancho. */
+.panel-tabla td {
+  font-variant-numeric: tabular-nums;
 }
 
 .panel-tabla button {
@@ -628,84 +732,48 @@ h2 {
   gap: 0.75rem;
 }
 
+/* ---------- Carteles de estado ----------
+   CINCO reglas, no una por cada estado del negocio. Antes había veinte reglas que repetían
+   los mismos tres colores, y alguna pantalla pedía una clase que ni siquiera existía —el
+   cartel salía gris sin que nadie se enterara—. Qué estado corresponde a qué tono se decide
+   en un solo lugar: `src/lib/tonos.js`. De qué color es cada tono se decide en otro solo
+   lugar: `src/styles/variables.css`. Acá no se decide nada, solo se arma el cartel.
+
+   En una pantalla: <span className={claseBadge(f.estado)}>…</span> */
+
 .badge {
   display: inline-block;
   padding: 0.25rem 0.7rem;
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 600;
-  background: var(--fondo-alt);
-  color: var(--texto-secundario);
+  background: var(--tono-neutro-fondo);
+  color: var(--tono-neutro-texto);
 }
 
-.badge-aprobado,
-.badge-asignada,
-.badge-completada {
-  background: oklch(0.55 0.13 165 / 0.12);
-  color: oklch(0.4 0.13 165);
+.badge-exito {
+  background: var(--tono-exito-fondo);
+  color: var(--tono-exito-texto);
 }
 
-.badge-rechazado,
-.badge-cancelada {
-  background: oklch(0.58 0.15 25 / 0.12);
-  color: oklch(0.45 0.15 25);
+.badge-atencion {
+  background: var(--tono-atencion-fondo);
+  color: var(--tono-atencion-texto);
 }
 
-.badge-en_revision,
-.badge-en_gestion {
-  background: oklch(0.62 0.13 70 / 0.12);
-  color: oklch(0.45 0.13 70);
+.badge-critico {
+  background: var(--tono-critico-fondo);
+  color: var(--tono-critico-texto);
 }
 
-.badge-certificada,
-.badge-pagada {
-  background: oklch(0.55 0.13 165 / 0.12);
-  color: oklch(0.4 0.13 165);
+.badge-info {
+  background: var(--tono-info-fondo);
+  color: var(--tono-info-texto);
 }
 
-.badge-suspendida,
-.badge-dada_de_baja,
-.badge-vencida {
-  background: oklch(0.58 0.15 25 / 0.12);
-  color: oklch(0.45 0.15 25);
-}
-
-.badge-prospecto,
-.badge-en_certificacion,
-.badge-pendiente {
-  background: oklch(0.62 0.13 70 / 0.12);
-  color: oklch(0.45 0.13 70);
-}
-
-.badge-evv-verificado {
-  background: oklch(0.55 0.13 165 / 0.12);
-  color: oklch(0.4 0.13 165);
-}
-
-.badge-evv-fuera_de_rango {
-  background: oklch(0.58 0.15 25 / 0.12);
-  color: oklch(0.45 0.15 25);
-}
-
-.badge-evv-sin_datos,
-.badge-evv-sin_domicilio {
-  background: var(--fondo-alt);
-  color: var(--texto-secundario);
-}
-
-.badge-vigente {
-  background: oklch(0.55 0.13 165 / 0.12);
-  color: oklch(0.4 0.13 165);
-}
-
-.badge-por_vencer {
-  background: oklch(0.62 0.13 70 / 0.12);
-  color: oklch(0.45 0.13 70);
-}
-
-.badge-vencido {
-  background: oklch(0.58 0.15 25 / 0.12);
-  color: oklch(0.45 0.15 25);
+.badge-neutro {
+  background: var(--tono-neutro-fondo);
+  color: var(--tono-neutro-texto);
 }
 
 /* ---------- Comunicación interna (tipo chat) ---------- */
@@ -729,13 +797,20 @@ h2 {
 
 .panel-chat-burbuja-propia {
   align-self: flex-end;
-  background: oklch(0.65 0.13 250 / 0.12);
+  background: var(--tono-info-fondo);
+}
+
+/* Respuesta que redactó la inteligencia artificial y todavía no salió: se ve distinta
+   (borde punteado) para que no se confunda con un mensaje realmente enviado. */
+.panel-chat-burbuja-borrador {
+  border: 1px dashed var(--borde-card);
+  background: transparent;
 }
 
 .panel-chat-burbuja-autor {
   font-family: var(--font-display);
   font-size: 0.8rem;
-  color: var(--azul-oscuro);
+  color: var(--texto-titulo);
   margin-bottom: 0.15rem;
 }
 
@@ -801,13 +876,28 @@ h2 {
 }
 
 .panel-comunicacion-item-activo {
-  background: oklch(0.65 0.13 250 / 0.1);
+  background: var(--tono-info-fondo);
 }
 
 .panel-comunicacion-item-nombre {
   font-family: var(--font-display);
   color: var(--texto-principal);
   margin-bottom: 0.2rem;
+}
+
+.panel-comunicacion-item-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.15rem;
+}
+
+.panel-comunicacion-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .panel-comunicacion-item-preview {
@@ -819,7 +909,7 @@ h2 {
 }
 
 .panel-comunicacion-hilo {
-  background: #FFFFFF;
+  background: var(--superficie);
   border: 1px solid var(--borde-card);
   border-radius: 12px;
   padding: 1rem 1.25rem;
@@ -835,7 +925,7 @@ h2 {
 }
 
 .panel-kpi-card {
-  background: #FFFFFF;
+  background: var(--superficie);
   border: 1px solid var(--borde-card);
   border-radius: 12px;
   padding: 1.1rem 1.25rem;
@@ -843,7 +933,7 @@ h2 {
 
 .panel-kpi-valor {
   font-family: var(--font-display);
-  color: var(--azul-oscuro);
+  color: var(--texto-titulo);
   font-size: 1.6rem;
   font-weight: 700;
 }
@@ -902,7 +992,7 @@ h2 {
 .panel-modal-fondo {
   position: fixed;
   inset: 0;
-  background: oklch(0.2 0.01 250 / 0.5);
+  background: var(--velo-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -911,7 +1001,7 @@ h2 {
 }
 
 .panel-modal {
-  background: #FFFFFF;
+  background: var(--superficie);
   border-radius: 16px;
   padding: 2rem;
   width: 100%;
@@ -929,7 +1019,7 @@ h2 {
 
 .panel-detalle-lista dt {
   font-weight: 700;
-  color: var(--azul-oscuro);
+  color: var(--texto-titulo);
   font-size: 0.85rem;
 }
 
@@ -949,6 +1039,55 @@ h2 {
   justify-content: flex-end;
   gap: 0.75rem;
   margin-top: 1rem;
+}
+
+/* Bloque de detalle que se abre debajo de una tabla, sin tapar la pantalla.
+   A diferencia del modal, deja la lista a la vista mientras se lee el detalle. */
+.panel-detalle {
+  background: var(--superficie);
+  border: 1px solid var(--borde-card);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.panel-detalle-encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.panel-detalle-encabezado h2 {
+  margin: 0;
+}
+
+/* Un campo del reporte diario: rótulo arriba, contenido abajo.
+   Mismas clases que usan las PWA de Familias y Asistentes, para que el
+   reporte se lea igual en las tres aplicaciones. */
+.reporte-preview-campo {
+  margin-bottom: 0.75rem;
+}
+
+.reporte-preview-campo label {
+  font-weight: 700;
+  color: var(--texto-titulo);
+  font-size: 0.8rem;
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.signo-vital-normal {
+  color: var(--verde-exito-texto);
+}
+
+.signo-vital-alerta {
+  color: var(--rojo-peligro);
+  font-weight: 600;
+}
+
+.signo-vital-aviso {
+  font-size: 0.85em;
 }
 
 /* ---------- Módulo 4: Plantel de Asistentes ---------- */
@@ -982,12 +1121,12 @@ h2 {
 }
 
 .panel-tab-activo {
-  color: var(--azul-oscuro);
+  color: var(--texto-titulo);
   border-bottom-color: var(--azul-medio);
 }
 
 .panel-resultado-calculo {
-  background: #FFFFFF;
+  background: var(--superficie);
   border: 1px solid var(--borde-card);
   border-radius: 12px;
   padding: 1.25rem;
@@ -996,7 +1135,7 @@ h2 {
 
 
 .panel-card-ausencia {
-  background: #FFFFFF;
+  background: var(--superficie);
   border: 1px solid var(--borde-card);
   border-radius: 12px;
   padding: 1.25rem;
@@ -1004,7 +1143,7 @@ h2 {
 }
 
 .panel-card-verificacion {
-  background: #FFFFFF;
+  background: var(--superficie);
   border: 1px solid var(--borde-card);
   border-radius: 12px;
   padding: 1.25rem;
@@ -1032,11 +1171,11 @@ h2 {
 .panel-guardia-dia-titulo {
   margin-top: 1.5rem;
   margin-bottom: 0.5rem;
-  color: var(--azul-oscuro);
+  color: var(--texto-titulo);
 }
 
 .panel-guardia-card {
-  background: #FFFFFF;
+  background: var(--superficie);
   border-radius: 12px;
   padding: 1rem 1.25rem;
   margin-bottom: 0.75rem;
@@ -1055,9 +1194,30 @@ h2 {
 .guardia-ausente    { border-left: 4px solid var(--naranja-alerta); }
 
 .panel-guardia-alerta {
-  color: oklch(0.45 0.15 25);
+  color: var(--tono-critico-texto);
   font-weight: 600;
   font-size: 0.85rem;
+}
+
+/* Cobertura de la guardia: ¿hay alguien que la haga? Es una pregunta distinta del estado
+   (en qué momento de su vida está), por eso se pinta con otro recurso visual: el estado usa
+   la barra de color a la izquierda y la cobertura usa el borde punteado, que se lee como
+   "esto todavía no está cerrado". Una guardia cubierta no lleva nada — es lo normal. */
+.panel-cobertura-sin_cubrir,
+.panel-cobertura-ofrecida {
+  border: 1px dashed var(--naranja-alerta);
+  background: var(--fondo-alt);
+}
+
+.panel-guardia-cobertura {
+  color: var(--naranja-alerta);
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+/* La fila de los huecos va arriba de todo en la grilla y se distingue del resto. */
+.panel-guardias-fila-sin-cubrir {
+  color: var(--naranja-alerta);
 }
 
 .panel-filtros-tarjeta {
@@ -1065,7 +1225,7 @@ h2 {
   flex-wrap: wrap;
   gap: 0.75rem;
   align-items: center;
-  background: #FFFFFF;
+  background: var(--superficie);
   border: 1px solid var(--borde-card);
   border-radius: 12px;
   padding: 1rem 1.25rem;
@@ -1081,7 +1241,7 @@ h2 {
 }
 
 .panel-guardias-grid-tarjeta {
-  background: #FFFFFF;
+  background: var(--superficie);
   border: 1px solid var(--borde-card);
   border-radius: 12px;
   padding: 1.25rem;
@@ -1100,7 +1260,7 @@ h2 {
 
 .panel-guardias-grid-header {
   font-weight: 700;
-  color: var(--azul-oscuro);
+  color: var(--texto-titulo);
   padding: 0.5rem;
   text-transform: capitalize;
 }
@@ -1128,7 +1288,7 @@ h2 {
 }
 
 .panel-guardia-chip {
-  background: #FFFFFF;
+  background: var(--superficie);
   border-radius: 8px;
   padding: 0.4rem 0.6rem;
   font-size: 0.8rem;
@@ -1154,12 +1314,12 @@ h2 {
 }
 
 .informe-obra-social-contenido h3 {
-  color: var(--azul-oscuro);
+  color: var(--texto-titulo);
   margin-top: 0;
 }
 
 .informe-obra-social-contenido h4 {
-  color: var(--azul-oscuro);
+  color: var(--texto-titulo);
   margin-bottom: 0.5rem;
 }
 

@@ -26,6 +26,10 @@ function asegurarConfiguracion() {
 // Devuelve true si al menos una suscripción recibió el push con éxito — lo necesita Fase 11
 // (revisarRecordatoriosPush.js) para decidir si cae a WhatsApp de respaldo.
 async function enviarPush(columna, id, { titulo, cuerpo, url }) {
+  // Sin destinatario no hay push. Pasa cuando la guardia está sin cubrir: no hay Asistente
+  // a quien avisarle. Se corta acá y no en cada llamador, para no repetir la misma
+  // verificación en todos lados.
+  if (!id) return false;
   if (!asegurarConfiguracion()) {
     console.error('Push no configurado: falta VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY');
     return false;

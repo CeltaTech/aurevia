@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
 import { esAdminOSuperior } from '../lib/roles';
+import { claseBadge } from '../lib/tonos';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
+import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
 import { ListaPrecioDetalle } from './ListaPrecioDetalle';
@@ -11,7 +13,7 @@ export function ListaPrecios() {
   const { t } = useLocale();
   const { usuario } = useAuth();
   const { filas, estado, error, recargar } = useSupabaseTable('lista_precios', { orderBy: 'created_at' });
-  const [busqueda, setBusqueda] = useState('');
+  const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '' });
   const [seleccionado, setSeleccionado] = useState(null);
   const [creandoNuevo, setCreandoNuevo] = useState(false);
 
@@ -19,11 +21,11 @@ export function ListaPrecios() {
 
   const filasFiltradas = useMemo(() => {
     return filas.filter((p) => {
-      if (!busqueda) return true;
-      const b = busqueda.toLowerCase();
+      if (!f.busqueda) return true;
+      const b = f.busqueda.toLowerCase();
       return p.tipo_servicio?.toLowerCase().includes(b) || p.modalidad?.toLowerCase().includes(b);
     });
-  }, [filas, busqueda]);
+  }, [filas, f]);
 
   return (
     <div>
@@ -34,13 +36,20 @@ export function ListaPrecios() {
         <input
           type="text"
           placeholder={t.lista_precios.buscar}
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
+          value={f.busqueda}
+          onChange={(e) => set('busqueda', e.target.value)}
         />
         {esAdmin && <Button onClick={() => setCreandoNuevo(true)}>{t.lista_precios.nuevo}</Button>}
       </div>
 
-      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && filasFiltradas.length === 0} recargar={recargar}>
+      <EstadoLista
+        estado={estado}
+        error={error}
+        vacio={estado === 'listo' && filasFiltradas.length === 0}
+        recargar={recargar}
+        filtrado={hayFiltros}
+        onLimpiarFiltros={limpiar}
+      >
         <table className="panel-tabla">
           <thead>
             <tr>
@@ -60,7 +69,7 @@ export function ListaPrecios() {
                 <td>{p.precio}</td>
                 <td>{new Date(p.vigente_desde).toLocaleDateString()}</td>
                 <td>
-                  <span className={`badge badge-${p.activo ? 'aprobado' : 'rechazado'}`}>
+                  <span className={claseBadge(p.activo ? 'activo' : 'inactivo')}>
                     {p.activo ? t.lista_precios.activo_si : t.lista_precios.activo_no}
                   </span>
                 </td>

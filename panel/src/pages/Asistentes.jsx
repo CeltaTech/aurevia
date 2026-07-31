@@ -4,7 +4,9 @@ import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
 import { usePermisos } from '../context/PermisosContext';
 import { esAdminOSuperior } from '../lib/roles';
+import { claseBadge } from '../lib/tonos';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
+import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
 import { NuevoAsistenteModal } from './asistentes/NuevoAsistenteModal';
@@ -20,20 +22,19 @@ export function Asistentes() {
   const puedeAltaManual = esAdmin || puede('alta_manual_asistente');
   // Coordinador consulta la vista sin vínculo laboral/score de riesgo — ver schema_etapa2i.sql.
   const { filas, estado, error, recargar } = useSupabaseTable(esAdmin ? 'asistentes' : 'asistentes_coordinador', { orderBy: 'created_at' });
-  const [busqueda, setBusqueda] = useState('');
-  const [filtroEstado, setFiltroEstado] = useState('');
+  const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '', estado: '' });
   const [mostrarNuevo, setMostrarNuevo] = useState(false);
 
   const filasFiltradas = useMemo(() => {
     return filas.filter((a) => {
       const coincideBusqueda =
-        !busqueda ||
-        a.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-        a.email?.toLowerCase().includes(busqueda.toLowerCase());
-      const coincideEstado = !filtroEstado || a.estado === filtroEstado;
+        !f.busqueda ||
+        a.nombre?.toLowerCase().includes(f.busqueda.toLowerCase()) ||
+        a.email?.toLowerCase().includes(f.busqueda.toLowerCase());
+      const coincideEstado = !f.estado || a.estado === f.estado;
       return coincideBusqueda && coincideEstado;
     });
-  }, [filas, busqueda, filtroEstado]);
+  }, [filas, f]);
 
   return (
     <div>
@@ -43,10 +44,10 @@ export function Asistentes() {
         <input
           type="text"
           placeholder={t.asistentes.buscar}
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
+          value={f.busqueda}
+          onChange={(e) => set('busqueda', e.target.value)}
         />
-        <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
+        <select value={f.estado} onChange={(e) => set('estado', e.target.value)}>
           <option value="">{t.comun.todos}</option>
           {ESTADOS.map((e) => (
             <option key={e} value={e}>
@@ -72,6 +73,8 @@ export function Asistentes() {
         error={error}
         vacio={estado === 'listo' && filasFiltradas.length === 0}
         recargar={recargar}
+        filtrado={hayFiltros}
+        onLimpiarFiltros={limpiar}
         mensajeVacio={filas.length === 0 ? t.asistentes.vacio_texto : undefined}
         accionVacio={
           filas.length === 0 && puedeAltaManual ? (
@@ -87,7 +90,7 @@ export function Asistentes() {
                   <p className="lista-tarjeta-titulo">{a.nombre}</p>
                   <p className="lista-tarjeta-subtitulo">{(a.especialidades || []).join(', ') || '—'}</p>
                 </div>
-                <span className={`badge badge-${a.estado === 'activo' ? 'aprobado' : a.estado === 'cesado' ? 'rechazado' : ''}`}>
+                <span className={claseBadge(a.estado)}>
                   {t.asistentes[`estado_${a.estado}`]}
                 </span>
               </div>

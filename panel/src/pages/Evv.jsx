@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { supabase } from '../lib/supabaseClient';
 import { distanciaKm } from '../lib/distancia';
+import { claseBadge } from '../lib/tonos';
+import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 
 // Umbral de cercanía para considerar un check-in/check-out "verificado" contra el
@@ -32,9 +34,12 @@ export function Evv() {
   const [filas, setFilas] = useState([]);
   const [estadoCarga, setEstadoCarga] = useState('cargando');
   const [error, setError] = useState(null);
-  const [desde, setDesde] = useState(sumarDias(hoyISO(), -7));
-  const [hasta, setHasta] = useState(hoyISO());
-  const [filtro, setFiltro] = useState('');
+  // El rango de fechas arranca en la última semana: se calcula una sola vez, al abrir la pantalla.
+  const filtrosIniciales = useMemo(
+    () => ({ desde: sumarDias(hoyISO(), -7), hasta: hoyISO(), estado: '' }),
+    []
+  );
+  const { f, set, limpiar, hayFiltros } = useFiltros(filtrosIniciales);
 
   const recargar = useCallback(async () => {
     setEstadoCarga('cargando');
@@ -44,8 +49,8 @@ export function Evv() {
       supabase
         .from('guardias')
         .select('id, fecha, hora_inicio, hora_fin, estado, asistente_id, paciente_id, checkin_at, checkin_lat, checkin_lng, checkout_at, checkout_lat, checkout_lng')
-        .gte('fecha', desde)
-        .lte('fecha', hasta)
+        .gte('fecha', f.desde)
+        .lte('fecha', f.hasta)
         .in('estado', ['activa', 'completada'])
         .order('fecha', { ascending: false })
         .order('hora_inicio', { ascending: true }),
@@ -75,16 +80,18 @@ export function Evv() {
 
     setFilas(filasConEstado);
     setEstadoCarga('listo');
-  }, [desde, hasta]);
+    // Solo el rango de fechas se pide al servidor: el filtro de verificación se aplica acá,
+    // en memoria, y no tiene que volver a consultar la base cada vez que cambia.
+  }, [f.desde, f.hasta]);
 
   useEffect(() => {
     recargar();
   }, [recargar]);
 
   const filasFiltradas = useMemo(() => {
-    if (!filtro) return filas;
-    return filas.filter((g) => g.estado_checkin === filtro || g.estado_checkout === filtro);
-  }, [filas, filtro]);
+    if (!f.estado) return filas;
+    return filas.filter((g) => g.estado_checkin === f.estado || g.estado_checkout === f.estado);
+  }, [filas, f]);
 
   return (
     <div>
@@ -94,13 +101,13 @@ export function Evv() {
       <div className="panel-filtros">
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           {t.guardias.filtro_desde}
-          <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
+          <input type="date" value={f.desde} onChange={(e) => set('desde', e.target.value)} />
         </label>
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           {t.guardias.filtro_hasta}
-          <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
+          <input type="date" value={f.hasta} onChange={(e) => set('hasta', e.target.value)} />
         </label>
-        <select value={filtro} onChange={(e) => setFiltro(e.target.value)}>
+        <select value={f.estado} onChange={(e) => set('estado', e.target.value)}>
           <option value="">{t.comun.todos}</option>
           <option value="verificado">{t.evv.estado_verificado}</option>
           <option value="fuera_de_rango">{t.evv.estado_fuera_de_rango}</option>
@@ -114,6 +121,8 @@ export function Evv() {
         error={error}
         vacio={estadoCarga === 'listo' && filasFiltradas.length === 0}
         recargar={recargar}
+        filtrado={hayFiltros}
+        onLimpiarFiltros={limpiar}
       >
         <table className="panel-tabla">
           <thead>
@@ -133,14 +142,14 @@ export function Evv() {
                 <td>{g.paciente_nombre}</td>
                 <td>
                   {g.checkin_at ? (
-                    <span className={`badge badge-evv-${g.estado_checkin}`}>{t.evv[`estado_${g.estado_checkin}`]}</span>
+                    <span className={claseBadge(g.estado_checkin)}>{t.evv[`estado_${g.estado_checkin}`]}</span>
                   ) : (
                     <span className="badge">{t.evv.sin_checkin}</span>
                   )}
                 </td>
                 <td>
                   {g.checkout_at ? (
-                    <span className={`badge badge-evv-${g.estado_checkout}`}>{t.evv[`estado_${g.estado_checkout}`]}</span>
+                    <span className={claseBadge(g.estado_checkout)}>{t.evv[`estado_${g.estado_checkout}`]}</span>
                   ) : (
                     <span className="badge">{t.evv.sin_checkout}</span>
                   )}

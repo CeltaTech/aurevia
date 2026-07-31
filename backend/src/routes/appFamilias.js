@@ -257,7 +257,6 @@ appFamiliasRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRol
     .select('id, estado, hora_inicio, hora_fin, asistente_id')
     .eq('paciente_id', paciente.id)
     .eq('fecha', hoyISO)
-    .not('asistente_id', 'is', null)
     .order('hora_inicio', { ascending: true })
     .limit(1)
     .maybeSingle();
@@ -268,6 +267,25 @@ appFamiliasRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRol
       motivo: 'sin_guardia_hoy',
       asistenteEscaneado,
       guardia: null,
+      certificado: null,
+    });
+  }
+
+  // La guardia de hoy existe pero está sin cubrir. No es lo mismo que "no hay guardia":
+  // hay servicio previsto y nadie asignado, y la Familia tiene que poder distinguirlo —
+  // si no, escanea el QR de alguien que se presentó y el sistema le contesta que hoy no
+  // había nada previsto.
+  if (!guardiaHoy.asistente_id) {
+    return res.json({
+      coincide: false,
+      motivo: 'guardia_sin_cubrir',
+      asistenteEscaneado,
+      guardia: {
+        id: guardiaHoy.id,
+        estado: guardiaHoy.estado,
+        horaInicio: guardiaHoy.hora_inicio,
+        horaFin: guardiaHoy.hora_fin,
+      },
       certificado: null,
     });
   }
@@ -323,6 +341,12 @@ appFamiliasRouter.post('/guardias/:guardiaId/calificar', requiereRolFamilia, asy
     .maybeSingle();
   if (!guardia) {
     return res.status(404).json({ error: 'Guardia no encontrada' });
+  }
+  // Una guardia que quedó sin cubrir no tiene a quién calificar. Sin este corte, el INSERT
+  // manda asistente_id en NULL contra una columna obligatoria y devuelve un 500 sin
+  // explicación.
+  if (!guardia.asistente_id) {
+    return res.status(400).json({ error: 'guardia_sin_asistente' });
   }
 
   const { error } = await supabase.from('calificaciones_asistente').insert({

@@ -3,6 +3,7 @@ import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
 import { supabase } from '../../lib/supabaseClient';
+import { TONO, claseBadgeTono } from '../../lib/tonos';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
@@ -525,9 +526,9 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                       <td>{p.precio_final}</td>
                       <td>
                         {p.requiere_revision ? (
-                          <span className="badge badge-rechazado">{t.prestaciones.a_revisar}</span>
+                          <span className={claseBadgeTono(TONO.ATENCION)}>{t.prestaciones.a_revisar}</span>
                         ) : (
-                          <span className="badge badge-aprobado">{t.prestaciones.al_dia}</span>
+                          <span className={claseBadgeTono(TONO.EXITO)}>{t.prestaciones.al_dia}</span>
                         )}
                       </td>
                       <td>
@@ -763,11 +764,11 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                             <td>{fila.asistentes?.nombre || '—'}</td>
                             <td>
                               {fila.avisado_verbalmente_at ? (
-                                <span className="badge badge-aprobado">{t.prestaciones.aviso_asistente_avisado_verbalmente}</span>
+                                <span className={claseBadgeTono(TONO.EXITO)}>{t.prestaciones.aviso_asistente_avisado_verbalmente}</span>
                               ) : fila.aviso_automatico_enviado_at ? (
-                                <span className="badge badge-rechazado">{t.prestaciones.aviso_asistente_aviso_automatico_enviado}</span>
+                                <span className={claseBadgeTono(TONO.INFO)}>{t.prestaciones.aviso_asistente_aviso_automatico_enviado}</span>
                               ) : (
-                                <span className="badge badge-rechazado">{t.prestaciones.aviso_asistente_pendiente}</span>
+                                <span className={claseBadgeTono(TONO.ATENCION)}>{t.prestaciones.aviso_asistente_pendiente}</span>
                               )}
                             </td>
                             <td>

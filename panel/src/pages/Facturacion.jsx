@@ -3,6 +3,7 @@ import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
 import { useConfirmarDestructivo } from '../context/TenantSessionContext';
 import { supabase } from '../lib/supabaseClient';
+import { claseBadge } from '../lib/tonos';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
@@ -199,7 +200,7 @@ export function Facturacion() {
               <tr key={f.id}>
                 <td>{f.familias?.solicitudes?.nombre || '—'}</td>
                 <td>{Number(f.monto_total).toLocaleString(undefined, { style: 'currency', currency: 'ARS' })}</td>
-                <td><span className={`badge badge-${f.estado}`}>{t.facturacion[`estado_${f.estado}`]}</span></td>
+                <td><span className={claseBadge(f.estado)}>{t.facturacion[`estado_${f.estado}`]}</span></td>
                 <td>{f.fecha_emision}</td>
                 <td>{f.fecha_vencimiento || '—'}</td>
                 <td>

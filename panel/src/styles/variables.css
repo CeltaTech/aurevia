@@ -1,22 +1,266 @@
+/* Sistema de diseño del Panel de Careonys.
+   ========================================
+
+   Este archivo es el ÚNICO lugar donde se decide un color, una tipografía o una medida de
+   espacio del Panel (`CLAUDE.md` §7 regla 6 y regla 12). Ninguna pantalla escribe un color
+   a mano: si una pantalla necesita un color que acá no está, se agrega acá y se le pone
+   nombre — no se lo inventa en su propio archivo.
+
+   Está partido en dos mitades, y la división importa:
+
+   1. LA MARCA. Los cinco colores de Careonys. Son los mismos siempre, de día y de noche,
+      porque son la identidad del producto.
+
+   2. LOS TOKENS. "Token" acá quiere decir: un nombre que dice PARA QUÉ SIRVE el color, no
+      de qué color es. `--superficie` en vez de "blanco". La diferencia no es cosmética:
+      cuando el Panel pasa a modo oscuro, `--superficie` deja de ser blanco y pasa a ser
+      gris oscuro, y todas las pantallas se dan vuelta solas. Si en cambio estuviera escrito
+      "blanco" en 27 lugares, habría que ir a buscar los 27.
+
+   MODO CLARO Y MODO OSCURO. Los tokens se definen tres veces:
+     · una vez en `:root`             → el modo claro, que es el de arranque;
+     · una vez en `prefers-color-scheme: dark` → lo que la persona tenga puesto en su
+       computadora o su teléfono, sin haber elegido nada en el Panel;
+     · una vez en `[data-tema="claro"]` y `[data-tema="oscuro"]` → cuando la persona SÍ
+       eligió a mano desde el Panel, y esa elección tiene que ganarle a la de la
+       computadora, en los dos sentidos (ver `src/context/PreferenciasVistaContext.jsx`).
+
+   POR QUÉ oklch Y NO LOS `#RRGGBB` DE SIEMPRE. En oklch el primer número es el brillo,
+   y es brillo tal como lo ve el ojo humano. Eso permite armar el modo oscuro cambiando
+   solo ese primer número y sabiendo que el color se va a seguir viendo del mismo tono.
+   Con `#RRGGBB` habría que probar a ojo color por color. */
+
 :root {
+  /* ================= 1. LA MARCA ================= */
+  /* Los cinco colores de Careonys. No cambian entre modo claro y oscuro. */
   --azul-oscuro: oklch(0.22 0.02 250);
   --azul-medio: oklch(0.65 0.13 250);
   --verde-exito: oklch(0.55 0.13 165);
   --naranja-alerta: oklch(0.62 0.13 70);
   --rojo-peligro: oklch(0.58 0.15 25);
 
-  /* Variantes "-texto": mismo tono y saturación, más oscuras para llegar a 4.5:1 sobre fondo
-     blanco (WCAG AA). Usar únicamente cuando el color pinta texto — bordes, fondos de
-     alerta y acentos grandes siguen usando la variable base de arriba. */
+  /* ================= 2. LOS TOKENS ================= */
+
+  /* --- Fondos y superficies ---
+     `--fondo-app` es el papel de la pantalla entera.
+     `--superficie` es una tarjeta, una tabla o un modal apoyado encima de ese papel.
+     `--superficie-hundida` es un renglón metido DENTRO de una tarjeta (el encabezado de
+     una tabla, una celda de la grilla): tiene que leerse como un escalón hacia adentro. */
+  --fondo-app: oklch(0.98 0.004 250);
+  --superficie: oklch(1 0 0);
+  --superficie-hundida: oklch(0.98 0.004 250);
+  --superficie-hover: oklch(0.96 0.006 250);
+  --borde-card: oklch(0.9 0.005 250);
+  --sombra-card: 0 1px 2px oklch(0.2 0.01 250 / 0.06);
+  --velo-modal: oklch(0.2 0.01 250 / 0.5);
+
+  /* `--fondo-alt` es el nombre viejo de `--superficie-hundida`. Se mantiene como sinónimo
+     para no romper nada, pero en código nuevo se usa `--superficie-hundida`. */
+  --fondo-alt: var(--superficie-hundida);
+
+  /* --- Texto --- */
+  --texto-principal: oklch(0.2 0.01 250);
+  --texto-secundario: oklch(0.5 0.01 250);
+  --texto-titulo: oklch(0.22 0.02 250);
+  /* Texto que se apoya ENCIMA de un color fuerte (un botón azul, un banner naranja).
+     Es casi blanco en los dos modos, porque abajo siempre tiene un color saturado. */
+  --texto-sobre-color: oklch(1 0 0);
+
+  /* --- La barra lateral ---
+     Es la única zona del Panel que en modo claro ya era oscura, así que tiene sus propios
+     tokens en vez de reusar los de arriba. */
+  --barra-fondo: oklch(0.22 0.02 250);
+  --barra-texto: oklch(1 0 0 / 0.8);
+  --barra-texto-activo: oklch(1 0 0);
+  --barra-texto-tenue: oklch(1 0 0 / 0.45);
+  --barra-hover: oklch(1 0 0 / 0.08);
+
+  /* --- Los cinco colores, en su versión "para texto" ---
+     Mismo tono, más oscuros, para llegar a 4.5:1 sobre el fondo claro (WCAG AA).
+     Se usan ÚNICAMENTE cuando el color pinta letras. Bordes, barras de color y fondos de
+     alerta siguen usando la variable de marca de arriba. En modo oscuro estos mismos
+     tokens se vuelven MÁS CLAROS que la marca, no más oscuros — es la misma idea al revés. */
   --azul-medio-texto: oklch(0.567 0.13 250);
   --verde-exito-texto: oklch(0.548 0.13 165);
   --naranja-alerta-texto: oklch(0.575 0.13 70);
-  --rojo-peligro-bg: oklch(0.92 0.05 25);
-  --fondo-alt: oklch(0.98 0.004 250);
-  --texto-principal: oklch(0.2 0.01 250);
-  --texto-secundario: oklch(0.5 0.01 250);
-  --borde-card: oklch(0.9 0.005 250);
+  --rojo-peligro-texto: oklch(0.45 0.15 25);
 
+  /* --- Los cuatro tonos de señal ---
+     Todo lo que el Panel marca como "está bien / prestá atención / esto es grave / esto es
+     un dato más" sale de acá y de ningún otro lado. `src/lib/tonos.js` es el que decide qué
+     estado del negocio corresponde a qué tono; este archivo solo dice de qué color se pinta
+     cada tono. Un par por tono: un fondo suave y una letra que se lee encima de ese fondo. */
+  --tono-exito-fondo: oklch(0.55 0.13 165 / 0.12);
+  --tono-exito-texto: oklch(0.4 0.13 165);
+  --tono-atencion-fondo: oklch(0.62 0.13 70 / 0.12);
+  --tono-atencion-texto: oklch(0.45 0.13 70);
+  --tono-critico-fondo: oklch(0.58 0.15 25 / 0.12);
+  --tono-critico-texto: oklch(0.45 0.15 25);
+  --tono-info-fondo: oklch(0.65 0.13 250 / 0.12);
+  --tono-info-texto: oklch(0.42 0.13 250);
+  --tono-neutro-fondo: oklch(0.94 0.006 250);
+  --tono-neutro-texto: oklch(0.45 0.01 250);
+
+  /* --- Densidad de las filas ---
+     Cuánto respira cada renglón de una tabla o de la grilla. Lo elige cada persona desde el
+     encabezado y se guarda en su navegador; ver `src/context/PreferenciasVistaContext.jsx`. El valor
+     de acá es el intermedio, que es el de arranque. Los otros dos los pisa ese contexto. */
+  --densidad-fila-y: 0.75rem;
+  --densidad-fila-texto: 0.9rem;
+
+  /* --- Tipografía --- */
   --font-display: 'Public Sans', sans-serif;
   --font-body: 'Public Sans', sans-serif;
+}
+
+/* ================= MODO OSCURO POR PREFERENCIA DEL SISTEMA =================
+   Se aplica cuando la persona no eligió nada en el Panel y su computadora o su teléfono
+   están en modo oscuro. Solo se redefinen los tokens; ninguna pantalla se escribe de nuevo. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo-app: oklch(0.17 0.012 250);
+    --superficie: oklch(0.22 0.014 250);
+    --superficie-hundida: oklch(0.26 0.014 250);
+    --superficie-hover: oklch(0.29 0.014 250);
+    --borde-card: oklch(0.34 0.014 250);
+    --sombra-card: 0 1px 2px oklch(0 0 0 / 0.35);
+    --velo-modal: oklch(0.1 0.01 250 / 0.65);
+
+    --texto-principal: oklch(0.95 0.005 250);
+    --texto-secundario: oklch(0.72 0.008 250);
+    --texto-titulo: oklch(0.93 0.015 250);
+
+    --barra-fondo: oklch(0.13 0.012 250);
+    --barra-texto: oklch(1 0 0 / 0.72);
+    --barra-texto-activo: oklch(1 0 0);
+    --barra-texto-tenue: oklch(1 0 0 / 0.4);
+    --barra-hover: oklch(1 0 0 / 0.1);
+
+    --azul-medio-texto: oklch(0.75 0.12 250);
+    --verde-exito-texto: oklch(0.75 0.12 165);
+    --naranja-alerta-texto: oklch(0.78 0.12 70);
+    --rojo-peligro-texto: oklch(0.72 0.14 25);
+
+    --tono-exito-fondo: oklch(0.55 0.13 165 / 0.2);
+    --tono-exito-texto: oklch(0.78 0.12 165);
+    --tono-atencion-fondo: oklch(0.62 0.13 70 / 0.2);
+    --tono-atencion-texto: oklch(0.82 0.12 70);
+    --tono-critico-fondo: oklch(0.58 0.15 25 / 0.22);
+    --tono-critico-texto: oklch(0.76 0.14 25);
+    --tono-info-fondo: oklch(0.65 0.13 250 / 0.2);
+    --tono-info-texto: oklch(0.79 0.12 250);
+    --tono-neutro-fondo: oklch(0.3 0.01 250);
+    --tono-neutro-texto: oklch(0.78 0.008 250);
+  }
+}
+
+/* ================= MODO ELEGIDO A MANO DESDE EL PANEL =================
+   Cuando la persona elige "claro" u "oscuro" en el encabezado, el Panel escribe
+   `data-tema` en la etiqueta <html> y estas dos reglas le ganan a la preferencia de la
+   computadora. Hacen falta las dos: sin `[data-tema="claro"]`, alguien con la computadora
+   en oscuro no podría forzar el Panel en claro. */
+
+:root[data-tema='claro'] {
+  --fondo-app: oklch(0.98 0.004 250);
+  --superficie: oklch(1 0 0);
+  --superficie-hundida: oklch(0.98 0.004 250);
+  --superficie-hover: oklch(0.96 0.006 250);
+  --borde-card: oklch(0.9 0.005 250);
+  --sombra-card: 0 1px 2px oklch(0.2 0.01 250 / 0.06);
+  --velo-modal: oklch(0.2 0.01 250 / 0.5);
+
+  --texto-principal: oklch(0.2 0.01 250);
+  --texto-secundario: oklch(0.5 0.01 250);
+  --texto-titulo: oklch(0.22 0.02 250);
+
+  --barra-fondo: oklch(0.22 0.02 250);
+  --barra-texto: oklch(1 0 0 / 0.8);
+  --barra-texto-activo: oklch(1 0 0);
+  --barra-texto-tenue: oklch(1 0 0 / 0.45);
+  --barra-hover: oklch(1 0 0 / 0.08);
+
+  --azul-medio-texto: oklch(0.567 0.13 250);
+  --verde-exito-texto: oklch(0.548 0.13 165);
+  --naranja-alerta-texto: oklch(0.575 0.13 70);
+  --rojo-peligro-texto: oklch(0.45 0.15 25);
+
+  --tono-exito-fondo: oklch(0.55 0.13 165 / 0.12);
+  --tono-exito-texto: oklch(0.4 0.13 165);
+  --tono-atencion-fondo: oklch(0.62 0.13 70 / 0.12);
+  --tono-atencion-texto: oklch(0.45 0.13 70);
+  --tono-critico-fondo: oklch(0.58 0.15 25 / 0.12);
+  --tono-critico-texto: oklch(0.45 0.15 25);
+  --tono-info-fondo: oklch(0.65 0.13 250 / 0.12);
+  --tono-info-texto: oklch(0.42 0.13 250);
+  --tono-neutro-fondo: oklch(0.94 0.006 250);
+  --tono-neutro-texto: oklch(0.45 0.01 250);
+}
+
+:root[data-tema='oscuro'] {
+  --fondo-app: oklch(0.17 0.012 250);
+  --superficie: oklch(0.22 0.014 250);
+  --superficie-hundida: oklch(0.26 0.014 250);
+  --superficie-hover: oklch(0.29 0.014 250);
+  --borde-card: oklch(0.34 0.014 250);
+  --sombra-card: 0 1px 2px oklch(0 0 0 / 0.35);
+  --velo-modal: oklch(0.1 0.01 250 / 0.65);
+
+  --texto-principal: oklch(0.95 0.005 250);
+  --texto-secundario: oklch(0.72 0.008 250);
+  --texto-titulo: oklch(0.93 0.015 250);
+
+  --barra-fondo: oklch(0.13 0.012 250);
+  --barra-texto: oklch(1 0 0 / 0.72);
+  --barra-texto-activo: oklch(1 0 0);
+  --barra-texto-tenue: oklch(1 0 0 / 0.4);
+  --barra-hover: oklch(1 0 0 / 0.1);
+
+  --azul-medio-texto: oklch(0.75 0.12 250);
+  --verde-exito-texto: oklch(0.75 0.12 165);
+  --naranja-alerta-texto: oklch(0.78 0.12 70);
+  --rojo-peligro-texto: oklch(0.72 0.14 25);
+
+  --tono-exito-fondo: oklch(0.55 0.13 165 / 0.2);
+  --tono-exito-texto: oklch(0.78 0.12 165);
+  --tono-atencion-fondo: oklch(0.62 0.13 70 / 0.2);
+  --tono-atencion-texto: oklch(0.82 0.12 70);
+  --tono-critico-fondo: oklch(0.58 0.15 25 / 0.22);
+  --tono-critico-texto: oklch(0.76 0.14 25);
+  --tono-info-fondo: oklch(0.65 0.13 250 / 0.2);
+  --tono-info-texto: oklch(0.79 0.12 250);
+  --tono-neutro-fondo: oklch(0.3 0.01 250);
+  --tono-neutro-texto: oklch(0.78 0.008 250);
+}
+
+/* ================= DENSIDAD DE FILAS =================
+   Tres modos. Los escribe el contexto de densidad en la etiqueta <html>, igual que el tema.
+   No se toca ningún otro token: solo cuánto respira cada renglón y qué tan grande es su
+   letra. */
+
+:root[data-densidad='comoda'] {
+  --densidad-fila-y: 1rem;
+  --densidad-fila-texto: 0.95rem;
+}
+
+:root[data-densidad='normal'] {
+  --densidad-fila-y: 0.75rem;
+  --densidad-fila-texto: 0.9rem;
+}
+
+:root[data-densidad='compacta'] {
+  --densidad-fila-y: 0.4rem;
+  --densidad-fila-texto: 0.85rem;
+}
+
+/* Quien pidió que el movimiento se reduzca no ve transiciones. No es un extra: para algunas
+   personas el movimiento en pantalla produce mareo real. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

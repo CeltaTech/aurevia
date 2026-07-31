@@ -8,6 +8,7 @@ import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { traducirValor } from '../i18n/valores';
+import { claseBadge } from '../lib/tonos';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -351,7 +352,7 @@ export function InformesObraSocial() {
                 <td>{t.informesObraSocial[`tipo_${informe.tipo}`]}</td>
                 <td>{informe.periodo_desde} — {informe.periodo_hasta}</td>
                 <td>
-                  <span className={informe.estado === 'validado' ? 'badge badge-vigente' : 'badge badge-cancelada'}>
+                  <span className={claseBadge(informe.estado)}>
                     {t.informesObraSocial[`estado_${informe.estado}`]}
                   </span>
                 </td>

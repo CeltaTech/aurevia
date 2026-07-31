@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
+import { claseBadge } from '../lib/tonos';
+import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 
 function hoyISO() {
@@ -25,10 +27,14 @@ export function Documentacion() {
   const { t } = useLocale();
   const { usuario } = useAuth();
   const [filas, setFilas] = useState([]);
+  // No es un filtro de la lista: lo trae el servidor (configuración de la Prestadora) y sirve
+  // para calcular el estado de cada documento, no para elegir qué se muestra.
   const [diasAviso, setDiasAviso] = useState(30);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
-  const [filtro, setFiltro] = useState('vencido_o_por_vencer');
+  // La pantalla abre ya filtrada a lo vencido o por vencer: ese es el valor de arranque y el
+  // punto de comparación, así que dejarlo así no cuenta como filtro puesto.
+  const { f, set, limpiar, hayFiltros } = useFiltros({ filtro: 'vencido_o_por_vencer' });
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -72,10 +78,10 @@ export function Documentacion() {
   }, [recargar]);
 
   const filasFiltradas = useMemo(() => {
-    if (filtro === 'todos') return filas;
-    if (filtro === 'vencido_o_por_vencer') return filas.filter((f) => f.estado_documento !== 'vigente');
-    return filas.filter((f) => f.estado_documento === filtro);
-  }, [filas, filtro]);
+    if (f.filtro === 'todos') return filas;
+    if (f.filtro === 'vencido_o_por_vencer') return filas.filter((d) => d.estado_documento !== 'vigente');
+    return filas.filter((d) => d.estado_documento === f.filtro);
+  }, [filas, f]);
 
   return (
     <div>
@@ -83,7 +89,7 @@ export function Documentacion() {
       <p className="panel-explicacion">{t.documentacion.explicacion}</p>
 
       <div className="panel-filtros">
-        <select value={filtro} onChange={(e) => setFiltro(e.target.value)}>
+        <select value={f.filtro} onChange={(e) => set('filtro', e.target.value)}>
           <option value="vencido_o_por_vencer">{t.documentacion.filtro_vencido_o_por_vencer}</option>
           <option value="vencido">{t.documentacion.estado_vencido}</option>
           <option value="por_vencer">{t.documentacion.estado_por_vencer}</option>
@@ -91,7 +97,14 @@ export function Documentacion() {
         </select>
       </div>
 
-      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && filasFiltradas.length === 0} recargar={recargar}>
+      <EstadoLista
+        estado={estado}
+        error={error}
+        vacio={estado === 'listo' && filasFiltradas.length === 0}
+        recargar={recargar}
+        filtrado={hayFiltros}
+        onLimpiarFiltros={limpiar}
+      >
         <table className="panel-tabla">
           <thead>
             <tr>
@@ -102,12 +115,12 @@ export function Documentacion() {
             </tr>
           </thead>
           <tbody>
-            {filasFiltradas.map((f) => (
-              <tr key={f.id}>
-                <td>{f.asistente_nombre}</td>
-                <td>{f.tipo_nombre}</td>
-                <td>{f.fecha_vencimiento}</td>
-                <td><span className={`badge badge-${f.estado_documento}`}>{t.documentacion[`estado_${f.estado_documento}`]}</span></td>
+            {filasFiltradas.map((d) => (
+              <tr key={d.id}>
+                <td>{d.asistente_nombre}</td>
+                <td>{d.tipo_nombre}</td>
+                <td>{d.fecha_vencimiento}</td>
+                <td><span className={claseBadge(d.estado_documento)}>{t.documentacion[`estado_${d.estado_documento}`]}</span></td>
               </tr>
             ))}
           </tbody>

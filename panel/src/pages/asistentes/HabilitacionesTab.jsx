@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
+import { claseBadge } from '../../lib/tonos';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
@@ -120,7 +121,7 @@ export function HabilitacionesTab({ asistente }) {
                   <td>{fila.vigente_desde}</td>
                   <td>{fila.vigente_hasta || '—'}</td>
                   <td>
-                    <span className={`badge ${vigente ? 'badge-verde' : ''}`}>
+                    <span className={claseBadge(vigente ? 'vigente' : 'vencida')}>
                       {vigente ? t.asistentes.habilitaciones.estado_vigente : t.asistentes.habilitaciones.estado_historico}
                     </span>
                   </td>

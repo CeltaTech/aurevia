@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { linkWhatsapp } from '../lib/telefono';
+import { claseBadge } from '../lib/tonos';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
+import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { SolicitudDetalle } from './SolicitudDetalle';
 
@@ -10,21 +12,20 @@ const ESTADOS = ['nueva', 'en_gestion', 'asignada', 'cancelada', 'completada'];
 export function Solicitudes() {
   const { t } = useLocale();
   const { filas, estado, error, recargar } = useSupabaseTable('solicitudes', { orderBy: 'creado_en', ascending: false });
-  const [busqueda, setBusqueda] = useState('');
-  const [filtroEstado, setFiltroEstado] = useState('');
+  const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '', estado: '' });
   const [seleccionada, setSeleccionada] = useState(null);
 
   const filasFiltradas = useMemo(() => {
     return filas.filter((s) => {
       const coincideBusqueda =
-        !busqueda ||
-        s.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-        s.email?.toLowerCase().includes(busqueda.toLowerCase()) ||
-        s.telefono?.toLowerCase().includes(busqueda.toLowerCase());
-      const coincideEstado = !filtroEstado || (s.estado || 'nueva') === filtroEstado;
+        !f.busqueda ||
+        s.nombre?.toLowerCase().includes(f.busqueda.toLowerCase()) ||
+        s.email?.toLowerCase().includes(f.busqueda.toLowerCase()) ||
+        s.telefono?.toLowerCase().includes(f.busqueda.toLowerCase());
+      const coincideEstado = !f.estado || (s.estado || 'nueva') === f.estado;
       return coincideBusqueda && coincideEstado;
     });
-  }, [filas, busqueda, filtroEstado]);
+  }, [filas, f]);
 
   return (
     <div>
@@ -34,10 +35,10 @@ export function Solicitudes() {
         <input
           type="text"
           placeholder={t.comun.buscar}
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
+          value={f.busqueda}
+          onChange={(e) => set('busqueda', e.target.value)}
         />
-        <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
+        <select value={f.estado} onChange={(e) => set('estado', e.target.value)}>
           <option value="">{t.comun.todos}</option>
           {ESTADOS.map((e) => (
             <option key={e} value={e}>
@@ -47,7 +48,14 @@ export function Solicitudes() {
         </select>
       </div>
 
-      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && filasFiltradas.length === 0} recargar={recargar}>
+      <EstadoLista
+        estado={estado}
+        error={error}
+        vacio={estado === 'listo' && filasFiltradas.length === 0}
+        recargar={recargar}
+        filtrado={hayFiltros}
+        onLimpiarFiltros={limpiar}
+      >
         <table className="panel-tabla">
           <thead>
             <tr>
@@ -73,7 +81,7 @@ export function Solicitudes() {
                 <td>{s.modalidad}</td>
                 <td>{new Date(s.creado_en).toLocaleDateString()}</td>
                 <td>
-                  <span className={`badge badge-${s.estado || 'nueva'}`}>
+                  <span className={claseBadge(s.estado || 'nueva')}>
                     {t.solicitudes[`estado_${s.estado || 'nueva'}`]}
                   </span>
                 </td>

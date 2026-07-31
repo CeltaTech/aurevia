@@ -11,6 +11,7 @@ import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { Layout } from './components/layout/Layout';
 import { Login } from './pages/Login';
 import { Mfa } from './pages/Mfa';
+import { Muestra } from './pages/Muestra';
 import { Dashboard } from './pages/Dashboard';
 import { Postulaciones } from './pages/Postulaciones';
 import { Solicitudes } from './pages/Solicitudes';
@@ -55,6 +56,12 @@ function App() {
                 <Routes>
                   <Route path="/login" element={<Login />} />
                   <Route path="/mfa" element={<Mfa />} />
+                  {/* La muestra del sistema de diseño existe SOLO mientras se desarrolla.
+                      `import.meta.env.DEV` es falso al compilar para publicar, el
+                      compilador borra esta línea y la pantalla no llega al servidor: no es
+                      un interruptor que alguien pueda dejar mal puesto. No pide contraseña
+                      porque no consulta la base — ver el encabezado de `pages/Muestra.jsx`. */}
+                  {import.meta.env.DEV ? <Route path="/muestra" element={<Muestra />} /> : null}
                   <Route
                     path="/"
                     element={

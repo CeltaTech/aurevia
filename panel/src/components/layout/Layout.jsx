@@ -7,8 +7,7 @@ import { useTenantSession } from '../../context/TenantSessionContext';
 import { usePermisos } from '../../context/PermisosContext';
 import { useModalidades } from '../../context/ModalidadesContext';
 import { esAdminOSuperior } from '../../lib/roles';
-import { LOCALES } from '../../i18n/translations';
-import { DENSIDADES, TEMAS, usePreferenciasVista } from '../../context/PreferenciasVistaContext';
+import { SelectoresPreferencias } from './SelectoresPreferencias';
 
 const AVISO_MINUTOS_RESTANTES = 10; // aviso "a los 50 minutos" de una sesión de 60
 
@@ -70,12 +69,11 @@ function BannerSesionTenant() {
 }
 
 export function Layout() {
-  const { t, locale, setLocale } = useLocale();
+  const { t } = useLocale();
   const { usuario, logout } = useAuth();
   const { empresa } = useEmpresa();
   const { puede } = usePermisos();
   const { tieneModalidad } = useModalidades();
-  const { tema, setTema, densidad, setDensidad } = usePreferenciasVista();
 
   return (
     <div className="panel-layout">
@@ -132,43 +130,9 @@ export function Layout() {
         <BannerSesionTenant />
         <header className="panel-header">
           <span className="panel-usuario">{usuario?.nombre}</span>
-          {/* Idioma, tema y densidad: las tres preferencias personales de quien mira la
-              pantalla. Cada una lleva un rótulo que solo leen los lectores de pantalla,
-              porque tres desplegables seguidos sin nombre no se entienden sin verlos. */}
-          <div className="panel-preferencias">
-            <label className="solo-lectores-pantalla" htmlFor="pref-idioma">
-              {t.preferencias.idioma}
-            </label>
-            <select id="pref-idioma" value={locale} onChange={(e) => setLocale(e.target.value)}>
-              {LOCALES.map((l) => (
-                <option key={l} value={l}>
-                  {l}
-                </option>
-              ))}
-            </select>
-
-            <label className="solo-lectores-pantalla" htmlFor="pref-tema">
-              {t.preferencias.tema}
-            </label>
-            <select id="pref-tema" value={tema} onChange={(e) => setTema(e.target.value)}>
-              {TEMAS.map((v) => (
-                <option key={v} value={v}>
-                  {t.preferencias[`tema_${v}`]}
-                </option>
-              ))}
-            </select>
-
-            <label className="solo-lectores-pantalla" htmlFor="pref-densidad">
-              {t.preferencias.densidad}
-            </label>
-            <select id="pref-densidad" value={densidad} onChange={(e) => setDensidad(e.target.value)}>
-              {DENSIDADES.map((v) => (
-                <option key={v} value={v}>
-                  {t.preferencias[`densidad_${v}`]}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Idioma, tema y densidad. Están en su propio archivo porque la pantalla de
+              muestra del sistema de diseño usa exactamente los mismos tres desplegables. */}
+          <SelectoresPreferencias />
           <button className="panel-logout" onClick={logout}>
             {t.nav.cerrar_sesion}
           </button>

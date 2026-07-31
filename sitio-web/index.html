@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#111318" />
+    <!-- noindex a propósito MIENTRAS ESTO SEA UNA PÁGINA DE OBRA. Se saca el día
+         que acá vaya el sitio de verdad: una página "en construcción" indexada
+         en Google es la primera impresión que después cuesta corregir. -->
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="google" content="notranslate" />
+    <title>{{producto}}</title>
+    <style>
+      /* Estilos deliberadamente neutros y provisorios (decisión del Desarrollador,
+         2026-07-31: "algo sencillo pero funcional, después trabajamos la imagen
+         visual"). No usan la paleta de DESIGN_SYSTEM.md a propósito: esta página
+         no debería fijar una identidad que todavía no está decidida.
+         Sin tipografías externas, sin imágenes, sin dependencias: un solo archivo. */
+      :root {
+        --fondo: #ffffff;
+        --texto: #111318;
+        --tenue: #5c6270;
+        --linea: #e3e5ea;
+        --punto: #2f7d64;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --fondo: #111318;
+          --texto: #f4f5f7;
+          --tenue: #9aa1ae;
+          --linea: #2a2e37;
+          --punto: #4ea98a;
+        }
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body { margin: 0; padding: 0; min-height: 100%; }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100svh;
+        padding: 2rem 1.5rem;
+        background: var(--fondo);
+        color: var(--texto);
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        line-height: 1.6;
+      }
+
+      main { width: 100%; max-width: 30rem; }
+
+      .estado {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        margin: 0 0 1.75rem;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--tenue);
+      }
+
+      .estado::before {
+        content: '';
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: 50%;
+        background: var(--punto);
+        flex: none;
+      }
+
+      .marca {
+        margin: 0;
+        font-size: clamp(2rem, 8vw, 2.75rem);
+        font-weight: 600;
+        letter-spacing: -0.025em;
+        line-height: 1.1;
+      }
+
+      .bajada {
+        margin: 1rem 0 0;
+        font-size: 1.0625rem;
+        color: var(--tenue);
+      }
+
+      .pie {
+        margin: 2.5rem 0 0;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--linea);
+        font-size: 0.875rem;
+        color: var(--tenue);
+      }
+    </style>
+  </head>
+  <body translate="no">
+    <main>
+      <p class="estado" data-texto="estado">En construcción</p>
+      <h1 class="marca">{{producto}}</h1>
+      <p class="bajada" data-texto="bajada">Estamos terminando de definir el producto. Muy pronto vas a encontrar todo acá.</p>
+      <p class="pie" data-texto="pie">Si ya usás la plataforma, entrá por la dirección que te dieron.</p>
+    </main>
+
+    <script>
+      // Página estática, sin framework y sin build de aplicación: los marcadores
+      // {{producto}} y {{dominio}} ya vienen resueltos por sitio-web/construir.mjs
+      // (CLAUDE.md §7 regla 1 — el nombre del producto nunca se escribe a mano).
+      //
+      // Los tres idiomas van desde el día uno (regla 2). No hay selector visible
+      // todavía porque no hay nada que leer: se elige el del navegador y listo.
+      var TEXTOS = {
+        'es-AR': {
+          estado: 'En construcción',
+          bajada: 'Estamos terminando de definir el producto. Muy pronto vas a encontrar todo acá.',
+          pie: 'Si ya usás la plataforma, entrá por la dirección que te dieron.',
+        },
+        en: {
+          estado: 'Under construction',
+          bajada: 'We are still shaping the product. Everything will be here soon.',
+          pie: 'If you already use the platform, go in through the address you were given.',
+        },
+        'pt-BR': {
+          estado: 'Em construção',
+          bajada: 'Ainda estamos definindo o produto. Em breve você vai encontrar tudo aqui.',
+          pie: 'Se você já usa a plataforma, entre pelo endereço que lhe passaram.',
+        },
+      };
+
+      var IDIOMA_POR_DEFECTO = 'es-AR';
+
+      // "es", "es-MX", "ES-mx" y "es-AR" caen todos en es-AR; "pt" y "pt-PT" en
+      // pt-BR. Cualquier otro cae en el idioma por defecto.
+      function elegirIdioma(preferido) {
+        var base = String(preferido || '').toLowerCase().split('-')[0];
+        if (base === 'en') return 'en';
+        if (base === 'pt') return 'pt-BR';
+        return IDIOMA_POR_DEFECTO;
+      }
+
+      var idioma = elegirIdioma(navigator.language);
+      var textos = TEXTOS[idioma];
+      document.documentElement.lang = idioma;
+      var nodos = document.querySelectorAll('[data-texto]');
+      for (var i = 0; i < nodos.length; i++) {
+        nodos[i].textContent = textos[nodos[i].getAttribute('data-texto')];
+      }
+    </script>
+  </body>
+</html>

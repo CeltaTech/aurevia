@@ -1,18 +1,18 @@
 // ---------------------------------------------------------------------------
-// sincronizar_identidad.mjs — copia la identidad del producto a las 4 unidades
+// sincronizar_identidad.mjs — copia la identidad del producto a las 5 unidades
 //
 // Uso, desde la raíz del repo:
 //   node scripts/sincronizar_identidad.mjs
 //
-// La copia de backend/ es la original; las otras tres se sobrescriben con ella.
+// La copia de backend/ es la original; las otras cuatro se sobrescriben con ella.
 // Se edita SIEMPRE backend/src/config/identidadProducto.js y después se corre
 // esto. Es la contracara de scripts/verificar_identidad.mjs, que falla el build
 // si las cuatro no coinciden.
 //
-// Por qué hay cuatro copias en vez de un import compartido: cada unidad se
+// Por qué hay cinco copias en vez de un import compartido: cada unidad se
 // despliega por separado y sin acceso al resto del repo (`railway up` sube solo
-// backend/, cada frontend tiene su vercel.json con su root). Ver la cabecera de
-// identidadProducto.js.
+// backend/, y cada frontend se sube a Cloudflare Pages desde su propia carpeta).
+// Ver la cabecera de identidadProducto.js.
 // ---------------------------------------------------------------------------
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -26,6 +26,7 @@ export const COPIAS = [
   'panel/src/config/identidadProducto.js',
   'pwa-asistentes/src/config/identidadProducto.js',
   'pwa-familias/src/config/identidadProducto.js',
+  'sitio-web/src/config/identidadProducto.js',
 ];
 
 const contenido = readFileSync(join(RAIZ, ORIGINAL), 'utf8');
@@ -51,6 +52,6 @@ for (const ruta of COPIAS) {
 
 console.log(
   cambiadas === 0
-    ? '\nLas 4 copias de la identidad ya estaban sincronizadas.'
+    ? '\nLas 5 copias de la identidad ya estaban sincronizadas.'
     : `\n${cambiadas} copia(s) actualizada(s) desde ${ORIGINAL}.`
 );

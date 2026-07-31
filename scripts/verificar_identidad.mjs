@@ -6,7 +6,7 @@
 //
 // Comprueba dos cosas y devuelve código de salida 1 si alguna falla:
 //
-//   1. SINCRONÍA — las 4 copias de identidadProducto.js son idénticas byte a
+//   1. SINCRONÍA — las 5 copias de identidadProducto.js son idénticas byte a
 //      byte. Si alguien edita una sola, esto lo caza.
 //
 //   2. LITERAL — el nombre del producto no aparece escrito a mano en ninguna
@@ -50,6 +50,7 @@ const COPIAS_IDENTIDAD = [
   'panel/src/config/identidadProducto.js',
   'pwa-asistentes/src/config/identidadProducto.js',
   'pwa-familias/src/config/identidadProducto.js',
+  'sitio-web/src/config/identidadProducto.js',
 ];
 
 const DIRECTORIOS_IGNORADOS = new Set([
@@ -150,7 +151,7 @@ if (fallasLiteral.length > 0) {
 }
 
 if (fallasSincronia.length === 0 && fallasLiteral.length === 0) {
-  console.log('✓ Identidad del producto: 4 copias sincronizadas y ningún nombre escrito a mano.');
+  console.log('✓ Identidad del producto: 5 copias sincronizadas y ningún nombre escrito a mano.');
   process.exit(0);
 }
 

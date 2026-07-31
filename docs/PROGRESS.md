@@ -67,6 +67,28 @@
 > (comprobado ese día, cero apariciones), y el propio esquema tiene el freno escrito. Es el
 > pendiente #102 y bloquea activar el seguimiento con Asistentes reales en cualquier país.
 
+> **2026-07-30 — El Asistente ahora puede decir que sí o que no a que le registren la ubicación, y
+> queda constancia de qué texto leyó.** Lo pidió el Desarrollador: *tiene que haber un
+> consentimiento expreso de la Asistente para el seguimiento*. Se construyó entero, con **textos de
+> relleno** en el lugar donde después va el texto del abogado. Cómo funciona, en criollo. Hay un
+> **catálogo de textos** —uno por país, por idioma y según la persona sea dependiente o autónoma—
+> que escribe solamente CeltaTech, y un **libro de constancias** donde queda anotada la decisión de
+> cada persona. La constancia **guarda una copia del texto**, no un enlace a él: si mañana el texto
+> cambia, la constancia vieja sigue diciendo lo que decía el día que la firmaron. Una sola función
+> decide si se puede registrar la ubicación de alguien, y dice que sí **solo si** hay una decisión
+> viva, es un sí, el texto que firmó sigue vigente y **no es un borrador**. **Ese último requisito
+> es el freno:** como los seis textos que hay hoy son de relleno y están marcados como borrador, la
+> pantalla anda de punta a punta pero el seguimiento **no se enciende para nadie**. El interruptor
+> real es cargar el texto del abogado, que es la tarea que le toca al Desarrollador. **Dos
+> decisiones de diseño que no son técnicas y conviene no perder:** la pantalla **no traba** el uso
+> de la aplicación y los dos botones se ven igual de importantes, porque un consentimiento que hay
+> que dar para poder trabajar no es libre; y el "no" **también se registra**, no se lo trata como
+> un error. La persona puede volver a mirarlo y retirarlo cuando quiera desde Mi Perfil, y al
+> retirarlo **no se borra nada**: se le anota la fecha de retiro, para poder mostrar qué hubo
+> vigente entre qué fechas. Probado contra la base local con datos ficticios (ocho casos en la
+> base y la vuelta completa por la aplicación: preguntar, decir que no, cambiar de opinión,
+> retirar), y sin dejar una sola fila de prueba atrás. Es el pendiente #102.
+
 > **2026-07-27 — La empresa pasó a llamarse CeltaTech** (antes Xeitra), por decisión del
 > Desarrollador. El renombre se aplicó en todo el repositorio: comentarios, referencias a
 > documentos y textos visibles del Panel en los tres idiomas. **No cambió ninguna tabla, rol,

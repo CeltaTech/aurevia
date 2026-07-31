@@ -3,6 +3,7 @@ import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { activarPush, desactivarPush, pushSoportado, suscripcionActual } from '../lib/push';
 import { traducirValor } from '../i18n/valores';
+import Consentimientos from '../components/Consentimientos';
 
 export default function MiPerfil() {
   const { t } = useLocale();
@@ -98,6 +99,11 @@ export default function MiPerfil() {
           {notifError && <div className="alert alert-error">{notifError}</div>}
         </>
       )}
+
+      {/* Pendiente #102. Vive en Mi Perfil y no en una pantalla aparte a
+          propósito: es algo que la persona tiene que poder volver a mirar
+          cuando quiera, no un trámite de una sola vez que después desaparece. */}
+      <Consentimientos />
     </div>
   );
 }

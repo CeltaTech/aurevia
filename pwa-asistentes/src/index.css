@@ -344,3 +344,46 @@ h2 {
   font-weight: 600;
   color: var(--texto-secundario);
 }
+
+/* ---------- Consentimientos (pendiente #102) ---------- */
+
+/* Mismo molde que .guardia-card, sin el borde de estado: acá no hay estados de
+   color, y teñir un consentimiento de verde o rojo sería empujar la decisión. */
+.tarjeta-consentimiento {
+  background: #FFFFFF;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.tarjeta-consentimiento h3 {
+  font-family: var(--font-display);
+  color: var(--azul-oscuro);
+  margin-bottom: 0.5rem;
+}
+
+.tarjeta-consentimiento ul {
+  margin: 0 0 0.75rem 1.1rem;
+  color: var(--texto-secundario);
+  font-size: 0.9rem;
+}
+
+.consentimiento-acciones {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+/* Los dos botones de decisión ocupan el mismo lugar y pesan lo mismo a
+   propósito: resaltar el "acepto" sería empujar hacia el sí, y un
+   consentimiento empujado deja de ser libre. */
+.consentimiento-acciones .btn {
+  flex: 1 1 auto;
+}
+
+.texto-ayuda {
+  color: var(--texto-secundario);
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+}

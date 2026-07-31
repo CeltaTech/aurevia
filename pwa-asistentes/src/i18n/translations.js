@@ -122,6 +122,23 @@ export const T = {
       notificaciones_permiso_denegado: 'Denegaste el permiso de notificaciones. Habilitalo desde la configuración del navegador.',
       notificaciones_error: 'No se pudo activar las notificaciones. Probá de nuevo.',
     },
+    // Pendiente #102 — consentimiento para el registro de ubicación.
+    consentimientos: {
+      titulo: 'Permisos que dependen de vos',
+      aviso_borrador:
+        'Este texto todavía es un borrador de prueba, no tiene validez legal y el seguimiento no se activa con él. Está acá para que puedas ver cómo va a funcionar la pantalla.',
+      acepto: 'Acepto',
+      no_acepto: 'No acepto',
+      sin_consecuencias:
+        'Podés decir que no. Vas a seguir usando la aplicación igual, y podés cambiar de opinión cuando quieras.',
+      estado_otorgado: 'Lo aceptaste el',
+      estado_rechazado: 'No lo aceptaste. Fecha:',
+      cambiar_a_acepto: 'Quiero aceptarlo',
+      retirar: 'Retirar mi consentimiento',
+      retirar_ayuda: 'Si lo retirás, dejamos de registrar tu ubicación desde ese mismo momento.',
+      texto_cambio: 'El texto cambió desde la última vez. Leelo de nuevo y volvé a decidir.',
+      pendiente_aviso: 'Hay algo para leer y decidir en Mi Perfil.',
+    },
   },
   en: {
     comun: {
@@ -246,6 +263,22 @@ export const T = {
       notificaciones_permiso_denegado: 'You denied notification permission. Enable it from your browser settings.',
       notificaciones_error: 'Could not enable notifications. Please try again.',
     },
+    consentimientos: {
+      titulo: 'Permissions that are yours to give',
+      aviso_borrador:
+        'This text is still a draft for testing. It has no legal validity and tracking will not be enabled with it. It is here so you can see how the screen will work.',
+      acepto: 'I agree',
+      no_acepto: 'I do not agree',
+      sin_consecuencias:
+        'You can say no. You will keep using the app just the same, and you can change your mind at any time.',
+      estado_otorgado: 'You agreed on',
+      estado_rechazado: 'You did not agree. Date:',
+      cambiar_a_acepto: 'I want to agree',
+      retirar: 'Withdraw my consent',
+      retirar_ayuda: 'If you withdraw it, we stop recording your location from that moment on.',
+      texto_cambio: 'The text changed since last time. Please read it again and decide.',
+      pendiente_aviso: 'There is something to read and decide in My Profile.',
+    },
   },
   'pt-BR': {
     comun: {
@@ -369,6 +402,22 @@ export const T = {
       notificaciones_no_soportadas: 'Este navegador não suporta notificações push.',
       notificaciones_permiso_denegado: 'Você negou a permissão de notificações. Ative-a nas configurações do navegador.',
       notificaciones_error: 'Não foi possível ativar as notificações. Tente novamente.',
+    },
+    consentimientos: {
+      titulo: 'Permissões que dependem de você',
+      aviso_borrador:
+        'Este texto ainda é um rascunho de teste, não tem validade legal e o rastreamento não é ativado com ele. Está aqui para você ver como a tela vai funcionar.',
+      acepto: 'Concordo',
+      no_acepto: 'Não concordo',
+      sin_consecuencias:
+        'Você pode dizer não. Vai continuar usando o aplicativo igual, e pode mudar de ideia quando quiser.',
+      estado_otorgado: 'Você concordou em',
+      estado_rechazado: 'Você não concordou. Data:',
+      cambiar_a_acepto: 'Quero concordar',
+      retirar: 'Retirar meu consentimento',
+      retirar_ayuda: 'Se você retirar, paramos de registrar sua localização a partir daquele momento.',
+      texto_cambio: 'O texto mudou desde a última vez. Leia de novo e decida novamente.',
+      pendiente_aviso: 'Há algo para ler e decidir em Meu Perfil.',
     },
   },
 };

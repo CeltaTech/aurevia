@@ -41,6 +41,14 @@ export const api = {
   confirmarReporte: (id, datos) => pedido(`/guardias/${id}/reporte/confirmar`, { method: 'POST', body: JSON.stringify(datos) }),
   reportesDelPaciente: (pacienteId) => pedido(`/pacientes/${pacienteId}/reportes`),
   medicacionDelPaciente: (pacienteId) => pedido(`/medicacion/${pacienteId}`),
+  // Pendiente #102 — consentimiento para el registro de ubicación. El idioma
+  // viaja en el pedido porque el texto que se guarda como constancia tiene que
+  // ser el mismo que la persona leyó en pantalla.
+  consentimientos: (idioma) => pedido(`/consentimientos?idioma=${encodeURIComponent(idioma)}`),
+  decidirConsentimiento: (clave, decision, idioma) =>
+    pedido('/consentimientos', { method: 'POST', body: JSON.stringify({ clave, decision, idioma }) }),
+  retirarConsentimiento: (clave, motivo) =>
+    pedido('/consentimientos/retirar', { method: 'POST', body: JSON.stringify({ clave, motivo }) }),
   suscribirPush: (suscripcion) => pedido('/push/suscribir', { method: 'POST', body: JSON.stringify(suscripcion) }),
   desuscribirPush: (endpoint) => pedido('/push/suscribir', { method: 'DELETE', body: JSON.stringify({ endpoint }) }),
 };

@@ -5,6 +5,7 @@ import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
 import { listarCola } from '../lib/colaOffline';
 import { suscribirseASincronizacion } from '../lib/sincronizarCola';
+import AvisoConsentimientoPendiente from '../components/AvisoConsentimientoPendiente';
 
 export default function MisGuardias() {
   const { t } = useLocale();
@@ -36,10 +37,17 @@ export default function MisGuardias() {
 
   if (error) return <div className="alert alert-error">{error}</div>;
   if (guardias === null) return <div className="estado-cargando">{t.comun.cargando}</div>;
-  if (guardias.length === 0) return <div className="estado-vacio">{t.guardias.sin_guardias}</div>;
+  if (guardias.length === 0)
+    return (
+      <div>
+        <AvisoConsentimientoPendiente />
+        <div className="estado-vacio">{t.guardias.sin_guardias}</div>
+      </div>
+    );
 
   return (
     <div>
+      <AvisoConsentimientoPendiente />
       <h1>{t.guardias.titulo}</h1>
       {guardias.map((g) => (
         <Link key={g.id} to={`/guardias/${g.id}`} className={`guardia-card guardia-${g.estado}`} style={{ display: 'block', textDecoration: 'none' }}>

@@ -12,7 +12,9 @@ import { Layout } from './components/layout/Layout';
 import { Login } from './pages/Login';
 import { Mfa } from './pages/Mfa';
 import { Muestra } from './pages/Muestra';
+import { MuestraMostrador } from './pages/MuestraMostrador';
 import { Dashboard } from './pages/Dashboard';
+import { Mostrador } from './pages/Mostrador';
 import { Postulaciones } from './pages/Postulaciones';
 import { Solicitudes } from './pages/Solicitudes';
 import { Asistentes } from './pages/Asistentes';
@@ -62,6 +64,9 @@ function App() {
                       un interruptor que alguien pueda dejar mal puesto. No pide contraseña
                       porque no consulta la base — ver el encabezado de `pages/Muestra.jsx`. */}
                   {import.meta.env.DEV ? <Route path="/muestra" element={<Muestra />} /> : null}
+                  {import.meta.env.DEV ? (
+                    <Route path="/muestra-mostrador" element={<MuestraMostrador />} />
+                  ) : null}
                   <Route
                     path="/"
                     element={
@@ -70,7 +75,12 @@ function App() {
                       </ProtectedRoute>
                     }
                   >
-                    <Route index element={<Dashboard />} />
+                    {/* La pantalla de entrada es el mostrador: lo primero que se ve al abrir el
+                        Panel es lo que hay que resolver hoy, no el resumen del mes. El resumen
+                        no se borró —sigue entero en su propia dirección—, solo dejó de ser lo
+                        primero, porque nadie empieza el día leyendo un promedio. */}
+                    <Route index element={<Mostrador />} />
+                    <Route path="resumen-del-mes" element={<Dashboard />} />
                     <Route path="postulaciones" element={<Postulaciones />} />
                     <Route path="solicitudes" element={<Solicitudes />} />
                     <Route path="asistentes" element={<Asistentes />} />

@@ -1367,3 +1367,539 @@ h2 {
     display: none;
   }
 }
+
+/* ---------- Etapa 4: el mostrador, la grilla nueva y el panel de cobertura ----------
+
+   Todo lo de acá abajo usa únicamente tokens de `styles/variables.css` (regla 6 de
+   CLAUDE.md §7). No hay un solo color escrito a mano, así que el modo oscuro sale gratis.
+
+   Una aclaración sobre el semáforo de la guardia. La propuesta original pedía seis colores,
+   uno de ellos violeta para "llegó tarde". El violeta no existe en la paleta de Careonys, y
+   la decisión 6.4 del informe dice que no se agrega ningún color nuevo. Así que "tarde" se
+   pinta con el mismo rojo que "sin cubrir": las dos cosas quieren decir lo mismo —algo está
+   roto y alguien tiene que actuar— y ese es exactamente el significado del rojo en este
+   sistema. Quedan cinco colores, que son los cinco tonos de siempre, y quién cae en cada
+   uno lo decide `lib/semaforoGuardia.js` y ninguna pantalla más. */
+
+/* --- La franja de excepciones --- */
+
+.mostrador-franja {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Cada contador es un botón de verdad, no un cartel: al tocarlo filtra la grilla de abajo.
+   Por eso se resetea la apariencia de botón y se arma de cero. */
+.mostrador-excepcion {
+  font-family: var(--font-body);
+  text-align: left;
+  background: var(--superficie);
+  border: 1px solid var(--borde-card);
+  border-left: 4px solid var(--tono-neutro-texto);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.mostrador-excepcion:hover {
+  background: var(--superficie-hover);
+}
+
+.mostrador-excepcion:focus-visible {
+  outline: 2px solid var(--azul-medio);
+  outline-offset: 2px;
+}
+
+/* El rojo aparece solo cuando algo está roto. Si todo fuera urgente, nada sería urgente. */
+.mostrador-excepcion-critica {
+  border-left-color: var(--rojo-peligro);
+}
+
+.mostrador-excepcion-critica .mostrador-excepcion-valor {
+  color: var(--rojo-peligro-texto);
+}
+
+/* El contador que está filtrando ahora mismo se marca, para que nadie lea una grilla
+   filtrada creyendo que la está viendo entera. */
+.mostrador-excepcion-activa {
+  background: var(--superficie-hundida);
+  border-color: var(--azul-medio);
+  box-shadow: inset 0 0 0 1px var(--azul-medio);
+}
+
+.mostrador-excepcion-valor {
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  line-height: 1.1;
+  font-weight: 700;
+  color: var(--texto-titulo);
+  font-variant-numeric: tabular-nums;
+}
+
+.mostrador-excepcion-etiqueta {
+  font-weight: 600;
+  color: var(--texto-principal);
+}
+
+.mostrador-excepcion-ayuda {
+  font-size: 0.78rem;
+  color: var(--texto-secundario);
+}
+
+.mostrador-franja-vacia {
+  color: var(--texto-secundario);
+  margin-bottom: 1.5rem;
+}
+
+.mostrador-filtro-activo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  background: var(--tono-info-fondo);
+  color: var(--tono-info-texto);
+  border-radius: 8px;
+  padding: 0.5rem 0.85rem;
+  margin-bottom: 1rem;
+}
+
+/* --- Los interruptores de la grilla --- */
+
+.grilla-controles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Grupo de botones donde uno solo está apretado a la vez. El estado se lee de
+   `aria-pressed`, así que lo que ve una persona y lo que oye un lector de pantalla no
+   pueden desincronizarse: son el mismo dato. */
+.grilla-interruptor {
+  display: inline-flex;
+  border: 1px solid var(--borde-card);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.grilla-interruptor button {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  padding: 0.45rem 0.9rem;
+  background: var(--superficie);
+  color: var(--texto-principal);
+  border: none;
+  border-right: 1px solid var(--borde-card);
+  cursor: pointer;
+}
+
+.grilla-interruptor button:last-child {
+  border-right: none;
+}
+
+.grilla-interruptor button:hover {
+  background: var(--superficie-hover);
+}
+
+.grilla-interruptor button[aria-pressed='true'] {
+  background: var(--azul-medio);
+  color: var(--texto-sobre-color);
+  font-weight: 600;
+}
+
+.grilla-interruptor button:focus-visible {
+  outline: 2px solid var(--azul-medio);
+  outline-offset: -2px;
+}
+
+/* Un botón apagado tiene que verse apagado. En el selector de día los extremos se apagan
+   al llegar a la punta del rango, y si se vieran igual que los demás alguien seguiría
+   apretando sin entender por qué no pasa nada. */
+.grilla-interruptor button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.grilla-interruptor button:disabled:hover {
+  background: var(--superficie);
+}
+
+/* El selector de día: los tres botones y, al lado, el día que se está mirando escrito. */
+.grilla-dia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.grilla-dia-actual {
+  font-size: 0.85rem;
+  color: var(--texto-secundario);
+  text-transform: capitalize;
+}
+
+.grilla-ayuda {
+  font-size: 0.8rem;
+  color: var(--texto-secundario);
+  margin: 0 0 0.75rem;
+}
+
+/* --- La grilla --- */
+
+.grilla-wrap {
+  overflow-x: auto;
+}
+
+/* La cantidad de columnas cambia con el zoom elegido (un día, siete días, o una columna por
+   hora), así que `grid-template-columns` se arma en el componente. Es medida, no color: no
+   hay ninguna decisión de diseño escapándose del sistema. */
+.grilla {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 900px;
+}
+
+.grilla-cabecera {
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--texto-titulo);
+  padding: 0.4rem 0.3rem;
+  text-transform: capitalize;
+  position: sticky;
+  top: 0;
+  background: var(--superficie);
+  z-index: 1;
+}
+
+.grilla-esquina {
+  background: var(--superficie);
+}
+
+.grilla-fila-titulo {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.3rem;
+}
+
+/* La fila de los huecos va arriba de todo y se distingue: es el trabajo pendiente de la
+   Prestadora, no un renglón más. */
+.grilla-fila-titulo-hueco {
+  color: var(--rojo-peligro-texto);
+}
+
+.grilla-celda {
+  background: var(--fondo-alt);
+  border: 1px solid var(--borde-card);
+  border-radius: 8px;
+  padding: 0.3rem;
+  min-height: 3.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+/* Mientras se arrastra una guardia, la celda donde se puede soltar se ilumina. Sin esto,
+   arrastrar es adivinar. */
+.grilla-celda-destino {
+  background: var(--tono-info-fondo);
+  border-color: var(--azul-medio);
+  border-style: dashed;
+}
+
+.grilla-chip {
+  background: var(--superficie);
+  border: 1px solid var(--borde-card);
+  border-left: 4px solid var(--tono-neutro-texto);
+  border-radius: 8px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.78rem;
+  cursor: grab;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.grilla-chip:active {
+  cursor: grabbing;
+}
+
+.grilla-chip:focus-visible {
+  outline: 2px solid var(--azul-medio);
+  outline-offset: 2px;
+}
+
+/* Los cinco tonos del semáforo. Son cinco reglas y no hay una sexta: el mapa de qué
+   situación cae en cada tono vive en `lib/semaforoGuardia.js`. */
+.grilla-chip[data-tono='critico'] { border-left-color: var(--rojo-peligro); }
+.grilla-chip[data-tono='atencion'] { border-left-color: var(--naranja-alerta); }
+.grilla-chip[data-tono='info']     { border-left-color: var(--azul-medio); }
+.grilla-chip[data-tono='exito']    { border-left-color: var(--verde-exito); }
+.grilla-chip[data-tono='neutro']   { border-left-color: var(--tono-neutro-texto); }
+
+.grilla-chip-elegida {
+  background: var(--tono-info-fondo);
+  box-shadow: inset 0 0 0 1px var(--azul-medio);
+}
+
+.grilla-chip-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.grilla-chip-horario {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.grilla-chip-detalle {
+  color: var(--texto-secundario);
+}
+
+.grilla-chip-nota {
+  color: var(--rojo-peligro-texto);
+  font-weight: 600;
+  font-size: 0.72rem;
+}
+
+.grilla-chip-cobertura {
+  color: var(--naranja-alerta-texto);
+  font-weight: 600;
+  font-size: 0.72rem;
+}
+
+/* --- La barra de acciones de a muchos --- */
+
+/* Aparece pegada abajo y solo cuando hay algo elegido. Dice cuántas son: una acción masiva
+   que no dice sobre cuántas filas cae es una acción a ciegas. */
+.barra-masiva {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--superficie);
+  border: 1px solid var(--azul-medio);
+  border-radius: 12px;
+  box-shadow: var(--sombra-card);
+  padding: 0.75rem 1rem;
+  margin-top: 1rem;
+}
+
+.barra-masiva-cuenta {
+  font-weight: 700;
+  color: var(--texto-titulo);
+  font-variant-numeric: tabular-nums;
+}
+
+.barra-masiva-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.barra-masiva-detalle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  width: 100%;
+  border-top: 1px solid var(--borde-card);
+  padding-top: 0.75rem;
+}
+
+.barra-masiva select,
+.barra-masiva input {
+  font-family: var(--font-body);
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--borde-card);
+  border-radius: 8px;
+  background: var(--superficie);
+  color: var(--texto-principal);
+}
+
+/* --- El panel lateral de cobertura --- */
+
+.panel-lateral-fondo {
+  position: fixed;
+  inset: 0;
+  background: var(--velo-modal);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 40;
+}
+
+/* Se abre a la derecha y la grilla sigue estando ahí, detrás: cubrir una vacante no manda a
+   nadie a otra pantalla. */
+.panel-lateral {
+  background: var(--superficie);
+  width: min(30rem, 100%);
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--sombra-card);
+  animation: panel-lateral-entra 160ms ease-out;
+}
+
+@keyframes panel-lateral-entra {
+  from { transform: translateX(1.5rem); opacity: 0.6; }
+  to   { transform: translateX(0);      opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-lateral { animation: none; }
+}
+
+.panel-lateral-header {
+  padding: 1.25rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--borde-card);
+}
+
+.panel-lateral-header h2 {
+  margin: 0;
+}
+
+.panel-lateral-subtitulo {
+  color: var(--texto-secundario);
+  font-size: 0.85rem;
+  margin: 0.25rem 0 0;
+}
+
+.panel-lateral-cuerpo {
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 1;
+}
+
+.panel-lateral-pie {
+  position: sticky;
+  bottom: 0;
+  background: var(--superficie);
+  border-top: 1px solid var(--borde-card);
+  padding: 0.85rem 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* --- Los candidatos --- */
+
+.candidato {
+  border: 1px solid var(--borde-card);
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.candidato-elegido {
+  border-color: var(--azul-medio);
+  background: var(--tono-info-fondo);
+}
+
+.candidato-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.candidato-nombre {
+  font-weight: 600;
+  flex: 1;
+}
+
+.candidato-puntaje {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--texto-titulo);
+}
+
+/* Los motivos en contra se muestran igual de grandes que los motivos a favor. Esconderlos
+   detrás de un puntaje bajo sería decidir por la Coordinadora. */
+.candidato-motivos {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+}
+
+.motivo-a-favor {
+  color: var(--verde-exito-texto);
+}
+
+.motivo-en-contra {
+  color: var(--naranja-alerta-texto);
+}
+
+.invitado-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--borde-card);
+  font-size: 0.85rem;
+}
+
+.invitado-fila:last-child {
+  border-bottom: none;
+}
+
+/* --- Los avisos del momento de asignar --- */
+
+/* Advierten, no impiden (CLAUDE.md §3: el software advierte, no impone). Por eso son una
+   lista al lado del botón, y no un cartel que tape la pantalla. */
+.avisos-asignacion {
+  background: var(--tono-atencion-fondo);
+  color: var(--tono-atencion-texto);
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+}
+
+.avisos-asignacion-titulo {
+  font-weight: 700;
+}
+
+.avisos-asignacion ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.avisos-asignacion p {
+  margin: 0;
+  opacity: 0.85;
+}
+
+/* "Asignar igual" primero y "Mejor no" al lado: los dos a la vista, ninguno escondido.
+   Se envuelven en pantallas angostas para que nunca queden pisados. */
+.avisos-asignacion-botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
+}

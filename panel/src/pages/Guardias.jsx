@@ -8,6 +8,7 @@ import { NuevaGuardiaModal } from './guardias/NuevaGuardiaModal';
 import { GuardiaAcciones } from './guardias/GuardiaAcciones';
 import { GuardiasGrid } from './guardias/GuardiasGrid';
 import { COBERTURA, coberturaDeGuardia } from '../lib/cobertura';
+import { reasignarGuardia } from '../lib/reasignarGuardia';
 
 const ESTADOS = ['programada', 'activa', 'completada', 'cancelada', 'ausente'];
 const HORAS_ALERTA_CHECKIN_SIN_CHECKOUT = 2;
@@ -102,42 +103,18 @@ export function Guardias() {
     recargar();
   }
 
+  // Los tres pasos de una reasignación viven en `lib/reasignarGuardia.js`, no acá: el
+  // mostrador hace exactamente lo mismo y no puede haber dos versiones de esta operación
+  // (regla 12 de CLAUDE.md §7).
   async function handleReasignar(guardiaId, asistenteId, fecha) {
     const guardiaActual = filas.find((g) => g.id === guardiaId);
-    const estabaSinCobertura = guardiaActual?.estado === 'ausente';
-    const cambios = { asistente_id: asistenteId, fecha };
-    if (estabaSinCobertura) {
-      cambios.estado = 'programada';
-    }
-    // Si estaba publicada como disponible, al asignarle un Asistente deja de estarlo. No es
-    // una prolijidad: la base tiene una restricción que no permite que una guardia con
-    // Asistente siga ofrecida, así que sin esto la asignación fallaría entera.
-    if (guardiaActual?.ofrecida_at) {
-      cambios.ofrecida_at = null;
-      cambios.ofrecida_por = null;
-    }
+    if (!guardiaActual) return;
 
-    const { error: errorUpdate } = await supabase.from('guardias').update(cambios).eq('id', guardiaId);
-    if (errorUpdate) {
-      setError(errorUpdate.message);
+    const { error: falla } = await reasignarGuardia(guardiaActual, asistenteId, fecha);
+    if (falla) {
+      setError(falla);
       return;
     }
-
-    // Reasignar una guardia que estaba "ausente" (sin cobertura) la cubre de verdad — el
-    // incidente de relevo abierto para ella debe cerrarse acá, no solo desde la pantalla de
-    // Continuidad, o el aviso de "necesita relevo" sigue activo aunque ya tenga cuidador.
-    if (estabaSinCobertura) {
-      const { error: errorIncidente } = await supabase
-        .from('incidentes_relevo')
-        .update({ resuelto_at: new Date().toISOString(), resuelto_por_tipo: 'suplente', resuelto_por_id: asistenteId })
-        .eq('guardia_entrante_id', guardiaId)
-        .is('resuelto_at', null);
-      if (errorIncidente) {
-        setError(errorIncidente.message);
-        return;
-      }
-    }
-
     recargar();
   }
 

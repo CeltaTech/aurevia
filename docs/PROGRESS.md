@@ -111,6 +111,31 @@
 > pendiente #99, que queda a un solo paso de cerrarse: falta comprobar un correo de activación real
 > antes de borrar lo viejo de Vercel.
 
+> **2026-08-02 — Etapa 5 del rediseño del Panel: el menú de seis grupos y Configuración partida
+> en cinco pantallas.** El menú lateral tenía 22 enlaces sueltos, ordenados por cómo se fue
+> construyendo el sistema; ahora son seis grupos ordenados por lo que una persona viene a hacer:
+> Guardias, Personas, Cuidado, Conversaciones, Dinero y Ajustes. El menú pasó a ser una lista de
+> datos, así que el candado de cada enlace se escribe una sola vez al lado del enlace (regla 12),
+> y un grupo sin ningún enlace visible no muestra su título. **El grupo "Marketplace" desapareció
+> a propósito:** el marketplace es un canal de venta, no un lugar del sistema; sus tres pantallas
+> se fueron a donde corresponde por tema —Familias del marketplace y Calificaciones a Personas,
+> Auditoría legal a Ajustes—, cada una conservando su candado. Configuración era una sola pantalla
+> de 2.443 líneas con trece solapas: se partió en cinco pantallas con dirección propia
+> (`/configuracion/prestadora`, `/asistentes`, `/cuidado`, `/avisos`, `/accesos`), sin cambiar
+> ningún bloque por dentro. De paso se arreglaron dos cosas: la solapa "Modalidades" mostraba su
+> título y sus columnas en blanco porque esos textos nunca se habían escrito, y el Resumen del mes
+> tomaba prestados dos nombres del menú para nombrar las modalidades. **Comprobado en el navegador
+> contra una base local sembrada con datos ficticios** —los seis grupos con sus 22 enlaces en
+> orden, `/configuracion` redirigiendo a la primera sección, las cinco secciones abriendo con sus
+> bloques y la consola sin errores—, nunca contra la base real. Commit `b68975e`, 12 archivos.
+> **Desplegado el mismo día a Cloudflare Pages** con el token acotado, y comprobado desde afuera
+> que `gestion.careonys.com` ya sirve la versión nueva y que una dirección interna
+> (`/configuracion/prestadora`) contesta 200 al entrar derecho. **Dato que conviene recordar:** el
+> proyecto `careonys-panel` de Cloudflare es de **subida directa**, no está enganchado a GitHub,
+> así que un `push` no despliega nada — el comando explícito es parte de terminar la tarea
+> (`CLAUDE.md` §8). Quedó abierto el pendiente #111: la base local viene vacía y hay que sembrarla
+> a mano en cada revisión.
+
 > **2026-07-27 — La empresa pasó a llamarse CeltaTech** (antes Xeitra), por decisión del
 > Desarrollador. El renombre se aplicó en todo el repositorio: comentarios, referencias a
 > documentos y textos visibles del Panel en los tres idiomas. **No cambió ninguna tabla, rol,

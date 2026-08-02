@@ -60,6 +60,7 @@ const DIRECTORIOS_IGNORADOS = new Set([
   '.claude',
   '.playwright-mcp',
   '.vercel',        // estado local de la CLI de Vercel, no es código del producto
+  '.wrangler',      // ídem, pero de la CLI de Cloudflare — guarda el nombre del proyecto de Pages
   '.temp',          // ídem, pero de la CLI de Supabase (supabase/.temp) — está en .gitignore
   'dist',
   'build',

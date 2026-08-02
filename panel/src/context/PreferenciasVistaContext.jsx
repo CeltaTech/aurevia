@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { IDENTIDAD } from '../config/identidadProducto';
 
 /* Las dos preferencias de vista del Panel: el TEMA (claro u oscuro) y la DENSIDAD (cuánto
    respira cada renglón de una tabla).
@@ -30,8 +31,12 @@ export const TEMA_POR_DEFECTO = 'automatico';
 export const DENSIDADES = ['comoda', 'normal', 'compacta'];
 export const DENSIDAD_POR_DEFECTO = 'normal';
 
-const CLAVE_TEMA = 'careonys-panel-tema';
-const CLAVE_DENSIDAD = 'careonys-panel-densidad';
+// Las dos claves con las que esto queda guardado en el navegador salen de `IDENTIDAD.codigo`,
+// no del nombre de la marca. El código técnico no cambia nunca; el nombre sí puede cambiar, y si
+// estuviera acá escrito a mano, el día del cambio todo el mundo perdería su tema y su densidad
+// sin motivo (CLAUDE.md §7.1: todo lo que persiste usa el código, no el nombre).
+const CLAVE_TEMA = `${IDENTIDAD.codigo}-panel-tema`;
+const CLAVE_DENSIDAD = `${IDENTIDAD.codigo}-panel-densidad`;
 
 function leerGuardado(clave, permitidos, porDefecto) {
   // Si el navegador tiene el almacenamiento bloqueado, `localStorage` puede tirar error.

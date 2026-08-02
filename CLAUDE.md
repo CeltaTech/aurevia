@@ -170,7 +170,7 @@ Careonys tiene **tres** roles de Panel: Superadmin, Admin_prestadora y Coordinad
 
 ## 8. Despliegue e infraestructura
 
-- **Vercel no tiene auto-deploy implícito**: un push a GitHub no es un despliegue. Si la tarea tocó una app desplegada (Panel, sitio público), el despliegue explícito es parte de terminar la tarea, no un paso opcional posterior.
+- **Un push no es un despliegue por sí solo — lo es porque hay un automatismo que lo convierte en uno.** Desde el 2026-08-02, cada `push` a `main` que toca `backend/`, `panel/`, `pwa-familias/` o `pwa-asistentes/` dispara el despliegue de esa parte (`.github/workflows/deploy-backend.yml` y `publicar-pantallas.yml`). Los proyectos de Cloudflare Pages siguen siendo de **subida directa**, o sea que no están enganchados a GitHub: quien publica es el automatismo, no Cloudflare. **Terminar una tarea que tocó una app desplegada incluye comprobar que la publicación salió bien** (`gh run list`, y la dirección en vivo respondiendo) — no alcanza con ver el push subido. Si el automatismo falla o está deshabilitado, el despliegue explícito por comando sigue siendo parte de terminar la tarea, no un paso opcional posterior.
 - **Todo schema aplicado directamente contra Supabase termina con** `NOTIFY pgrst, 'reload schema';` — sin este paso PostgREST puede devolver 404 en tablas que sí existen.
 - Toda tabla nueva: propósito documentado, relaciones definidas, restricciones, timestamps donde corresponda, políticas RLS, validación de seguridad — evaluada siempre contra el impacto multi-tenant, nunca aislada de esa pregunta.
 

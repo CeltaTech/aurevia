@@ -136,6 +136,25 @@
 > (`CLAUDE.md` §8). Quedó abierto el pendiente #111: la base local viene vacía y hay que sembrarla
 > a mano en cada revisión.
 
+> **2026-08-02 — Las tres aplicaciones de pantalla ahora se publican solas.** Salió de una
+> pregunta del Desarrollador al cerrar la Etapa 5: *¿subir el código a GitHub y publicar no son
+> necesariamente lo mismo?* No lo eran. GitHub guarda el código fuente; Cloudflare guarda el
+> resultado ya compilado, y entre uno y otro hay un paso que alguien tiene que disparar. Como los
+> tres proyectos de Cloudflare son de **subida directa** —no están enganchados al repositorio—,
+> olvidarse de ese paso dejaba el sitio en vivo con la versión vieja **sin ningún cartel de
+> error**. El motor del sistema ya no tenía ese problema desde el 2026-07-28. Ahora tampoco lo
+> tienen las pantallas: `.github/workflows/publicar-pantallas.yml` vigila `panel/`,
+> `pwa-familias/` y `pwa-asistentes/`, y cada `push` a `main` arma y sube **solo** la que cambió,
+> con la misma mecánica que ya usaba el backend. Si una falla, las otras dos se publican igual, y
+> nunca se sube un armado sin portada. Como los archivos `.env.production` no se versionan
+> (`CLAUDE.md` §7.9), sus valores quedaron guardados en los secretos del repositorio, junto con el
+> token acotado de Cloudflare y el identificador de la cuenta; **ningún valor quedó escrito en el
+> repositorio ni pasó por pantalla**. **Comprobado el mismo día, no supuesto:** disparado a mano,
+> las tres se publicaron bien y las tres direcciones de `careonys.com` contestan con el título que
+> les corresponde; disparado por un push que solo tocaba el propio archivo del automatismo, las
+> tres se saltearon —"no se toca lo que está publicado"—, que es exactamente lo que tenía que
+> pasar. `CLAUDE.md` §8 quedó reescrita y el motivo está en `docs/claude_history.md`.
+
 > **2026-07-27 — La empresa pasó a llamarse CeltaTech** (antes Xeitra), por decisión del
 > Desarrollador. El renombre se aplicó en todo el repositorio: comentarios, referencias a
 > documentos y textos visibles del Panel en los tres idiomas. **No cambió ninguna tabla, rol,
@@ -157,6 +176,9 @@
 > rama `main` que toque `backend/**`, y de hecho así se desplegó el backend hoy mismo (ver la
 > entrada de la Etapa 2 más abajo). O sea: **el backend se redespliega solo; el Panel y las dos
 > PWA no.** Para esos tres sigue haciendo falta el comando explícito, como dice `CLAUDE.md` §8.
+>
+> **Ya no. Corrección del 2026-08-02:** desde ese día las tres aplicaciones de pantalla también se
+> publican solas, con `.github/workflows/publicar-pantallas.yml`. Ver la entrada de esa fecha.
 
 > **2026-07-28 — La base de datos también se mudó a la cuenta de la empresa.** El proyecto de
 > Supabase (`abcpmzfnnhpuiupmrsdi`) estaba en una cuenta vieja, la organización "Sendler"; ahora

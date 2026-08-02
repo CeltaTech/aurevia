@@ -2,6 +2,15 @@
 
 > Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§10) — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
 
+## §8: el push pasa a publicar también las tres aplicaciones de pantalla (2026-08-02)
+
+- **Antes:** la regla decía *"Vercel no tiene auto-deploy implícito: un push a GitHub no es un despliegue"*. Nombraba a Vercel, que ya no se usa (las tres aplicaciones se mudaron a Cloudflare Pages el 2026-07-30), y describía un estado en el que el Panel, la aplicación de Familias y la de Asistentes se publicaban con un comando escrito a mano cada vez. El motor del sistema, en cambio, ya se publicaba solo desde el 2026-07-28 (`deploy-backend.yml`).
+- **Ahora:** las tres aplicaciones de pantalla también se publican solas. `publicar-pantallas.yml` vigila `panel/`, `pwa-familias/` y `pwa-asistentes/`; cada `push` a `main` arma y sube **solo** la que cambió. La regla dejó de nombrar a Vercel y agregó lo que antes se daba por sabido: **terminar la tarea incluye comprobar que la publicación salió bien**, no solo que el push subió.
+- **Motivo:** el 2026-08-02, al cerrar la Etapa 5, el Desarrollador preguntó si subir el código a GitHub y publicar eran o no lo mismo. No lo eran, y esa diferencia es una trampa silenciosa: los proyectos de Cloudflare son de **subida directa** —no están enganchados al repositorio—, así que olvidarse del comando dejaba el sitio en vivo con la versión vieja **sin ningún cartel de error**. La regla escrita no alcanzaba para evitarlo, porque dependía de que alguien se acordara. El automatismo lo vuelve imposible de olvidar.
+- **Qué hizo falta:** los archivos `.env.production` de las tres aplicaciones no se versionan (§7.9), así que sus valores se guardaron en los secretos del repositorio, junto con el token acotado de Cloudflare y el identificador de la cuenta. Ningún valor quedó escrito en el repositorio.
+- **Comprobado el mismo día, no supuesto:** disparado a mano, publicó las tres y las tres contestan en sus direcciones de `careonys.com`; disparado por un push que solo tocaba el propio archivo del automatismo, no republicó ninguna de las tres, que es lo que tenía que pasar.
+- **No reintroducir:** la idea de que "Cloudflare despliega solo al subir a GitHub". No lo hace, y si el automatismo se rompe o se apaga, se vuelve al comando a mano — no hay red de seguridad de Cloudflare abajo.
+
 ## Glosario: el producto pasa a llamarse Careonys (2026-07-28)
 
 - **Antes:** el producto se llamaba **Aurevia**, y así figuraba en el glosario de §4, en el nombre de la carpeta, en el del repositorio y en 169 lugares del texto de la documentación y de los comentarios del código.

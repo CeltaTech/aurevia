@@ -39,12 +39,15 @@ async function obtenerUsuariosEquipo() {
   return resultado.usuarios;
 }
 
-// Reutiliza las mismas etiquetas ya traducidas del menú (Layout.jsx) en vez de crear un
-// namespace de i18n nuevo para el mismo concepto (Regla 12). 'cooperativa' no tiene label
-// todavía porque Configuracion.jsx tampoco la ofrece como activable (ver su comentario).
+// Los nombres de las modalidades salen de un solo lado: los mismos textos que usa la
+// solapa donde se activan y se desactivan, en Configuración → La Prestadora (Regla 12).
+// Antes se tomaban prestados dos títulos del menú, que solo servían mientras el menú
+// estuvo agrupado por modalidad; desde que se agrupa por lo que uno viene a hacer, ese
+// préstamo dejó de tener sentido.
 const NOMBRE_MODALIDAD = {
-  directa: (t) => t.nav.grupo_prestacion_directa,
-  marketplace: (t) => t.nav.grupo_marketplace,
+  directa: (t) => t.configuracion.modalidades_directa,
+  marketplace: (t) => t.configuracion.modalidades_marketplace,
+  cooperativa: (t) => t.configuracion.modalidades_cooperativa,
 };
 
 function esHoy(fechaIso) {

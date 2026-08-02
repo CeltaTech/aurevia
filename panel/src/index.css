@@ -1110,6 +1110,9 @@ h2 {
   flex-wrap: wrap;
 }
 
+/* Sirve para un botón y también para un enlace: las secciones de Configuración son
+   enlaces de verdad, porque cada una tiene su propia dirección. De ahí el
+   `text-decoration: none`, que a un botón no le hace nada. */
 .panel-tab {
   background: none;
   border: none;
@@ -1118,6 +1121,8 @@ h2 {
   cursor: pointer;
   color: var(--texto-secundario);
   font-weight: 600;
+  text-decoration: none;
+  display: inline-block;
 }
 
 .panel-tab-activo {

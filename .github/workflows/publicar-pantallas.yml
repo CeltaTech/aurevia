@@ -1,0 +1,114 @@
+name: Publicar las aplicaciones de pantalla en Cloudflare Pages
+
+# El Panel y las dos aplicaciones de celular viven en Cloudflare Pages como proyectos de
+# "subida directa": no están enganchados a este repositorio, así que un `git push` NO las
+# publica. Hasta el 2026-08-02 el despliegue era un comando a mano, y eso deja abierta la
+# posibilidad de que el sitio en vivo se quede con una versión vieja sin que nada avise
+# (ver CLAUDE.md §8). Este archivo cierra ese agujero: hace lo mismo que ya hace
+# `deploy-backend.yml` para el motor del sistema.
+#
+# Cada aplicación se arma y se sube sola, y solo si su carpeta cambió.
+#
+# Lo que hace falta guardado en los secretos del repositorio:
+#   CLOUDFLARE_API_TOKEN      token acotado "Despliegues Pages - CeltaTech" (solo Pages y DNS)
+#   CLOUDFLARE_ACCOUNT_ID     la cuenta de Cloudflare donde viven los tres proyectos
+#   VITE_SUPABASE_URL         \
+#   VITE_SUPABASE_ANON_KEY     |  valores de producción que se compilan adentro de cada
+#   VITE_API_URL               |  aplicación. Están acá porque los archivos .env.production
+#   VITE_SITE_URL              |  no se versionan (CLAUDE.md §7.9).
+#   VITE_VAPID_PUBLIC_KEY     /
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'panel/**'
+      - 'pwa-familias/**'
+      - 'pwa-asistentes/**'
+      - '.github/workflows/publicar-pantallas.yml'
+  # También se puede disparar a mano desde la pestaña Actions, por si hace falta
+  # volver a publicar sin cambiar código.
+  workflow_dispatch:
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    strategy:
+      # Si una aplicación falla, las otras dos igual se publican.
+      fail-fast: false
+      matrix:
+        include:
+          - carpeta: panel
+            proyecto: careonys-panel
+          - carpeta: pwa-familias
+            proyecto: careonys-familias
+          - carpeta: pwa-asistentes
+            proyecto: careonys-asistentes
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Historia completa: hace falta para comparar contra lo que había antes del push,
+          # que puede traer varios cambios juntos, no uno solo.
+          fetch-depth: 0
+
+      - name: ¿Cambió esta aplicación?
+        id: cambios
+        env:
+          ANTES: ${{ github.event.before }}
+          AHORA: ${{ github.sha }}
+        run: |
+          # Ante cualquier duda se publica. Equivocarse publicando de más no rompe nada;
+          # equivocarse publicando de menos deja el sitio en vivo con la versión vieja.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Disparado a mano: se publica igual."
+            echo "hay=si" >> "$GITHUB_OUTPUT"
+          elif ! git cat-file -e "$ANTES" 2>/dev/null; then
+            echo "No puedo ver la versión anterior: publico por las dudas."
+            echo "hay=si" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$ANTES" "$AHORA" | grep -q "^${{ matrix.carpeta }}/"; then
+            echo "Cambió ${{ matrix.carpeta }}: se publica."
+            echo "hay=si" >> "$GITHUB_OUTPUT"
+          else
+            echo "No cambió ${{ matrix.carpeta }}: no se toca lo que está publicado."
+            echo "hay=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.cambios.outputs.hay == 'si'
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ${{ matrix.carpeta }}/package-lock.json
+
+      - name: Instalar dependencias
+        if: steps.cambios.outputs.hay == 'si'
+        working-directory: ${{ matrix.carpeta }}
+        run: npm ci
+
+      - name: Armar la aplicación
+        if: steps.cambios.outputs.hay == 'si'
+        working-directory: ${{ matrix.carpeta }}
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_SITE_URL: ${{ secrets.VITE_SITE_URL }}
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
+        run: npm run build
+
+      - name: Comprobar que quedó armada
+        if: steps.cambios.outputs.hay == 'si'
+        working-directory: ${{ matrix.carpeta }}
+        run: |
+          # Si el armado saliera vacío o sin portada, subirlo dejaría la aplicación
+          # rota en vivo. Mejor frenar acá.
+          test -f dist/index.html || { echo "No hay dist/index.html: no se sube nada."; exit 1; }
+
+      - name: Subir a Cloudflare Pages
+        if: steps.cambios.outputs.hay == 'si'
+        working-directory: ${{ matrix.carpeta }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler@4 pages deploy dist --project-name=${{ matrix.proyecto }} --branch=main --commit-dirty=true

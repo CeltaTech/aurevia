@@ -19,21 +19,21 @@ export async function medicacionVigenteDelPaciente(pacienteId) {
   return data || [];
 }
 
-export async function tipoHabilitacionRequerida(prestadoraId, viaAdministracion) {
+export async function tipoMatriculaRequerida(prestadoraId, viaAdministracion) {
   const { data } = await supabase
-    .from('configuracion_habilitacion_via_medicacion')
-    .select('tipo_habilitacion_requerida')
+    .from('configuracion_matricula_via_medicacion')
+    .select('tipo_matricula_requerida')
     .eq('prestadora_id', prestadoraId)
     .eq('via_administracion', viaAdministracion)
     .maybeSingle();
-  return data?.tipo_habilitacion_requerida ?? null;
+  return data?.tipo_matricula_requerida ?? null;
 }
 
-export async function asistenteTieneHabilitacionVigente(asistenteId, tipoRequerido) {
+export async function asistenteTieneMatriculaVigente(asistenteId, tipoRequerido) {
   if (!tipoRequerido) return true;
   const hoyISO = new Date().toISOString().slice(0, 10);
   const { data } = await supabase
-    .from('habilitaciones_asistente')
+    .from('matriculas_asistente')
     .select('id')
     .eq('asistente_id', asistenteId)
     .eq('tipo', tipoRequerido)
@@ -58,11 +58,11 @@ export async function asistentesAsignadosAlPaciente(pacienteId) {
   return [...new Set((data || []).map((g) => g.asistente_id))];
 }
 
-export async function hayAsistenteAsignadoHabilitado(pacienteId, tipoRequerido) {
+export async function hayAsistenteAsignadoConMatricula(pacienteId, tipoRequerido) {
   if (!tipoRequerido) return true;
   const asignados = await asistentesAsignadosAlPaciente(pacienteId);
   for (const asistenteId of asignados) {
-    if (await asistenteTieneHabilitacionVigente(asistenteId, tipoRequerido)) return true;
+    if (await asistenteTieneMatriculaVigente(asistenteId, tipoRequerido)) return true;
   }
   return false;
 }

@@ -104,13 +104,13 @@ export function Guardias() {
   }
 
   // Los tres pasos de una reasignación viven en `lib/reasignarGuardia.js`, no acá: el
-  // mostrador hace exactamente lo mismo y no puede haber dos versiones de esta operación
+  // Estado actual hace exactamente lo mismo y no puede haber dos versiones de esta operación
   // (regla 12 de CLAUDE.md §7).
   async function handleReasignar(guardiaId, asistenteId, fecha) {
     const guardiaActual = filas.find((g) => g.id === guardiaId);
     if (!guardiaActual) return;
 
-    const { error: falla } = await reasignarGuardia(guardiaActual, asistenteId, fecha);
+    const { error: falla } = await reasignarGuardia(guardiaActual, asistenteId, fecha, t.matricula);
     if (falla) {
       setError(falla);
       return;

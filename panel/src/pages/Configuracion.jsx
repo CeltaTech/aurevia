@@ -10,23 +10,10 @@ import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { traducirValor } from '../i18n/valores';
 import { SIGNOS_VITALES } from '../lib/signosVitales';
+import { TiposAsistenteTab } from './configuracion/TiposAsistenteTab';
+import { llamarApiConfiguracion as llamarApi } from '../lib/apiConfiguracion';
 
 const API_URL = import.meta.env.VITE_API_URL;
-
-async function llamarApi(path, opciones = {}) {
-  const { data } = await supabase.auth.getSession();
-  const respuesta = await fetch(`${API_URL}/api/panel/configuracion${path}`, {
-    ...opciones,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${data.session?.access_token}`,
-      ...opciones.headers,
-    },
-  });
-  const resultado = await respuesta.json();
-  if (!respuesta.ok) throw new Error(resultado.error);
-  return resultado;
-}
 
 async function llamarApiMarketplace(path, opciones = {}) {
   const { data } = await supabase.auth.getSession();
@@ -43,7 +30,7 @@ async function llamarApiMarketplace(path, opciones = {}) {
   return resultado;
 }
 
-const TABS = ['empresa', 'modalidades', 'zonas', 'servicios', 'documentos', 'vitales', 'habilitacion_medicacion', 'notificaciones', 'whatsapp', 'permisos'];
+const TABS = ['empresa', 'modalidades', 'zonas', 'servicios', 'tipos_asistente', 'documentos', 'vitales', 'matricula_medicacion', 'notificaciones', 'whatsapp', 'permisos'];
 const ROLES_RELEVO = ['suplente', 'franquero', 'emergencia', 'familiar'];
 const TIPOS_PERSONAL_EMERGENCIA = ['franquero', 'emergencia'];
 
@@ -80,9 +67,10 @@ export function Configuracion() {
         {tab === 'modalidades' && <TabModalidades />}
         {tab === 'zonas' && <TabZonas />}
         {tab === 'servicios' && <TabServicios />}
+        {tab === 'tipos_asistente' && <TiposAsistenteTab />}
         {tab === 'documentos' && <TabDocumentos />}
         {tab === 'vitales' && <TabVitales />}
-        {tab === 'habilitacion_medicacion' && <TabHabilitacionMedicacion />}
+        {tab === 'matricula_medicacion' && <TabMatriculaMedicacion />}
         {tab === 'notificaciones' && <TabNotificaciones />}
         {tab === 'whatsapp' && <TabWhatsapp />}
         {tab === 'permisos' && <TabPermisos />}
@@ -1543,7 +1531,7 @@ function TabVitales() {
   );
 }
 
-function TabHabilitacionMedicacion() {
+function TabMatriculaMedicacion() {
   const { t } = useLocale();
   const { usuario } = useAuth();
   const confirmarDestructivo = useConfirmarDestructivo();
@@ -1559,7 +1547,7 @@ function TabHabilitacionMedicacion() {
     setEstado('cargando');
     setError(null);
     const { data, error: errorConsulta } = await supabase
-      .from('configuracion_habilitacion_via_medicacion')
+      .from('configuracion_matricula_via_medicacion')
       .select('*')
       .eq('prestadora_id', usuario.prestadora_id)
       .order('via_administracion');
@@ -1577,15 +1565,15 @@ function TabHabilitacionMedicacion() {
   }, [recargar]);
 
   function set(id, valor) {
-    setFilas((fs) => fs.map((f) => (f.id === id ? { ...f, tipo_habilitacion_requerida: valor } : f)));
+    setFilas((fs) => fs.map((f) => (f.id === id ? { ...f, tipo_matricula_requerida: valor } : f)));
   }
 
   async function guardar(fila) {
     setGuardandoId(fila.id);
     setError(null);
     const { error: errorUpdate } = await supabase
-      .from('configuracion_habilitacion_via_medicacion')
-      .update({ tipo_habilitacion_requerida: fila.tipo_habilitacion_requerida || null, updated_at: new Date().toISOString() })
+      .from('configuracion_matricula_via_medicacion')
+      .update({ tipo_matricula_requerida: fila.tipo_matricula_requerida || null, updated_at: new Date().toISOString() })
       .eq('id', fila.id);
     setGuardandoId(null);
     if (errorUpdate) {
@@ -1598,10 +1586,10 @@ function TabHabilitacionMedicacion() {
   async function agregar() {
     setAgregando(true);
     setError(null);
-    const { error: errorInsert } = await supabase.from('configuracion_habilitacion_via_medicacion').insert({
+    const { error: errorInsert } = await supabase.from('configuracion_matricula_via_medicacion').insert({
       prestadora_id: usuario.prestadora_id,
       via_administracion: nuevaVia,
-      tipo_habilitacion_requerida: nuevoTipo || null,
+      tipo_matricula_requerida: nuevoTipo || null,
     });
     setAgregando(false);
     if (errorInsert) {
@@ -1614,10 +1602,10 @@ function TabHabilitacionMedicacion() {
   }
 
   async function borrar(fila) {
-    if (!(await confirmarDestructivo(t.configuracion.habilitacion_medicacion_confirmar_borrar))) return;
+    if (!(await confirmarDestructivo(t.configuracion.matricula_medicacion_confirmar_borrar))) return;
     setGuardandoId(fila.id);
     setError(null);
-    const { error: errorDelete } = await supabase.from('configuracion_habilitacion_via_medicacion').delete().eq('id', fila.id);
+    const { error: errorDelete } = await supabase.from('configuracion_matricula_via_medicacion').delete().eq('id', fila.id);
     setGuardandoId(null);
     if (errorDelete) {
       setError(t.comun.error_generico);
@@ -1628,15 +1616,15 @@ function TabHabilitacionMedicacion() {
 
   return (
     <div>
-      <h2>{t.configuracion.habilitacion_medicacion_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.habilitacion_medicacion_explicacion}</p>
+      <h2>{t.configuracion.matricula_medicacion_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.matricula_medicacion_explicacion}</p>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
-      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && filas.length === 0} recargar={recargar} mensajeVacio={t.configuracion.habilitacion_medicacion_vacio}>
+      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && filas.length === 0} recargar={recargar} mensajeVacio={t.configuracion.matricula_medicacion_vacio}>
         <table className="panel-tabla">
           <thead>
             <tr>
-              <th>{t.configuracion.habilitacion_medicacion_col_via}</th>
-              <th>{t.configuracion.habilitacion_medicacion_col_tipo}</th>
+              <th>{t.configuracion.matricula_medicacion_col_via}</th>
+              <th>{t.configuracion.matricula_medicacion_col_tipo}</th>
               <th></th>
             </tr>
           </thead>
@@ -1647,8 +1635,8 @@ function TabHabilitacionMedicacion() {
                 <td>
                   <input
                     type="text"
-                    value={fila.tipo_habilitacion_requerida || ''}
-                    placeholder={t.configuracion.habilitacion_medicacion_sin_requisito}
+                    value={fila.tipo_matricula_requerida || ''}
+                    placeholder={t.configuracion.matricula_medicacion_sin_requisito}
                     onChange={(e) => set(fila.id, e.target.value)}
                   />
                 </td>
@@ -1664,23 +1652,23 @@ function TabHabilitacionMedicacion() {
         </table>
       </EstadoLista>
 
-      <h2 style={{ marginTop: '1.5rem' }}>{t.configuracion.habilitacion_medicacion_nueva}</h2>
+      <h2 style={{ marginTop: '1.5rem' }}>{t.configuracion.matricula_medicacion_nueva}</h2>
       <FormField
-        label={t.configuracion.habilitacion_medicacion_col_via}
+        label={t.configuracion.matricula_medicacion_col_via}
         name="nueva_via"
         value={nuevaVia}
         onChange={(e) => setNuevaVia(e.target.value)}
-        placeholder={t.configuracion.habilitacion_medicacion_via_placeholder}
+        placeholder={t.configuracion.matricula_medicacion_via_placeholder}
       />
       <FormField
-        label={t.configuracion.habilitacion_medicacion_col_tipo}
+        label={t.configuracion.matricula_medicacion_col_tipo}
         name="nuevo_tipo"
         value={nuevoTipo}
         onChange={(e) => setNuevoTipo(e.target.value)}
-        placeholder={t.configuracion.habilitacion_medicacion_sin_requisito}
+        placeholder={t.configuracion.matricula_medicacion_sin_requisito}
       />
       <Button onClick={agregar} disabled={agregando || !nuevaVia}>
-        {agregando ? t.comun.guardando : t.configuracion.habilitacion_medicacion_agregar}
+        {agregando ? t.comun.guardando : t.configuracion.matricula_medicacion_agregar}
       </Button>
     </div>
   );

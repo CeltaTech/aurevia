@@ -253,7 +253,7 @@ export function GrillaGuardias({
 
   /* Moverse de día en Día y en Línea de tiempo.
      Se guarda acá adentro Y se avisa hacia afuera: adentro para que la grilla funcione aunque
-     la pantalla de arriba no escuche, y afuera para que la que sí escucha —el mostrador— pida
+     la pantalla de arriba no escuche, y afuera para que la que sí escucha —el Estado actual— pida
      a la base las guardias del día nuevo si le hicieran falta. Nunca sale del rango pedido:
      un día del que no se trajeron guardias se vería vacío y parecería que no hay ninguna. */
   function cambiarDia(nuevo) {

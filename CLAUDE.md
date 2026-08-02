@@ -68,15 +68,19 @@ Esta tabla se mantiene siempre en su versión **vigente** — sin notas de fecha
 |---|---|
 | CeltaTech | nombres anteriores de la empresa; "software de CeltaTech" al referirse al producto |
 | Careonys | "Aurevia", el nombre anterior del producto. Única excepción: la clave técnica `codigo: 'aurevia'` de `identidadProducto.js` y las claves de entitlements que se arman con ella (`aurevia.pacientes.activos_max`), que son inmutables por diseño y **no** se renombran |
-| Prestadora (sinónimo aceptado: "licenciataria", cuando el contexto es específicamente la relación de licenciamiento SaaS con CeltaTech). Es el caso específico de un cliente de CeltaTech que contrata Careonys — no todo cliente de CeltaTech es una Prestadora (podría contratar otro producto de CeltaTech sin dedicarse al cuidado de personas; ver `ARQUITECTURA_NIVELES.md` en la raíz de CeltaTech) | empresa cliente, organización comercial, empresa usuaria (fuera del sentido técnico del sistema) |
+| Prestadora, o **empresa prestadora** — las dos formas valen indistintamente (sinónimo aceptado además: "licenciataria", cuando el contexto es específicamente la relación de licenciamiento SaaS con CeltaTech). Es el caso específico de un cliente de CeltaTech que contrata Careonys — no todo cliente de CeltaTech es una Prestadora (podría contratar otro producto de CeltaTech sin dedicarse al cuidado de personas; ver `ARQUITECTURA_NIVELES.md` en la raíz de CeltaTech) | "empresa" a secas (ambigua: a nivel CeltaTech significa cualquier cliente, no una Prestadora), empresa cliente, organización comercial, empresa usuaria (fuera del sentido técnico del sistema) |
 | Cliente (a secas, únicamente cuando se habla desde la perspectiva de CeltaTech/Nivel 1 sobre cualquier empresa que le contrata un producto, sea o no Careonys) | usar dentro del contexto de Careonys para referirse a la Familia o a la Prestadora — dentro de Careonys esos dos roles siempre llevan su propio nombre, nunca "cliente" genérico |
 | Organización | entidad técnica multi-tenant — no confundir con "Prestadora" en texto de negocio |
 | Sandbox | empresa cliente, Prestadora real, organización comercial |
-| Asistente (cuidador/a, enfermero/a, etc.) | empleado/a, trabajador/a |
+| Asistente — es el término **genérico**, el único que usan el código y las tablas. Cuidador/a, enfermero/a, kinesiólogo/a, médico/a, etc. no son otros nombres del Asistente: son **tipos** de Asistente (ver la entrada siguiente) | empleado/a, trabajador/a; usar el nombre de un tipo ("cuidador") como si fuera el término general |
+| Tipo de Asistente — **qué es** un Asistente: cuidador/a, enfermero/a, kinesiólogo/a, médico/a, y los que cada Prestadora agregue. Vive en un catálogo de dos niveles (general de CeltaTech + propio de cada Prestadora). Cada tipo define sus Tareas y si requiere Matrícula | especialidad (deprecado, ver `asistentes.especialidades`), categoría, puesto, rol (rol es del sistema, ver §5) |
+| Tareas — **qué hace y qué no hace** un tipo de Asistente. Son siempre dos listas separadas, nunca un párrafo que las mezcle: las que le corresponden y las que no. La segunda existe porque es la que evita la confusión con las Familias, y por eso pesa igual que la primera | funciones, incumbencias, perfil del puesto, "descripción de tareas" como texto único |
 | Familia | cliente, usuario |
 | Paciente | adulto mayor (salvo contexto clínico específico) |
-| Guardia | turno, jornada, servicio |
-| Coordinador | supervisor, jefe, encargado |
+| Servicio — lo que la Prestadora le presta a una Familia. Es el concepto **superior**: de un Servicio cuelgan las Guardias, las prestaciones y lo facturable (tabla `servicios`). *Definición fina pendiente del Desarrollador* | usarlo como sinónimo de Guardia o de prestación suelta |
+| Guardia — una parte de un Servicio, nunca el todo | turno, jornada, servicio |
+| Coordinador (sinónimo aceptado: "supervisor" — hoy son la misma cosa con otro nombre; si en versiones futuras se separan, se separan acá. El rol en el código sigue llamándose `coordinador`) | jefe, encargado |
+| Estado actual — la pantalla de entrada del Panel: arriba lo que no está bien hoy, abajo la semana entera. Se llama así porque eso es lo que contesta: *cómo está todo ahora mismo*. En el código: `pages/EstadoActual.jsx`, clave `estado_actual` | mostrador (retirado: nombraba el mueble, no lo que la pantalla muestra), estatus (es "status" adaptado del inglés, ver la pregunta 3 más abajo), tablero, dashboard, home, inicio |
 | Reporte diario | informe, planilla, parte |
 | Vínculo / Cese | contrato de trabajo, despido (salvo causal literal de despido) |
 | Proceso de Incorporación de Asistentes | selección, filtro, pipeline, reclutamiento |
@@ -86,11 +90,32 @@ Esta tabla se mantiene siempre en su versión **vigente** — sin notas de fecha
 | Ausente sin relevo previo | cualquier término en inglés o genérico para el caso de un Asistente que no se presenta a una Guardia cuando no había ningún otro Asistente cubriendo antes de él (ej. primera guardia del día para un Paciente) — distinto de un ausente con relevo, donde sí hay alguien saliente esperando |
 | Documentación (vencimientos documentales de Asistentes, por Prestadora) | compliance, cumplimiento normativo |
 | Indicación de medicación (medicamento/dosis/frecuencia/vía solicitados por la Familia para un Paciente, sujeta a aceptación del Panel) | medicación habitual (deprecado, ver `pacientes.medicacion_habitual`), orden médica genérica |
-| Habilitación (matrícula o título profesional de un Asistente que lo autoriza a administrar cierta vía de medicación, ej. enfermero/a matriculado/a) | certificación genérica, licencia, permiso |
+| Matrícula — **qué autoriza legalmente** a ejercer a un Asistente, emitida por el colegio o el organismo que corresponda (número, vigencia, archivo). Los tipos de Asistente que la requieren no pueden atender a ningún Paciente sin ella vigente y verificada. Distinta de las Tareas (qué hace) y del Tipo (qué es) | habilitación (retirado: se leía como "habilidades del Asistente", es decir lo contrario de lo que significa), certificación genérica, licencia, permiso |
 | Desarrollador (quien dirige el desarrollo y aprueba las decisiones elevadas) | nombre propio de esa persona como estand-in genérico; no es un rol del sistema (ver §5) |
 | multi-tenant, SaaS, RLS, MFA, Sandbox | — (términos técnicos permitidos tal cual) |
 
 **Verificación al cerrar cualquier tarea que tocó texto visible:** ¿se incorporó algún término nuevo no aprobado? Si sí, la tarea no está terminada hasta agregarlo al glosario o reemplazarlo.
+
+**Cinco preguntas antes de proponer una palabra nueva.** La tabla dice qué palabras están aprobadas; esto dice contra qué se aprueba una que todavía no está. Solo si pasa las cinco se propone:
+
+1. ¿Ya existe una palabra aprobada para esto? Si existe, no hace falta otra.
+2. ¿La palabra es del negocio o de la tecnología? Ante la duda, la del negocio gana: el producto lo usan Coordinadoras, no programadores.
+3. ¿Hay una equivalente clara en castellano? Si la hay, se usa esa.
+4. Si es en inglés, ¿está tan aceptada en informática que traducirla confundiría más que aclarar? (`multi-tenant`, `SaaS`, `RLS` pasan esta prueba; casi ninguna otra.)
+5. ¿La entiende alguien que no conoce el tema? Si hace falta explicarla cada vez que aparece, la palabra no está funcionando.
+
+**Equivalencias de uso corriente.** No es prohibición de términos técnicos: es que, existiendo la forma en castellano, se escribe en castellano.
+
+| En vez de | Escribir |
+|---|---|
+| Workflow engine | Motor de flujo de trabajo |
+| Business intelligence | Análisis de información del negocio |
+| Core engine | Motor principal del sistema |
+| Deployment | Publicación de una nueva versión |
+| Logging | Registro de actividades |
+| CRUD | Alta, baja, modificación y consulta (o "administración de información") |
+
+*Excepción:* los **nombres comerciales** —de un plan, de un módulo que se vende— son una decisión de marca y pueden quedar como estén. Esta tabla rige el texto que describe el producto, no cómo se llama lo que se vende.
 
 ## 5. Roles del sistema y control de acceso
 

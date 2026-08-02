@@ -3,7 +3,7 @@ import { useLocale } from '../i18n/LocaleContext';
 import { supabase } from '../lib/supabaseClient';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
-import { FranjaExcepciones } from '../components/mostrador/FranjaExcepciones';
+import { FranjaExcepciones } from '../components/estado-actual/FranjaExcepciones';
 import { GrillaGuardias } from './guardias/GrillaGuardias';
 import { BarraAccionesMasivas } from './guardias/BarraAccionesMasivas';
 import { PanelCobertura } from './guardias/PanelCobertura';
@@ -12,14 +12,15 @@ import { filtrarPorExcepcion } from '../lib/excepciones';
 import { estaSinCubrir } from '../lib/cobertura';
 import { reasignarGuardia } from '../lib/reasignarGuardia';
 import { correrHora, hoyISO, sumarDias } from '../lib/horarios';
+import { COLUMNAS_ESTADO_MATRICULA, URGENCIA, urgenciaDeVencimiento } from '../lib/matricula';
 
-/* El mostrador.
+/* El Estado actual.
    ==========================================================================
 
    POR QUÉ EXISTE. La pantalla de entrada del Panel era un tablero: seis números que
    contaban cosas y no llevaban a ninguna parte. Contar no es el trabajo de una Prestadora;
    el trabajo es que no quede ningún Paciente sin nadie. Así que la pantalla de entrada
-   ahora es un mostrador: arriba lo que está roto, abajo la semana entera, y todo lo de
+   ahora muestra el estado actual: arriba lo que está roto, abajo la semana entera, y todo lo de
    arriba lleva a lo de abajo con un solo clic.
 
    LA REGLA QUE ORDENA TODO. Cada contador de arriba usa exactamente la misma función para
@@ -27,8 +28,8 @@ import { correrHora, hoyISO, sumarDias } from '../lib/horarios';
    que aparecen abajo no pueden discrepar: es la misma pregunta hecha una sola vez.
 
    QUÉ CARGA ESTA PANTALLA Y QUÉ NO. Trae las guardias del rango, los nombres, los papeles
-   por vencer y los reportes que faltan — lo que necesitan los seis contadores. Todo lo que
-   hace falta solo para cubrir un hueco (habilitaciones, invitaciones ya hechas) lo carga el
+   por vencer y los reportes que faltan — lo que necesitan los siete contadores. Todo lo que
+   hace falta solo para cubrir un hueco (matriculas, invitaciones ya hechas) lo carga el
    panel lateral cuando se abre, no antes: nadie tiene que pagar esa consulta por entrar. */
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -36,11 +37,11 @@ const API_URL = import.meta.env.VITE_API_URL;
 /** Con cuántos días de anticipación avisa esta Prestadora si no se pudo averiguar. */
 const DIAS_AVISO_POR_DEFECTO = 30;
 
-/** Cuántos días muestra el mostrador de entrada: la semana que viene. */
+/** Cuántos días muestra la pantalla de entrada: la semana que viene. */
 const DIAS_A_LA_VISTA = 7;
 
 /* Cuántos días para atrás también se traen.
-   Tres de las seis excepciones miran al pasado, no al futuro: quien no llegó, quien no marcó
+   Tres de las siete excepciones miran al pasado, no al futuro: quien no llegó, quien no marcó
    la salida y la guardia terminada sin reporte. Si la ventana arrancara hoy, esas guardias se
    contarían en la franja de arriba —porque la excepción las encuentra— pero al tocar el
    contador la grilla quedaría vacía, y el número de arriba parecería mentira. Dos días cubren
@@ -59,7 +60,7 @@ async function obtenerDiasAvisoDocumentos() {
   return resultado.dias_aviso_vencimiento_documentos;
 }
 
-export function Mostrador() {
+export function EstadoActual() {
   const { t } = useLocale();
 
   const [estado, setEstado] = useState('cargando');
@@ -71,6 +72,8 @@ export function Mostrador() {
     asistentesConPapelVencido: new Set(),
     guardiasSinReporte: new Set(),
     diasAviso: DIAS_AVISO_POR_DEFECTO,
+    asistentesConMatriculaTrabada: new Set(),
+    asistentesConMatriculaPorVencer: new Set(),
   });
 
   const [excepcionActiva, setExcepcionActiva] = useState(null);
@@ -89,7 +92,7 @@ export function Mostrador() {
     setError(null);
 
     // Los días de aviso vienen del backend y el backend puede no estar levantado. Que eso
-    // pase no puede voltear el mostrador entero: se usa el valor por defecto y se sigue.
+    // pase no puede voltear la pantalla entera: se usa el valor por defecto y se sigue.
     let diasAviso = DIAS_AVISO_POR_DEFECTO;
     try {
       diasAviso = (await obtenerDiasAvisoDocumentos()) ?? DIAS_AVISO_POR_DEFECTO;
@@ -99,7 +102,7 @@ export function Mostrador() {
 
     const limitePapeles = sumarDias(hoyISO(), diasAviso);
 
-    const [gs, as, ps, ds] = await Promise.all([
+    const [gs, as, ps, ds, em] = await Promise.all([
       supabase
         .from('guardias')
         .select('*')
@@ -118,6 +121,9 @@ export function Mostrador() {
         .select('asistente_id, fecha_vencimiento')
         .not('fecha_vencimiento', 'is', null)
         .lte('fecha_vencimiento', limitePapeles),
+      // La vista contesta de una sola vez si cada Asistente está trabado y cuánto le falta a su
+      // matrícula. El motivo lo decide la base, no esta pantalla: acá solo se lee.
+      supabase.from('estado_matricula_asistente').select(COLUMNAS_ESTADO_MATRICULA),
     ]);
 
     if (gs.error) {
@@ -158,6 +164,21 @@ export function Mostrador() {
       sinReporte = new Set(completadas.filter((id) => !conReporte.has(id)));
     }
 
+    // Dos conjuntos otra vez, por el mismo motivo que los papeles: trabado es rojo y por vencer
+    // es naranja. La ventana de aviso es la misma que la de los documentos — una sola perilla
+    // para los dos vencimientos, no dos que se separen con el tiempo.
+    const matriculaTrabada = new Set();
+    const matriculaPorVencer = new Set();
+    for (const fila of em.data ?? []) {
+      if (fila.motivo_bloqueo) {
+        matriculaTrabada.add(fila.asistente_id);
+        continue;
+      }
+      if (fila.requiere_matricula !== true) continue;
+      const urgencia = urgenciaDeVencimiento(fila.dias_para_vencer, diasAviso);
+      if (urgencia !== URGENCIA.NINGUNA) matriculaPorVencer.add(fila.asistente_id);
+    }
+
     setGuardias(filas);
     setAsistentes(as.data ?? []);
     setCtxExtra({
@@ -165,6 +186,8 @@ export function Mostrador() {
       asistentesConPapelVencido: vencidos,
       guardiasSinReporte: sinReporte,
       diasAviso,
+      asistentesConMatriculaTrabada: matriculaTrabada,
+      asistentesConMatriculaPorVencer: matriculaPorVencer,
     });
     setEstado('listo');
   }, [desde, hasta]);
@@ -214,7 +237,7 @@ export function Mostrador() {
   async function reasignarUna(guardiaId, asistenteId, fecha) {
     const g = guardias.find((x) => x.id === guardiaId);
     if (!g) return;
-    const { error: falla } = await reasignarGuardia(g, asistenteId, fecha);
+    const { error: falla } = await reasignarGuardia(g, asistenteId, fecha, t.matricula);
     if (falla) {
       setError(falla);
       return;
@@ -314,8 +337,8 @@ export function Mostrador() {
 
   return (
     <div>
-      <h1>{t.mostrador.titulo}</h1>
-      <p className="panel-lateral-subtitulo">{t.mostrador.subtitulo}</p>
+      <h1>{t.estado_actual.titulo}</h1>
+      <p className="panel-lateral-subtitulo">{t.estado_actual.subtitulo}</p>
 
       {error && <Alert variant="error">{error}</Alert>}
 

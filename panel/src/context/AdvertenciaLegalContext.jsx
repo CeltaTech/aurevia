@@ -7,8 +7,8 @@ import { Button } from '../components/ui/Button';
 const AdvertenciaLegalContext = createContext(null);
 
 // Infraestructura genérica del pendiente #51 (docs/PENDIENTES.md) / CLAUDE.md §3.
-// Primer consumidor real: Medicacion.jsx, función 'medicacion_via_sin_habilitacion' (aceptar
-// una indicación cuya vía requiere una habilitación que ningún Asistente asignado tiene
+// Primer consumidor real: Medicacion.jsx, función 'medicacion_via_sin_matricula' (aceptar
+// una indicación cuya vía requiere una matrícula que ningún Asistente asignado tiene
 // vigente). Cualquier función nueva de gestión de Asistentes (rankings, penalización de
 // inasistencias, etc.) se envuelve del mismo modo:
 //

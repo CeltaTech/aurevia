@@ -1,9 +1,9 @@
-// Punto único de verdad de LAS EXCEPCIONES DEL MOSTRADOR (regla 12 de CLAUDE.md §7).
+// Punto único de verdad de LAS EXCEPCIONES DEL ESTADO ACTUAL (regla 12 de CLAUDE.md §7).
 // ============================================================================
 //
 // Qué es una excepción acá. Una cosa que no está bien y que alguien tiene que resolver:
 // un hueco sin cubrir, una invitación que nadie contestó, un Asistente que no llegó. El
-// mostrador arranca mostrando seis contadores —uno por excepción— y debajo la semana entera.
+// Estado actual arranca mostrando siete contadores —uno por excepción— y debajo la semana entera.
 //
 // El problema que este archivo evita. La franja tiene que hacer dos cosas con la misma idea:
 // **contar** ("hay 4 sin cubrir") y **filtrar** ("mostrame esas 4"). Si el contador se calcula
@@ -15,7 +15,7 @@
 // usa para contar y para filtrar. Que el número y la lista coincidan no es algo que haya que
 // cuidar: es imposible que no coincidan.
 //
-// De dónde salen las definiciones. Cinco de las seis se leen de `lib/semaforoGuardia.js`, que
+// De dónde salen las definiciones. Cinco de las siete se leen de `lib/semaforoGuardia.js`, que
 // ya decide en qué situación está cada guardia. Así el color del borde en la grilla y el
 // contador de arriba no pueden contradecirse tampoco: si el chip está rojo por "llegó tarde",
 // está sí o sí adentro del contador "tarde".
@@ -36,6 +36,8 @@ import { SITUACION, situacionDeGuardia } from './semaforoGuardia';
  *   asistentesConPapelVencido    → Set de ids de Asistentes con un papel ya vencido.
  *   guardiasSinReporte           → Set de ids de guardias terminadas sin reporte cargado.
  *   diasAviso                    → con cuántos días de anticipación avisa esta Prestadora.
+ *   asistentesConMatriculaTrabada→ Set de ids de Asistentes que hoy no pueden tomar guardias.
+ *   asistentesConMatriculaPorVencer → Set de ids con la matrícula cerca de vencer.
  */
 export function contextoVacio() {
   return {
@@ -45,13 +47,15 @@ export function contextoVacio() {
     asistentesConPapelVencido: new Set(),
     guardiasSinReporte: new Set(),
     diasAviso: 0,
+    asistentesConMatriculaTrabada: new Set(),
+    asistentesConMatriculaPorVencer: new Set(),
   };
 }
 
 const conjunto = (c) => (c instanceof Set ? c : new Set());
 
 /**
- * Las seis excepciones, en el orden en que se muestran: primero lo que deja a un Paciente sin
+ * Las siete excepciones, en el orden en que se muestran: primero lo que deja a un Paciente sin
  * nadie, después lo que pasa durante la guardia, y al final lo administrativo.
  *
  * Cada una tiene:
@@ -135,6 +139,28 @@ export const EXCEPCIONES = [
       guardias.some((g) => conjunto(ctx?.asistentesConPapelVencido).has(g.asistente_id)),
   },
   {
+    id: 'matricula',
+    claveEtiqueta: 'exc_matricula',
+    claveAyuda: 'exc_matricula_ayuda',
+    parametros: () => ({}),
+    /* Va aparte de "papeles" aunque las dos hablen de vencimientos, y la diferencia es grande:
+       un papel vencido es un aviso —la guardia se hace igual—, mientras que una matrícula sin
+       vigencia la base directamente no la deja asignar. Contarlas juntas mezclaría "hay que
+       reclamar un certificado" con "esta guardia no se puede cubrir con esta persona". */
+    aplica: (g, ctx) => {
+      if (!g?.asistente_id) return false;
+      const s = situacionDeGuardia(g, ctx);
+      if (s === SITUACION.CANCELADA || s === SITUACION.COMPLETADA) return false;
+      return (
+        conjunto(ctx?.asistentesConMatriculaTrabada).has(g.asistente_id) ||
+        conjunto(ctx?.asistentesConMatriculaPorVencer).has(g.asistente_id)
+      );
+    },
+    // Rojo solo cuando ya está trabado. Por vencer todavía se resuelve con una llamada.
+    esCritica: (guardias, ctx) =>
+      guardias.some((g) => conjunto(ctx?.asistentesConMatriculaTrabada).has(g.asistente_id)),
+  },
+  {
     id: 'reportes',
     claveEtiqueta: 'exc_reportes',
     claveAyuda: 'exc_reportes_ayuda',
@@ -153,10 +179,10 @@ export function excepcionPorId(id) {
 }
 
 /**
- * Pasa la lista de guardias por las seis excepciones y devuelve, para cada una, cuántas
+ * Pasa la lista de guardias por las siete excepciones y devuelve, para cada una, cuántas
  * cayeron y si va en rojo. Es lo único que necesita la franja para dibujarse.
  *
- * Devuelve las seis siempre, incluso las que dieron cero: que un contador desaparezca cuando
+ * Devuelve las siete siempre, incluso las que dieron cero: que un contador desaparezca cuando
  * llega a cero hace que la franja cambie de forma sola y que uno no encuentre lo que buscaba.
  * Quien la dibuja decide si atenúa las de cero; el cálculo no esconde nada.
  */

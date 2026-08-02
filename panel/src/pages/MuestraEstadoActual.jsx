@@ -1,15 +1,15 @@
 import { useMemo, useState } from 'react';
-import { FranjaExcepciones } from '../components/mostrador/FranjaExcepciones';
+import { FranjaExcepciones } from '../components/estado-actual/FranjaExcepciones';
 import { GrillaGuardias } from './guardias/GrillaGuardias';
 import { BarraAccionesMasivas } from './guardias/BarraAccionesMasivas';
 import { filtrarPorExcepcion } from '../lib/excepciones';
 import { hoyISO, sumarDias } from '../lib/horarios';
 import { SelectoresPreferencias } from '../components/layout/SelectoresPreferencias';
 
-/* BANCO DE PRUEBAS DEL MOSTRADOR — herramienta de desarrollo, no es producto.
+/* BANCO DE PRUEBAS DEL ESTADO ACTUAL — herramienta de desarrollo, no es producto.
    ====================================================================================
 
-   Para qué está. Las tres piezas nuevas del mostrador —la franja de contadores, la grilla
+   Para qué está. Las tres piezas nuevas del Estado actual —la franja de contadores, la grilla
    de guardias y la barra de acciones de a muchos— se pueden mirar acá sin entrar al Panel:
    sin usuario, sin contraseña y sin tocar la base de datos de nadie. Todas las guardias que
    se ven abajo están inventadas en este mismo archivo.
@@ -28,7 +28,7 @@ import { SelectoresPreferencias } from '../components/layout/SelectoresPreferenc
    Sobre el idioma. Los títulos de esta pantalla están escritos a mano, igual que en
    `Muestra.jsx`, y por el mismo motivo: la regla 1 de `CLAUDE.md` §7 protege el texto del
    producto, y esto no es producto. Todo lo que la pantalla DEMUESTRA —los nombres de los
-   seis contadores, los textos de la grilla— sale de los archivos de traducción reales. */
+   siete contadores, los textos de la grilla— sale de los archivos de traducción reales. */
 
 const HOY = hoyISO();
 const dia = (n) => sumarDias(HOY, n);
@@ -99,7 +99,7 @@ const GUARDIAS = [
     estado: 'programada' },
 ];
 
-export function MuestraMostrador() {
+export function MuestraEstadoActual() {
   const [filtro, setFiltro] = useState(null);
   const [vista, setVista] = useState('asistente');
   const [zoom, setZoom] = useState('semana');
@@ -125,7 +125,7 @@ export function MuestraMostrador() {
     [filtro, ctx]
   );
 
-  // La grilla manda la guardia entera; acá se guarda solo el id, igual que en el mostrador.
+  // La grilla manda la guardia entera; acá se guarda solo el id, igual que en el Estado actual.
   function alternar(guardia) {
     const id = guardia?.id ?? guardia;
     setSeleccionadas((previas) => {
@@ -148,7 +148,7 @@ export function MuestraMostrador() {
         }}
       >
         <div>
-          <h1 style={{ margin: 0 }}>Banco de pruebas del mostrador</h1>
+          <h1 style={{ margin: 0 }}>Banco de pruebas del Estado actual</h1>
           <p className="panel-explicacion" style={{ margin: 0 }}>
             Datos inventados. No consulta la base. Solo existe en desarrollo.
           </p>

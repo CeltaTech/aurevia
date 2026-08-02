@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { mensajeDeBloqueo } from './matricula';
 
 /* Cambiarle el Asistente a una guardia: un solo lugar para las tres cosas que hay que hacer.
    =========================================================================================
@@ -15,7 +16,7 @@ import { supabase } from './supabaseClient';
         el aviso de "necesita relevo" sigue encendido aunque el Paciente ya tenga quien lo
         cuide, y alguien va a salir a resolver un problema que ya no existe.
 
-   Dos pantallas hacen esta misma operación —la de Guardias y el mostrador—, así que las tres
+   Dos pantallas hacen esta misma operación —la de Guardias y el Estado actual—, así que las tres
    cosas se escriben una sola vez y las dos la llaman (regla 12 de CLAUDE.md §7). Si mañana
    aparece un cuarto paso, se agrega acá y las dos pantallas lo tienen sin tocarlas. */
 
@@ -24,9 +25,13 @@ import { supabase } from './supabaseClient';
  *                          ofrecida y si estaba ausente. Con el id solo no alcanzaría.
  * @param {string} asistenteId  Quién pasa a hacerla.
  * @param {string} fecha  En qué fecha queda. Puede ser la misma que ya tenía.
+ * @param {object} textosMatricula  El bloque `t.matricula` ya traducido. Se pide desde afuera
+ *                          porque acá no se sabe en qué idioma está el Panel, y hace falta para
+ *                          el único caso en que la base puede rechazar la operación con un
+ *                          mensaje que nunca debe verse crudo: la Matrícula del Asistente.
  * @returns {Promise<{ error: string | null }>} El motivo si algo falló, o null si salió todo.
  */
-export async function reasignarGuardia(guardia, asistenteId, fecha) {
+export async function reasignarGuardia(guardia, asistenteId, fecha, textosMatricula = null) {
   const estabaSinCobertura = guardia?.estado === 'ausente';
 
   const cambios = { asistente_id: asistenteId, fecha };
@@ -38,7 +43,9 @@ export async function reasignarGuardia(guardia, asistenteId, fecha) {
   }
 
   const { error: errorUpdate } = await supabase.from('guardias').update(cambios).eq('id', guardia.id);
-  if (errorUpdate) return { error: errorUpdate.message };
+  if (errorUpdate) {
+    return { error: mensajeDeBloqueo(errorUpdate, textosMatricula) ?? errorUpdate.message };
+  }
 
   if (estabaSinCobertura) {
     const { error: errorIncidente } = await supabase

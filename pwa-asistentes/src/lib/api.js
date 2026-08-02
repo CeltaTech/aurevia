@@ -49,6 +49,18 @@ export const api = {
     pedido('/consentimientos', { method: 'POST', body: JSON.stringify({ clave, decision, idioma }) }),
   retirarConsentimiento: (clave, motivo) =>
     pedido('/consentimientos/retirar', { method: 'POST', body: JSON.stringify({ clave, motivo }) }),
+  // La Matrícula. Se carga en un solo envío —datos y archivo juntos— porque un
+  // archivo sin su ficha es un papel suelto que nadie va a mirar.
+  matricula: () => pedido('/matricula'),
+  cargarMatricula: ({ numeroMatricula, vigenteDesde, vigenteHasta, archivo }) => {
+    const formData = new FormData();
+    if (numeroMatricula) formData.append('numeroMatricula', numeroMatricula);
+    formData.append('vigenteDesde', vigenteDesde);
+    if (vigenteHasta) formData.append('vigenteHasta', vigenteHasta);
+    if (archivo) formData.append('archivo', archivo);
+    return pedido('/matricula', { method: 'POST', body: formData });
+  },
+  archivoDeMatricula: (ruta) => pedido(`/matricula/archivo-url?ruta=${encodeURIComponent(ruta)}`),
   suscribirPush: (suscripcion) => pedido('/push/suscribir', { method: 'POST', body: JSON.stringify(suscripcion) }),
   desuscribirPush: (endpoint) => pedido('/push/suscribir', { method: 'DELETE', body: JSON.stringify({ endpoint }) }),
 };

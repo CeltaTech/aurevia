@@ -2,19 +2,19 @@ import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
-import { tipoHabilitacionRequerida, hayAsistenteAsignadoHabilitado } from '../utils/medicacionIndicaciones.js';
+import { tipoMatriculaRequerida, hayAsistenteAsignadoConMatricula } from '../utils/medicacionIndicaciones.js';
 
 // Cierra pendiente #62 (docs/PENDIENTES.md): cola de revisión de indicaciones de
 // medicación solicitadas por la Familia (appFamiliasMedicacion.js). Aceptar/rechazar nunca
-// bloquea por falta de habilitación del Asistente (CLAUDE.md §3) — solo informa mediante
-// el flag `sinHabilitacion`, que el Panel usa para disparar la advertencia legal ya
-// existente (AdvertenciaLegalContext, funcion_clave 'medicacion_via_sin_habilitacion') antes
+// bloquea por falta de matrícula del Asistente (CLAUDE.md §3) — solo informa mediante
+// el flag `sinMatricula`, que el Panel usa para disparar la advertencia legal ya
+// existente (AdvertenciaLegalContext, funcion_clave 'medicacion_via_sin_matricula') antes
 // de confirmar la aceptación.
 //
-// habilitaciones_asistente y configuracion_habilitacion_via_medicacion no tienen rutas CRUD
+// matriculas_asistente y configuracion_matricula_via_medicacion no tienen rutas CRUD
 // acá: el Panel las gestiona directo vía supabase-js bajo RLS (mismo criterio que
 // autorizaciones_monitoreo_paciente/rangos_referencia_vitales — RLS ya lo permite a
-// admin_prestadora). Esta ruta solo resuelve el archivo de evidencia de habilitación,
+// admin_prestadora). Esta ruta solo resuelve el archivo de evidencia de matrícula,
 // porque el bucket es privado y sin policies (regla 7, CLAUDE.md §6).
 
 export const panelMedicacionRouter = Router();
@@ -49,11 +49,11 @@ panelMedicacionRouter.get('/pendientes', requiereRolPanel, async (req, res) => {
 
   const pendientes = await Promise.all(
     (data || []).map(async (indicacion) => {
-      const tipoRequerido = await tipoHabilitacionRequerida(req.usuarioPanel.prestadoraId, indicacion.via_administracion);
-      const sinHabilitacion = tipoRequerido
-        ? !(await hayAsistenteAsignadoHabilitado(indicacion.pacientes.id, tipoRequerido))
+      const tipoRequerido = await tipoMatriculaRequerida(req.usuarioPanel.prestadoraId, indicacion.via_administracion);
+      const sinMatricula = tipoRequerido
+        ? !(await hayAsistenteAsignadoConMatricula(indicacion.pacientes.id, tipoRequerido))
         : false;
-      return { ...indicacion, tipoHabilitacionRequerida: tipoRequerido, sinHabilitacion };
+      return { ...indicacion, tipoMatriculaRequerida: tipoRequerido, sinMatricula };
     })
   );
 
@@ -107,7 +107,7 @@ panelMedicacionRouter.post('/:id/rechazar', requiereRolPanel, async (req, res) =
 });
 
 panelMedicacionRouter.post(
-  '/habilitaciones/:asistenteId/archivo',
+  '/matriculas/:asistenteId/archivo',
   requiereRolPanel,
   upload.single('archivo'),
   manejarErrorMulter,
@@ -125,7 +125,7 @@ panelMedicacionRouter.post(
     if (!asistente) return res.status(404).json({ error: 'Asistente no encontrado' });
 
     const extension = req.file.mimetype === 'application/pdf' ? 'pdf' : req.file.mimetype === 'image/png' ? 'png' : 'jpg';
-    const ruta = `${asistente.prestadora_id}/habilitaciones/${asistente.id}/matricula-${Date.now()}.${extension}`;
+    const ruta = `${asistente.prestadora_id}/matriculas/${asistente.id}/matricula-${Date.now()}.${extension}`;
 
     const { error } = await supabase.storage
       .from(BUCKET)

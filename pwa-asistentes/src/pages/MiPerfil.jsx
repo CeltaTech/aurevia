@@ -3,6 +3,7 @@ import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { activarPush, desactivarPush, pushSoportado, suscripcionActual } from '../lib/push';
 import { traducirValor } from '../i18n/valores';
+import Matricula from '../components/Matricula';
 import Consentimientos from '../components/Consentimientos';
 
 export default function MiPerfil() {
@@ -83,6 +84,11 @@ export default function MiPerfil() {
         </div>
       </div>
 
+      {/* La Matrícula va antes que las notificaciones porque es lo único de esta
+          pantalla que puede dejarlo sin trabajo. Si le corresponde y está trabada,
+          tiene que ser lo primero que vea. Si su tipo no requiere Matrícula, este
+          bloque no se dibuja. */}
+      <Matricula />
       <h2 style={{ marginTop: '2rem' }}>{t.perfil.notificaciones_titulo}</h2>
       {!pushSoportado() ? (
         <div className="alert">{t.perfil.notificaciones_no_soportadas}</div>

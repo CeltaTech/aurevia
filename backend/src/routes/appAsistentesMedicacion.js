@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
 import { supabase } from '../db/connection.js';
-import { medicacionVigenteDelPaciente, tipoHabilitacionRequerida, asistenteTieneHabilitacionVigente } from '../utils/medicacionIndicaciones.js';
+import { medicacionVigenteDelPaciente, tipoMatriculaRequerida, asistenteTieneMatriculaVigente } from '../utils/medicacionIndicaciones.js';
 
 // Cierra pendiente #62 (docs/PENDIENTES.md): órdenes de medicación de solo lectura para el
 // Asistente asignado — nunca muestra una vía que este Asistente en particular no está
@@ -27,8 +27,8 @@ appAsistentesMedicacionRouter.get('/:pacienteId', requiereRolAsistente, async (r
 
   const ordenes = [];
   for (const indicacion of indicaciones) {
-    const tipoRequerido = await tipoHabilitacionRequerida(req.usuarioAsistente.prestadoraId, indicacion.via_administracion);
-    const habilitado = await asistenteTieneHabilitacionVigente(req.usuarioAsistente.id, tipoRequerido);
+    const tipoRequerido = await tipoMatriculaRequerida(req.usuarioAsistente.prestadoraId, indicacion.via_administracion);
+    const habilitado = await asistenteTieneMatriculaVigente(req.usuarioAsistente.id, tipoRequerido);
     if (habilitado) ordenes.push(indicacion);
   }
 

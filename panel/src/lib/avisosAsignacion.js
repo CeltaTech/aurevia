@@ -5,7 +5,7 @@
 // ¿qué puede salir mal con esta asignación puntual? Devuelve la lista de cosas que conviene
 // mirar, y marca cuáles son lo bastante serias como para pedir una confirmación más fuerte.
 //
-// **Ningún aviso impide asignar.** Ni siquiera el peor. Quien está del otro lado del mostrador
+// **Ningún aviso impide asignar.** Ni siquiera el peor. Quien está del otro lado de la pantalla
 // sabe cosas que la base no sabe —que el Asistente ya avisó que ese día se libera, que la
 // Familia lo pidió por nombre—, y un hueco sin cubrir es peor que casi cualquiera de estos
 // avisos. El software advierte; la persona decide. Lo que sí queda es el registro de quién
@@ -17,7 +17,7 @@
 //
 // "¿Quién sirve para este hueco?" y "¿qué puede salir mal con este?" son dos preguntas
 // distintas, pero se contestan mirando exactamente lo mismo: si se pisa con otra guardia,
-// cuánto va a descansar, cuántas horas lleva en la semana, qué papeles y qué Habilitación
+// cuánto va a descansar, cuántas horas lleva en la semana, qué papeles y qué Matrícula
 // vencen. Si esas cuentas estuvieran escritas dos veces, tarde o temprano dirían cosas
 // distintas sobre la misma persona y la misma guardia: la lista de candidatos mostrando a
 // alguien arriba de todo y, dos clics después, un cartel diciendo que se pisa con otra
@@ -39,7 +39,7 @@ import {
   descansoMasCorto,
   cargaSemanal,
   topeSemanalDe,
-  habilitacionVigenteAl,
+  matriculaVigenteAl,
   papelQueVencePrimero,
 } from './candidatos';
 
@@ -49,7 +49,7 @@ export const AVISO = {
   DESCANSO: 'descanso',
   HORAS_EXTRA: 'horas_extra',
   DOCUMENTACION: 'documentacion',
-  HABILITACION: 'habilitacion',
+  MATRICULA: 'matricula',
 };
 
 const redondear = (n) => Math.round(n * 10) / 10;
@@ -64,18 +64,18 @@ function diaEnQueTermina(guardia) {
 }
 
 /**
- * La Habilitación que hay que mirar para esta asignación.
+ * La Matrícula que hay que mirar para esta asignación.
  *
  * Primero la que está vigente hoy. Si no hay ninguna vigente, se toma la última que tuvo —la de
  * vencimiento más lejano—, porque el aviso necesita una fecha para mostrar. Si el Asistente no
- * tiene ninguna Habilitación registrada, no hay aviso: eso no es "algo que vence", es que falta
- * el papel entero, y de eso ya avisa `candidatos.js` con `motivo_habilitacion_falta`.
+ * tiene ninguna Matrícula registrada, no hay aviso: eso no es "algo que vence", es que falta
+ * el papel entero, y de eso ya avisa `candidatos.js` con `motivo_matricula_falta`.
  */
-function habilitacionAMirar(asistenteId, habilitaciones, ahora) {
-  const vigente = habilitacionVigenteAl(asistenteId, habilitaciones, ahora);
+function matriculaAMirar(asistenteId, matriculas, ahora) {
+  const vigente = matriculaVigenteAl(asistenteId, matriculas, ahora);
   if (vigente) return vigente;
 
-  const propias = lista(habilitaciones).filter(
+  const propias = lista(matriculas).filter(
     (h) => h.asistente_id === asistenteId && h.vigente_hasta
   );
   if (!propias.length) return null;
@@ -87,7 +87,7 @@ function habilitacionAMirar(asistenteId, habilitaciones, ahora) {
  *
  * @param guardia      la fila de `guardias` que se va a asignar.
  * @param asistenteId  a quién se le va a dar.
- * @param datos        `{ asistentes, guardias, habilitaciones, documentos, ahora }` — lo mismo
+ * @param datos        `{ asistentes, guardias, matriculas, documentos, ahora }` — lo mismo
  *                     que recibe `candidatosParaGuardia`, para que la pantalla pase el mismo
  *                     objeto en los dos lugares y no tenga que armar dos.
  * @param opciones     `{ topes }` — para pisar los topes sin tocar este archivo.
@@ -157,14 +157,14 @@ export function avisosDeAsignacion(guardia, asistenteId, datos = {}, opciones = 
     });
   }
 
-  // --- 5. Habilitación que vence antes o durante la guardia. Mismo criterio que los papeles,
-  //        y pesa más: sin Habilitación vigente no puede administrar medicación.
-  const habilitacion = habilitacionAMirar(asistenteId, datos.habilitaciones, ahora);
-  if (habilitacion?.vigente_hasta && habilitacion.vigente_hasta <= ultimoDia) {
+  // --- 5. Matrícula que vence antes o durante la guardia. Mismo criterio que los papeles,
+  //        y pesa más: sin Matrícula vigente no puede administrar medicación.
+  const matricula = matriculaAMirar(asistenteId, datos.matriculas, ahora);
+  if (matricula?.vigente_hasta && matricula.vigente_hasta <= ultimoDia) {
     avisos.push({
-      clave: AVISO.HABILITACION,
-      valores: { fecha: habilitacion.vigente_hasta },
-      grave: habilitacion.vigente_hasta < guardia.fecha,
+      clave: AVISO.MATRICULA,
+      valores: { fecha: matricula.vigente_hasta },
+      grave: matricula.vigente_hasta < guardia.fecha,
     });
   }
 

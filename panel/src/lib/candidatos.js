@@ -1,7 +1,7 @@
 // Punto único de verdad de QUIÉN PUEDE CUBRIR UN HUECO (regla 12 de CLAUDE.md §7).
 // ============================================================================
 //
-// La pregunta que contesta. Hay una Guardia sin Asistente y alguien del mostrador tiene que
+// La pregunta que contesta. Hay una Guardia sin Asistente y alguien de la Prestadora tiene que
 // elegir a quién llamar. Este archivo ordena a los Asistentes de la Prestadora de mejor a peor
 // para ese hueco puntual, y —esto es lo importante— **dice por qué** cada uno quedó donde
 // quedó, motivo por motivo.
@@ -53,6 +53,12 @@ import {
   seSuperponen,
   horasDeDescansoEntre,
 } from './horarios';
+import {
+  BLOQUEO,
+  estadoDe,
+  matriculaQueMandaAl,
+  motivoDeBloqueo,
+} from './matricula';
 
 /**
  * Cuánto suma o resta cada criterio.
@@ -82,9 +88,18 @@ export const PESOS = {
   /** Ya tiene una guardia encima. Bloquea igual; el número es para que quede al fondo. */
   ocupado: -1000,
 
-  habilitacion_ok: 8,
-  habilitacion_vence: -10,
-  habilitacion_falta: -25,
+  /** Tiene la Matrícula que su tipo le exige, vigente y comprobada. */
+  matricula_ok: 8,
+  /** La tiene bien, pero está por vencerse. Resta y se avisa; no bloquea. */
+  matricula_vence: -10,
+  /**
+   * Los tres motivos que sí bloquean. Restan lo mismo que estar ocupado y por el mismo motivo:
+   * el número no decide nada —el bloqueo ya lo decidió la base—, solo los manda al fondo de la
+   * lista para que no se mezclen con los que sí pueden tomar la guardia.
+   */
+  matricula_falta: -1000,
+  matricula_vencida: -1000,
+  matricula_sin_verificar: -1000,
 
   papeles_ok: 5,
   papeles_vencen: -10,
@@ -124,23 +139,8 @@ export const TOPES = {
   /** Desde qué proporción del tope semanal ya conviene avisar que se está acercando. */
   proporcion_horas_para_avisar: 0.75,
 
-  /** Con cuántos días de anticipación se avisa que un papel o una Habilitación vence. */
+  /** Con cuántos días de anticipación se avisa que un papel o una Matrícula vence. */
   dias_aviso_vencimiento: 30,
-
-  /**
-   * Qué niveles de complejidad del Paciente exigen que el Asistente tenga Habilitación.
-   *
-   * No hay una columna que diga "este Paciente necesita Habilitación". Lo que hay es
-   * `pacientes.nivel_complejidad`, que la base restringe a exactamente tres valores —'I', 'II'
-   * y 'III'— por la restricción CHECK `pacientes_nivel_complejidad_check`. De ahí sale esta
-   * lista: de II para arriba hay medicación de por medio y se exige la Habilitación.
-   *
-   * Ojo con el caso en que el nivel **no se conoce** (el Paciente lo tiene vacío, o la pantalla
-   * no cargó ese dato): ahí no se bloquea a nadie. Falta de Habilitación pasa a ser un motivo
-   * que resta y se ve, nunca un bloqueo. Bloquear por una suposición es peor que no bloquear:
-   * dejaría a un Paciente sin nadie por un dato que ni siquiera estaba cargado.
-   */
-  niveles_que_exigen_habilitacion: ['II', 'III'],
 
   /** Qué día arranca la semana para contar horas. 1 = lunes (0 sería domingo). */
   dia_inicio_semana: 1,
@@ -152,9 +152,11 @@ export const MOTIVO = {
   SIN_CONTINUIDAD: 'motivo_sin_continuidad',
   LIBRE: 'motivo_libre',
   OCUPADO: 'motivo_ocupado',
-  HABILITACION_OK: 'motivo_habilitacion_ok',
-  HABILITACION_VENCE: 'motivo_habilitacion_vence',
-  HABILITACION_FALTA: 'motivo_habilitacion_falta',
+  MATRICULA_OK: 'motivo_matricula_ok',
+  MATRICULA_VENCE: 'motivo_matricula_vence',
+  MATRICULA_FALTA: 'motivo_matricula_falta',
+  MATRICULA_VENCIDA: 'motivo_matricula_vencida',
+  MATRICULA_SIN_VERIFICAR: 'motivo_matricula_sin_verificar',
   PAPELES_OK: 'motivo_papeles_ok',
   PAPELES_VENCEN: 'motivo_papeles_vencen',
   HORAS: 'motivo_horas',
@@ -289,24 +291,14 @@ export function cargaSemanal(guardia, guardiasDelAsistente, topes = TOPES) {
 }
 
 /**
- * La Habilitación del Asistente que está vigente en un momento dado, o `null` si no tiene
- * ninguna. Si tiene varias, se devuelve la que vence más tarde: es la que manda.
- * Una Habilitación sin `vigente_hasta` es una que no vence.
+ * La Matrícula del Asistente que está vigente en un momento dado, o `null` si no tiene ninguna.
+ *
+ * La cuenta no está acá: vive en `lib/matricula.js`, junto con el resto de la regla de
+ * Matrícula, porque la usan también las pantallas que no arman listas de candidatos. Esto es
+ * solo el nombre con el que este archivo y `avisosAsignacion.js` la venían llamando.
  */
-export function habilitacionVigenteAl(asistenteId, habilitaciones, momento) {
-  const dia = diaDe(momento);
-  const vigentes = lista(habilitaciones).filter(
-    (h) =>
-      h.asistente_id === asistenteId &&
-      (!h.vigente_desde || h.vigente_desde <= dia) &&
-      (!h.vigente_hasta || h.vigente_hasta >= dia)
-  );
-  if (!vigentes.length) return null;
-  return vigentes.reduce((mejor, h) => {
-    if (!mejor.vigente_hasta) return mejor; // la que no vence gana siempre
-    if (!h.vigente_hasta) return h;
-    return h.vigente_hasta > mejor.vigente_hasta ? h : mejor;
-  });
+export function matriculaVigenteAl(asistenteId, matriculas, momento, tipo = null) {
+  return matriculaQueMandaAl(asistenteId, matriculas, momento, tipo);
 }
 
 /**
@@ -345,37 +337,17 @@ export function vecesQueAtendio(asistenteId, pacienteId, guardias, ahora) {
 }
 
 /**
- * ¿Este Paciente exige que el Asistente tenga Habilitación?
- *
- * Devuelve `true`, `false` o `null`. `null` es "no se sabe" —el nivel de complejidad no vino
- * cargado— y ese caso **nunca bloquea a nadie**: ver el comentario de
- * `TOPES.niveles_que_exigen_habilitacion`.
+ * Qué clave de traducción le corresponde a cada motivo de bloqueo de la Matrícula, y cuánto
+ * resta. Los tres motivos vienen de `lib/matricula.js`, que es donde vive la regla.
  */
-export function exigeHabilitacion(nivelComplejidad, topes = TOPES) {
-  if (nivelComplejidad === null || nivelComplejidad === undefined || nivelComplejidad === '') {
-    return null;
-  }
-  return topes.niveles_que_exigen_habilitacion.includes(nivelComplejidad);
-}
-
-/**
- * De dónde sale el nivel de complejidad del Paciente.
- *
- * El hueco es una fila de `guardias` y ahí no está el nivel. Según cómo lo haya pedido la
- * pantalla, el Paciente puede venir colgado de la guardia (`hueco.paciente`, o `hueco.pacientes`
- * si vino de un join de Supabase), suelto en `datos.paciente`, o directamente pasado a mano en
- * `opciones.nivelComplejidad`. Se acepta cualquiera de esas formas en vez de obligar a la
- * pantalla a acomodar los datos: si no aparece por ninguna, se devuelve `null` y no se bloquea.
- */
-function nivelDelPaciente(hueco, datos, opciones) {
-  return (
-    opciones?.nivelComplejidad ??
-    datos?.paciente?.nivel_complejidad ??
-    hueco?.paciente?.nivel_complejidad ??
-    hueco?.pacientes?.nivel_complejidad ??
-    null
-  );
-}
+const MOTIVO_DE_BLOQUEO = {
+  [BLOQUEO.SIN_MATRICULA]: { clave: MOTIVO.MATRICULA_FALTA, peso: 'matricula_falta' },
+  [BLOQUEO.VENCIDA]: { clave: MOTIVO.MATRICULA_VENCIDA, peso: 'matricula_vencida' },
+  [BLOQUEO.SIN_VERIFICAR]: {
+    clave: MOTIVO.MATRICULA_SIN_VERIFICAR,
+    peso: 'matricula_sin_verificar',
+  },
+};
 
 // ============================================================================
 // La lista de candidatos
@@ -388,11 +360,15 @@ function nivelDelPaciente(hueco, datos, opciones) {
  * @param datos     lo que la pantalla ya cargó:
  *                    asistentes     → los activos de la Prestadora
  *                    guardias       → todas las del rango, para ver ocupación y carga semanal
- *                    habilitaciones → filas de `habilitaciones_asistente`
+ *                    matriculas     → filas de `matriculas_asistente`
+ *                    estadoMatricula→ filas de la vista `estado_matricula_asistente`: dicen si
+ *                                     el tipo de cada Asistente exige Matrícula, cuál, y si la
+ *                                     Prestadora es estricta. Si no vienen, nadie se bloquea
+ *                                     por Matrícula.
  *                    documentos     → filas de `documentos_asistente`
  *                    ofertas        → filas de `ofertas_guardia` de este hueco
  *                    ahora          → Date
- * @param opciones  `{ pesos, topes, nivelComplejidad }` — todos opcionales, todos para pisar
+ * @param opciones  `{ pesos, topes }` — todos opcionales, todos para pisar
  *                  los valores de arriba sin tocar este archivo.
  *
  * @returns array ordenado de mejor a peor. Cada elemento:
@@ -411,11 +387,10 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
 
   const asistentes = lista(datos.asistentes);
   const guardias = lista(datos.guardias);
-  const habilitaciones = lista(datos.habilitaciones);
+  const matriculas = lista(datos.matriculas);
   const documentos = lista(datos.documentos);
   const ofertas = lista(datos.ofertas);
-
-  const pideHabilitacion = exigeHabilitacion(nivelDelPaciente(hueco, datos, opciones), topes);
+  const estadosMatricula = lista(datos.estadoMatricula);
 
   // Los ya invitados, en un conjunto: preguntarlo una vez por Asistente sobre un array sería
   // recorrer la lista de ofertas otras tantas veces para nada.
@@ -429,12 +404,12 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
     evaluarAsistente(asistente, {
       hueco,
       guardias,
-      habilitaciones,
+      matriculas,
       documentos,
       ahora,
       pesos,
       topes,
-      pideHabilitacion,
+      estadoMatricula: estadoDe(asistente.id, estadosMatricula),
       yaInvitado: yaInvitados.has(asistente.id),
     })
   );
@@ -451,7 +426,7 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
 
 /** Todo lo que se mira de un solo Asistente. Devuelve el elemento de la lista, sin ordenar. */
 function evaluarAsistente(asistente, ctx) {
-  const { hueco, guardias, habilitaciones, documentos, ahora, pesos, topes } = ctx;
+  const { hueco, guardias, matriculas, documentos, ahora, pesos, topes } = ctx;
 
   const aFavor = [];
   const enContra = [];
@@ -489,27 +464,51 @@ function evaluarAsistente(asistente, ctx) {
     suma(aFavor, MOTIVO.LIBRE, null, pesos.libre);
   }
 
-  // --- 3. Habilitación. Solo bloquea si el Paciente la necesita Y sabemos que la necesita.
-  const habilitacion = habilitacionVigenteAl(
+  // --- 3. Matrícula. Bloquea cuando el tipo de Asistente la exige y algo no está en orden.
+  //
+  //        La regla no se decide acá: se decide en la base, que además la hace cumplir en las
+  //        otras tres puertas (asignar, invitar, aceptar). Acá se la anticipa, para que el
+  //        motivo esté a la vista antes de que alguien elija a esta persona y se choque con
+  //        la pared. La cuenta vive una sola vez, en `lib/matricula.js`.
+  //
+  //        Se mira contra el día en que la guardia **termina**, no el que empieza: la de noche
+  //        arranca a las 22:00 y termina a las 06:00 del día siguiente, y lo que importa es que
+  //        la Matrícula llegue hasta el final. Es el mismo día que mira la base.
+  const ultimoDiaDeLaGuardia = diaDe(finDeGuardia(hueco));
+  const bloqueoMatricula = motivoDeBloqueo(
     asistente.id,
-    habilitaciones,
-    inicioDeGuardia(hueco)
+    ctx.estadoMatricula,
+    matriculas,
+    ultimoDiaDeLaGuardia
   );
-  if (!habilitacion) {
-    if (ctx.pideHabilitacion === true) bloqueado = true;
-    suma(enContra, MOTIVO.HABILITACION_FALTA, null, pesos.habilitacion_falta);
+
+  if (bloqueoMatricula) {
+    bloqueado = true;
+    const { clave, peso } = MOTIVO_DE_BLOQUEO[bloqueoMatricula];
+    suma(enContra, clave, null, pesos[peso]);
   } else {
-    const limiteAviso = sumarDiasISO(hueco.fecha, topes.dias_aviso_vencimiento);
-    if (habilitacion.vigente_hasta && habilitacion.vigente_hasta <= limiteAviso) {
-      suma(
-        enContra,
-        MOTIVO.HABILITACION_VENCE,
-        { fecha: habilitacion.vigente_hasta },
-        pesos.habilitacion_vence
-      );
-    } else {
-      suma(aFavor, MOTIVO.HABILITACION_OK, null, pesos.habilitacion_ok);
+    // No está bloqueado, pero puede estar por vencerse: eso se avisa y resta, nunca bloquea.
+    const matricula = matriculaVigenteAl(
+      asistente.id,
+      matriculas,
+      ultimoDiaDeLaGuardia,
+      ctx.estadoMatricula?.tipo_matricula ?? null
+    );
+    if (matricula) {
+      const limiteAviso = sumarDiasISO(hueco.fecha, topes.dias_aviso_vencimiento);
+      if (matricula.vigente_hasta && matricula.vigente_hasta <= limiteAviso) {
+        suma(
+          enContra,
+          MOTIVO.MATRICULA_VENCE,
+          { fecha: matricula.vigente_hasta },
+          pesos.matricula_vence
+        );
+      } else {
+        suma(aFavor, MOTIVO.MATRICULA_OK, null, pesos.matricula_ok);
+      }
     }
+    // Si no hay Matrícula y tampoco hay bloqueo, es que su tipo no la exige: no se dice nada.
+    // "Matrícula vigente" sería mentira y "no tiene Matrícula" sonaría a problema sin serlo.
   }
 
   // --- 4. Documentación. Si el Asistente no tiene ningún papel con vencimiento cargado no se

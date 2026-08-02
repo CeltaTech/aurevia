@@ -80,10 +80,10 @@ export function Layout() {
       <aside className="panel-sidebar">
         <div className="panel-logo">{empresa?.nombre ?? ''}</div>
         <nav>
-          {/* Arriba de todo, sin grupo: el mostrador es el punto de partida del día, y el
+          {/* Arriba de todo, sin grupo: el Estado actual es el punto de partida del día, y el
               resumen del mes queda justo debajo para el que quiera el número grande. */}
           <NavLink to="/" end>
-            {t.nav.mostrador}
+            {t.nav.estado_actual}
           </NavLink>
           <NavLink to="/resumen-del-mes">{t.nav.resumen_del_mes}</NavLink>
           {(tieneModalidad('directa') || tieneModalidad('marketplace')) && (

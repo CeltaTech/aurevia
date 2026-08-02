@@ -444,6 +444,38 @@ panelConfiguracionRouter.patch('/documentos-tipo/plazo-aviso', async (req, res) 
   res.json({ ok: true });
 });
 
+// --- Qué tan estricto es el control de matrícula en esta prestadora.
+//     Mismo motivo que el plazo de aviso de más arriba: el dato vive en la tabla "prestadoras",
+//     que por RLS solo superadmin puede modificar. El navegador no la puede escribir ni aunque
+//     lo intente; el backend sí, porque usa la service role key y acota siempre a la prestadora
+//     de quien pide. Los dos valores posibles los fija una restricción de la base
+//     (supabase/migrations/20260801180000_regla_matricula_vigente.sql) — acá se repiten como
+//     validación de entrada, no como fuente de verdad. ---
+const MODOS_DE_CONTROL_MATRICULA = ['flexible', 'estricto'];
+
+panelConfiguracionRouter.get('/modo-control-matricula', async (req, res) => {
+  const { data, error } = await supabase
+    .from('prestadoras')
+    .select('modo_control_matricula')
+    .eq('id', req.usuarioPanel.prestadoraId)
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ modo: data.modo_control_matricula });
+});
+
+panelConfiguracionRouter.patch('/modo-control-matricula', async (req, res) => {
+  const { modo } = req.body;
+  if (!MODOS_DE_CONTROL_MATRICULA.includes(modo)) {
+    return res.status(400).json({ error: 'modo debe ser flexible o estricto' });
+  }
+  const { error } = await supabase
+    .from('prestadoras')
+    .update({ modo_control_matricula: modo })
+    .eq('id', req.usuarioPanel.prestadoraId);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
 // --- Catálogo de motivos de aviso previo de guardia, configurable por prestadora
 //     (pendiente #18 candidato 3, docs/PENDIENTES.md — ver
 //     backend/src/db/schema_motivos_aviso_previo_01.sql). Mismo patrón que

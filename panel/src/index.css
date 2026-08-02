@@ -1368,7 +1368,7 @@ h2 {
   }
 }
 
-/* ---------- Etapa 4: el mostrador, la grilla nueva y el panel de cobertura ----------
+/* ---------- Etapa 4: el Estado actual, la grilla nueva y el panel de cobertura ----------
 
    Todo lo de acá abajo usa únicamente tokens de `styles/variables.css` (regla 6 de
    CLAUDE.md §7). No hay un solo color escrito a mano, así que el modo oscuro sale gratis.
@@ -1383,7 +1383,7 @@ h2 {
 
 /* --- La franja de excepciones --- */
 
-.mostrador-franja {
+.estado-actual-franja {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
   gap: 0.75rem;
@@ -1392,7 +1392,7 @@ h2 {
 
 /* Cada contador es un botón de verdad, no un cartel: al tocarlo filtra la grilla de abajo.
    Por eso se resetea la apariencia de botón y se arma de cero. */
-.mostrador-excepcion {
+.estado-actual-excepcion {
   font-family: var(--font-body);
   text-align: left;
   background: var(--superficie);
@@ -1406,33 +1406,33 @@ h2 {
   gap: 0.15rem;
 }
 
-.mostrador-excepcion:hover {
+.estado-actual-excepcion:hover {
   background: var(--superficie-hover);
 }
 
-.mostrador-excepcion:focus-visible {
+.estado-actual-excepcion:focus-visible {
   outline: 2px solid var(--azul-medio);
   outline-offset: 2px;
 }
 
 /* El rojo aparece solo cuando algo está roto. Si todo fuera urgente, nada sería urgente. */
-.mostrador-excepcion-critica {
+.estado-actual-excepcion-critica {
   border-left-color: var(--rojo-peligro);
 }
 
-.mostrador-excepcion-critica .mostrador-excepcion-valor {
+.estado-actual-excepcion-critica .estado-actual-excepcion-valor {
   color: var(--rojo-peligro-texto);
 }
 
 /* El contador que está filtrando ahora mismo se marca, para que nadie lea una grilla
    filtrada creyendo que la está viendo entera. */
-.mostrador-excepcion-activa {
+.estado-actual-excepcion-activa {
   background: var(--superficie-hundida);
   border-color: var(--azul-medio);
   box-shadow: inset 0 0 0 1px var(--azul-medio);
 }
 
-.mostrador-excepcion-valor {
+.estado-actual-excepcion-valor {
   font-family: var(--font-display);
   font-size: 1.9rem;
   line-height: 1.1;
@@ -1441,22 +1441,22 @@ h2 {
   font-variant-numeric: tabular-nums;
 }
 
-.mostrador-excepcion-etiqueta {
+.estado-actual-excepcion-etiqueta {
   font-weight: 600;
   color: var(--texto-principal);
 }
 
-.mostrador-excepcion-ayuda {
+.estado-actual-excepcion-ayuda {
   font-size: 0.78rem;
   color: var(--texto-secundario);
 }
 
-.mostrador-franja-vacia {
+.estado-actual-franja-vacia {
   color: var(--texto-secundario);
   margin-bottom: 1.5rem;
 }
 
-.mostrador-filtro-activo {
+.estado-actual-filtro-activo {
   display: flex;
   align-items: center;
   gap: 0.75rem;

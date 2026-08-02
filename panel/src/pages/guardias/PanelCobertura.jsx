@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { con } from '../../lib/textos';
 import { candidatosParaGuardia } from '../../lib/candidatos';
 import { avisosDeAsignacion } from '../../lib/avisosAsignacion';
+import { COLUMNAS_ESTADO_MATRICULA, mensajeDeBloqueo } from '../../lib/matricula';
 
 /* El panel lateral para cubrir una vacante.
    ==========================================================================
@@ -30,7 +31,7 @@ import { avisosDeAsignacion } from '../../lib/avisosAsignacion';
    y es la razón de ser de la tabla `ofertas_guardia`.
 
    LOS CUATRO ESTADOS (CLAUDE.md §7 regla 3) se manejan acá adentro, porque este panel
-   carga datos propios que ninguna otra pantalla necesita: las habilitaciones, los papeles y
+   carga datos propios que ninguna otra pantalla necesita: las matriculas, los papeles y
    las invitaciones ya hechas. Cargarlos en la pantalla de arriba obligaría a traerlos
    siempre, aunque nadie abra el panel. */
 
@@ -42,6 +43,7 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
   const { usuario } = useAuth();
   const tp = t.guardias.cobertura_panel;
   const ta = t.guardias.avisos;
+  const tm = t.matricula;
 
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -57,6 +59,15 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
     [asistentes]
   );
 
+  /* La base tiene la última palabra sobre la Matrícula: aunque esta pantalla ya deje afuera a
+     quien no puede, hay caminos por los que el bloqueo aparece igual —dos personas trabajando
+     a la vez, o una Matrícula que se venció con el panel abierto—. Cuando eso pasa, el mensaje
+     crudo de la base no se muestra nunca: se traduce al motivo y a qué hacer al respecto. */
+  const mostrarFalla = useCallback(
+    (falla) => setError(mensajeDeBloqueo(falla, tm) ?? falla.message),
+    [tm]
+  );
+
   const cargar = useCallback(async () => {
     if (!guardia) return;
     setEstado('cargando');
@@ -70,28 +81,22 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
     hasta.setDate(hasta.getDate() + DIAS_DE_CONTEXTO);
     const iso = (d) => d.toISOString().slice(0, 10);
 
-    const [gs, hs, ds, os, pa] = await Promise.all([
+    const [gs, hs, ds, os, em] = await Promise.all([
       supabase
         .from('guardias')
         .select('id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, estado')
         .gte('fecha', iso(desde))
         .lte('fecha', iso(hasta)),
-      supabase.from('habilitaciones_asistente').select('*'),
+      supabase.from('matriculas_asistente').select('*'),
       supabase.from('documentos_asistente').select('*'),
       supabase.from('ofertas_guardia').select('*').eq('guardia_id', guardia.id),
-      // El nivel de complejidad del Paciente es lo que decide si para esta guardia hace falta
-      // Habilitación. Sin este dato nadie queda bloqueado por falta de Habilitación —dejar a
-      // un Paciente sin nadie por un dato que ni siquiera estaba cargado sería peor.
-      guardia.paciente_id
-        ? supabase
-            .from('pacientes')
-            .select('id, nivel_complejidad')
-            .eq('id', guardia.paciente_id)
-            .maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
+      // Quién necesita Matrícula, cuál, y si esta Prestadora exige que alguien la haya
+      // comprobado. Viene ya resuelto de la base —no se decide acá— para que la pantalla diga
+      // exactamente lo mismo que después van a hacer cumplir los disparadores al guardar.
+      supabase.from('estado_matricula_asistente').select(COLUMNAS_ESTADO_MATRICULA),
     ]);
 
-    const fallo = gs.error || hs.error || ds.error || os.error;
+    const fallo = gs.error || hs.error || ds.error || os.error || em.error;
     if (fallo) {
       setError(fallo.message);
       setEstado('error');
@@ -101,10 +106,10 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
     setDatos({
       asistentes: asistentes ?? [],
       guardias: gs.data ?? [],
-      habilitaciones: hs.data ?? [],
+      matriculas: hs.data ?? [],
       documentos: ds.data ?? [],
       ofertas: os.data ?? [],
-      paciente: pa?.data ?? null,
+      estadoMatricula: em.data ?? [],
       ahora: new Date(),
     });
     setEstado('listo');
@@ -177,7 +182,7 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
       .eq('id', guardia.id);
     setEnCurso(null);
     if (falla) {
-      setError(falla.message);
+      mostrarFalla(falla);
       return;
     }
     onHecho?.();
@@ -210,14 +215,14 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
 
     if (fallaGuardia) {
       setEnCurso(null);
-      setError(fallaGuardia.message);
+      mostrarFalla(fallaGuardia);
       return;
     }
 
     const { error: fallaOfertas } = await supabase.from('ofertas_guardia').insert(filas);
     setEnCurso(null);
     if (fallaOfertas) {
-      setError(fallaOfertas.message);
+      mostrarFalla(fallaOfertas);
       return;
     }
     setElegidos(new Set());
@@ -231,7 +236,7 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
     const { error: falla } = await supabase.from('ofertas_guardia').delete().eq('id', ofertaId);
     setEnCurso(null);
     if (falla) {
-      setError(falla.message);
+      mostrarFalla(falla);
       return;
     }
     cargar();

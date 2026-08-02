@@ -4,7 +4,7 @@
 // El problema que resuelve. Hasta acá, cada pantalla escribía su propia clase de color:
 // `badge-aprobado` en una, `badge-vigente` en otra, `badge-certificada` en otra — todas del
 // mismo verde, todas definidas por separado en `index.css`. Eran veinte reglas de CSS que
-// decían lo mismo. Y no era gratis: la pantalla de Habilitaciones pedía una clase
+// decían lo mismo. Y no era gratis: la pantalla de Matrículas pedía una clase
 // `badge-verde` que directamente no existía en el CSS, así que ese cartel se veía gris.
 // Nadie lo notó porque no rompe nada: simplemente se ve mal.
 //

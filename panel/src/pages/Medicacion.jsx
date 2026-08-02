@@ -54,8 +54,8 @@ export function Medicacion() {
   }, [recargar]);
 
   async function aceptar(fila) {
-    if (fila.sinHabilitacion) {
-      const confirmado = await verificarAntesDeActivar(usuario.prestadora_id, 'medicacion_via_sin_habilitacion');
+    if (fila.sinMatricula) {
+      const confirmado = await verificarAntesDeActivar(usuario.prestadora_id, 'medicacion_via_sin_matricula');
       if (!confirmado) return;
     }
     setAccionEnCurso(fila.id);
@@ -115,7 +115,7 @@ export function Medicacion() {
                 <button onClick={() => verArchivo(fila.prescripcion_archivo_url)}>{t.medicacion.ver_prescripcion}</button>
               </p>
             )}
-            {fila.sinHabilitacion && <Alert variant="info">{t.medicacion.sin_habilitacion_aviso}</Alert>}
+            {fila.sinMatricula && <Alert variant="info">{t.medicacion.sin_matricula_aviso}</Alert>}
 
             {rechazando === fila.id ? (
               <div>

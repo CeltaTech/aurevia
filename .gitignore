@@ -28,3 +28,4 @@ docs/Documentos Obsoletos/
 # Configuracion local de Claude Code. Tiene rutas absolutas de esta maquina, no sirve
 # en otra. Cada quien arma la suya.
 .claude/
+huerfanos.txt

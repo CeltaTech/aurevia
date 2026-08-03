@@ -3,7 +3,6 @@ export const T = {
     comun: {
       cargando: 'Cargando…',
       error_generico: 'Ocurrió un error. Probá de nuevo.',
-      reintentar: 'Reintentar',
       vacio: 'No hay resultados.',
       guardar: 'Guardar',
       guardando: 'Guardando…',
@@ -45,7 +44,6 @@ export const T = {
       estado_completada: 'Completada',
       estado_cancelada: 'Cancelada',
       estado_ausente: 'Ausente',
-      ver_detalle: 'Ver detalle',
     },
     guardia_activa: {
       titulo: 'Guardia',
@@ -77,7 +75,6 @@ export const T = {
       estructurando: 'Analizando…',
       revisar_titulo: 'Revisá y corregí antes de guardar',
       campo_alimentacion: 'Alimentación',
-      campo_medicacion: 'Medicación',
       campo_signos_vitales: 'Signos vitales',
       campo_estado_animo: 'Estado de ánimo',
       campo_incidentes: 'Incidentes',
@@ -177,7 +174,6 @@ export const T = {
     comun: {
       cargando: 'Loading…',
       error_generico: 'Something went wrong. Please try again.',
-      reintentar: 'Retry',
       vacio: 'No results.',
       guardar: 'Save',
       guardando: 'Saving…',
@@ -219,7 +215,6 @@ export const T = {
       estado_completada: 'Completed',
       estado_cancelada: 'Cancelled',
       estado_ausente: 'Absent',
-      ver_detalle: 'View detail',
     },
     guardia_activa: {
       titulo: 'Shift',
@@ -251,7 +246,6 @@ export const T = {
       estructurando: 'Analyzing…',
       revisar_titulo: 'Review and correct before saving',
       campo_alimentacion: 'Food intake',
-      campo_medicacion: 'Medication',
       campo_signos_vitales: 'Vital signs',
       campo_estado_animo: 'Mood',
       campo_incidentes: 'Incidents',
@@ -348,7 +342,6 @@ export const T = {
     comun: {
       cargando: 'Carregando…',
       error_generico: 'Ocorreu um erro. Tente novamente.',
-      reintentar: 'Tentar novamente',
       vacio: 'Nenhum resultado.',
       guardar: 'Salvar',
       guardando: 'Salvando…',
@@ -390,7 +383,6 @@ export const T = {
       estado_completada: 'Concluído',
       estado_cancelada: 'Cancelado',
       estado_ausente: 'Ausente',
-      ver_detalle: 'Ver detalhe',
     },
     guardia_activa: {
       titulo: 'Plantão',
@@ -422,7 +414,6 @@ export const T = {
       estructurando: 'Analisando…',
       revisar_titulo: 'Revise e corrija antes de salvar',
       campo_alimentacion: 'Alimentação',
-      campo_medicacion: 'Medicação',
       campo_signos_vitales: 'Sinais vitais',
       campo_estado_animo: 'Estado de ânimo',
       campo_incidentes: 'Incidentes',

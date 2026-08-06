@@ -7,6 +7,16 @@ import { listarCola } from '../lib/colaOffline';
 import { suscribirseASincronizacion } from '../lib/sincronizarCola';
 import AvisoConsentimientoPendiente from '../components/AvisoConsentimientoPendiente';
 
+// Una guardia de un día anterior que sigue en curso es una guardia que nadie cerró. Antes no
+// podía pasar, porque el cierre venía pegado al envío del reporte; desde que cerrar es un acto
+// propio (tarea 66a) sí puede, así que la lista lo tiene que mostrar.
+function quedoSinCerrar(guardia) {
+  if (guardia.estado !== 'activa' || guardia.checkout_at) return false;
+  const hoy = new Date();
+  const hoyISO = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+  return guardia.fecha < hoyISO;
+}
+
 export default function MisGuardias() {
   const { t } = useLocale();
   const [guardias, setGuardias] = useState(null);
@@ -56,6 +66,7 @@ export default function MisGuardias() {
             {g.fecha} · {g.hora_inicio?.slice(0, 5)} - {g.hora_fin?.slice(0, 5)}
           </div>
           <span className="badge">{traducirValor(t.guardias, `estado_${g.estado}`)}</span>
+          {quedoSinCerrar(g) && <span className="badge badge-alerta">{t.guardias.sin_cerrar}</span>}
           {guardiasPendientes.has(g.id) && (
             <span className="badge badge-alerta">
               <span aria-hidden="true">⏳</span> {t.comun.pendiente_de_enviar}

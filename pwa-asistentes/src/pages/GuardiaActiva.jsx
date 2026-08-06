@@ -44,11 +44,18 @@ export default function GuardiaActiva() {
   const [mostrandoMedicacion, setMostrandoMedicacion] = useState(false);
   const [tick, setTick] = useState(0);
   const [checkinPendiente, setCheckinPendiente] = useState(null); // { desde } o null
+  const [reporteCargado, setReporteCargado] = useState(false);
+  const [confirmandoCierre, setConfirmandoCierre] = useState(false);
+  const [cerrando, setCerrando] = useState(false);
+  const [cerradoPendiente, setCerradoPendiente] = useState(false);
 
   function cargar() {
     api
       .guardia(id)
-      .then(({ guardia: data }) => setGuardia(data))
+      .then(({ guardia: data, reporteCargado: hayReporte }) => {
+        setGuardia(data);
+        setReporteCargado(!!hayReporte);
+      })
       .catch(() => setError(t.comun.error_generico));
   }
 
@@ -56,6 +63,10 @@ export default function GuardiaActiva() {
     const pendientes = await pendientesDeGuardia(id);
     const checkin = pendientes.find((p) => p.tipo === 'checkin');
     setCheckinPendiente(checkin ? { desde: checkin.creadoEn } : null);
+    // Un reporte esperando señal cuenta como cargado: ya lo escribió el Asistente, y si no
+    // contara, la pantalla le pediría escribirlo de nuevo por estar sin conexión.
+    if (pendientes.some((p) => p.tipo === 'reporte')) setReporteCargado(true);
+    setCerradoPendiente(pendientes.some((p) => p.tipo === 'checkout'));
   }
 
   useEffect(() => {
@@ -72,10 +83,10 @@ export default function GuardiaActiva() {
   }, [id]);
 
   useEffect(() => {
-    if ((!guardia?.checkin_at && !checkinPendiente) || guardia?.checkout_at) return;
+    if ((!guardia?.checkin_at && !checkinPendiente) || guardia?.checkout_at || cerradoPendiente) return;
     const intervalo = setInterval(() => setTick((v) => v + 1), 30000);
     return () => clearInterval(intervalo);
-  }, [guardia, checkinPendiente]);
+  }, [guardia, checkinPendiente, cerradoPendiente]);
 
   async function alHacerCheckin() {
     setError('');
@@ -101,6 +112,36 @@ export default function GuardiaActiva() {
       setError(e.message === 'sin_geo' ? t.guardia_activa.geo_no_disponible : t.comun.error_generico);
     } finally {
       setHaciendoCheckin(false);
+    }
+  }
+
+  async function alCerrarGuardia() {
+    setError('');
+    setAviso('');
+    setCerrando(true);
+    try {
+      const { lat, lng } = await obtenerUbicacion();
+      const clienteUuid = nuevoId();
+      try {
+        await api.checkout(id, { lat, lng, clienteUuid });
+        setConfirmandoCierre(false);
+        cargar();
+      } catch (e) {
+        if (!esErrorDeRed(e)) throw e;
+        // Sin señal: se guarda local y se reintenta solo al volver la conexión, igual que
+        // el check-in. El Asistente puede irse; el cierre viaja cuando haya red.
+        await agregarACola({ id: clienteUuid, tipo: 'checkout', guardiaId: id, payload: { lat, lng, clienteUuid } });
+        setCerradoPendiente(true);
+        setConfirmandoCierre(false);
+        sincronizarCola();
+      }
+    } catch (e) {
+      if (e.message === 'sin_geo') setError(t.guardia_activa.geo_no_disponible);
+      else if (e.motivo === 'falta_reporte') setError(t.guardia_activa.cerrar_falta_reporte);
+      else if (e.motivo === 'continuidad') setError(t.guardia_activa.cerrar_bloqueado);
+      else setError(t.comun.error_generico);
+    } finally {
+      setCerrando(false);
     }
   }
 
@@ -176,13 +217,54 @@ export default function GuardiaActiva() {
           <p className="guardia-card-detalle" style={{ textAlign: 'center', marginTop: '-0.5rem' }}>
             {t.guardia_activa.tiempo_transcurrido}
           </p>
-          <Link to={`/guardias/${id}/reporte`} className="btn btn-exito btn-full" style={{ marginTop: '1rem' }}>
-            {t.guardia_activa.cargar_reporte}
-          </Link>
+
+          {!reporteCargado && (
+            <>
+              <Link to={`/guardias/${id}/reporte`} className="btn btn-exito btn-full" style={{ marginTop: '1rem' }}>
+                {t.guardia_activa.cargar_reporte}
+              </Link>
+              <p className="guardia-card-detalle">{t.guardia_activa.cerrar_falta_reporte}</p>
+            </>
+          )}
+
+          {/* El cierre es un acto propio, no un efecto secundario de mandar el reporte
+              (tarea 66a). Es también el lugar donde va a enchufarse el pase por QR. */}
+          {reporteCargado && cerradoPendiente && (
+            <div className="alert alert-info" aria-label={t.comun.pendiente_de_enviar} style={{ marginTop: '1rem' }}>
+              <span aria-hidden="true">⏳</span> {t.comun.pendiente_de_enviar}
+            </div>
+          )}
+
+          {reporteCargado && !cerradoPendiente && guardia.checkout_bloqueado && (
+            <div className="alert alert-alerta" style={{ marginTop: '1rem' }}>{t.guardia_activa.cerrar_bloqueado}</div>
+          )}
+
+          {reporteCargado && !cerradoPendiente && !guardia.checkout_bloqueado && !confirmandoCierre && (
+            <button className="btn btn-primary btn-full" onClick={() => setConfirmandoCierre(true)} style={{ marginTop: '1rem' }}>
+              {t.guardia_activa.hacer_checkout}
+            </button>
+          )}
+
+          {reporteCargado && !cerradoPendiente && !guardia.checkout_bloqueado && confirmandoCierre && (
+            <div style={{ marginTop: '1rem' }}>
+              <p className="guardia-card-detalle">{t.guardia_activa.cerrar_pregunta}</p>
+              <button className="btn btn-primary btn-full" onClick={alCerrarGuardia} disabled={cerrando}>
+                {cerrando ? t.guardia_activa.haciendo_checkout : t.guardia_activa.cerrar_si}
+              </button>
+              <button
+                className="btn btn-secondary btn-full"
+                onClick={() => setConfirmandoCierre(false)}
+                disabled={cerrando}
+                style={{ marginTop: '0.5rem' }}
+              >
+                {t.comun.cancelar}
+              </button>
+            </div>
+          )}
         </>
       )}
 
-      {guardia.checkout_at && <div className="alert alert-info">{t.guardias.estado_completada}</div>}
+      {guardia.checkout_at && <div className="alert alert-info">{t.guardia_activa.cerrar_ok}</div>}
 
       <button className="btn btn-secondary btn-full" onClick={verReportesAnteriores} style={{ marginTop: '1rem' }}>
         {t.guardia_activa.ver_reportes_anteriores}

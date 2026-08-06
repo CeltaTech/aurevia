@@ -30,10 +30,21 @@ function manejarErrorMulter(err, req, res, next) {
 async function guardiaDelAsistente(guardiaId, usuarioAsistente) {
   const { data } = await supabase
     .from('guardias')
-    .select('id, prestadora_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, checkin_at, checkout_at')
+    .select('id, prestadora_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, checkin_at, checkout_at, checkout_bloqueado')
     .eq('id', guardiaId)
     .eq('asistente_id', usuarioAsistente.id)
     .eq('prestadora_id', usuarioAsistente.prestadoraId)
+    .maybeSingle();
+  return data;
+}
+
+// Punto único de verdad de "esta guardia ya tiene su Reporte Diario" (regla 12 de §7):
+// lo consultan el guard de reporte duplicado y el guard de cierre sin reporte.
+async function reporteDeLaGuardia(guardiaId) {
+  const { data } = await supabase
+    .from('reportes')
+    .select('id')
+    .eq('guardia_id', guardiaId)
     .maybeSingle();
   return data;
 }
@@ -97,8 +108,16 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
   }
 
   const vitales = await resolverVitalesHabilitados(data.paciente_id, req.usuarioAsistente.prestadoraId);
+  // La pantalla necesita saberlo para ofrecer el cierre recién cuando hay reporte cargado,
+  // en vez de dejar apretar un botón que el backend va a rechazar.
+  const reporte = await reporteDeLaGuardia(data.id);
 
-  res.json({ guardia: data, vitalesHabilitados: vitales.habilitados, rangosVitales: vitales.rangos });
+  res.json({
+    guardia: data,
+    reporteCargado: !!reporte,
+    vitalesHabilitados: vitales.habilitados,
+    rangosVitales: vitales.rangos,
+  });
 });
 
 // ============================================================================
@@ -231,25 +250,29 @@ appAsistentesRouter.post(
   }
 );
 
-// Confirmar y enviar: persiste el reporte (ya revisado por el Asistente), hace el check-out
-// y pasa la guardia a 'completada' — un solo paso atómico del lado de UX (PRD_04_05
-// _App_Servicio.md, Flujo de Reporte Diario punto 4).
+// Confirmar y enviar: persiste el reporte (ya revisado por el Asistente) y avisa a la Familia.
+//
+// Hasta el 2026-08-06 este mismo endpoint hacía además el check-out y pasaba la guardia a
+// 'completada'. Se separó (tarea 66a, pendiente #113) porque el cierre de guardia no tenía
+// botón propio en ningún lado: terminaba siendo un efecto secundario invisible de mandar el
+// reporte, y el pase de guardia por QR necesita que cerrar sea un acto con entidad propia.
+// El orden de negocio no cambió: sigue sin poder cerrarse una guardia sin reporte — eso ahora
+// lo valida POST /guardias/:id/checkout.
 appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente, async (req, res) => {
-  const { textoLibre, alimentacion, medicacion, signosVitales, estadoAnimo, incidentes, observaciones, fotoUrl, lat, lng } = req.body;
-  if (typeof lat !== 'number' || typeof lng !== 'number') {
-    return res.status(400).json({ error: 'Faltan coordenadas GPS de check-out' });
-  }
+  const { textoLibre, alimentacion, medicacion, signosVitales, estadoAnimo, incidentes, observaciones, fotoUrl } = req.body;
 
   const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
   if (!guardia) {
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
   if (!guardia.checkin_at) {
-    return res.status(400).json({ error: 'No se puede hacer check-out sin check-in previo' });
+    return res.status(400).json({ error: 'No se puede cargar el reporte sin check-in previo' });
   }
-  if (guardia.checkout_at) {
-    // yaRegistrado: true — mismo criterio que en /checkin (Fase 9, cliente offline).
-    return res.status(400).json({ error: 'Esta guardia ya tiene check-out registrado', yaRegistrado: true });
+  if (await reporteDeLaGuardia(guardia.id)) {
+    // yaRegistrado: true — mismo criterio que en /checkin (Fase 9, cliente offline). Antes
+    // esta protección contra el envío duplicado la daba el guard de checkout_at; al separar
+    // el cierre del reporte, la da la existencia del reporte mismo.
+    return res.status(400).json({ error: 'Esta guardia ya tiene su Reporte Diario cargado', yaRegistrado: true });
   }
 
   const { data: reporte, error: errorReporte } = await supabase
@@ -276,13 +299,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
 
   const { error: errorGuardia } = await supabase
     .from('guardias')
-    .update({
-      checkout_at: new Date().toISOString(),
-      checkout_lat: lat,
-      checkout_lng: lng,
-      estado: 'completada',
-      push_reporte_enviado_at: new Date().toISOString(),
-    })
+    .update({ push_reporte_enviado_at: new Date().toISOString() })
     .eq('id', guardia.id);
   if (errorGuardia) {
     return res.status(500).json({ error: errorGuardia.message });
@@ -323,6 +340,61 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
   }
 
   res.json({ ok: true, reporteId: reporte.id });
+});
+
+// ============================================================================
+// Check-out — cerrar la guardia. Acto con entidad propia desde el 2026-08-06 (tarea 66a):
+// antes ocurría solo como efecto secundario de confirmar el Reporte Diario.
+//
+// Tres condiciones, en este orden, porque cada una dice algo distinto al Asistente:
+//   1. sin check-in previo no hay nada que cerrar;
+//   2. sin Reporte Diario cargado no se cierra — la regla de negocio que antes garantizaba
+//      el endpoint del reporte, ahora explícita en vez de implícita;
+//   3. si checkout_bloqueado está puesto, rige el protocolo de continuidad de guardia (no
+//      retirarse sin relevo) y el cierre solo lo libera el Panel con excepción documentada.
+//      Sin este guard la base rechazaría el UPDATE por el CHECK
+//      guardias_checkout_bloqueado_requiere_excepcion (schema_modulo6_guardias_02.sql) y el
+//      Asistente vería un error genérico sin saber por qué no puede irse.
+// ============================================================================
+
+appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, async (req, res) => {
+  const { lat, lng } = req.body || {};
+  if (typeof lat !== 'number' || typeof lng !== 'number') {
+    return res.status(400).json({ error: 'Faltan coordenadas GPS' });
+  }
+
+  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  if (!guardia) {
+    return res.status(404).json({ error: 'Guardia no encontrada' });
+  }
+  if (!guardia.checkin_at) {
+    return res.status(400).json({ error: 'No se puede cerrar una guardia sin check-in previo', motivo: 'falta_checkin' });
+  }
+  if (guardia.checkout_at) {
+    // yaRegistrado: true — mismo criterio que en /checkin (Fase 9, cliente offline).
+    return res.status(400).json({ error: 'Esta guardia ya tiene check-out registrado', yaRegistrado: true });
+  }
+  if (!(await reporteDeLaGuardia(guardia.id))) {
+    return res.status(400).json({ error: 'Falta cargar el Reporte Diario antes de cerrar la guardia', motivo: 'falta_reporte' });
+  }
+  if (guardia.checkout_bloqueado) {
+    return res.status(409).json({ error: 'Check-out bloqueado por el protocolo de continuidad de guardia', motivo: 'continuidad' });
+  }
+
+  const { error } = await supabase
+    .from('guardias')
+    .update({
+      checkout_at: new Date().toISOString(),
+      checkout_lat: lat,
+      checkout_lng: lng,
+      estado: 'completada',
+    })
+    .eq('id', guardia.id);
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  res.json({ ok: true });
 });
 
 // Ping de ubicación en vivo durante una guardia activa — la Familia lo lee vía Supabase

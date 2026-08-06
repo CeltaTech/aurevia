@@ -1,8 +1,8 @@
-// Procesa la cola offline en orden de creación: un check-in encolado antes que su Reporte
-// Diario se envía primero, así el backend nunca rechaza el Reporte por falta de check-in
-// previo (backend/src/routes/appAsistentes.js). Si un ítem falla por un motivo real (no de
-// red), se corta el procesamiento ahí — los siguientes ítems de esa misma guardia podrían
-// depender del que falló.
+// Procesa la cola offline en orden de creación, y ese orden es justamente la garantía: los
+// tres actos de una guardia dependen del anterior —check-in, después Reporte Diario, después
+// cierre—, y el backend rechaza cada uno si falta el de más atrás
+// (backend/src/routes/appAsistentes.js). Si un ítem falla por un motivo real (no de red), se
+// corta el procesamiento ahí — los siguientes ítems de esa misma guardia dependen del que falló.
 import { api } from './api';
 import { listarCola, quitarDeCola, marcarError } from './colaOffline';
 
@@ -34,6 +34,8 @@ export async function sincronizarCola() {
           await api.checkin(item.guardiaId, item.payload);
         } else if (item.tipo === 'reporte') {
           await api.confirmarReporte(item.guardiaId, item.payload);
+        } else if (item.tipo === 'checkout') {
+          await api.checkout(item.guardiaId, item.payload);
         }
         await quitarDeCola(item.id);
         avisar();

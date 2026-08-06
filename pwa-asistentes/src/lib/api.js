@@ -21,6 +21,9 @@ async function pedido(ruta, opciones = {}) {
   if (!respuesta.ok) {
     const error = new Error(datos.error || 'Error de red');
     if (datos.yaRegistrado) error.yaRegistrado = true;
+    // El motivo permite que la pantalla explique por qué no se pudo (falta el reporte,
+    // continuidad de guardia) en vez de mostrar siempre el mismo error genérico.
+    if (datos.motivo) error.motivo = datos.motivo;
     throw error;
   }
   return datos;
@@ -31,6 +34,7 @@ export const api = {
   misGuardias: () => pedido('/guardias'),
   guardia: (id) => pedido(`/guardias/${id}`),
   checkin: (id, datos) => pedido(`/guardias/${id}/checkin`, { method: 'POST', body: JSON.stringify(datos) }),
+  checkout: (id, datos) => pedido(`/guardias/${id}/checkout`, { method: 'POST', body: JSON.stringify(datos) }),
   estructurarReporte: (id, textoLibre) =>
     pedido(`/guardias/${id}/reporte/estructurar`, { method: 'POST', body: JSON.stringify({ textoLibre }) }),
   subirFotoReporte: (id, archivo) => {

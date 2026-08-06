@@ -38,20 +38,6 @@ function colorSigno(valor, rango) {
   return numero >= rango.min && numero <= rango.max ? 'normal' : 'alerta';
 }
 
-function obtenerUbicacion() {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('sin_geo'));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (posicion) => resolve({ lat: posicion.coords.latitude, lng: posicion.coords.longitude }),
-      () => reject(new Error('sin_geo')),
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
-  });
-}
-
 export default function ReporteDiario() {
   const { id } = useParams();
   const { t } = useLocale();
@@ -147,11 +133,14 @@ export default function ReporteDiario() {
     }
   }
 
+  // El reporte ya no pide ubicación: desde que el cierre de guardia es un acto propio
+  // (tarea 66a), los dos momentos que dejan constancia de dónde estuvo el Asistente son la
+  // llegada y el retiro, y los dos la registran. Exigir el GPS también acá solo servía para
+  // dejarlo sin poder mandar el reporte cuando el teléfono no consigue señal satelital.
   async function alConfirmar() {
     setError('');
     setConfirmando(true);
     try {
-      const { lat, lng } = await obtenerUbicacion();
       const clienteUuid = nuevoId();
       const datos = {
         textoLibre,
@@ -162,8 +151,6 @@ export default function ReporteDiario() {
         incidentes: estructurado.incidentes,
         observaciones: estructurado.observaciones,
         fotoUrl,
-        lat,
-        lng,
         clienteUuid,
       };
       try {
@@ -176,9 +163,11 @@ export default function ReporteDiario() {
         setGuardadoPendiente(true);
         sincronizarCola();
       }
-      setTimeout(() => navigate('/guardias'), 1500);
-    } catch (e) {
-      setError(e.message === 'sin_geo' ? t.guardia_activa.geo_no_disponible : t.comun.error_generico);
+      // Vuelve a la guardia, no a la lista: ahí está el botón de cerrarla, que es el paso
+      // que sigue y el que antes ocurría solo, sin que el Asistente lo viera.
+      setTimeout(() => navigate(`/guardias/${id}`), 1500);
+    } catch {
+      setError(t.comun.error_generico);
     } finally {
       setConfirmando(false);
     }

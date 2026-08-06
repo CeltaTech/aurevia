@@ -5,8 +5,11 @@
      3. Pantallas con dirección propia a las que no lleva ningún enlace -> escondidas. */
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const RAIZ = 'F:/proyectos/celtatech/productos/aurevia';
+// La raíz sale de dónde está parado este archivo, no escrita a mano: así el barrido
+// corre en cualquier máquina, y sigue andando cuando la carpeta se renombre (tarea 39).
+const RAIZ = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const APPS = ['panel', 'pwa-familias', 'pwa-asistentes'];
 
 function archivosDe(dir, exts = ['.js', '.jsx']) {

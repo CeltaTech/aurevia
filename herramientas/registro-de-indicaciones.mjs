@@ -11,7 +11,7 @@
    cierra. La memoria de Claude Code no es un lugar donde guardar cosas. El registro de
    la conversación sí lo es, y este archivo lo convierte en algo legible.
 
-   Cómo se usa, parado en `productos/aurevia`:
+   Cómo se usa, parado en la raíz del repositorio del producto:
 
        node herramientas/registro-de-indicaciones.mjs
 

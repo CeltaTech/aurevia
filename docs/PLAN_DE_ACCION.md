@@ -1,6 +1,6 @@
 # PLAN_DE_ACCION.md — Todo lo que falta, ordenado por quién lo hace y qué va primero
 
-> Escrito el **2026-08-03**. Junta en un solo lugar los 36 pendientes abiertos de Careonys, los 6 de
+> Escrito el **2026-08-06**. Junta en un solo lugar los 36 pendientes abiertos de Careonys, los 6 de
 > CeltaTech, las etapas de planes que quedaron a medio construir, las tareas que se hablaron y nunca
 > se anotaron, y lo que se decidió el 2026-08-03 sobre cómo tiene que estar organizado el Panel.
 >
@@ -33,15 +33,15 @@ Cuando una cosa necesita a los dos, aparece en **Compartidos** con la parte de c
 
 ---
 
-## Lo primero de todo: la única fecha dura
+## Lo primero de todo: la única fecha dura, ya cumplida
 
-**🔥 Faltan 3 días.** El plan Hobby de Railway hay que pagarlo antes del **6 de agosto de 2026**.
-Si no se paga, el 6 se cae el backend, y con él: la API que usan el Panel y las dos aplicaciones,
-los correos de activación, las notificaciones a los teléfonos y los 8 relojes internos.
+**🟢 Pagado el 2026-08-06**, el mismo día del corte. El Desarrollador pagó el plan Hobby de Railway
+y el backend siguió en el aire: comprobado en el momento, `…/health` responde **200**. Con él siguen
+vivos la API que usan el Panel y las dos aplicaciones, los correos de activación, las notificaciones
+a los teléfonos y los 8 relojes internos. *(pendiente `#103`, tarea 44 — cerrado)*
 
-**Dónde:** `railway.com`, entrando con la cuenta de la empresa → el workspace → sección de
-facturación. Hay que cargar una tarjeta, por eso no lo puede hacer Claude Code.
-*(pendiente `#103`, tarea 44)*
+**No queda ninguna fecha dura por delante.** Las que vienen son condiciones, no calendario: "antes
+del primer cliente real" y "antes de liberarlo a la venta".
 
 ---
 
@@ -52,9 +52,7 @@ dependen de un tercero (un abogado, un banco).
 
 ## 🔥 Ahora
 
-| # | Qué | Dónde se hace |
-|---|---|---|
-| `#103` | **Pagar el plan Hobby de Railway** (arriba) | `railway.com` → workspace → facturación |
+**Nada.** La única con fecha era Railway y está pagada (`#103`, cerrado el 2026-08-06).
 
 ## 🔴 Antes del primer cliente real
 
@@ -267,7 +265,7 @@ No es una lista de deseos: es el orden que evita rehacer trabajo.
 
 **Hoy y mañana, sin esperar a nadie:**
 
-1. 🔥 Él paga Railway.
+1. ~~Él paga Railway.~~ 🟢 Hecho el 2026-08-06.
 2. El pase de guardia por QR (`#113`). **No depende del mapa del Panel**: vive en la aplicación del
    Asistente, que tiene cuatro pantallas y no la toca la reorganización del menú. Arreglando eso se
    arregla también la observación 2 del estudio comparado y parte del grupo 1 de textos huérfanos.

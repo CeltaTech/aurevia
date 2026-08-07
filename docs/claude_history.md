@@ -173,3 +173,21 @@ La primera versión de la definición, escrita esa misma mañana, se corrigió c
 - **El Servicio cambia mientras está vivo.** *"Puede finalizar alguna prestación o puede comenzar otra en cualquier momento cronológico del servicio"*. Consecuencia dura: el Servicio no tiene *un* precio, tiene el precio de lo que estaba vigente en cada período, y por eso una prestación necesita **desde cuándo y hasta cuándo** estuvo vigente. Hoy `prestaciones` solo tiene `estado`, así que al darla de baja se pierde **cuándo** dejó de estar vigente y el mes se factura mal.
 - **Palabra nueva en el glosario:** "Cerrar un Servicio", con su sinónimo de la jerga del rubro, **"levantar el servicio"**, que se usa sobre todo cuando la decisión de terminar la toma la Prestadora. Es la finalización definitiva del Servicio: se dan de baja sus prestaciones, se cancelan sus guardias futuras y se avisa a los Asistentes que se quedan sin ese trabajo.
 - **No reintroducir:** la idea de que un Servicio es "el cuidado de un Paciente con su horario y su precio". Es la lectura que sugiere el código de hoy, porque todo cuelga del Paciente, y es la que hay que desarmar.
+
+### La palabra para quien contrata: "Cliente Contratante", pero en pantalla dice "Cliente" (2026-08-07)
+
+- **Qué decía antes:** nada. La palabra faltaba, y el documento del Servicio la dejaba anotada como pregunta abierta con "Contratante" como propuesta sin confirmar.
+- **Qué dice ahora:** el término aprobado es **Cliente Contratante** — quien contrata un Servicio y a quien se le cobra: una Familia, una Obra Social o cualquier otro. Entra al glosario de `CLAUDE.md` §4 con una regla de uso partida en tres, que es lo importante de la decisión:
+  - **en pantalla y hablando se dice "Cliente"** a secas;
+  - **"Cliente Contratante"** es la forma completa, para documentos y para donde pueda confundirse con el Cliente de CeltaTech;
+  - **`contratante`** es el identificador en el código y en la base, porque nombra la función.
+- **Motivo:** se ofrecieron seis alternativas (Contratante, liberar "Cliente", Titular del Servicio, Financiador, Pagador, Comitente) con la recomendación de "Contratante". El Desarrollador eligió el compuesto y explicó por qué se queda la palabra corta: *"entonces usa cliente contratante aunque los seres humanos usaran cliente"* y *"no podemos ir contra el vocabulario de los hombres"*. O sea: el vocabulario del negocio manda sobre la prolijidad del modelo, y quien opera el Panel no tiene que aprender una palabra nueva para algo que ya sabe nombrar.
+- **Lo que no cambió:** la restricción de §4 sobre "Cliente" a secas sigue en pie para el Nivel 1 (CeltaTech mirando a las empresas que le contratan un producto), y adentro de Careonys la Familia se sigue llamando Familia y la Prestadora, Prestadora. Nunca "cliente" genérico para esos dos.
+- **No reintroducir:** "Contratante" solo, sin "Cliente" adelante, como si fuera el término aprobado.
+
+### La Obra Social como Cliente Contratante entra a medias, y a propósito (2026-08-07)
+
+- **Qué decía antes:** era la segunda pregunta abierta del documento del Servicio — si la Obra Social entraba al MVP o esperaba junto con la modalidad de Subcontratación (pendiente #123).
+- **Qué dice ahora:** entra **el lugar**, no la entidad. El Servicio se guarda desde el arranque con un contratante que puede no ser una Familia (tipo de contratante más identificador, en vez del `servicios.familia_id` obligatorio de hoy). La Obra Social como entidad de verdad —ficha, afiliados, facturación propia— **queda para después del MVP**. Mientras tanto el único contratante que se carga por pantalla es la Familia.
+- **Motivo:** palabras del Desarrollador: *"podés incluirlos donde haga falta para que no rompa, pero si se complica mucho lo dejamos para después del MVP"*. Dejar el lugar hecho es barato ahora y carísimo después, porque cambiar de quién cuelga un Servicio obliga a tocar facturación.
+- **No reintroducir:** un `familia_id` obligatorio en `servicios`, que es exactamente lo que hay hoy y lo que esta decisión sale a corregir.

@@ -1,13 +1,14 @@
 # Qué es un Servicio
 
 > **Estado:** escrito por Claude Code el 2026-08-07 y corregido por el Desarrollador ese
-> mismo día, en cinco pasadas. Sobre esta versión se construye la pantalla de Servicios
-> (pendiente #116). Lo que sigue abierto está al final, en su propia sección.
+> mismo día, en seis pasadas. Sobre esta versión se construye la pantalla de Servicios
+> (pendiente #116). **No queda nada abierto:** las dos preguntas que había están
+> contestadas al final, en su propia sección.
 
 ## La definición
 
-**Un Servicio es el paquete de prestaciones que la Prestadora le brinda a quien lo
-contrata — una Familia, o un contratante de otro tipo como una Obra Social.**
+**Un Servicio es el paquete de prestaciones que la Prestadora le brinda a su Cliente
+Contratante — una Familia, o un contratante de otro tipo como una Obra Social.**
 
 Es lo que la Prestadora **vende**. Todo lo demás cuelga de acá: las Guardias son la forma
 de cubrir *algunas* de esas prestaciones, y la factura es el mismo paquete mirado desde el
@@ -106,8 +107,8 @@ Son las cuatro confusiones que ya aparecieron en el código:
 deja de cobrar. No se borra nada: lo que pasó queda en la historia.
 
 **En la jerga del rubro se dice "levantar el servicio"**, y se usa sobre todo cuando la
-decisión de terminar la toma **la Prestadora** — porque dejó de poder atender a esa Familia
-o a ese contratante, por el motivo que sea.
+decisión de terminar la toma **la Prestadora** — porque dejó de poder atender a ese Cliente
+Contratante, por el motivo que sea.
 
 Al cerrarse, pasan cinco cosas (el producto ya hace las cinco hoy, en
 `panel/src/pages/familias/PrestacionesPaciente.jsx:200`):
@@ -128,8 +129,8 @@ consecuencias laborales que hay que poder reconstruir después.
 Son los puntos donde la descripción del negocio no alcanzaba para escribir código y hubo
 que elegir. Están separados a propósito, para poder discutirlos de a uno.
 
-**D1 · Un Servicio es de quien lo contrata, y puede cubrir a más de un Paciente.**
-Quien contrata puede ser una Familia o un contratante de otro tipo, como una Obra Social. Y
+**D1 · Un Servicio es de su Cliente Contratante, y puede cubrir a más de un Paciente.**
+El Cliente Contratante puede ser una Familia o un contratante de otro tipo, como una Obra Social. Y
 un mismo Servicio puede cubrir a varios Pacientes — es la única forma de que entre el caso
 del matrimonio bajo el mismo techo, donde se cobra menos del doble. Si el precio colgara del
 Paciente, ese "menos del doble" no tendría dónde vivir. Respaldo: respuesta del Desarrollador
@@ -140,7 +141,7 @@ servicios individuales o como un servicio unificado"*.
 Cuando contrata una Familia suelen coincidir. Cuando contrata una Obra Social no: los
 Pacientes son los afiliados que ella deriva, no "su familia". Hoy están pegadas.
 
-**D3 · Un mismo contratante puede tener varios Servicios a la vez.**
+**D3 · Un mismo Cliente Contratante puede tener varios Servicios a la vez.**
 Si la madre y el padre están en arreglos distintos, son dos Servicios; si están en el mismo
 arreglo, es uno solo con dos Pacientes. Quien carga elige, el producto no impone.
 
@@ -205,19 +206,34 @@ Tampoco existe hoy la Obra Social como entidad: es un campo de texto suelto en e
 (`pacientes.obra_social`) y una pantalla de informes. Nada que pueda ser la contraparte de
 un Servicio.
 
-## Qué queda abierto
+## Las dos preguntas que quedaban, ya contestadas
 
-**Dos preguntas para el Desarrollador**, ninguna bloqueante para la pantalla de Servicios:
+**1 · La palabra para quien contrata: Cliente Contratante.** Decidido por el Desarrollador
+el 2026-08-07. Hacía falta una que cubriera a la Familia y a la Obra Social por igual, y
+"Cliente" a secas estaba reservada por `CLAUDE.md` §4 para la mirada de CeltaTech sobre las
+empresas que le contratan un producto. La salida es el término compuesto, con una regla que
+va con él: *"no podemos ir contra el vocabulario de los hombres"*. Es decir:
 
-1. **La palabra para quien contrata.** Hace falta una que cubra a la Familia y a la Obra
-   Social por igual. "Cliente" no se puede usar: `CLAUDE.md` §4 la reserva para la mirada de
-   CeltaTech sobre las empresas que le contratan un producto, y la prohíbe adentro de
-   Careonys. La propuesta es **Contratante**, que pasa las cinco preguntas de §4. Sin
-   confirmar.
-2. **Si la Obra Social como contratante entra en el MVP** o queda para después, junto con la
-   modalidad de Subcontratación (pendiente #123), donde el contratante es justamente una
-   Obra Social. Cambia el tamaño del trabajo: si entra, hay que construir la Obra Social
-   como entidad de verdad.
+- **En pantalla y hablando se dice "Cliente"**, que es la palabra que le sale natural a
+  cualquiera. No se la corrige.
+- **"Cliente Contratante" es el término completo**, para documentos y para donde pueda haber
+  confusión con el Cliente de CeltaTech.
+- **En el código y en la base el identificador es `contratante`**, que nombra la función.
+
+**2 · La Obra Social entra a medias, y a propósito.** Decidido el mismo día:
+*"podés incluirlos donde haga falta para que no rompa, pero si se complica mucho lo dejamos
+para después del MVP"*. Se traduce así:
+
+- El Servicio se guarda desde el arranque con **un contratante que puede no ser una
+  Familia** — o sea, tipo de contratante más identificador, no un `familia_id` obligatorio
+  como hoy. Es barato hacerlo ahora y carísimo después, porque cambiarlo obliga a tocar
+  facturación.
+- **La Obra Social como entidad de verdad** —su ficha, sus afiliados, su facturación
+  propia— **queda para después del MVP**, junto con la modalidad de Subcontratación
+  (pendiente #123), donde el contratante es justamente una Obra Social.
+- Mientras tanto, el único contratante que se carga por pantalla es la Familia. El lugar
+  para el otro está hecho, pero vacío.
+
 **Y una cosa que no es esta tarea:** la mudanza en sí. Mover el precio y el calendario del
 Paciente al Servicio toca facturación y generación de Guardias; se hace con su propio plan,
 no de costado. Lo que se construye ahora es la pantalla que muestra el Servicio como el

@@ -122,6 +122,7 @@ function TabNotificaciones() {
         </table>
       </EstadoLista>
       <TabAvisoCese />
+      <TabAvisoGuardiaSinCubrir />
       <TabEmailRemitente />
     </>
   );
@@ -284,6 +285,95 @@ function TabAvisoCese() {
               type="number"
               value={config.horas_plazo_aviso_verbal}
               onChange={(e) => setConfig((c) => ({ ...c, horas_plazo_aviso_verbal: e.target.value }))}
+            />
+            <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+          </div>
+        )}
+      </EstadoLista>
+    </div>
+  );
+}
+
+// Los dos números del aviso de guardia sin cubrir (pendiente #106). Mismo camino que
+// TabAvisoCese —el navegador escribe directo en la tabla y RLS decide si puede— en vez de
+// una ruta nueva del backend: es la misma clase de dato y no hay motivo para dos caminos.
+function TabAvisoGuardiaSinCubrir() {
+  const { t } = useLocale();
+  const { usuario } = useAuth();
+  const [config, setConfig] = useState(null);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    const { data, error: errorConsulta } = await supabase
+      .from('configuracion_aviso_guardia_sin_cubrir')
+      .select('*')
+      .eq('prestadora_id', usuario.prestadora_id)
+      .maybeSingle();
+    if (errorConsulta) {
+      setError(errorConsulta.message);
+      setEstado('error');
+      return;
+    }
+    // Sin fila todavía, el formulario muestra los mismos valores de arranque que la base le
+    // pone a una fila nueva. No es un número escrito acá: es lo que se va a guardar apenas
+    // el usuario toque "Guardar", y el que manda sigue siendo el de la base.
+    setConfig(data ?? { activo: true, horas_antes: 48, horas_entre_avisos: 12 });
+    setEstado('listo');
+  }, [usuario.prestadora_id]);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  async function guardar() {
+    setGuardando(true);
+    setError(null);
+    const { error: errorUpsert } = await supabase.from('configuracion_aviso_guardia_sin_cubrir').upsert({
+      prestadora_id: usuario.prestadora_id,
+      activo: config.activo,
+      horas_antes: Number(config.horas_antes),
+      horas_entre_avisos: Number(config.horas_entre_avisos),
+    });
+    setGuardando(false);
+    if (errorUpsert) {
+      setError(errorUpsert.message);
+      return;
+    }
+    recargar();
+  }
+
+  return (
+    <div>
+      <h2>{t.configuracion.aviso_guardia_sin_cubrir_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.aviso_guardia_sin_cubrir_explicacion}</p>
+      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+        {config && (
+          <div>
+            {error && <Alert variant="error">{error}</Alert>}
+            <FormField
+              label={t.configuracion.aviso_guardia_sin_cubrir_activo}
+              name="aviso_guardia_sin_cubrir_activo"
+              type="checkbox"
+              checked={config.activo}
+              onChange={(e) => setConfig((c) => ({ ...c, activo: e.target.checked }))}
+            />
+            <FormField
+              label={t.configuracion.aviso_guardia_sin_cubrir_horas_antes}
+              name="aviso_guardia_sin_cubrir_horas_antes"
+              type="number"
+              value={config.horas_antes}
+              onChange={(e) => setConfig((c) => ({ ...c, horas_antes: e.target.value }))}
+            />
+            <FormField
+              label={t.configuracion.aviso_guardia_sin_cubrir_horas_entre_avisos}
+              name="aviso_guardia_sin_cubrir_horas_entre_avisos"
+              type="number"
+              value={config.horas_entre_avisos}
+              onChange={(e) => setConfig((c) => ({ ...c, horas_entre_avisos: e.target.value }))}
             />
             <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
           </div>

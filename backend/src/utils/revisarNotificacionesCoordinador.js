@@ -2,6 +2,7 @@ import { supabase } from '../db/connection.js';
 import { notificarCoordinador, enviarWhatsApp } from './whatsapp.js';
 import { enviarPushFamilia } from './push.js';
 import { configuracionEvento } from './email.js';
+import { necesitaNotificar } from './insistencia.js';
 
 // Punto 5 de docs/PRD_06_WhatsApp_IA.md: insistencia al Coordinador según premura, con
 // coordinador de respaldo si no hay reacción, parametrizado por prestadora
@@ -39,12 +40,6 @@ function intervaloParaPremura(umbrales, minutosPremura) {
     }
   }
   return 60;
-}
-
-function necesitaNotificar({ ultimaNotificacionAt, intervaloMinutos, ahora }) {
-  if (!ultimaNotificacionAt) return true;
-  const proxima = new Date(ultimaNotificacionAt).getTime() + intervaloMinutos * 60_000;
-  return ahora.getTime() >= proxima;
 }
 
 async function revisarAlertas(config, ahora) {

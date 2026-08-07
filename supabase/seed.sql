@@ -325,7 +325,74 @@ INSERT INTO public.guardias (
 
 
 -- ----------------------------------------------------------------------------
--- 6. Limpieza y aviso final
+-- 6. La configuración de avisos de la Prestadora de prueba
+--
+--    Las migraciones siembran estas filas para las Prestadoras que existían
+--    cuando corrieron, pero Sandbox nace acá, después. Sin estas dos filas la
+--    Prestadora de prueba queda muda y el aviso parece roto cuando en realidad
+--    está apagado por falta de configuración.
+--
+--    6.a Cuándo avisar que una guardia sigue sin cubrir. Con 48 horas de
+--        anticipación, la guardia sin cubrir de hoy a las 22:00 (sección 5)
+--        dispara el aviso apenas arranca el backend, que es justo lo que hace
+--        falta para probarlo sin esperar.
+-- ----------------------------------------------------------------------------
+INSERT INTO public.configuracion_aviso_guardia_sin_cubrir (
+  prestadora_id, activo, horas_antes, horas_entre_avisos
+) VALUES (
+  '11111111-1111-4111-8111-111111111111', true, 48, 12
+);
+
+-- ----------------------------------------------------------------------------
+--    6.b A quién le llega. La lista de correos va vacía a propósito: así el
+--        aviso cae en el correo de contacto de la Prestadora
+--        (`contacto@sandbox.local`, sección 1), que es el camino de respaldo
+--        que conviene tener probado. Ver `destinatariosEvento()` en
+--        `backend/src/utils/email.js`.
+-- ----------------------------------------------------------------------------
+INSERT INTO public.configuracion_notificaciones (
+  evento, prestadora_id, descripcion, emails, activo
+) VALUES (
+  'guardia_sin_cubrir',
+  '11111111-1111-4111-8111-111111111111',
+  'Una guardia próxima sigue sin Asistente asignado',
+  '{}',
+  true
+);
+
+
+-- ----------------------------------------------------------------------------
+--    6.c A dónde salen los correos en la máquina. Apuntan al buzón de pruebas
+--        que trae la base local (se abre en http://127.0.0.1:54424), así que
+--        nada sale a internet ni llega a una casilla real. Sin esto, probar un
+--        aviso obliga a configurar el correo a mano cada vez que se resiembra.
+--
+--        Falta un paso que no se puede hacer desde acá: `backend/.env.local`
+--        tiene que tener `SMTP_USER` con cualquier valor. El backend usa esa
+--        variable como interruptor —si está vacía no intenta mandar nada— y ese
+--        archivo no vive en el repositorio.
+-- ----------------------------------------------------------------------------
+INSERT INTO public.configuracion_email_prestadora (
+  prestadora_id, activo, direccion_remitente, usuario_smtp, host, puerto
+) VALUES (
+  '11111111-1111-4111-8111-111111111111',
+  true,
+  'avisos@sandbox.local',
+  'avisos@sandbox.local',
+  '127.0.0.1',
+  54425
+);
+
+-- El buzón de pruebas no pide contraseña, pero el backend solo usa el remitente
+-- propio de la Prestadora si encuentra una guardada. Se carga una de relleno.
+SELECT guardar_credencial_smtp_prestadora(
+  '11111111-1111-4111-8111-111111111111',
+  'el-buzon-local-no-pide-clave'
+);
+
+
+-- ----------------------------------------------------------------------------
+-- 7. Limpieza y aviso final
 -- ----------------------------------------------------------------------------
 -- Sin esto, la capa que sirve los datos puede seguir contestando 404 en tablas
 -- que sí existen (§8 de `CLAUDE.md`).
@@ -339,5 +406,6 @@ BEGIN
   RAISE NOTICE '  Panel  -> superadmin@sandbox.local / admin@sandbox.local / coordinadora@sandbox.local';
   RAISE NOTICE '  Asistentes -> ana.asistente@sandbox.local (y bruno, clara, delia)';
   RAISE NOTICE '  Familias   -> familia.gomez@sandbox.local (y lopez, morales)';
+  RAISE NOTICE 'Los correos que manda el backend quedan en http://127.0.0.1:54424';
   RAISE NOTICE '';
 END $$;

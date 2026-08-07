@@ -106,8 +106,11 @@ openai_api_key = "env(OPENAI_API_KEY)"
 enabled = true
 # Port to use for the email testing server web interface.
 port = 54424
-# Uncomment to expose additional ports for testing user applications that send emails.
-# smtp_port = 54325
+# Puerto de entrada de correo del buzón de pruebas local. Descomentado a propósito: sin él
+# el buzón solo se puede mirar por el navegador, y el backend no tiene a dónde mandar los
+# avisos cuando se los prueba contra esta base. Todo lo que salga por acá queda en la
+# máquina, no llega a ninguna casilla real.
+smtp_port = 54425
 # pop3_port = 54326
 # admin_email = "admin@email.com"
 # sender_name = "Admin"

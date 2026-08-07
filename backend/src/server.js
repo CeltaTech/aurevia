@@ -29,6 +29,7 @@ import { revisarAusenciasAutomaticas } from './utils/ausenciaAutomatica.js';
 import { revisarNotificacionesCoordinador } from './utils/revisarNotificacionesCoordinador.js';
 import { extenderSeriesGuardiaAbiertas } from './utils/generacionSeriesGuardia.js';
 import { revisarRecordatoriosPush } from './utils/revisarRecordatoriosPush.js';
+import { revisarGuardiasSinCubrir } from './utils/revisarGuardiasSinCubrir.js';
 import { whatsappWebhookRouter } from './routes/whatsappWebhook.js';
 import { appAsistentesRouter } from './routes/appAsistentes.js';
 import { appFamiliasRouter } from './routes/appFamilias.js';
@@ -130,6 +131,15 @@ setInterval(() => {
 revisarAvisosAutomaticosCese().catch((err) => console.error('Error en revisión inicial de avisos automáticos de cese:', err.message));
 setInterval(() => {
   revisarAvisosAutomaticosCese().catch((err) => console.error('Error en revisión de avisos automáticos de cese:', err.message));
+}, CINCO_MINUTOS_MS);
+
+// Aviso al Coordinador de guardias próximas que siguen sin cubrir (pendiente #106,
+// docs/PENDIENTES.md). Con cuánta anticipación avisar y cada cuánto repetirlo los define
+// cada Prestadora en configuracion_aviso_guardia_sin_cubrir; acá solo se fija cada cuánto se
+// mira, y se mira seguido porque la anticipación configurada puede ser de pocas horas.
+revisarGuardiasSinCubrir().catch((err) => console.error('Error en revisión inicial de guardias sin cubrir:', err.message));
+setInterval(() => {
+  revisarGuardiasSinCubrir().catch((err) => console.error('Error en revisión de guardias sin cubrir:', err.message));
 }, CINCO_MINUTOS_MS);
 
 // Verificación mensual de precios de IA (pendiente #84, docs/PENDIENTES.md) — la función

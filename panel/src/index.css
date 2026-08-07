@@ -1034,6 +1034,18 @@ h2 {
   margin: 0.25rem 0 1rem;
 }
 
+/* Los momentos de la guardia que ya quedaron registrados, con su hora. */
+.panel-momentos-registrados {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--texto-secundario);
+  font-size: 0.9rem;
+}
+
 .panel-modal-acciones {
   display: flex;
   justify-content: flex-end;

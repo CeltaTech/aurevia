@@ -74,6 +74,10 @@ export default function PacienteDetalle() {
   const guardia = guardiaActiva || guardiaProxima;
   const asistente = guardia?.asistentes;
 
+  // "En camino" es el rato entre que el Asistente sale de su casa y llega al domicilio:
+  // hay hora de salida registrada y todavía no hay hora de llegada.
+  const enCamino = Boolean(guardia?.salida_checkin_at && !guardia?.checkin_at);
+
   return (
     <div>
       <h1>{paciente.nombre}</h1>
@@ -103,18 +107,27 @@ export default function PacienteDetalle() {
             {guardia.fecha} · {guardia.hora_inicio?.slice(0, 5)} - {guardia.hora_fin?.slice(0, 5)}
           </div>
           {guardiaActiva && !guardiaActiva.checkin_at && <div className="guardia-card-detalle">{t.paciente.checkin_pendiente}</div>}
+          {enCamino && <div className="guardia-card-detalle">{t.paciente.en_camino}</div>}
         </div>
       )}
 
-      {guardiaActiva && ubicacion && (
+      {guardiaActiva && (
         <>
           <h2 style={{ marginTop: '1.5rem' }}>{t.paciente.ubicacion_en_vivo}</h2>
-          <iframe
-            className="mapa-embed"
-            title={t.paciente.ubicacion_en_vivo}
-            src={`https://www.openstreetmap.org/export/embed.html?bbox=${ubicacion.lng - 0.01}%2C${ubicacion.lat - 0.01}%2C${ubicacion.lng + 0.01}%2C${ubicacion.lat + 0.01}&layer=mapnik&marker=${ubicacion.lat}%2C${ubicacion.lng}`}
-          />
-          <p className="mapa-actualizado">{t.paciente.ubicacion_actualizada.replace('{segundos}', segundosDesde(ubicacion.at))}</p>
+          {ubicacion ? (
+            <>
+              <iframe
+                className="mapa-embed"
+                title={t.paciente.ubicacion_en_vivo}
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${ubicacion.lng - 0.01}%2C${ubicacion.lat - 0.01}%2C${ubicacion.lng + 0.01}%2C${ubicacion.lat + 0.01}&layer=mapnik&marker=${ubicacion.lat}%2C${ubicacion.lng}`}
+              />
+              <p className="mapa-actualizado">{t.paciente.ubicacion_actualizada.replace('{segundos}', segundosDesde(ubicacion.at))}</p>
+            </>
+          ) : (
+            /* Sin esto el título y el mapa desaparecían juntos, y la Familia no sabía si el
+               seguimiento no estaba andando o si todavía no había llegado ninguna posición. */
+            <p className="mapa-actualizado">{t.paciente.ubicacion_sin_datos}</p>
+          )}
         </>
       )}
 

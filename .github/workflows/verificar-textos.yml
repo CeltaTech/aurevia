@@ -1,0 +1,29 @@
+name: Verificar textos traducidos
+
+# El guardarraíl del pendiente #114: que no queden textos traducidos que ninguna pantalla usa.
+#
+# Una traducción muerta no rompe nada —por eso nadie la ve— pero engaña: se lee como una
+# función que existe cuando en realidad no está construida, y cada idioma nuevo obliga a
+# traducirla otra vez. El 2026-08-03 había 54 así.
+#
+# Corre en cada push y en cada pull request. El script no tiene dependencias, así que no hay
+# npm install. Si falla, hay dos respuestas correctas: construir la pantalla que usa ese
+# texto, o borrarlo de los tres idiomas.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Buscar textos huérfanos
+        run: node scripts/buscar_textos_huerfanos.mjs

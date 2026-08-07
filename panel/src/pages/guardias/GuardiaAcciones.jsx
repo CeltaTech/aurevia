@@ -168,6 +168,16 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
   const puedeReasignar = guardia.estado === 'programada' || guardia.estado === 'ausente';
   const puedeOfrecer = !tieneAsistente && guardia.estado === 'programada';
 
+  // Lo que ya quedó registrado no se esconde. Hasta acá, cuando la salida o la llegada ya
+  // estaban marcadas, el bloque con su botón simplemente desaparecía, y la pantalla no
+  // decía si el momento se había registrado o si nunca se había hecho: dos cosas muy
+  // distintas que se veían igual. Ahora se listan los que tienen hora, con su hora.
+  const momentosRegistrados = [
+    { clave: 'salida_registrada', at: guardia.salida_checkin_at },
+    { clave: 'llegada_registrada', at: guardia.checkin_at },
+    { clave: 'checkout_registrado', at: guardia.checkout_at },
+  ].filter((m) => m.at);
+
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
@@ -189,6 +199,16 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
           <dt>{t.guardias.detalle.estado}</dt>
           <dd>{t.guardias[`estado_${guardia.estado}`]}</dd>
         </dl>
+
+        {momentosRegistrados.length > 0 && (
+          <ul className="panel-momentos-registrados">
+            {momentosRegistrados.map(({ clave, at }) => (
+              <li key={clave}>
+                {t.guardias.detalle[clave]} · {new Date(at).toLocaleString()}
+              </li>
+            ))}
+          </ul>
+        )}
 
         {puedeOfrecer && (
           <div className="panel-resultado-calculo">

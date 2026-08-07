@@ -74,7 +74,7 @@ export function Servicios() {
           value={f.busqueda}
           onChange={(e) => set('busqueda', e.target.value)}
         />
-        <select value={f.estado} onChange={(e) => set('estado', e.target.value)}>
+        <select aria-label={t.servicios.filtro_estado} value={f.estado} onChange={(e) => set('estado', e.target.value)}>
           <option value="todos">{t.servicios.filtro_todos}</option>
           <option value="vigente">{t.servicios.estado_vigente}</option>
           <option value="de_baja">{t.servicios.estado_de_baja}</option>

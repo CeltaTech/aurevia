@@ -96,7 +96,9 @@ appFamiliasRouter.get('/pacientes/:id', requiereRolFamilia, async (req, res) => 
   if (!guardiaActiva) {
     const { data } = await supabase
       .from('guardias')
-      .select('id, fecha, hora_inicio, hora_fin, estado, asistente_id, asistentes(nombre, foto_url)')
+      // salida_checkin_at es lo que permite decirle a la Familia "en camino": el Asistente
+      // ya salió de su casa pero todavía no llegó al domicilio.
+      .select('id, fecha, hora_inicio, hora_fin, estado, salida_checkin_at, asistente_id, asistentes(nombre, foto_url)')
       .eq('paciente_id', paciente.id)
       .eq('estado', 'programada')
       .gte('fecha', new Date().toISOString().slice(0, 10))

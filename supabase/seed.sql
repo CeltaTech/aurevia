@@ -82,8 +82,8 @@ INSERT INTO public.configuracion_prestadora (
 );
 
 -- Las dos formas de trabajar que la Prestadora tiene encendidas. Queda apagada
--- a propósito la tercera (`cooperativa`), que está en pleno rediseño — ver el
--- pendiente #115.
+-- a propósito la tercera (`subcontratacion`), que está en pleno rediseño — ver
+-- el pendiente #115.
 INSERT INTO public.prestadora_modalidades (prestadora_id, modalidad, activa) VALUES
   ('11111111-1111-4111-8111-111111111111', 'directa',     true),
   ('11111111-1111-4111-8111-111111111111', 'marketplace', true);

@@ -1,5 +1,13 @@
 # Rediseño del dashboard de Admin_prestadora en grupos por modalidad — PROPUESTA
 
+> **Aviso de nombre (2026-08-07).** Este documento fue aprobado el 2026-07-24 y se conserva
+> tal como se aprobó, así que adentro la tercera modalidad todavía se llama **"cooperativa"**.
+> Desde el 2026-08-07 esa modalidad se llama **Subcontratación**, y el valor guardado en la
+> base es `subcontratacion`. El cambio de nombre y el porqué están en `docs/PENDIENTES.md`
+> (pendiente #115) y en `docs/claude_history.md`. Donde este documento dice "cooperativa" o
+> "Grupo 4 — Cooperativas", léase "Subcontratación". No se reescribe el texto aprobado porque
+> es el registro de lo que se decidió ese día (`CLAUDE.md` §10).
+
 > Estado: **PROPUESTA sin aprobar**, pendiente de revisión del Desarrollador. No se tocó
 > ningún archivo de `panel/src` ni ninguna otra parte del código para escribir este
 > documento (`CLAUDE.md` §11: inventario → plan → aprobación → código; este documento es el

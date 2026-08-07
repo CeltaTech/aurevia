@@ -5,7 +5,7 @@ import { useAuth } from './AuthContext';
 const ModalidadesContext = createContext(null);
 const API_URL = import.meta.env.VITE_API_URL;
 
-// Modalidades de negocio activas de la Prestadora (directa/marketplace/cooperativa —
+// Modalidades de negocio activas de la Prestadora (directa/marketplace/subcontratacion —
 // PRD_08_Dashboard_Modalidades.md, aprobado 2026-07-24). Se carga una vez por sesión, igual
 // que PermisosContext, para que Layout.jsx sepa qué grupos de menú mostrar sin volver a
 // pedirlo pantalla por pantalla.

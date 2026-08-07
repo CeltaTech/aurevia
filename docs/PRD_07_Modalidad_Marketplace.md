@@ -19,9 +19,14 @@
   correctamente el principio del §4 de este documento, antes de que se discutiera en
   detalle.
 
-Las 3 modalidades de trabajo de una Prestadora (directa / marketplace / cooperativa) son
+Las 3 modalidades de trabajo de una Prestadora (directa / marketplace / subcontratación) son
 **combinables entre sí**, no mutuamente excluyentes — una Prestadora puede operar varias a
 la vez.
+
+> La tercera se llamó **"cooperativa"** hasta el 2026-08-07, y con ese nombre aparece más
+> abajo en la propuesta cruda del §8, que se conserva textual porque es lo que el
+> Desarrollador escribió ese día. El nombre cambió porque nombraba otra cosa: ver
+> `docs/PENDIENTES.md` pendiente #115 y `docs/claude_history.md`.
 
 ## 2. Principio central: quién ejerce el control
 

@@ -47,7 +47,7 @@ async function obtenerUsuariosEquipo() {
 const NOMBRE_MODALIDAD = {
   directa: (t) => t.configuracion.modalidades_directa,
   marketplace: (t) => t.configuracion.modalidades_marketplace,
-  cooperativa: (t) => t.configuracion.modalidades_cooperativa,
+  subcontratacion: (t) => t.configuracion.modalidades_subcontratacion,
 };
 
 function esHoy(fechaIso) {
@@ -143,7 +143,7 @@ export function Dashboard() {
       setErrorAlertas(t.comun.error_generico);
       return;
     }
-    const porModalidad = { directa: 0, marketplace: 0, cooperativa: 0 };
+    const porModalidad = { directa: 0, marketplace: 0, subcontratacion: 0 };
     for (const fila of filasAusentes ?? []) {
       const canal = fila.guardias?.canal_modalidad;
       if (canal && canal in porModalidad) porModalidad[canal] += 1;

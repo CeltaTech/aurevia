@@ -670,8 +670,10 @@ panelConfiguracionRouter.patch('/politica-verificacion', async (req, res) => {
 //     admin_prestadora (este router ya lo exige vía requiereAdminOSuperior más arriba); la
 //     lectura para armar el menú de cualquier rol vive en panelCuentas.js /modalidades-activas
 //     (misma tabla, misma fuente única de verdad — CLAUDE.md §7 regla 12).
-//     'cooperativa' todavía no se ofrece acá: no tiene menú ni pantallas (PRD_08 §3.8), solo
-//     existe en el CHECK de la tabla para no requerir otra migración cuando se diseñe.
+//     'subcontratacion' todavía no se ofrece acá: no tiene menú ni pantallas (PRD_08 §3.8),
+//     solo existe en el CHECK de la tabla para no requerir otra migración cuando se diseñe.
+//     Hasta el 2026-08-07 ese valor se llamaba 'cooperativa', que nombraba otra cosa
+//     (pendiente #115).
 const MODALIDADES_DISPONIBLES = ['directa', 'marketplace'];
 
 panelConfiguracionRouter.get('/modalidades', async (req, res) => {

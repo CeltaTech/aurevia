@@ -61,7 +61,7 @@ panelCuentasRouter.get('/permisos-efectivos', requiereRolPanel, async (req, res)
 });
 
 // PRD_08 (docs/PRD_08_Dashboard_Modalidades.md, aprobado 2026-07-24): qué modalidades de
-// negocio (directa/marketplace/cooperativa) tiene activas la Prestadora, para que el menú
+// negocio (directa/marketplace/subcontratacion) tiene activas la Prestadora, para que el menú
 // del Panel muestre solo los grupos que correspondan. Lectura disponible para cualquier rol
 // logueado (igual que permisos-efectivos) — activar/desactivar sigue siendo exclusivo de
 // admin_prestadora vía PATCH /api/panel/configuracion/modalidades (panelConfiguracion.js).

@@ -216,6 +216,47 @@ INSERT INTO public.familias (id, prestadora_id, plan) VALUES
   ('40000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'directo'),
   ('40000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'marketplace');
 
+-- El nombre, el teléfono y la localidad de una Familia NO están en `familias`:
+-- están en la Solicitud con la que entró, y `familias.solicitud_id` es el que la
+-- señala. Sin esta parte, todas las pantallas que muestran una Familia la
+-- muestran como "—". Por eso van las tres Solicitudes ya convertidas en Familia,
+-- y dos más todavía sin contestar para que la pantalla de Solicitudes no esté
+-- vacía.
+--
+-- El id de `solicitudes` lo genera la base sola, así que no se puede fijar acá:
+-- primero se insertan y después se le avisa a cada Familia cuál es la suya.
+INSERT INTO public.solicitudes (
+  prestadora_id, nombre, telefono, email, nombre_paciente, localidad,
+  tipo_servicio, modalidad, dias_horario, estado, familia_id
+) VALUES
+  ('11111111-1111-4111-8111-111111111111', 'Familia Gómez', '+54 11 5001-0001',
+   'familia.gomez@sandbox.local', 'Elena Gómez', 'CABA',
+   'Cuidado de adultos mayores', 'Por horas', 'Lunes a viernes de 8 a 20', 'convertida',
+   '40000000-0000-4000-8000-000000000001'),
+
+  ('11111111-1111-4111-8111-111111111111', 'Familia López', '+54 11 5001-0002',
+   'familia.lopez@sandbox.local', 'Héctor López', 'Zona Norte',
+   'Cuidado de adultos mayores', 'Por horas', 'Lunes a sábado de 8 a 14', 'convertida',
+   '40000000-0000-4000-8000-000000000002'),
+
+  ('11111111-1111-4111-8111-111111111111', 'Familia Morales', '+54 11 5001-0003',
+   'familia.morales@sandbox.local', 'Rosa Morales', 'Zona Sur',
+   'Cuidado de adultos mayores', 'Permanente', 'Todos los días, las 24 horas', 'convertida',
+   '40000000-0000-4000-8000-000000000003'),
+
+  ('11111111-1111-4111-8111-111111111111', 'Familia Ibarra', '+54 11 5001-0004',
+   'familia.ibarra@sandbox.local', 'Nélida Ibarra', 'CABA',
+   'Acompañamiento', 'Por horas', 'Martes y jueves a la tarde', 'nueva', NULL),
+
+  ('11111111-1111-4111-8111-111111111111', 'Familia Sosa', '+54 11 5001-0005',
+   'familia.sosa@sandbox.local', 'Aníbal Sosa', 'Zona Oeste',
+   'Enfermería domiciliaria', 'Por horas', 'Lunes, miércoles y viernes a la mañana', 'nueva', NULL);
+
+UPDATE public.familias f
+   SET solicitud_id = s.id
+  FROM public.solicitudes s
+ WHERE s.familia_id = f.id;
+
 -- Quien inició sesión por la Familia también figura como miembro del grupo
 -- familiar. Es lo que mira la aplicación de la Familia para saber qué puede ver.
 INSERT INTO public.miembros_familia (usuario_id, familia_id, email, rol) VALUES
@@ -246,6 +287,46 @@ INSERT INTO public.servicios (id, prestadora_id, familia_id, etiqueta, estado) V
   ('60000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', 'Acompañamiento diurno de Elena',   'vigente'),
   ('60000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000002', 'Cuidado de mañana de Héctor',      'vigente'),
   ('60000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000003', 'Cuidado permanente de Rosa',       'vigente');
+
+-- La Lista de Precios es el catálogo: lo que la Prestadora ofrece y a cuánto.
+-- No es lo vendido. Lo vendido son las prestaciones de más abajo, que guardan el
+-- precio del día en que se acordó (`precio_lista_snapshot`) para que un cambio de
+-- catálogo no altere lo ya pactado.
+INSERT INTO public.lista_precios (prestadora_id, tipo_servicio, modalidad, precio) VALUES
+  ('11111111-1111-4111-8111-111111111111', 'Cuidado de adultos mayores', 'Por hora',      3500.00),
+  ('11111111-1111-4111-8111-111111111111', 'Cuidado de adultos mayores', 'Guardia de 12', 38000.00),
+  ('11111111-1111-4111-8111-111111111111', 'Cuidado de adultos mayores', 'Guardia de 24', 70000.00),
+  ('11111111-1111-4111-8111-111111111111', 'Enfermería domiciliaria',    'Por visita',    9000.00),
+  ('11111111-1111-4111-8111-111111111111', 'Kinesiología',               'Por sesión',    12000.00),
+  ('11111111-1111-4111-8111-111111111111', 'Limpieza del hogar',         'Por jornada',   25000.00);
+
+-- Las prestaciones: lo que cada Servicio incluye de verdad. Rosa muestra el caso
+-- que importa —un Servicio es una canasta, no una sola cosa—: cuidado permanente
+-- más kinesiología más limpieza, tres prestaciones distintas dentro del mismo
+-- Servicio (`docs/QUE_ES_UN_SERVICIO.md`).
+INSERT INTO public.prestaciones (
+  prestadora_id, servicio_id, paciente_id, tipo_servicio, precio_final,
+  precio_lista_snapshot, nota, estado
+) VALUES
+  ('11111111-1111-4111-8111-111111111111', '60000000-0000-4000-8000-000000000001',
+   '50000000-0000-4000-8000-000000000001', 'Cuidado de adultos mayores — Guardia de 12',
+   38000.00, 38000.00, 'Incluye acompañamiento y apoyo en el baño. No incluye curaciones.', 'vigente'),
+
+  ('11111111-1111-4111-8111-111111111111', '60000000-0000-4000-8000-000000000002',
+   '50000000-0000-4000-8000-000000000002', 'Cuidado de adultos mayores — Por hora',
+   3500.00, 3500.00, 'Seis horas por la mañana. No incluye traslados.', 'vigente'),
+
+  ('11111111-1111-4111-8111-111111111111', '60000000-0000-4000-8000-000000000003',
+   '50000000-0000-4000-8000-000000000003', 'Cuidado de adultos mayores — Guardia de 24',
+   70000.00, 70000.00, 'Cobertura permanente, dos Asistentes rotando.', 'vigente'),
+
+  ('11111111-1111-4111-8111-111111111111', '60000000-0000-4000-8000-000000000003',
+   '50000000-0000-4000-8000-000000000003', 'Kinesiología — Por sesión',
+   12000.00, 12000.00, 'Dos sesiones por semana, martes y jueves.', 'vigente'),
+
+  ('11111111-1111-4111-8111-111111111111', '60000000-0000-4000-8000-000000000003',
+   '50000000-0000-4000-8000-000000000003', 'Limpieza del hogar — Por jornada',
+   25000.00, 25000.00, 'Una jornada semanal. Se dio de baja a pedido de la Familia.', 'de_baja');
 
 
 -- ----------------------------------------------------------------------------

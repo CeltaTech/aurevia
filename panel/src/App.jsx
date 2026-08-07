@@ -21,6 +21,8 @@ import { Asistentes } from './pages/Asistentes';
 import { AsistenteDetalle } from './pages/asistentes/AsistenteDetalle';
 import { Familias } from './pages/Familias';
 import { FamiliaDetalle } from './pages/familias/FamiliaDetalle';
+import { Servicios } from './pages/Servicios';
+import { ServicioDetalle } from './pages/servicios/ServicioDetalle';
 import { Guardias } from './pages/Guardias';
 import { Reportes } from './pages/Reportes';
 import { Alertas } from './pages/Alertas';
@@ -92,6 +94,8 @@ function App() {
                     <Route path="asistentes/:id" element={<AsistenteDetalle />} />
                     <Route path="familias" element={<Familias />} />
                     <Route path="familias/:id" element={<FamiliaDetalle />} />
+                    <Route path="servicios" element={<Servicios />} />
+                    <Route path="servicios/:id" element={<ServicioDetalle />} />
                     <Route path="medicacion" element={<Medicacion />} />
                     <Route path="guardias" element={<Guardias />} />
                     <Route path="reportes" element={<Reportes />} />

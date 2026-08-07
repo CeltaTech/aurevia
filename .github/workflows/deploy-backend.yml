@@ -12,6 +12,12 @@ on:
     paths:
       - 'backend/**'
       - '.github/workflows/deploy-backend.yml'
+  # También se puede disparar a mano, igual que `publicar-pantallas.yml`. Hace falta cuando el
+  # push no llega a convertirse en despliegue: el 2026-08-06 GitHub tardó media hora en procesar
+  # los push y este automatismo directamente no arrancó, con el motor del sistema quedando en la
+  # versión vieja. Sin este botón la única salida era `railway up` a mano, y el token de Railway
+  # no está en la máquina del Desarrollador: vive solo como secreto del repositorio.
+  workflow_dispatch:
 
 jobs:
   deploy:

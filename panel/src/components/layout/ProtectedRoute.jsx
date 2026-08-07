@@ -1,10 +1,12 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { usePermisos } from '../../context/PermisosContext';
 import { useLocale } from '../../i18n/LocaleContext';
 import { esAdminOSuperior, ROLES_PANEL } from '../../lib/roles';
 
-export function ProtectedRoute({ children, soloAdmin = false, roles = null }) {
+export function ProtectedRoute({ children, soloAdmin = false, roles = null, permiso = null }) {
   const { session, usuario, cargando, mfaEstado } = useAuth();
+  const { puede, cargado: permisosCargados } = usePermisos();
   const { t } = useLocale();
 
   if (cargando) {
@@ -29,6 +31,15 @@ export function ProtectedRoute({ children, soloAdmin = false, roles = null }) {
 
   if (roles && !roles.includes(usuario.rol)) {
     return <Navigate to="/" replace />;
+  }
+
+  // Candado por permiso configurable. El Admin entra siempre, sin esperar nada: para él la
+  // respuesta ya se sabe. El Coordinador tiene que esperar a que lleguen sus permisos, y
+  // mientras no llegan no entra — si algo falla, la pantalla no se abre, que es el lado
+  // correcto para equivocarse.
+  if (permiso && !esAdminOSuperior(usuario.rol)) {
+    if (!permisosCargados) return <div className="pantalla-cargando">{t.comun.cargando}</div>;
+    if (!puede(permiso)) return <Navigate to="/" replace />;
   }
 
   return children;

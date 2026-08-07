@@ -146,9 +146,15 @@ export function Layout() {
     {
       titulo: t.nav.grupo_dinero,
       enlaces: [
+        // Primero las tres de lo que se le COBRA a la Familia, y al final la de lo que se
+        // le PAGA al Asistente, que es la otra mitad del dinero y hasta ahora no existía
+        // (pendiente #116). Va con candado propio porque una remuneración es dato sensible
+        // (CLAUDE.md §6): el Admin la ve siempre, el Coordinador solo si su Prestadora se
+        // lo habilitó en Configuración > Accesos.
         { a: '/facturacion', texto: t.nav.facturacion, ver: directa },
         { a: '/lista-precios', texto: t.nav.lista_precios, ver: directa },
         { a: '/informes-obra-social', texto: t.nav.informes_obra_social, ver: directa },
+        { a: '/pagos-asistentes', texto: t.nav.pagos_asistentes, ver: hayPlantel && (esAdmin || puede('ver_pagos_asistente')) },
       ],
     },
     {

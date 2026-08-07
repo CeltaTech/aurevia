@@ -29,6 +29,7 @@ import { Alertas } from './pages/Alertas';
 import { Comunicacion } from './pages/Comunicacion';
 import { Evv } from './pages/Evv';
 import { Facturacion } from './pages/Facturacion';
+import { PagosAsistentes } from './pages/PagosAsistentes';
 import { Documentacion } from './pages/Documentacion';
 import { Continuidad } from './pages/Continuidad';
 import { ListaPrecios } from './pages/ListaPrecios';
@@ -103,6 +104,13 @@ function App() {
                     <Route path="comunicacion" element={<Comunicacion />} />
                     <Route path="verificacion-guardias" element={<Evv />} />
                     <Route path="facturacion" element={<Facturacion />} />
+                    {/* Lo que se le paga al Asistente es dato sensible (CLAUDE.md §6), así que
+                        además de estar en el menú tiene candado propio en la dirección: sin el
+                        permiso no se entra ni escribiéndola a mano. */}
+                    <Route
+                      path="pagos-asistentes"
+                      element={<ProtectedRoute permiso="ver_pagos_asistente"><PagosAsistentes /></ProtectedRoute>}
+                    />
                     <Route path="documentacion" element={<Documentacion />} />
                     <Route path="continuidad" element={<Continuidad />} />
                     <Route path="lista-precios" element={<ListaPrecios />} />

@@ -10,6 +10,10 @@ const ACCIONES_DEFAULT_SOLO_ADMIN = new Set([
   'alta_manual_familia',
   'importar_datos_masivos',
   'validar_informe_obra_social',
+  // Lo que se le paga a cada Asistente es dato sensible (CLAUDE.md §6, "remuneraciones"),
+  // así que si la Prestadora no dijo nada, no lo ve el Coordinador. Para el resto de las
+  // acciones el default es al revés: si no se configuró, el Coordinador puede.
+  'ver_pagos_asistente',
 ]);
 
 export const ACCIONES_PERMISOS = [
@@ -20,6 +24,7 @@ export const ACCIONES_PERMISOS = [
   'editar_datos_paciente',
   'importar_datos_masivos',
   'validar_informe_obra_social',
+  'ver_pagos_asistente',
 ];
 
 export async function tienePermiso({ accion, rol, usuarioId, prestadoraId }) {

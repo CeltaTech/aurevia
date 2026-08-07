@@ -83,49 +83,63 @@ export function Layout() {
   // Asistentes que se incorporan, tienen documentación y cubren guardias.
   const hayPlantel = directa || marketplace;
 
-  /* El menú, como lista de datos y no como JSX suelto.
-     Antes eran 22 enlaces ordenados por cómo se fue construyendo el sistema, con
-     tres grupos armados por modalidad contratada. Ahora son seis grupos ordenados
-     por lo que una persona viene a hacer, y el candado de cada enlace (`ver`) está
-     escrito una sola vez, al lado del enlace, en vez de repetido alrededor de
-     bloques enteros de JSX.
+  /* El menú, como lista de datos y no como JSX suelto. El candado de cada enlace
+     (`ver`) está escrito una sola vez, al lado del enlace, en vez de repetido
+     alrededor de bloques enteros de JSX.
 
      El grupo "Marketplace" desapareció a propósito: el marketplace es un canal de
-     venta, no un lugar del sistema. Sus tres pantallas se fueron a donde
-     corresponde por tema, cada una conservando su candado. */
+     venta, no un lugar del sistema. Sus pantallas se fueron a donde corresponde
+     por tema, cada una conservando su candado. Lo mismo vale para la modalidad de
+     subcontratación: tampoco es un lugar del menú.
+
+     Los cuatro grupos del medio siguen el orden del negocio y, sobre todo, el
+     orden en que el operador se pregunta las cosas (pendiente #116): a quién le
+     vendemos (Clientes), quién lo cubre (Cobertura), si de verdad está pasando
+     (Cumplimiento) y con qué gente contamos (Plantel). Antes estaban agrupados
+     por cómo se fue construyendo el sistema: "Personas" juntaba a Familias con
+     Asistentes, que son los dos extremos opuestos, y "Cuidado" era el cajón donde
+     habían caído reportes, alertas y medicación sin contestar ninguna pregunta.
+
+     Dos pantallas que suenan parecido y van a grupos distintos a propósito: las
+     Solicitudes de Servicio las manda quien quiere contratar, así que son de
+     "Clientes"; las Postulaciones las manda quien quiere trabajar, así que son
+     de "Plantel".
+
+     Falta un enlace en "Clientes": el Servicio, que es lo que la Prestadora le
+     vende a la Familia y de lo que cuelgan las Guardias. La pantalla todavía no
+     existe (pendiente #116); va acá cuando se construya. */
   const grupos = [
     {
-      titulo: t.nav.grupo_guardias,
+      titulo: t.nav.grupo_clientes,
+      enlaces: [
+        { a: '/familias', texto: t.nav.familias, ver: directa },
+        { a: '/marketplace/familias', texto: t.nav.marketplace_familias, ver: marketplace },
+        { a: '/solicitudes', texto: t.nav.solicitudes, ver: hayPlantel },
+      ],
+    },
+    {
+      titulo: t.nav.grupo_cobertura,
       enlaces: [
         { a: '/guardias', texto: t.nav.guardias, ver: directa },
         { a: '/continuidad', texto: t.nav.continuidad, ver: hayPlantel },
-        { a: '/verificacion-guardias', texto: t.nav.verificacion_guardias, ver: hayPlantel },
       ],
     },
     {
-      titulo: t.nav.grupo_personas,
+      titulo: t.nav.grupo_cumplimiento,
+      enlaces: [
+        { a: '/verificacion-guardias', texto: t.nav.verificacion_guardias, ver: hayPlantel },
+        { a: '/reportes', texto: t.nav.reportes, ver: directa },
+        { a: '/medicacion', texto: t.nav.medicacion, ver: directa },
+        { a: '/alertas', texto: t.nav.alertas, ver: directa },
+      ],
+    },
+    {
+      titulo: t.nav.grupo_plantel,
       enlaces: [
         { a: '/asistentes', texto: t.nav.asistentes, ver: hayPlantel },
         { a: '/documentacion', texto: t.nav.documentacion, ver: hayPlantel },
-        { a: '/familias', texto: t.nav.familias, ver: directa },
-        { a: '/marketplace/familias', texto: t.nav.marketplace_familias, ver: marketplace },
         { a: '/postulaciones', texto: t.nav.postulaciones, ver: hayPlantel },
-        { a: '/solicitudes', texto: t.nav.solicitudes, ver: hayPlantel },
         { a: '/marketplace/calificaciones', texto: t.nav.marketplace_calificaciones, ver: marketplace },
-      ],
-    },
-    {
-      titulo: t.nav.grupo_cuidado,
-      enlaces: [
-        { a: '/reportes', texto: t.nav.reportes, ver: directa },
-        { a: '/alertas', texto: t.nav.alertas, ver: directa },
-        { a: '/medicacion', texto: t.nav.medicacion, ver: directa },
-      ],
-    },
-    {
-      titulo: t.nav.grupo_conversaciones,
-      enlaces: [
-        { a: '/comunicacion', texto: t.nav.comunicacion, ver: true },
       ],
     },
     {
@@ -155,12 +169,15 @@ export function Layout() {
       <aside className="panel-sidebar">
         <div className="panel-logo">{empresa?.nombre ?? ''}</div>
         <nav>
-          {/* Arriba de todo, sin grupo: el Estado actual es el punto de partida del día, y el
-              resumen del mes queda justo debajo para el que quiera el número grande. */}
+          {/* Arriba de todo, sin grupo: el Estado actual es el punto de partida del día, el
+              resumen del mes queda justo debajo para el que quiera el número grande, y la
+              bandeja de conversaciones sube acá porque se abre a cada rato y desde cualquier
+              parte. Tenía un grupo entero para ella sola, que no agrupaba nada. */}
           <NavLink to="/" end>
             {t.nav.estado_actual}
           </NavLink>
           <NavLink to="/resumen-del-mes">{t.nav.resumen_del_mes}</NavLink>
+          <NavLink to="/comunicacion">{t.nav.comunicacion}</NavLink>
           {/* Un grupo que se quedó sin ningún enlace visible no muestra su título: nadie
               tiene que leer un encabezado que no lleva a ninguna parte. */}
           {grupos.map((grupo) => {

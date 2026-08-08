@@ -6,6 +6,12 @@ import { estructurarReporteIA, distanciaMetros } from '../utils/reporteIA.js';
 import { enviarPushFamilia } from '../utils/push.js';
 import { analizarPaciente } from '../utils/revisarAlertasIA.js';
 import { resolverVitalesHabilitados } from '../utils/vitalesReferencia.js';
+import {
+  conPacientes,
+  pacientesDeGuardia,
+  asistenteAtiendeAlPaciente,
+  guardiasDelPaciente,
+} from '../utils/pacientesDeGuardia.js';
 
 export const appAsistentesRouter = Router();
 
@@ -78,10 +84,13 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
 // Mis Guardias
 // ============================================================================
 
+// `guardia.pacientes` es una LISTA, no una persona: un mismo turno puede cubrir a más de un
+// Paciente (ver `utils/pacientesDeGuardia.js`). La lista ya no la engancha PostgREST por la
+// columna vieja `guardias.paciente_id` — sale de la tabla `guardia_pacientes`.
 appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
   const { data, error } = await supabase
     .from('guardias')
-    .select('id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, checkin_at, checkout_at, checkout_bloqueado, pacientes(nombre, domicilio, lat, lng)')
+    .select('id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, checkin_at, checkout_at, checkout_bloqueado')
     .eq('asistente_id', req.usuarioAsistente.id)
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .order('fecha', { ascending: false })
@@ -91,13 +100,18 @@ appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
   if (error) {
     return res.status(500).json({ error: error.message });
   }
-  res.json({ guardias: data });
+
+  try {
+    res.json({ guardias: await conPacientes(data ?? []) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) => {
   const { data, error } = await supabase
     .from('guardias')
-    .select('id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, checkin_at, checkout_at, checkout_bloqueado, pacientes(id, nombre, domicilio, lat, lng, patologias)')
+    .select('id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, checkin_at, checkout_at, checkout_bloqueado')
     .eq('id', req.params.id)
     .eq('asistente_id', req.usuarioAsistente.id)
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
@@ -107,13 +121,23 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
 
+  let guardia;
+  try {
+    [guardia] = await conPacientes([data], 'id, nombre, domicilio, lat, lng, patologias');
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+
+  // Los signos vitales son de una persona, no de un turno, así que un turno que cubre a dos
+  // Pacientes todavía no los sabe repartir: hoy salen los del Paciente de la columna vieja.
+  // Se arregla junto con el Reporte Diario por Paciente (tarea 93h), que es donde hace falta.
   const vitales = await resolverVitalesHabilitados(data.paciente_id, req.usuarioAsistente.prestadoraId);
   // La pantalla necesita saberlo para ofrecer el cierre recién cuando hay reporte cargado,
   // en vez de dejar apretar un botón que el backend va a rechazar.
   const reporte = await reporteDeLaGuardia(data.id);
 
   res.json({
-    guardia: data,
+    guardia,
     reporteCargado: !!reporte,
     vitalesHabilitados: vitales.habilitados,
     rangosVitales: vitales.rangos,
@@ -141,11 +165,14 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, async (r
     return res.status(400).json({ error: 'Esta guardia ya tiene check-in registrado', yaRegistrado: true });
   }
 
-  const { data: paciente } = await supabase
-    .from('pacientes')
-    .select('lat, lng, familia_id, nombre')
-    .eq('id', guardia.paciente_id)
-    .maybeSingle();
+  // Un solo check-in para todo el turno, aunque el turno cubra a varias personas: el Asistente
+  // llega una vez a la casa y marca una vez.
+  let pacientes;
+  try {
+    pacientes = await pacientesDeGuardia(guardia, 'id, nombre, lat, lng, familia_id');
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
 
   const { data: config } = await supabase
     .from('configuracion_ausencia_automatica')
@@ -154,12 +181,14 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, async (r
     .maybeSingle();
   const tolerancia = config?.metros_tolerancia_checkin ?? 150;
 
-  let dentroDeRango = true;
-  let distancia = null;
-  if (paciente?.lat != null && paciente?.lng != null) {
-    distancia = Math.round(distanciaMetros(lat, lng, paciente.lat, paciente.lng));
-    dentroDeRango = distancia <= tolerancia;
-  }
+  // Con varios Pacientes se mide contra el domicilio MÁS CERCANO. Casi siempre viven todos en
+  // la misma casa y da lo mismo; cuando no, estar en la puerta de uno de ellos no es llegar
+  // tarde ni al lugar equivocado, y el aviso al Coordinador sería un falso positivo.
+  const distancias = pacientes
+    .filter((p) => p.lat != null && p.lng != null)
+    .map((p) => Math.round(distanciaMetros(lat, lng, p.lat, p.lng)));
+  const distancia = distancias.length > 0 ? Math.min(...distancias) : null;
+  const dentroDeRango = distancia == null || distancia <= tolerancia;
 
   const { error } = await supabase
     .from('guardias')
@@ -169,15 +198,24 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, async (r
     return res.status(500).json({ error: error.message });
   }
 
-  if (paciente?.familia_id) {
-    // Push inmediato a la Familia — docs/PRD_04_05_App_Servicio.md:58 ("el Asistente llegó
-    // al domicilio"). Se envía una sola vez porque checkin_at ya se validó arriba como no
-    // seteado antes de este UPDATE.
-    enviarPushFamilia(paciente.familia_id, {
+  // Push inmediato a la Familia — docs/PRD_04_05_App_Servicio.md:58 ("el Asistente llegó al
+  // domicilio"). Se envía una sola vez porque checkin_at ya se validó arriba como no seteado
+  // antes de este UPDATE.
+  //
+  // Un aviso por Paciente, no uno por turno: la Familia de cada uno tiene que enterarse de que
+  // llegaron a atender al suyo, y con el nombre del suyo. Dos hermanos que viven juntos pero
+  // avisan a familias distintas reciben cada uno el suyo. Si las dos personas son de la misma
+  // Familia, esa Familia recibe los dos avisos, uno por nombre — es lo correcto: son dos
+  // Pacientes distintos, y un aviso solo obligaría a adivinar a cuál se refiere.
+  const conFamilia = pacientes.filter((p) => p.familia_id);
+  for (const p of conFamilia) {
+    enviarPushFamilia(p.familia_id, {
       titulo: 'Tu Asistente llegó',
-      cuerpo: `El Asistente llegó al domicilio de ${paciente.nombre}.`,
-      url: `/pacientes/${guardia.paciente_id}`,
+      cuerpo: `El Asistente llegó al domicilio de ${p.nombre}.`,
+      url: `/pacientes/${p.id}`,
     }).catch((err) => console.error('Error enviando push de llegada a Familia:', err.message));
+  }
+  if (conFamilia.length > 0) {
     await supabase.from('guardias').update({ push_llegada_enviado_at: new Date().toISOString() }).eq('id', guardia.id);
   }
 
@@ -305,16 +343,19 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
     return res.status(500).json({ error: errorGuardia.message });
   }
 
-  const { data: paciente } = await supabase
-    .from('pacientes')
-    .select('familia_id, nombre')
-    .eq('id', guardia.paciente_id)
-    .maybeSingle();
-  if (paciente?.familia_id) {
-    enviarPushFamilia(paciente.familia_id, {
+  // Un aviso por cada Paciente del turno, con el mismo criterio que el de llegada: cada
+  // Familia se entera del reporte del suyo, con su nombre.
+  let pacientesDelTurno = [];
+  try {
+    pacientesDelTurno = await pacientesDeGuardia(guardia, 'id, nombre, familia_id');
+  } catch (e) {
+    console.error('Error leyendo los Pacientes del turno para avisar del reporte:', e.message);
+  }
+  for (const p of pacientesDelTurno.filter((x) => x.familia_id)) {
+    enviarPushFamilia(p.familia_id, {
       titulo: 'Reporte diario disponible',
-      cuerpo: `Ya está listo el reporte de la guardia de ${paciente.nombre}.`,
-      url: `/pacientes/${guardia.paciente_id}/reportes/${reporte.id}`,
+      cuerpo: `Ya está listo el reporte de la guardia de ${p.nombre}.`,
+      url: `/pacientes/${p.id}/reportes/${reporte.id}`,
     }).catch((err) => console.error('Error enviando push de reporte a Familia:', err.message));
   }
 
@@ -332,9 +373,15 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
         const textoNormalizado = textoLibre.toLowerCase();
         const contieneCritica = palabrasClave.some((palabra) => textoNormalizado.includes(String(palabra).toLowerCase()));
         if (contieneCritica) {
-          analizarPaciente(guardia.paciente_id, guardia.prestadora_id).catch((err) =>
-            console.error('Error en análisis inmediato de IA Nivel 2:', err.message)
-          );
+          // El texto libre es uno solo para todo el turno, así que se revisa a cada Paciente
+          // que ese turno cubrió: no hay forma de saber de cuál de ellos habla la palabra
+          // crítica, y dejar a uno afuera sería justo el caso que la alerta existe para no
+          // perder. Cuando el reporte diga de qué Paciente habla (tarea 93h), se revisa solo ese.
+          for (const p of pacientesDelTurno) {
+            analizarPaciente(p.id, guardia.prestadora_id).catch((err) =>
+              console.error('Error en análisis inmediato de IA Nivel 2:', err.message)
+            );
+          }
         }
       });
   }
@@ -424,22 +471,27 @@ appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, async
 
 // Reportes anteriores del mismo Paciente (botón "Ver reportes anteriores" en Guardia Activa).
 appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, async (req, res) => {
-  const { data: guardiaPropia } = await supabase
-    .from('guardias')
-    .select('id')
-    .eq('paciente_id', req.params.id)
-    .eq('asistente_id', req.usuarioAsistente.id)
-    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
-    .limit(1)
-    .maybeSingle();
-  if (!guardiaPropia) {
+  if (!(await asistenteAtiendeAlPaciente(req.params.id, req.usuarioAsistente))) {
     return res.status(403).json({ error: 'No tenés guardias asignadas a este Paciente' });
+  }
+
+  // Los reportes de este Paciente son los de los turnos que lo cubrieron, no los de los turnos
+  // donde figura en la columna vieja: si no, el segundo Paciente de una visita compartida no
+  // tendría historia ninguna.
+  let idsDeSusGuardias;
+  try {
+    idsDeSusGuardias = await guardiasDelPaciente(req.params.id, req.usuarioAsistente.prestadoraId);
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+  if (idsDeSusGuardias.length === 0) {
+    return res.json({ reportes: [] });
   }
 
   const { data, error } = await supabase
     .from('reportes')
-    .select('id, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, foto_url, created_at, guardias!inner(paciente_id, fecha)')
-    .eq('guardias.paciente_id', req.params.id)
+    .select('id, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, foto_url, created_at, guardias!inner(fecha)')
+    .in('guardia_id', idsDeSusGuardias)
     .order('created_at', { ascending: false })
     .limit(30);
   if (error) {

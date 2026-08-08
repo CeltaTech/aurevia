@@ -5,7 +5,19 @@ import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
 import { listarCola } from '../lib/colaOffline';
 import { suscribirseASincronizacion } from '../lib/sincronizarCola';
+import { con } from '../lib/textos';
 import AvisoConsentimientoPendiente from '../components/AvisoConsentimientoPendiente';
+
+// En la tarjeta de una guardia no entran diez nombres, así que se muestran los dos primeros y
+// se dice cuántos faltan. La lista completa está adentro, al abrir la guardia.
+function nombresDeLaTarjeta(guardia, t) {
+  const nombres = (guardia.pacientes ?? []).map((p) => p.nombre).filter(Boolean);
+  if (nombres.length === 0) return t.guardias.sin_paciente;
+  const visibles = nombres.slice(0, 2);
+  const restantes = nombres.length - visibles.length;
+  if (restantes > 0) visibles.push(con(t.guardias.y_mas, { n: restantes }));
+  return visibles.join(' · ');
+}
 
 // Una guardia de un día anterior que sigue en curso es una guardia que nadie cerró. Antes no
 // podía pasar, porque el cierre venía pegado al envío del reporte; desde que cerrar es un acto
@@ -61,7 +73,7 @@ export default function MisGuardias() {
       <h1>{t.guardias.titulo}</h1>
       {guardias.map((g) => (
         <Link key={g.id} to={`/guardias/${g.id}`} className={`guardia-card guardia-${g.estado}`} style={{ display: 'block', textDecoration: 'none' }}>
-          <div className="guardia-card-paciente">{g.pacientes?.nombre}</div>
+          <div className="guardia-card-paciente">{nombresDeLaTarjeta(g, t)}</div>
           <div className="guardia-card-detalle">
             {g.fecha} · {g.hora_inicio?.slice(0, 5)} - {g.hora_fin?.slice(0, 5)}
           </div>

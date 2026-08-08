@@ -4,6 +4,98 @@ import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { agregarACola, nuevoId, pendientesDeGuardia } from '../lib/colaOffline';
 import { sincronizarCola, suscribirseASincronizacion } from '../lib/sincronizarCola';
+import { con } from '../lib/textos';
+
+/**
+ * Lo que se puede consultar de UN Paciente durante el turno: sus reportes anteriores y sus
+ * órdenes de medicación.
+ *
+ * Cada Paciente tiene su propio bloque, con su nombre arriba cuando el turno cubre a más de
+ * uno. Es a propósito: una lista de medicación sin decir de quién es, en una casa donde viven
+ * dos personas, es la clase de pantalla que termina en un medicamento dado a quien no era.
+ */
+function DatosDelPaciente({ paciente, mostrarNombre, t }) {
+  const [reportes, setReportes] = useState(null);
+  const [mostrandoReportes, setMostrandoReportes] = useState(false);
+  const [ordenesMedicacion, setOrdenesMedicacion] = useState(null);
+  const [mostrandoMedicacion, setMostrandoMedicacion] = useState(false);
+
+  async function verReportesAnteriores() {
+    if (mostrandoReportes) {
+      setMostrandoReportes(false);
+      return;
+    }
+    setMostrandoReportes(true);
+    if (reportes === null) {
+      try {
+        const { reportes: data } = await api.reportesDelPaciente(paciente.id);
+        setReportes(data);
+      } catch {
+        setReportes([]);
+      }
+    }
+  }
+
+  async function verOrdenesMedicacion() {
+    if (mostrandoMedicacion) {
+      setMostrandoMedicacion(false);
+      return;
+    }
+    setMostrandoMedicacion(true);
+    if (ordenesMedicacion === null) {
+      try {
+        const { ordenes } = await api.medicacionDelPaciente(paciente.id);
+        setOrdenesMedicacion(ordenes);
+      } catch {
+        setOrdenesMedicacion([]);
+      }
+    }
+  }
+
+  return (
+    <div style={{ marginTop: '1rem' }}>
+      {mostrarNombre && <h2 className="guardia-card-paciente">{paciente.nombre}</h2>}
+
+      <button className="btn btn-secondary btn-full" onClick={verReportesAnteriores}>
+        {t.guardia_activa.ver_reportes_anteriores}
+      </button>
+
+      {mostrandoReportes && (
+        <div style={{ marginTop: '1rem' }}>
+          {reportes === null && <div className="estado-cargando">{t.comun.cargando}</div>}
+          {reportes?.length === 0 && <div className="estado-vacio">{t.comun.vacio}</div>}
+          {reportes?.map((r) => (
+            <div key={r.id} className="guardia-card">
+              <div className="guardia-card-detalle">{r.guardias?.fecha}</div>
+              {r.observaciones && <p>{r.observaciones}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <button className="btn btn-secondary btn-full" onClick={verOrdenesMedicacion} style={{ marginTop: '1rem' }}>
+        {t.medicacion.ver_ordenes}
+      </button>
+
+      {mostrandoMedicacion && (
+        <div style={{ marginTop: '1rem' }}>
+          {ordenesMedicacion === null && <div className="estado-cargando">{t.comun.cargando}</div>}
+          {ordenesMedicacion?.length === 0 && <div className="estado-vacio">{t.medicacion.sin_ordenes}</div>}
+          {ordenesMedicacion?.map((o) => (
+            <div key={o.id} className="guardia-card">
+              <div className="guardia-card-detalle">
+                <strong>{o.medicamento}</strong> · {o.dosis} · {o.frecuencia} ({o.via_administracion})
+              </div>
+              <div className="guardia-card-detalle">
+                {t.medicacion.desde}: {o.fecha_desde} {o.fecha_hasta ? `— ${t.medicacion.hasta}: ${o.fecha_hasta}` : ''}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function esErrorDeRed(error) {
   return error instanceof TypeError;
@@ -38,10 +130,6 @@ export default function GuardiaActiva() {
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
   const [haciendoCheckin, setHaciendoCheckin] = useState(false);
-  const [reportes, setReportes] = useState(null);
-  const [mostrandoReportes, setMostrandoReportes] = useState(false);
-  const [ordenesMedicacion, setOrdenesMedicacion] = useState(null);
-  const [mostrandoMedicacion, setMostrandoMedicacion] = useState(false);
   const [tick, setTick] = useState(0);
   const [checkinPendiente, setCheckinPendiente] = useState(null); // { desde } o null
   const [reporteCargado, setReporteCargado] = useState(false);
@@ -145,56 +233,41 @@ export default function GuardiaActiva() {
     }
   }
 
-  async function verReportesAnteriores() {
-    if (mostrandoReportes) {
-      setMostrandoReportes(false);
-      return;
-    }
-    setMostrandoReportes(true);
-    if (reportes === null) {
-      try {
-        const { reportes: data } = await api.reportesDelPaciente(guardia.paciente_id);
-        setReportes(data);
-      } catch {
-        setReportes([]);
-      }
-    }
-  }
-
-  async function verOrdenesMedicacion() {
-    if (mostrandoMedicacion) {
-      setMostrandoMedicacion(false);
-      return;
-    }
-    setMostrandoMedicacion(true);
-    if (ordenesMedicacion === null) {
-      try {
-        const { ordenes } = await api.medicacionDelPaciente(guardia.paciente_id);
-        setOrdenesMedicacion(ordenes);
-      } catch {
-        setOrdenesMedicacion([]);
-      }
-    }
-  }
-
   if (error) return <div className="alert alert-error">{error}</div>;
   if (!guardia) return <div className="estado-cargando">{t.comun.cargando}</div>;
 
-  const paciente = guardia.pacientes;
+  // Un turno puede cubrir a más de un Paciente: una sola visita a una casa donde viven dos, o
+  // un grupo entero en un asilo. Por eso acá siempre hay una lista, aunque casi siempre tenga
+  // un solo nombre — y por eso el check-in de más abajo es uno solo para todos.
+  const pacientes = guardia.pacientes ?? [];
+  const sonVarios = pacientes.length > 1;
 
   return (
     <div>
       <Link to="/guardias" className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
         <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
-      <h1>{t.guardia_activa.paciente}: {paciente?.nombre}</h1>
-      <p className="guardia-card-detalle">
-        {t.guardia_activa.domicilio}: {paciente?.domicilio}
-      </p>
-      {paciente?.patologias && (
-        <p className="guardia-card-detalle">
-          {t.guardia_activa.patologias}: {paciente.patologias}
-        </p>
+
+      <h1>{sonVarios ? t.guardia_activa.pacientes : `${t.guardia_activa.paciente}: ${pacientes[0]?.nombre ?? ''}`}</h1>
+
+      {pacientes.length === 0 && <div className="estado-vacio">{t.guardias.sin_paciente}</div>}
+
+      {pacientes.map((p) => (
+        <div key={p.id} className={sonVarios ? 'guardia-card' : undefined}>
+          {sonVarios && <div className="guardia-card-paciente">{p.nombre}</div>}
+          <p className="guardia-card-detalle">
+            {t.guardia_activa.domicilio}: {p.domicilio}
+          </p>
+          {p.patologias && (
+            <p className="guardia-card-detalle">
+              {t.guardia_activa.patologias}: {p.patologias}
+            </p>
+          )}
+        </div>
+      ))}
+
+      {sonVarios && (
+        <div className="alert alert-info">{con(t.guardia_activa.varios_pacientes, { n: pacientes.length })}</div>
       )}
 
       {aviso && <div className="alert alert-alerta">{aviso}</div>}
@@ -266,43 +339,9 @@ export default function GuardiaActiva() {
 
       {guardia.checkout_at && <div className="alert alert-info">{t.guardia_activa.cerrar_ok}</div>}
 
-      <button className="btn btn-secondary btn-full" onClick={verReportesAnteriores} style={{ marginTop: '1rem' }}>
-        {t.guardia_activa.ver_reportes_anteriores}
-      </button>
-
-      {mostrandoReportes && (
-        <div style={{ marginTop: '1rem' }}>
-          {reportes === null && <div className="estado-cargando">{t.comun.cargando}</div>}
-          {reportes?.length === 0 && <div className="estado-vacio">{t.comun.vacio}</div>}
-          {reportes?.map((r) => (
-            <div key={r.id} className="guardia-card">
-              <div className="guardia-card-detalle">{r.guardias?.fecha}</div>
-              {r.observaciones && <p>{r.observaciones}</p>}
-            </div>
-          ))}
-        </div>
-      )}
-
-      <button className="btn btn-secondary btn-full" onClick={verOrdenesMedicacion} style={{ marginTop: '1rem' }}>
-        {t.medicacion.ver_ordenes}
-      </button>
-
-      {mostrandoMedicacion && (
-        <div style={{ marginTop: '1rem' }}>
-          {ordenesMedicacion === null && <div className="estado-cargando">{t.comun.cargando}</div>}
-          {ordenesMedicacion?.length === 0 && <div className="estado-vacio">{t.medicacion.sin_ordenes}</div>}
-          {ordenesMedicacion?.map((o) => (
-            <div key={o.id} className="guardia-card">
-              <div className="guardia-card-detalle">
-                <strong>{o.medicamento}</strong> · {o.dosis} · {o.frecuencia} ({o.via_administracion})
-              </div>
-              <div className="guardia-card-detalle">
-                {t.medicacion.desde}: {o.fecha_desde} {o.fecha_hasta ? `— ${t.medicacion.hasta}: ${o.fecha_hasta}` : ''}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {pacientes.map((p) => (
+        <DatosDelPaciente key={p.id} paciente={p} mostrarNombre={sonVarios} t={t} />
+      ))}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
-import { supabase } from '../db/connection.js';
 import { medicacionVigenteDelPaciente, tipoMatriculaRequerida, asistenteTieneMatriculaVigente } from '../utils/medicacionIndicaciones.js';
+import { asistenteAtiendeAlPaciente } from '../utils/pacientesDeGuardia.js';
 
 // Cierra pendiente #62 (docs/PENDIENTES.md): órdenes de medicación de solo lectura para el
 // Asistente asignado — nunca muestra una vía que este Asistente en particular no está
@@ -11,15 +11,10 @@ import { medicacionVigenteDelPaciente, tipoMatriculaRequerida, asistenteTieneMat
 export const appAsistentesMedicacionRouter = Router();
 
 appAsistentesMedicacionRouter.get('/:pacienteId', requiereRolAsistente, async (req, res) => {
-  const { data: guardia } = await supabase
-    .from('guardias')
-    .select('id')
-    .eq('paciente_id', req.params.pacienteId)
-    .eq('asistente_id', req.usuarioAsistente.id)
-    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
-    .limit(1)
-    .maybeSingle();
-  if (!guardia) {
+  // El permiso se pregunta contra la lista de Pacientes del turno, no contra la columna vieja:
+  // el segundo Paciente de una visita compartida también es un Paciente que este Asistente
+  // atiende, y sus órdenes de medicación tienen que estar a la vista.
+  if (!(await asistenteAtiendeAlPaciente(req.params.pacienteId, req.usuarioAsistente))) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
 

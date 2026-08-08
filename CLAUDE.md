@@ -68,7 +68,7 @@ Esta tabla se mantiene siempre en su versión **vigente** — sin notas de fecha
 |---|---|
 | CeltaTech | nombres anteriores de la empresa; "software de CeltaTech" al referirse al producto |
 | Careonys | "Aurevia", el nombre anterior del producto. Única excepción: la clave técnica `codigo: 'aurevia'` de `identidadProducto.js` y las claves de entitlements que se arman con ella (`aurevia.pacientes.activos_max`), que son inmutables por diseño y **no** se renombran |
-| Prestadora, o **empresa prestadora** — las dos formas valen indistintamente (sinónimo aceptado además: "licenciataria", cuando el contexto es específicamente la relación de licenciamiento SaaS con CeltaTech). Es el caso específico de un cliente de CeltaTech que contrata Careonys — no todo cliente de CeltaTech es una Prestadora (podría contratar otro producto de CeltaTech sin dedicarse al cuidado de personas; ver `ARQUITECTURA_NIVELES.md` en la raíz de CeltaTech) | "empresa" a secas (ambigua: a nivel CeltaTech significa cualquier cliente, no una Prestadora), empresa cliente, organización comercial, empresa usuaria (fuera del sentido técnico del sistema) |
+| Prestadora, o **empresa prestadora** — las dos formas valen indistintamente (sinónimo aceptado además: "licenciataria", cuando el contexto es específicamente la relación de licenciamiento SaaS con CeltaTech). Es el caso específico de un cliente de CeltaTech que contrata Careonys — no todo cliente de CeltaTech es una Prestadora (podría contratar otro producto de CeltaTech sin dedicarse al cuidado de personas; ver `celtatech/docs/ARQUITECTURA_NIVELES.md`) | "empresa" a secas (ambigua: a nivel CeltaTech significa cualquier cliente, no una Prestadora), empresa cliente, organización comercial, empresa usuaria (fuera del sentido técnico del sistema) |
 | Cliente (a secas, únicamente cuando se habla desde la perspectiva de CeltaTech/Nivel 1 sobre cualquier empresa que le contrata un producto, sea o no Careonys) | usar dentro del contexto de Careonys para referirse a la Familia o a la Prestadora — dentro de Careonys esos dos roles siempre llevan su propio nombre, nunca "cliente" genérico. Dentro de Careonys la única acepción válida es la forma corta de **Cliente Contratante** (ver la entrada siguiente) |
 | Cliente Contratante — quien contrata un Servicio y a quien se le cobra: una Familia, una Obra Social, o cualquier otro que contrate. Es el término **completo**, el que se usa en documentos y donde pueda haber duda. **En pantalla y en la charla se dice "Cliente" a secas** — es la palabra que la gente usa, y no se pelea con ella. En el código y en la base el identificador es `contratante`, que nombra la función y no se confunde con el "Cliente" de CeltaTech | escribir "Cliente Contratante" en un botón, una etiqueta o un título de pantalla (ahí va "Cliente"); usarlo para la Familia cuando lo que se quiere decir es la Familia (ahí va "Familia"); confundirlo con el Paciente (quien recibe el cuidado) ni con quien paga (puede ser otro, si la Obra Social cubre una parte) |
 | Organización | entidad técnica multi-tenant — no confundir con "Prestadora" en texto de negocio |
@@ -128,7 +128,7 @@ Esta tabla se mantiene siempre en su versión **vigente** — sin notas de fecha
 
 Separación estricta entre roles técnicos, administrativos y operativos. Ningún rol obtiene acceso implícito por pertenecer a CeltaTech. Principio de mínimo privilegio siempre: cada rol solo los permisos que su función requiere, nunca por comodidad de desarrollo.
 
-Careonys tiene **tres** roles de Panel: Superadmin, Admin_prestadora y Coordinador. El rol comercial que antes existía acá, `Admin_plataforma`, **ya no existe en Careonys**: la gestión comercial de las cuentas de Prestadoras es asunto de CeltaTech (Nivel 1) y vive en su propio panel. Ver `docs/PLAN_SEPARACION_CELTATECH.md`, Etapa 2.
+Careonys tiene **tres** roles de Panel: Superadmin, Admin_prestadora y Coordinador. El rol comercial que antes existía acá, `Admin_plataforma`, **ya no existe en Careonys**: la gestión comercial de las cuentas de Prestadoras es asunto de CeltaTech (Nivel 1) y vive en su propio panel. Ver `celtatech/docs/PLAN_SEPARACION_CELTATECH.md`, Etapa 2.
 
 **Superadmin** — rol técnico de CeltaTech. Infraestructura, mantenimiento técnico, configuración global, soporte interno. No representa una Prestadora, no la opera comercialmente.
 - **Restricción dura de acceso:** fuera de una sesión de soporte técnico, Superadmin tiene acceso de Panel **únicamente** a la Organización Sandbox. Vedado el acceso a datos de cualquier Prestadora real por la vía ordinaria, sin excepción.
@@ -185,13 +185,18 @@ Careonys tiene **tres** roles de Panel: Superadmin, Admin_prestadora y Coordinad
 
 ## 9. Acceso restringido a documentación
 
-Dentro de `docs/` pueden existir carpetas reservadas, identificables por su nombre — por ejemplo `Exclusivo <Prestadora>/` (contenido puramente particular de una Prestadora: identidad de marca, configuración de negocio específica, investigación de competencia, o cualquier otro material sin valor de arquitectura/código para el resto del sistema multi-tenant) y `Documentos Obsoletos/` (documentos de una etapa, diseño o decisión ya superada, conservados únicamente como archivo).
+Dentro de `docs/` hay dos clases de carpeta que no se leen como el resto, y son distintas entre sí. No confundirlas.
 
-**Regla de acceso:** no se entra a ninguna carpeta de este tipo — no se lee, no se lista, no se referencia su contenido — salvo permiso u orden explícita del Desarrollador en la sesión puntual. No alcanza con que la tarea "roce" el tema; el permiso se pide cada vez, no se asume de una sesión a la siguiente. El resto de `docs/` (arquitectura, PRDs genéricos, seguridad, modelo de datos) se lee con normalidad.
+**`Exclusivo <Prestadora>/` — carpeta reservada.** Guarda lo que es puramente de una Prestadora y de nadie más: su identidad de marca, su configuración de negocio, su investigación de competencia. **No se entra: no se lee, no se lista, no se cita su contenido**, salvo orden explícita del Desarrollador en esa misma sesión. No alcanza con que la tarea "roce" el tema, y el permiso no se hereda de una sesión a la siguiente. Cualquier carpeta nueva que guarde material de una sola Prestadora se nombra igual y queda bajo esta misma regla.
 
-Cualquier carpeta nueva que cumpla ese mismo criterio (particular de una sola Prestadora, o puramente histórica/superada) debe nombrarse siguiendo este mismo patrón y queda sujeta a esta misma regla.
+**`Documentos Obsoletos/` — el depósito.** Es donde va todo lo que se saca del medio para que no moleste: planes que ya se ejecutaron, investigaciones que ya se convirtieron en decisiones, el diario de obra, los pendientes ya cerrados. **No es material secreto: es material que dejó de estar vigente.** Por eso:
+- no se lee al empezar una sesión, ni entra en ninguna lista de lectura obligatoria — leerlo por costumbre es exactamente lo que se quiso evitar al mudarlo ahí;
+- se abre solamente cuando hace falta buscar algo puntual: cómo se resolvió un pendiente cerrado, qué se decidió en una etapa vieja;
+- **nada de lo que está adentro manda.** Si un documento del depósito dice una cosa y `CLAUDE.md` o un pendiente abierto dicen otra, gana lo vigente, siempre;
+- adentro hay nombres viejos a propósito (el producto se llamaba Aurevia) y no se corrigen: es el registro de lo que pasó;
+- **no se crea ningún otro depósito.** Cuando algo deja de servir, va acá, y nada más. Se guarda por si hace falta hasta que termine el proyecto; después se borra entero.
 
-*(No confundir `Documentos Obsoletos/` con `docs/claude_history.md` — ver §10: la carpeta guarda documentos completos de una etapa superada, de acceso restringido; `claude_history.md` es un archivo de lectura normal, sin restricción, que registra por qué cambió una regla de este mismo CLAUDE.md.)*
+*(No confundir el depósito con `docs/claude_history.md` — ver §10: el depósito guarda documentos enteros de una etapa superada; `claude_history.md` es lectura normal y vigente, y registra por qué cambió cada regla de este mismo CLAUDE.md.)*
 
 ## 10. `docs/claude_history.md` — historial de decisiones
 
@@ -221,7 +226,7 @@ No se salta directo al paso 3 aunque el cambio ya esté decidido de palabra — 
 
 **Al iniciar:**
 1. Leer `CLAUDE.md` (este archivo).
-2. Leer `docs/CONTEXT.md`, `docs/PROGRESS.md`, el PRD de la etapa actual (`docs/BUILD_ORDER.md`) y cualquier doc específico si la tarea toca Panel/Asistentes.
+2. Leer `docs/CONTEXT.md`, `docs/BUILD_ORDER.md` (la tabla de etapas con el estado de cada una), el PRD de la etapa actual y cualquier doc específico si la tarea toca Panel/Asistentes.
 3. Confirmar con una línea: *"Leí los documentos correspondientes. Etapa actual: [X]. Última tarea completada: [Y]. Tarea de esta sesión: [Z]."*
 4. Presentar plan (objetivo, archivos afectados, cambios previstos, riesgos, validaciones) y esperar aprobación antes de escribir código.
 
@@ -229,11 +234,13 @@ No se salta directo al paso 3 aunque el cambio ya esté decidido de palabra — 
 
 **Documentación verificable:** toda afirmación sobre una decisión ya tomada cita **archivo y línea exacta** (`archivo.md:línea`), verificable en segundos sin tener que leer todo el archivo ni entender el contexto — nunca "según el proyecto..." o "ya estaba resuelto" sin decir exactamente dónde.
 
+**Cómo se escribe la ruta de un documento:** hay dos carpetas de documentos y las dos se llaman `docs/` — la del producto, en `productos/aurevia/docs/`, y la de la empresa, en `celtatech/docs/`. Un documento del producto se cita como siempre, desde la raíz del producto: `docs/CONTEXT.md`. Uno de la empresa se cita con la ruta entera desde `celtatech/`, para que se sepa dónde buscarlo: `celtatech/docs/ARQUITECTURA_NIVELES.md`, y no `ARQUITECTURA_NIVELES.md` a secas.
+
 **Pendientes:** todo lo que quede abierto va a `docs/PENDIENTES.md` con nombre, fecha de creación y condición de cierre. Antes de cerrar cualquier tarea, se revisa esa lista completa — no de memoria — y se informa el estado de lo relacionado.
 
 **Principio de certeza:** nunca afirmar "está revisado/resuelto/no hay problemas" sin haber hecho la comprobación en el momento. Si no se verificó, decirlo así, no disimularlo con una respuesta que suene completa.
 
-**Estado real por encima del documentado:** los archivos `.sql` de `backend/src/db/` y las entradas de `docs/PROGRESS.md`/`docs/PENDIENTES.md` son historial de intención, no la fuente de verdad — pueden estar aplicados a medias, superados por un archivo posterior, o simplemente no reflejar lo que hay hoy en producción. Ninguna afirmación de "esto ya está hecho/migrado/resuelto" se escribe en esos documentos, ni se le comunica al Desarrollador como cerrada, sin haber consultado el estado real en ese mismo momento: la base de datos en vivo (`mcp__supabase__execute_sql`, `list_tables`, etc.) para todo lo de esquema/datos, o el código efectivamente desplegado para todo lo demás. Inferir el estado a partir de un `.sql` o de una entrada de doc anterior no alcanza.
+**Estado real por encima del documentado:** los archivos `.sql` de `backend/src/db/` y las entradas de `docs/PENDIENTES.md` son historial de intención, no la fuente de verdad — pueden estar aplicados a medias, superados por un archivo posterior, o simplemente no reflejar lo que hay hoy en producción. Ninguna afirmación de "esto ya está hecho/migrado/resuelto" se escribe en esos documentos, ni se le comunica al Desarrollador como cerrada, sin haber consultado el estado real en ese mismo momento: la base de datos en vivo (`mcp__supabase__execute_sql`, `list_tables`, etc.) para todo lo de esquema/datos, o el código efectivamente desplegado para todo lo demás. Inferir el estado a partir de un `.sql` o de una entrada de doc anterior no alcanza.
 
 **Revisión cruzada:** antes de una propuesta nueva, señalar explícitamente qué decisiones ya documentadas (arquitectura multi-tenant, SaaS, seguridad, glosario, reglas de negocio) son relevantes y si la conclusión nueva es consistente con ellas o entra en conflicto. Incluye revisar `docs/claude_history.md` cuando el tema ya haya sido debatido antes (ver §10).
 

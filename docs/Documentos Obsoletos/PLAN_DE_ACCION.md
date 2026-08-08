@@ -1,3 +1,10 @@
+> **ARCHIVADO EL 2026-08-08 — ESTO ES HISTORIA, NO ES LA LISTA DE LO QUE HAY QUE HACER.**
+> Este documento se escribió el 2026-08-06 para ver de un vistazo todo lo que faltaba, ordenado por
+> quién lo hace y qué va primero. Era una copia ordenada de la lista de pendientes, así que a los dos
+> días ya decía cosas que habían cambiado. Lo vigente y lo único que manda es `docs/PENDIENTES.md`.
+> Adentro vas a encontrar nombres viejos —el producto se llamaba **Aurevia**— y está bien que sea
+> así: es el registro de lo que pasó, no se corrige.
+
 # PLAN_DE_ACCION.md — Todo lo que falta, ordenado por quién lo hace y qué va primero
 
 > Escrito el **2026-08-06**. Junta en un solo lugar los 36 pendientes abiertos de Careonys, los 6 de

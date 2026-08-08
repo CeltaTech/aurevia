@@ -24,11 +24,10 @@
 - **Cambio societario (2026-07-09): el software pasa a ser propiedad de CeltaTech**, que
   lo licencia como SaaS a cualquier prestadora de cuidado domiciliario. Cada prestadora
   licenciataria sigue con su propio negocio de cuidado domiciliario, y puede sumar un
-  servicio B2B de auditoría/certificación a otras prestadoras. El plan técnico completo (entidad
-  `prestadoras`, aislamiento multi-tenant, roles nuevos, facturación dual CeltaTech/prestadora,
-  i18n y multi-moneda desde el arranque, residencia de datos a futuro) está definido en
-  `docs/Prompt_Claude_Code_CeltaTech_Multitenant.md` (dirección de arquitectura original) y su
-  ejecución viva se sigue en `docs/PLAN_MULTITENANT_CELTATECH.md` — ver también `CLAUDE.md`.
+  servicio B2B de auditoría/certificación a otras prestadoras. La arquitectura multi-prestadora
+  exige entidad `prestadoras`, aislamiento multi-tenant, roles nuevos, facturación dual
+  CeltaTech/prestadora, i18n y multi-moneda desde el arranque y residencia de datos a futuro:
+  todo eso ya está implementado y verificado.
   **Estado real (verificado contra el código el 2026-07-24, no solo contra este documento):
   ya NO es mono-tenant, y los 4 Bloques del plan están cerrados.** Bloque 1 (aislamiento
   aditivo de datos: tabla `prestadoras` + `prestadora_id NOT NULL` en 15 tablas), Bloque 2
@@ -45,8 +44,7 @@
   hardcodeo estructural que sigue abierto, a propósito**: el envío de emails sigue saliendo
   de una sola cuenta Gmail compartida entre todas las Prestadoras (`backend/src/utils/email.js`,
   `SMTP_USER`) — pendiente #44 en `docs/PENDIENTES.md`, con fecha de cierre exigida "antes
-  de dar de alta la primera Prestadora real", no antes — ver `docs/PROGRESS.md` para el
-  detalle Bloque a Bloque.
+  de dar de alta la primera Prestadora real", no antes.
 
 ## Roles de usuario
 
@@ -69,7 +67,7 @@ Ningún rol de Asistente/Familia debe tener acceso, ni siquiera de solo lectura,
 
 **Actualizado 2026-07-10:** el rol antes descripto acá como "Administrador de prestadora"
 (futuro) ya está implementado — es el mismo rol de la tabla de arriba, renombrado de
-`admin` a `admin_prestadora` (Bloque 2 de `docs/PLAN_MULTITENANT_CELTATECH.md`), con acceso
+`admin` a `admin_prestadora` (Bloque 2 del pasaje a multi-prestadora), con acceso
 acotado a los datos de su propia prestadora y cero visibilidad de otras, verificado contra
 Supabase real. Lo único que sigue siendo futuro, no implementado, es un rol de solo lectura
 agregada para financiadores (obras sociales/prepagas) — no diseñar código para ese rol sin
@@ -89,7 +87,7 @@ Etapa 1 — Sitio web público
              el backend escribe con la Service Role Key (bypassea RLS por diseño, es server-only)
   Email:     Nodemailer + Gmail SMTP App Password
   PWA:       app/manifest.js (Next.js metadata API) — manifest básico; service worker
-             offline completo queda pendiente (no bloquea, ver PROGRESS.md)
+             offline completo queda pendiente (no bloquea)
   Deploy:    Vercel (frontend) + Railway (backend Express)
 
   Nota (2026-07-08): el frontend de Etapa 1 migró de Vite+React Router a Next.js App
@@ -122,7 +120,7 @@ Etapa 2 — Panel de administración
   (vínculo dual monotributo/dependencia, motor `calcularCese` con las 13 causales, Simulador
   de Vínculo, Score de Riesgo de reclasificación, Ausencias y Cobertura) construidos en
   código y con `backend/src/db/schema_etapa2b.sql` ya aplicado y verificado (RLS activa y
-  probada) contra la base Supabase real — ver `docs/PROGRESS.md`.
+  probada) contra la base Supabase real.
 
   Módulo 5 (Familias y Pacientes) completo: se resolvió un gap arquitectónico compartido
   con Asistentes (ninguna de las dos tablas puede poblarse sin una cuenta real de Supabase
@@ -141,8 +139,8 @@ Etapa 2 — Panel de administración
   con RLS multi-tenant vía FKs compuestas — series_guardias, guardias,
   domicilios_temporales_paciente, personal_emergencia, incidentes_relevo,
   configuracion_escalada_relevo, excepciones_familiar_relevo, guardias_tracking_gps).
-  Todavía **no existen** rutas backend (CRUD) ni pantallas de Panel para este módulo — ver
-  `docs/PROGRESS.md` para el detalle. Módulo 7 queda para sesiones siguientes.
+  Todavía **no existen** rutas backend (CRUD) ni pantallas de Panel para este módulo.
+  Módulo 7 queda para sesiones siguientes.
 
   Módulo 8 (Precios/Prestaciones), primer corte: `schema_etapa2d.sql` (tablas
   `lista_precios`, `prestaciones`, `paquetes_prestaciones`, `paquete_prestacion_items`) ya
@@ -247,8 +245,7 @@ construir cualquier flujo de cobro, esto necesita una decisión de negocio expl�
   la lectura completa de la documentación del proyecto y separando lo vinculante de lo
   que no lo es.
 - v2 (2026-07-09): se documenta el cambio societario CeltaTech / prestadora licenciataria y la dirección
-  de multi-tenancy futura (ver `docs/Prompt_Claude_Code_CeltaTech_Multitenant.md`), sin
-  implementar nada todavía.
+  de multi-tenancy futura, sin implementar nada todavía.
 - v3 (2026-07-10): barrido completo contra la realidad del código — Bloques 1-3 de
   multi-tenancy ya aplicados y verificados (rol `admin` renombrado a `admin_prestadora` en
   dato y código, RLS vía `current_tenant()`/`es_superadmin()`, filtrado de tenant en

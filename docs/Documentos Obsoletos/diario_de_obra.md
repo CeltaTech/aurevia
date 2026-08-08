@@ -1,3 +1,19 @@
+> # Esto es historia, no el estado de hoy
+>
+> Acá está el diario de las sesiones de trabajo hasta el 2026-08-08: qué se hizo cada día,
+> qué se probó y con qué resultado. Se guarda como historia y **no se lee al empezar una
+> sesión**.
+>
+> El estado vigente está en otros tres lugares:
+> - `docs/PENDIENTES.md` — lo que sigue abierto;
+> - `docs/BUILD_ORDER.md` — las etapas de construcción y en qué está cada una;
+> - `docs/claude_history.md` — por qué cambió cada decisión.
+>
+> Un aviso para quien lea: adentro hay nombres viejos. El producto se llamaba **Aurevia**
+> antes de llamarse Careonys, y la empresa tuvo otro nombre antes de CeltaTech. Eso está
+> bien y se deja tal cual: es el registro de lo que pasó en su momento, no un error a
+> corregir.
+
 # PROGRESS.md — Estado real del proyecto
 
 > Se actualiza al final de cada sesión de trabajo (paso 8 del protocolo de `CLAUDE.md`).

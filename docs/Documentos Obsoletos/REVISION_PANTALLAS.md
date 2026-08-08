@@ -1,3 +1,11 @@
+> **ARCHIVADO EL 2026-08-08 — ESTO ES HISTORIA, NO ES LA LISTA DE LO QUE HAY QUE HACER.**
+> Esto fue la comparación de nuestras pantallas contra las de la competencia, hecha el 2026-08-02.
+> Sirvió de insumo para el pendiente `#112` (la apariencia que hay que retocar al final) y para el
+> `#113` (el pase de guardia). Las once observaciones que salieron de acá se siguen en
+> `docs/PENDIENTES.md`, que es la única lista que manda.
+> Adentro vas a encontrar nombres viejos —el producto se llamaba **Aurevia**— y está bien que sea
+> así: es el registro de lo que pasó, no se corrige.
+
 # REVISION_PANTALLAS.md — Nuestras pantallas comparadas con el software maduro del rubro
 
 > Creado el 2026-08-02. Nace del pendiente #112: el Desarrollador avisó que hay cosas de la

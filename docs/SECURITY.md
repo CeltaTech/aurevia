@@ -75,8 +75,8 @@ de este proyecto, con alcance distinto, no el que traía Money Suite):
 | `asistente` | Sus propias guardias, su perfil, su certificado |
 | `familia` | Sus pacientes, reportes y alertas de sus pacientes |
 
-**Nota (2026-07-10):** el rol se llamaba `admin` hasta el Bloque 2 de
-`docs/PLAN_MULTITENANT_CELTATECH.md` — se renombró a `admin_prestadora` en dato y código (sin
+**Nota (2026-07-10):** el rol se llamaba `admin` hasta el Bloque 2 del pasaje a
+multi-tenant — se renombró a `admin_prestadora` en dato y código (sin
 transición pendiente, no queda ningún registro ni ruta con el valor `admin`) al pasar a
 multi-tenant real, para reflejar que su alcance quedó acotado a una sola prestadora. Ver
 glosario de `CLAUDE.md`.
@@ -89,8 +89,8 @@ prestadora real) con acceso administrativo de negocio (comercial, todas las pres
 El diseño de reemplazo (roles `superadmin` acotado a sandbox + `admin_plataforma` nuevo,
 con el "modo dentro de una prestadora" — banner notorio, advertencia en acciones
 destructivas vía Regla 4 de `CLAUDE.md`, log de auditoría de todo login/acción sensible,
-timeout de 5 min de inactividad + tope de 60 min con aviso a los 50) está documentado
-completo en `docs/PLAN_MULTITENANT_CELTATECH.md` sección 3.4/3.4.1.
+timeout de 5 min de inactividad + tope de 60 min con aviso a los 50) es el que se
+implementó.
 
 **Nota (2026-07-15, cierra la anterior):** el mecanismo se implementó — `current_tenant()`
 dinámico por sesión incluido. La nota de arriba decía "todavía no está implementado"; eso

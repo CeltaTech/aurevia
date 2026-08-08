@@ -1,3 +1,12 @@
+> **ARCHIVADO EL 2026-08-08 — ESTO ES HISTORIA, NO ES LA LISTA DE LO QUE HAY QUE HACER.**
+> Este documento fue el plan para que el sistema dejara de servir a una sola empresa y pasara a
+> servir a muchas, cada una con sus datos separados. Ese trabajo **ya se hizo y está funcionando**:
+> hoy las reglas vigentes de ese tema viven en `CLAUDE.md` (§2 y §5), la forma de la base en
+> `docs/DATA_MODEL.md`, lo de seguridad en `docs/SECURITY.md`, y lo que todavía falta está anotado
+> en `docs/PENDIENTES.md`, que es la única lista que manda.
+> Adentro vas a encontrar nombres viejos —el producto se llamaba **Aurevia**— y está bien que sea
+> así: es el registro de lo que pasó, no se corrige.
+
 # PLAN_MULTITENANT_CELTATECH.md — Inventario + plan de migración a multi-tenant (CeltaTech)
 
 > Responde a los 4 puntos de "Lo que sí te pedimos ahora" en

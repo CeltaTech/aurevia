@@ -41,7 +41,7 @@ Cada prestadora licenciataria del software es un tenant aislado. La única fila 
 datos de prueba/desarrollo con id `874f54d7-4383-4d54-8b9f-f51d02f0dd11` (nombre `Prestadora
 Demo`, caso de uso de desarrollo, sin contrato firmado — no tiene estatus de "primera
 prestadora" ni ningún otro privilegio de diseño). Ver
-`docs/PLAN_MULTITENANT_CELTATECH.md` para el diseño completo y `backend/src/db/schema_multitenant_01.sql`/`schema_multitenant_02.sql` para el DDL real aplicado.
+`backend/src/db/schema_multitenant_01.sql`/`schema_multitenant_02.sql` para el DDL real aplicado.
 
 **Convención de FK tenant-segura (introducida con Módulo 6, aplicar a toda tabla nueva
 referenciada desde otra tabla con `prestadora_id`):** en vez de una FK simple al `id` de la
@@ -118,13 +118,17 @@ current_tenant()) OR (...)`, y `current_tenant()` para `superadmin` resuelve a s
 (`backend/src/routes/panelSesionTenant.js`). Ver sección siguiente para el mecanismo completo.
 
 ## Rol `superadmin` y la sesión de soporte técnico (pendiente #30, resuelto 2026-07-15 —
-## diseño original en `docs/PLAN_MULTITENANT_CELTATECH.md` 3.4/3.4.1; re-apuntado a
-## `superadmin` el 2026-07-28 en la Etapa 2 de la separación CeltaTech/Careonys)
+## re-apuntado a `superadmin` el 2026-07-28 en la Etapa 2 de la separación CeltaTech/Careonys)
 
 Modelo de 2 niveles: `admin_prestadora` (acotado a su propia `prestadora_id`, sin cambios) y
 `superadmin` (rol técnico de CeltaTech; su acceso ordinario es únicamente la Organización
 Sandbox, y para entrar a una Prestadora real tiene que abrir explícitamente una sesión de
 soporte técnico, una por vez, con banner, auditoría y vencimiento).
+
+El diseño de esa sesión, tal como se implementó: banner notorio con la Prestadora activa,
+advertencia adicional antes de operaciones destructivas, log de auditoría de todo login y de
+toda acción sensible, timeout de 5 minutos de inactividad y tope absoluto de 60 minutos de
+sesión con aviso a los 50.
 
 Hasta el 2026-07-28 esta maquinaria era del rol comercial `admin_plataforma`. Ese rol se fue
 entero a CeltaTech (Nivel 1) y **ya no existe en Careonys**: las dos tablas se renombraron
@@ -311,7 +315,7 @@ oficiales del sistema en vez de sus 8 etapas genéricas).
 **Actualizado 2026-07-10:** lo que esta nota describía como plan futuro ya está implementado
 — la tabla `prestadoras` existe y `prestadora_id` es `NOT NULL` en `asistentes` y en las
 otras 14 tablas listadas en la sección "Tabla: prestadoras" de arriba, aplicado y verificado
-contra Supabase real (Bloque 1 de `docs/PLAN_MULTITENANT_CELTATECH.md`).
+contra Supabase real (Bloque 1 del pasaje a multi-tenant).
 
 ## Tabla: verificaciones_asistente (Proceso de Incorporación de Asistentes — 5 etapas)
 
@@ -477,7 +481,7 @@ probar Módulo 6 Parte 2 en navegador (ver `docs/PENDIENTES.md` #20). Dos tablas
   solo se hace visible en el Panel (`Continuidad.jsx`) para acción manual del Coordinador.
 
 **Estado 2026-07-12:** las 8 tablas originales de Módulo 6 tienen rutas de Panel construidas
-(`GuardiaAcciones.jsx`, `Continuidad.jsx`) — ver `docs/PROGRESS.md`. Las dos tablas nuevas de
+(`GuardiaAcciones.jsx`, `Continuidad.jsx`). Las dos tablas nuevas de
 esta ampliación tienen código de Panel/backend escrito pero **el DDL todavía no se aplicó
 contra Supabase** — ver `docs/PENDIENTES.md` #20 para la condición de cierre.
 

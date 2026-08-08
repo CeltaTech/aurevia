@@ -3,9 +3,8 @@
 // (Módulo 8). Por eso cualquier chequeo que compara contra 'admin_prestadora' pasa a
 // usar este helper en vez de repetir la comparación.
 //
-// Rename admin → admin_prestadora completado (Bloque 2 del kickoff,
-// docs/PLAN_MULTITENANT_CELTATECH.md 4.1): el dato en `usuarios.rol` ya dice
-// 'admin_prestadora', no 'admin'.
+// Rename admin → admin_prestadora completado (Bloque 2 del kickoff): el dato en
+// `usuarios.rol` ya dice 'admin_prestadora', no 'admin'.
 //
 // Etapa 2 de la separación CeltaTech / Careonys (2026-07-28): acá también estaba
 // admin_plataforma, el rol comercial. Se fue entero a CeltaTech y ya no existe dentro de

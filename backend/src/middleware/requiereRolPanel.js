@@ -1,6 +1,6 @@
 import { supabase } from '../db/connection.js';
 
-// Ítem D del pendiente #30 (docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1): tope de 5 min de
+// Ítem D del pendiente #30: tope de 5 min de
 // inactividad dentro de la sesión de soporte técnico — se corta en silencio, sin aviso previo,
 // distinto del tope absoluto de 60 min (que sí tiene aviso a los 50, ver panelSesionTenant.js).
 const INACTIVIDAD_LIMITE_MS = 5 * 60 * 1000;

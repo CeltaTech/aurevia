@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 
-// Sesión de soporte técnico — pendiente #30, docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1.
+// Sesión de soporte técnico — pendiente #30.
 // Es la única puerta por la que superadmin entra a una Prestadora real: una por vez, nunca
 // varias a la vez, con banner visible, auditoría de todo y tope de tiempo. Fuera de esta
 // sesión, superadmin solo ve su propia Organización (Sandbox) — CLAUDE.md §5.

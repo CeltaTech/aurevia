@@ -2,8 +2,8 @@ import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 
-// Listado de prestadoras licenciatarias — pendiente #30, ítem I
-// (docs/PLAN_MULTITENANT_CELTATECH.md 3.4.1). Solo superadmin tiene uso legítimo de esto:
+// Listado de prestadoras licenciatarias — pendiente #30, ítem I.
+// Solo superadmin tiene uso legítimo de esto:
 // para elegir a cuál Prestadora entrar con una sesión de soporte técnico, y para elegir la
 // prestadora_id al dar de alta el primer admin_prestadora de una Prestadora nueva
 // (pendiente #26). Admin_prestadora/coordinador no ven otras Prestadoras bajo ninguna

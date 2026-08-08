@@ -1,3 +1,12 @@
+> **ARCHIVADO EL 2026-08-08 — ESTO ES HISTORIA, NO ES LA LISTA DE LO QUE HAY QUE HACER.**
+> Esto fue el estudio que se hizo antes de rediseñar las pantallas: cómo estaban las tres
+> aplicaciones y cómo lo resuelven otros. De acá salieron el sistema de diseño y el menú nuevo del
+> Panel, que **ya están construidos**. Lo vigente de este tema vive hoy en `docs/DESIGN_SYSTEM.md`
+> (cómo se ve el producto) y en `docs/PENDIENTES.md` (lo que todavía falta de apariencia y de
+> organización de pantallas).
+> Adentro vas a encontrar nombres viejos —el producto se llamaba **Aurevia**— y está bien que sea
+> así: es el registro de lo que pasó, no se corrige.
+
 # Investigación UX — Rediseño del frontend de Careonys
 
 > Documento de referencia. Reúne, en un solo lugar, el relevamiento completo de las tres

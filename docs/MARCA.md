@@ -18,8 +18,8 @@ Todo este documento habla de la segunda. **No confundirla con la tercera.**
 Una Familia contrató a la Prestadora, no a CeltaTech, y probablemente no sepa que Careonys
 existe. Un Asistente trabaja para la Prestadora. Para los dos, la marca que tiene sentido es
 la de la Prestadora — `prestadoras.nombre_fantasia`, que existe en la base desde el diseño
-inicial y que `docs/PLAN_MULTITENANT_CELTATECH.md:283` define textualmente como *"marca que ve
-la familia/paciente final"*.
+inicial y que el diseño multi-tenant definió textualmente como *"marca que ve la
+familia/paciente final"*.
 
 **La regla:** en toda pantalla, email o notificación dirigida a una Familia o a un Asistente,
 la marca **principal** la pone la Prestadora, nunca `identidadProducto.js`.

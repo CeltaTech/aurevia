@@ -108,6 +108,62 @@ export async function asistenteAtiendeAlPaciente(pacienteId, usuarioAsistente) {
   return !!data;
 }
 
+/**
+ * A quiénes cubre cada una de estas series, por id.
+ *
+ * Una serie es la guardia que se repite todas las semanas, y lleva su propia lista en
+ * `series_guardias_pacientes`. Devuelve un Map de id de serie → lista de ids de Paciente.
+ *
+ * Igual que arriba, si una serie no tiene ninguna fila se cae a la columna vieja: una serie
+ * cargada antes de este diseño tiene que seguir generando guardias con su Paciente.
+ */
+export async function pacientesDeSeries(series) {
+  const lista = (series ?? []).filter(Boolean);
+  const mapa = new Map();
+  if (lista.length === 0) return mapa;
+
+  const { data, error } = await supabase
+    .from('series_guardias_pacientes')
+    .select('serie_id, paciente_id')
+    .in(
+      'serie_id',
+      lista.map((s) => s.id)
+    );
+  if (error) throw new Error(error.message);
+
+  for (const fila of data ?? []) {
+    if (!mapa.has(fila.serie_id)) mapa.set(fila.serie_id, []);
+    mapa.get(fila.serie_id).push(fila.paciente_id);
+  }
+
+  for (const serie of lista) {
+    if (!mapa.has(serie.id) && serie.paciente_id) mapa.set(serie.id, [serie.paciente_id]);
+  }
+  return mapa;
+}
+
+/**
+ * Anota en `guardia_pacientes` que estas guardias cubren a estos Pacientes.
+ *
+ * Se usa cuando se crean guardias de a muchas y todas cubren a la misma gente — el caso de la
+ * serie que se repite. No pisa lo que ya está: el disparador de la base ya anotó al Paciente
+ * de la columna vieja en el momento del INSERT, y volver a escribirlo daría conflicto.
+ */
+export async function anotarPacientesEnGuardias(guardiaIds, pacienteIds, prestadoraId) {
+  const guardias = [...new Set(guardiaIds ?? [])];
+  const pacientes = [...new Set(pacienteIds ?? [])];
+  if (guardias.length === 0 || pacientes.length === 0) return;
+
+  const filas = guardias.flatMap((guardiaId) =>
+    pacientes.map((pacienteId) => ({ guardia_id: guardiaId, paciente_id: pacienteId, prestadora_id: prestadoraId }))
+  );
+
+  const { error } = await supabase
+    .from('guardia_pacientes')
+    .upsert(filas, { onConflict: 'guardia_id,paciente_id', ignoreDuplicates: true });
+  if (error) throw new Error(error.message);
+}
+
 /** Los ids de las guardias en las que estuvo este Paciente. */
 export async function guardiasDelPaciente(pacienteId, prestadoraId) {
   const { data, error } = await supabase

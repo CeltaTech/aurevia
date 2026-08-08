@@ -4,8 +4,15 @@
 // Uso, desde la raíz del repo:
 //   node scripts/buscar_textos_huerfanos.mjs
 //
-// Busca textos huérfanos: claves que están escritas en los tres idiomas y que
-// ninguna pantalla usa. Devuelve código de salida 1 si encuentra alguna.
+// Revisa dos cosas y devuelve código de salida 1 si alguna falla:
+//
+//   1. Textos huérfanos: claves escritas en los tres idiomas que ninguna
+//      pantalla usa. Sobran.
+//   2. Textos a medio traducir: claves que están en un idioma y no en los otros
+//      dos. Faltan. Es la regla 2 del §7 de CLAUDE.md —toda clave nueva se
+//      agrega a la vez en es-AR, en y pt-BR— comprobada en vez de recordada.
+//      El agujero que tapa es silencioso: la pantalla no se rompe, simplemente
+//      le muestra un hueco a quien la está mirando en su idioma.
 //
 // Por qué existe: el 2026-08-03 había 54 claves así. Una traducción muerta no
 // rompe nada —por eso nadie la ve— pero engaña: se lee como una función que
@@ -69,6 +76,7 @@ function hojas(obj, prefijo = []) {
 const escapar = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 let huboHuerfanas = false;
+let huboFaltantes = false;
 
 for (const app of APPS) {
   const rutaTrad = join(RAIZ, app.trad);
@@ -83,6 +91,22 @@ for (const app of APPS) {
 
   const base = T['es-AR'] ?? T.es ?? Object.values(T)[0];
   const claves = hojas(base);
+
+  /* Revisión 2: los tres idiomas tienen que tener exactamente las mismas claves. Se compara
+     contra es-AR, que es el idioma en el que se escribe primero. Faltar en uno y sobrar en
+     otro son el mismo error visto desde los dos lados, así que se informan los dos. */
+  const caminosBase = new Set(claves.map((c) => c.camino));
+  for (const idioma of Object.keys(T)) {
+    if (T[idioma] === base) continue;
+    const caminosOtro = new Set(hojas(T[idioma]).map((c) => c.camino));
+    const faltan = [...caminosBase].filter((c) => !caminosOtro.has(c));
+    const sobran = [...caminosOtro].filter((c) => !caminosBase.has(c));
+    if (faltan.length === 0 && sobran.length === 0) continue;
+    huboFaltantes = true;
+    console.log(`\n### ${app.nombre} · ${idioma}: no coincide con es-AR`);
+    if (faltan.length > 0) console.log(`  falta traducir (${faltan.length}): ${faltan.join(', ')}`);
+    if (sobran.length > 0) console.log(`  está de más (${sobran.length}): ${sobran.join(', ')}`);
+  }
 
   // Todo el código de la aplicación, menos el propio archivo de textos.
   const fuentes = archivosDe(join(RAIZ, app.src))
@@ -131,8 +155,14 @@ for (const app of APPS) {
   }
 }
 
+if (huboFaltantes) {
+  console.log('\nHay claves que no están en los tres idiomas.');
+  console.log('Se escribe el texto que falta, o se borra la clave de los idiomas donde sí está.');
+}
+
 if (huboHuerfanas) {
   console.log('\nHay textos traducidos que ninguna pantalla usa.');
   console.log('Se construye la pantalla que los usa, o se borran de los tres idiomas.');
-  process.exit(1);
 }
+
+if (huboHuerfanas || huboFaltantes) process.exit(1);

@@ -1,4 +1,5 @@
 import { supabase } from '../db/connection.js';
+import { pacientesDeSeries, anotarPacientesEnGuardias } from './pacientesDeGuardia.js';
 
 const DIAS_GENERACION_DEFAULT = 90;
 const UN_DIA_MS = 24 * 60 * 60 * 1000;
@@ -57,6 +58,19 @@ export async function extenderSeriesGuardiaAbiertas() {
       continue;
     }
 
+    // A quiénes cubre cada serie. Una serie puede cubrir a más de un Paciente —el matrimonio
+    // que vive en la misma casa—, y las guardias que se generan solas tienen que llevarlos a
+    // todos. Sin esto, la serie arranca bien y de a poco se le va cayendo el segundo Paciente:
+    // las primeras guardias las creó el Panel con la lista completa, y todas las de más
+    // adelante saldrían con uno solo, sin que nadie se entere.
+    let pacientesPorSerie;
+    try {
+      pacientesPorSerie = await pacientesDeSeries(series ?? []);
+    } catch (e) {
+      console.error(`Error leyendo los Pacientes de las series de ${prestadoraId}:`, e.message);
+      continue;
+    }
+
     for (const serie of series ?? []) {
       const { data: ultimaGuardia, error: errorUltima } = await supabase
         .from('guardias')
@@ -88,9 +102,22 @@ export async function extenderSeriesGuardiaAbiertas() {
         modalidad: serie.modalidad,
       }));
 
-      const { error: errorInsert } = await supabase.from('guardias').insert(filas);
+      const { data: creadas, error: errorInsert } = await supabase.from('guardias').insert(filas).select('id');
       if (errorInsert) {
         console.error(`Error extendiendo guardias de la serie ${serie.id}:`, errorInsert.message);
+        continue;
+      }
+
+      // Cada fecha es una guardia distinta y cada una lleva su propia lista de a quiénes
+      // atiende: no alcanza con que la lista esté cargada una vez en la serie.
+      try {
+        await anotarPacientesEnGuardias(
+          (creadas ?? []).map((g) => g.id),
+          pacientesPorSerie.get(serie.id) ?? [],
+          prestadoraId
+        );
+      } catch (e) {
+        console.error(`Error anotando los Pacientes de las guardias de la serie ${serie.id}:`, e.message);
       }
     }
   }

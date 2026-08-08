@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { agregarACola, nuevoId } from '../lib/colaOffline';
 import { sincronizarCola } from '../lib/sincronizarCola';
+import { con } from '../lib/textos';
 
 function esErrorDeRed(error) {
   return error instanceof TypeError;
@@ -39,9 +40,14 @@ function colorSigno(valor, rango) {
 }
 
 export default function ReporteDiario() {
-  const { id } = useParams();
+  const { id, pacienteId } = useParams();
   const { t } = useLocale();
   const navigate = useNavigate();
+
+  // De quién habla este reporte. El nombre se muestra arriba de todo, siempre, aunque el turno
+  // cubra a una sola persona: escribir la comida y la medicación en la hoja equivocada es un
+  // daño que después nadie encuentra.
+  const [paciente, setPaciente] = useState(null);
 
   const [textoLibre, setTextoLibre] = useState('');
   const [estructurando, setEstructurando] = useState(false);
@@ -71,16 +77,21 @@ export default function ReporteDiario() {
     let activo = true;
     api
       .guardia(id)
-      .then(({ vitalesHabilitados: habilitados, rangosVitales: rangos }) => {
+      .then(({ guardia, vitalesPorPaciente }) => {
         if (!activo) return;
-        setVitalesHabilitados(!!habilitados);
-        setRangosVitales(rangos || {});
+        setPaciente((guardia?.pacientes ?? []).find((p) => p.id === pacienteId) ?? null);
+        // Los signos vitales son de una persona: la presión normal de la señora de la casa no es
+        // la del marido, y la autorización de monitoreo puede estar firmada para una y no para
+        // la otra. Por eso se toman los de este Paciente y no los del turno.
+        const vitales = vitalesPorPaciente?.[pacienteId];
+        setVitalesHabilitados(!!vitales?.habilitados);
+        setRangosVitales(vitales?.rangos || {});
       })
       .catch(() => {});
     return () => {
       activo = false;
     };
-  }, [id]);
+  }, [id, pacienteId]);
 
   async function alEstructurar() {
     setError('');
@@ -143,6 +154,7 @@ export default function ReporteDiario() {
     try {
       const clienteUuid = nuevoId();
       const datos = {
+        pacienteId,
         textoLibre,
         alimentacion: estructurado.alimentacion,
         medicacion: estructurado.medicacion,
@@ -187,7 +199,7 @@ export default function ReporteDiario() {
       <Link to={`/guardias/${id}`} className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
         <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
-      <h1>{t.reporte.titulo}</h1>
+      <h1>{paciente ? con(t.reporte.titulo_de, { nombre: paciente.nombre }) : t.reporte.titulo}</h1>
       {error && <div className="alert alert-error">{error}</div>}
 
       {!estructurado && (

@@ -132,7 +132,10 @@ export default function GuardiaActiva() {
   const [haciendoCheckin, setHaciendoCheckin] = useState(false);
   const [tick, setTick] = useState(0);
   const [checkinPendiente, setCheckinPendiente] = useState(null); // { desde } o null
-  const [reporteCargado, setReporteCargado] = useState(false);
+  // Quiénes del turno ya tienen su reporte. Es una lista y no un sí/no porque cada Paciente
+  // lleva el suyo: si el Asistente atendió a dos personas y escribió una sola hoja, el turno
+  // todavía no está terminado.
+  const [conReporte, setConReporte] = useState([]);
   const [confirmandoCierre, setConfirmandoCierre] = useState(false);
   const [cerrando, setCerrando] = useState(false);
   const [cerradoPendiente, setCerradoPendiente] = useState(false);
@@ -140,9 +143,9 @@ export default function GuardiaActiva() {
   function cargar() {
     api
       .guardia(id)
-      .then(({ guardia: data, reporteCargado: hayReporte }) => {
+      .then(({ guardia: data, pacientesConReporte }) => {
         setGuardia(data);
-        setReporteCargado(!!hayReporte);
+        setConReporte(pacientesConReporte ?? []);
       })
       .catch(() => setError(t.comun.error_generico));
   }
@@ -153,7 +156,12 @@ export default function GuardiaActiva() {
     setCheckinPendiente(checkin ? { desde: checkin.creadoEn } : null);
     // Un reporte esperando señal cuenta como cargado: ya lo escribió el Asistente, y si no
     // contara, la pantalla le pediría escribirlo de nuevo por estar sin conexión.
-    if (pendientes.some((p) => p.tipo === 'reporte')) setReporteCargado(true);
+    const esperando = pendientes
+      .filter((p) => p.tipo === 'reporte' && p.payload?.pacienteId)
+      .map((p) => p.payload.pacienteId);
+    if (esperando.length > 0) {
+      setConReporte((previos) => [...new Set([...previos, ...esperando])]);
+    }
     setCerradoPendiente(pendientes.some((p) => p.tipo === 'checkout'));
   }
 
@@ -225,7 +233,16 @@ export default function GuardiaActiva() {
       }
     } catch (e) {
       if (e.message === 'sin_geo') setError(t.guardia_activa.geo_no_disponible);
-      else if (e.motivo === 'falta_reporte') setError(t.guardia_activa.cerrar_falta_reporte);
+      else if (e.motivo === 'falta_reporte')
+        // Con los nombres cuando el backend los manda: si el turno cubrió a dos personas y
+        // se escribió una sola hoja, hay que decir cuál falta, no que "falta el reporte".
+        setError(
+          e.pacientesSinReporte?.length
+            ? con(t.guardia_activa.cerrar_faltan_reportes, {
+                nombres: e.pacientesSinReporte.map((p) => p.nombre).join(', '),
+              })
+            : t.guardia_activa.cerrar_falta_reporte,
+        );
       else if (e.motivo === 'continuidad') setError(t.guardia_activa.cerrar_bloqueado);
       else setError(t.comun.error_generico);
     } finally {
@@ -241,6 +258,8 @@ export default function GuardiaActiva() {
   // un solo nombre — y por eso el check-in de más abajo es uno solo para todos.
   const pacientes = guardia.pacientes ?? [];
   const sonVarios = pacientes.length > 1;
+  const faltanReporte = pacientes.filter((p) => !conReporte.includes(p.id));
+  const reportesCompletos = pacientes.length > 0 && faltanReporte.length === 0;
 
   return (
     <div>
@@ -291,34 +310,46 @@ export default function GuardiaActiva() {
             {t.guardia_activa.tiempo_transcurrido}
           </p>
 
-          {!reporteCargado && (
+          {/* Un botón por cada persona que todavía no tiene su hoja. Con un solo Paciente se ve
+              igual que siempre; con dos, el nombre está en el botón para que no haya que
+              acordarse de cuál ya se cargó. */}
+          {faltanReporte.length > 0 && (
             <>
-              <Link to={`/guardias/${id}/reporte`} className="btn btn-exito btn-full" style={{ marginTop: '1rem' }}>
-                {t.guardia_activa.cargar_reporte}
-              </Link>
-              <p className="guardia-card-detalle">{t.guardia_activa.cerrar_falta_reporte}</p>
+              {faltanReporte.map((p) => (
+                <Link
+                  key={p.id}
+                  to={`/guardias/${id}/reporte/${p.id}`}
+                  className="btn btn-exito btn-full"
+                  style={{ marginTop: '1rem' }}
+                >
+                  {sonVarios ? con(t.guardia_activa.cargar_reporte_de, { nombre: p.nombre }) : t.guardia_activa.cargar_reporte}
+                </Link>
+              ))}
+              <p className="guardia-card-detalle">
+                {sonVarios ? t.guardia_activa.un_reporte_por_paciente : t.guardia_activa.cerrar_falta_reporte}
+              </p>
             </>
           )}
 
           {/* El cierre es un acto propio, no un efecto secundario de mandar el reporte
               (tarea 66a). Es también el lugar donde va a enchufarse el pase por QR. */}
-          {reporteCargado && cerradoPendiente && (
+          {reportesCompletos && cerradoPendiente && (
             <div className="alert alert-info" aria-label={t.comun.pendiente_de_enviar} style={{ marginTop: '1rem' }}>
               <span aria-hidden="true">⏳</span> {t.comun.pendiente_de_enviar}
             </div>
           )}
 
-          {reporteCargado && !cerradoPendiente && guardia.checkout_bloqueado && (
+          {reportesCompletos && !cerradoPendiente && guardia.checkout_bloqueado && (
             <div className="alert alert-alerta" style={{ marginTop: '1rem' }}>{t.guardia_activa.cerrar_bloqueado}</div>
           )}
 
-          {reporteCargado && !cerradoPendiente && !guardia.checkout_bloqueado && !confirmandoCierre && (
+          {reportesCompletos && !cerradoPendiente && !guardia.checkout_bloqueado && !confirmandoCierre && (
             <button className="btn btn-primary btn-full" onClick={() => setConfirmandoCierre(true)} style={{ marginTop: '1rem' }}>
               {t.guardia_activa.hacer_checkout}
             </button>
           )}
 
-          {reporteCargado && !cerradoPendiente && !guardia.checkout_bloqueado && confirmandoCierre && (
+          {reportesCompletos && !cerradoPendiente && !guardia.checkout_bloqueado && confirmandoCierre && (
             <div style={{ marginTop: '1rem' }}>
               <p className="guardia-card-detalle">{t.guardia_activa.cerrar_pregunta}</p>
               <button className="btn btn-primary btn-full" onClick={alCerrarGuardia} disabled={cerrando}>

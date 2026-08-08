@@ -10,7 +10,6 @@ import {
   conPacientes,
   pacientesDeGuardia,
   asistenteAtiendeAlPaciente,
-  guardiasDelPaciente,
 } from '../utils/pacientesDeGuardia.js';
 
 export const appAsistentesRouter = Router();
@@ -44,15 +43,30 @@ async function guardiaDelAsistente(guardiaId, usuarioAsistente) {
   return data;
 }
 
-// Punto único de verdad de "esta guardia ya tiene su Reporte Diario" (regla 12 de §7):
-// lo consultan el guard de reporte duplicado y el guard de cierre sin reporte.
-async function reporteDeLaGuardia(guardiaId) {
+// Punto único de verdad de "qué reportes tiene ya cargados esta guardia" (regla 12 de §7):
+// lo consultan el guard de reporte repetido, el guard de cierre sin reporte y la pantalla de
+// la guardia.
+//
+// Devuelve una lista y no uno solo porque un turno que cubre a varios Pacientes lleva un
+// reporte por cada uno: el de la señora de la casa no es el del marido, y darlos por
+// equivalentes era escribir la comida, la medicación y la presión de los dos en la misma hoja.
+async function reportesDeLaGuardia(guardiaId) {
   const { data } = await supabase
     .from('reportes')
-    .select('id')
-    .eq('guardia_id', guardiaId)
-    .maybeSingle();
-  return data;
+    .select('id, paciente_id')
+    .eq('guardia_id', guardiaId);
+  return data ?? [];
+}
+
+// A quiénes del turno todavía les falta el reporte. Es lo que decide si la guardia se puede
+// cerrar, y lo que la pantalla del Asistente muestra como lo que le queda por hacer.
+async function pacientesSinReporte(guardia) {
+  const [pacientes, reportes] = await Promise.all([
+    pacientesDeGuardia(guardia, 'id, nombre'),
+    reportesDeLaGuardia(guardia.id),
+  ]);
+  const conReporte = new Set(reportes.map((r) => r.paciente_id));
+  return pacientes.filter((p) => !conReporte.has(p.id));
 }
 
 // ============================================================================
@@ -128,19 +142,27 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
     return res.status(500).json({ error: e.message });
   }
 
-  // Los signos vitales son de una persona, no de un turno, así que un turno que cubre a dos
-  // Pacientes todavía no los sabe repartir: hoy salen los del Paciente de la columna vieja.
-  // Se arregla junto con el Reporte Diario por Paciente (tarea 93h), que es donde hace falta.
-  const vitales = await resolverVitalesHabilitados(data.paciente_id, req.usuarioAsistente.prestadoraId);
-  // La pantalla necesita saberlo para ofrecer el cierre recién cuando hay reporte cargado,
-  // en vez de dejar apretar un botón que el backend va a rechazar.
-  const reporte = await reporteDeLaGuardia(data.id);
+  // Los signos vitales son de una persona, no de un turno: la presión normal de la señora de
+  // la casa no es la del marido. Por eso van por Paciente, y la autorización de monitoreo
+  // también —puede estar firmada para uno y no para el otro.
+  const vitalesPorPaciente = {};
+  for (const p of guardia.pacientes ?? []) {
+    const vitales = await resolverVitalesHabilitados(p.id, req.usuarioAsistente.prestadoraId);
+    vitalesPorPaciente[p.id] = vitales;
+  }
+
+  // La pantalla necesita saber a quiénes les falta el reporte: ofrece el cierre recién cuando
+  // no queda ninguno, en vez de dejar apretar un botón que el backend va a rechazar.
+  const reportes = await reportesDeLaGuardia(data.id);
+  const conReporte = reportes.map((r) => r.paciente_id);
 
   res.json({
     guardia,
-    reporteCargado: !!reporte,
-    vitalesHabilitados: vitales.habilitados,
-    rangosVitales: vitales.rangos,
+    pacientesConReporte: conReporte,
+    // Se sigue mandando para las versiones de la aplicación que todavía no saben de la lista:
+    // significa "ya está todo el trabajo del turno", que es lo que preguntaban.
+    reporteCargado: (guardia.pacientes ?? []).every((p) => conReporte.includes(p.id)),
+    vitalesPorPaciente,
   });
 });
 
@@ -297,7 +319,7 @@ appAsistentesRouter.post(
 // El orden de negocio no cambió: sigue sin poder cerrarse una guardia sin reporte — eso ahora
 // lo valida POST /guardias/:id/checkout.
 appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente, async (req, res) => {
-  const { textoLibre, alimentacion, medicacion, signosVitales, estadoAnimo, incidentes, observaciones, fotoUrl } = req.body;
+  const { pacienteId, textoLibre, alimentacion, medicacion, signosVitales, estadoAnimo, incidentes, observaciones, fotoUrl } = req.body;
 
   const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
   if (!guardia) {
@@ -306,11 +328,33 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
   if (!guardia.checkin_at) {
     return res.status(400).json({ error: 'No se puede cargar el reporte sin check-in previo' });
   }
-  if (await reporteDeLaGuardia(guardia.id)) {
+
+  // De quién habla este reporte. Cuando el turno cubre a una sola persona no hace falta
+  // decirlo —es esa— y así las versiones de la aplicación que todavía no lo mandan siguen
+  // funcionando. Cuando cubre a varias, no se adivina: escribir la comida y la medicación en
+  // la hoja de la persona equivocada es un daño que después nadie encuentra.
+  let pacientes;
+  try {
+    pacientes = await pacientesDeGuardia(guardia, 'id, nombre');
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+  const paciente = pacienteId ? pacientes.find((p) => p.id === pacienteId) : pacientes.length === 1 ? pacientes[0] : null;
+  if (!paciente) {
+    return res.status(400).json({
+      error: pacienteId
+        ? 'Ese Paciente no está en este turno'
+        : 'Falta decir de qué Paciente habla el reporte',
+      motivo: 'falta_paciente',
+    });
+  }
+
+  const reportes = await reportesDeLaGuardia(guardia.id);
+  if (reportes.some((r) => r.paciente_id === paciente.id)) {
     // yaRegistrado: true — mismo criterio que en /checkin (Fase 9, cliente offline). Antes
     // esta protección contra el envío duplicado la daba el guard de checkout_at; al separar
     // el cierre del reporte, la da la existencia del reporte mismo.
-    return res.status(400).json({ error: 'Esta guardia ya tiene su Reporte Diario cargado', yaRegistrado: true });
+    return res.status(400).json({ error: `${paciente.nombre} ya tiene su Reporte Diario cargado en este turno`, yaRegistrado: true });
   }
 
   const { data: reporte, error: errorReporte } = await supabase
@@ -318,6 +362,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
     .insert({
       prestadora_id: guardia.prestadora_id,
       guardia_id: guardia.id,
+      paciente_id: paciente.id,
       texto_libre: textoLibre || null,
       alimentacion: alimentacion || null,
       medicacion: medicacion || [],
@@ -343,19 +388,18 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
     return res.status(500).json({ error: errorGuardia.message });
   }
 
-  // Un aviso por cada Paciente del turno, con el mismo criterio que el de llegada: cada
-  // Familia se entera del reporte del suyo, con su nombre.
-  let pacientesDelTurno = [];
-  try {
-    pacientesDelTurno = await pacientesDeGuardia(guardia, 'id, nombre, familia_id');
-  } catch (e) {
-    console.error('Error leyendo los Pacientes del turno para avisar del reporte:', e.message);
-  }
-  for (const p of pacientesDelTurno.filter((x) => x.familia_id)) {
-    enviarPushFamilia(p.familia_id, {
+  // El aviso va a la Familia de este Paciente y a ninguna otra: el reporte habla de él. Si el
+  // turno cubre a dos hermanos, cada Familia recibe su aviso cuando le toca, no el del otro.
+  const { data: datosPaciente } = await supabase
+    .from('pacientes')
+    .select('familia_id')
+    .eq('id', paciente.id)
+    .maybeSingle();
+  if (datosPaciente?.familia_id) {
+    enviarPushFamilia(datosPaciente.familia_id, {
       titulo: 'Reporte diario disponible',
-      cuerpo: `Ya está listo el reporte de la guardia de ${p.nombre}.`,
-      url: `/pacientes/${p.id}/reportes/${reporte.id}`,
+      cuerpo: `Ya está listo el reporte de la guardia de ${paciente.nombre}.`,
+      url: `/pacientes/${paciente.id}/reportes/${reporte.id}`,
     }).catch((err) => console.error('Error enviando push de reporte a Familia:', err.message));
   }
 
@@ -373,15 +417,13 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
         const textoNormalizado = textoLibre.toLowerCase();
         const contieneCritica = palabrasClave.some((palabra) => textoNormalizado.includes(String(palabra).toLowerCase()));
         if (contieneCritica) {
-          // El texto libre es uno solo para todo el turno, así que se revisa a cada Paciente
-          // que ese turno cubrió: no hay forma de saber de cuál de ellos habla la palabra
-          // crítica, y dejar a uno afuera sería justo el caso que la alerta existe para no
-          // perder. Cuando el reporte diga de qué Paciente habla (tarea 93h), se revisa solo ese.
-          for (const p of pacientesDelTurno) {
-            analizarPaciente(p.id, guardia.prestadora_id).catch((err) =>
-              console.error('Error en análisis inmediato de IA Nivel 2:', err.message)
-            );
-          }
+          // Se revisa a la persona de la que habla el reporte, y a nadie más. Antes había que
+          // revisar a todos los del turno porque el texto no decía de quién hablaba; ahora lo
+          // dice, y levantar una alerta sobre alguien que no era es ruido que le hace perder
+          // confianza a la Familia en las alertas que sí importan.
+          analizarPaciente(paciente.id, guardia.prestadora_id).catch((err) =>
+            console.error('Error en análisis inmediato de IA Nivel 2:', err.message)
+          );
         }
       });
   }
@@ -395,8 +437,10 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
 //
 // Tres condiciones, en este orden, porque cada una dice algo distinto al Asistente:
 //   1. sin check-in previo no hay nada que cerrar;
-//   2. sin Reporte Diario cargado no se cierra — la regla de negocio que antes garantizaba
-//      el endpoint del reporte, ahora explícita en vez de implícita;
+//   2. no se cierra hasta que cada Paciente del turno tenga su Reporte Diario — la regla de
+//      negocio que antes garantizaba el endpoint del reporte, ahora explícita en vez de
+//      implícita. Se le dice al Asistente de quiénes falta, porque "falta un reporte" en un
+//      turno que cubre a tres personas no le dice cuál le quedó pendiente;
 //   3. si checkout_bloqueado está puesto, rige el protocolo de continuidad de guardia (no
 //      retirarse sin relevo) y el cierre solo lo libera el Panel con excepción documentada.
 //      Sin este guard la base rechazaría el UPDATE por el CHECK
@@ -421,8 +465,18 @@ appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, async (
     // yaRegistrado: true — mismo criterio que en /checkin (Fase 9, cliente offline).
     return res.status(400).json({ error: 'Esta guardia ya tiene check-out registrado', yaRegistrado: true });
   }
-  if (!(await reporteDeLaGuardia(guardia.id))) {
-    return res.status(400).json({ error: 'Falta cargar el Reporte Diario antes de cerrar la guardia', motivo: 'falta_reporte' });
+  let faltan;
+  try {
+    faltan = await pacientesSinReporte(guardia);
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+  if (faltan.length > 0) {
+    return res.status(400).json({
+      error: `Falta cargar el Reporte Diario de ${faltan.map((p) => p.nombre).join(' y ')} antes de cerrar la guardia`,
+      motivo: 'falta_reporte',
+      pacientesSinReporte: faltan.map((p) => ({ id: p.id, nombre: p.nombre })),
+    });
   }
   if (guardia.checkout_bloqueado) {
     return res.status(409).json({ error: 'Check-out bloqueado por el protocolo de continuidad de guardia', motivo: 'continuidad' });
@@ -475,23 +529,14 @@ appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, async (
     return res.status(403).json({ error: 'No tenés guardias asignadas a este Paciente' });
   }
 
-  // Los reportes de este Paciente son los de los turnos que lo cubrieron, no los de los turnos
-  // donde figura en la columna vieja: si no, el segundo Paciente de una visita compartida no
-  // tendría historia ninguna.
-  let idsDeSusGuardias;
-  try {
-    idsDeSusGuardias = await guardiasDelPaciente(req.params.id, req.usuarioAsistente.prestadoraId);
-  } catch (e) {
-    return res.status(500).json({ error: e.message });
-  }
-  if (idsDeSusGuardias.length === 0) {
-    return res.json({ reportes: [] });
-  }
-
+  // El reporte dice de quién habla, así que se piden directo. Antes había que buscar primero
+  // todos los turnos que cubrieron a esta persona y después los reportes de esos turnos —una
+  // vuelta que además traía los reportes de los otros Pacientes del mismo turno.
   const { data, error } = await supabase
     .from('reportes')
     .select('id, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, foto_url, created_at, guardias!inner(fecha)')
-    .in('guardia_id', idsDeSusGuardias)
+    .eq('paciente_id', req.params.id)
+    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .order('created_at', { ascending: false })
     .limit(30);
   if (error) {

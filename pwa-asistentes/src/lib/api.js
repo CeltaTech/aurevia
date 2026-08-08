@@ -24,6 +24,9 @@ async function pedido(ruta, opciones = {}) {
     // El motivo permite que la pantalla explique por qué no se pudo (falta el reporte,
     // continuidad de guardia) en vez de mostrar siempre el mismo error genérico.
     if (datos.motivo) error.motivo = datos.motivo;
+    // Cuando falta un reporte, el backend dice de quiénes falta. Con un turno que cubre a
+    // tres personas, "falta un reporte" no le dice al Asistente cuál le quedó pendiente.
+    if (datos.pacientesSinReporte) error.pacientesSinReporte = datos.pacientesSinReporte;
     throw error;
   }
   return datos;

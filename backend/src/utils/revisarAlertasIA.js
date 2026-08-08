@@ -3,7 +3,6 @@ import { analizarAlertaIA } from './alertasIA.js';
 import { notificarCoordinador } from './whatsapp.js';
 import { enviarPushFamilia } from './push.js';
 import { medicacionVigenteDelPaciente } from './medicacionIndicaciones.js';
-import { LISTA_DENTRO_DE_LA_GUARDIA, PACIENTE_DENTRO_DE_LA_GUARDIA } from './pacientesDeGuardia.js';
 
 const REPORTES_A_ANALIZAR = 7;
 
@@ -25,8 +24,8 @@ export async function revisarAlertasIA() {
   for (const paciente of pacientes ?? []) {
     let query = supabase
       .from('reportes')
-      .select(`id, created_at, guardias!inner(${LISTA_DENTRO_DE_LA_GUARDIA})`)
-      .eq(PACIENTE_DENTRO_DE_LA_GUARDIA, paciente.id)
+      .select('id, created_at')
+      .eq('paciente_id', paciente.id)
       .limit(1);
     if (paciente.ultimo_analisis_ia_at) {
       query = query.gt('created_at', paciente.ultimo_analisis_ia_at);
@@ -52,12 +51,15 @@ export async function analizarPaciente(pacienteId, prestadoraId) {
   // IA analiza la medicación vigente real, derivada de indicaciones_medicacion.
   const medicacionVigente = await medicacionVigenteDelPaciente(pacienteId);
 
+  // Los reportes de esta persona, y solo los de esta persona. Antes se llegaba a ellos por los
+  // turnos que la cubrieron, y si el turno cubría a dos, la IA leía las dos historias juntas y
+  // podía levantar una alerta sobre alguien por lo que le pasaba al otro.
   const { data: reportes, error: errorReportes } = await supabase
     .from('reportes')
     .select(
-      `id, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, created_at, guardias!inner(${LISTA_DENTRO_DE_LA_GUARDIA})`
+      'id, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, created_at'
     )
-    .eq(PACIENTE_DENTRO_DE_LA_GUARDIA, pacienteId)
+    .eq('paciente_id', pacienteId)
     .order('created_at', { ascending: false })
     .limit(REPORTES_A_ANALIZAR);
 

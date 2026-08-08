@@ -37,7 +37,9 @@ function Rutas() {
         <Route index element={<Navigate to="/guardias" replace />} />
         <Route path="guardias" element={<MisGuardias />} />
         <Route path="guardias/:id" element={<GuardiaActiva />} />
-        <Route path="guardias/:id/reporte" element={<ReporteDiario />} />
+        {/* El reporte lleva el Paciente en la dirección: un turno puede cubrir a varias
+            personas y cada una tiene su propia hoja (tarea 93h). */}
+        <Route path="guardias/:id/reporte/:pacienteId" element={<ReporteDiario />} />
         <Route path="perfil" element={<MiPerfil />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -12,26 +12,10 @@ import {
   armarBuscadorDeRangos,
   tieneSignoFueraDeRango,
 } from '../lib/signosVitales';
-import { textoDePacientes } from '../lib/pacientesDeGuardia';
 
 // Tope de filas por consulta. Con el rango de fechas por defecto (una semana) no se alcanza
 // nunca; existe para que un rango muy ancho no traiga miles de filas de golpe.
 const TOPE_FILAS = 300;
-
-/*
- * Con qué rango se mide una señal cuando el turno cubrió a más de un Paciente.
- *
- * Cada persona puede tener su propio rango normal —la presión alta de uno es la presión de
- * siempre de otro—, y hoy el reporte del turno es uno solo para todos (eso se separa en la
- * tarea 93h). Mientras tanto se toma el criterio prudente: si el valor se sale del rango de
- * alguno de los Pacientes del turno, se avisa. Se prefiere avisar de más que dejar pasar una
- * señal que a una de esas personas le importaba.
- */
-function rangoDelTurno(rangoDe, pacienteIds, signo, valor) {
-  const ids = pacienteIds?.length ? pacienteIds : [null];
-  const rangos = ids.map((id) => rangoDe(id, signo));
-  return rangos.find((r) => colorSigno(valor, r) === 'alerta') ?? rangos[0] ?? null;
-}
 
 function fechaISO(desplazamientoDias = 0) {
   const fecha = new Date();
@@ -57,8 +41,10 @@ export function Reportes() {
     const [{ data: reportesData, error: errorReportes }, { data: rangosData }] = await Promise.all([
       supabase
         .from('reportes')
+        // El reporte dice de qué Paciente habla, así que se pide directo. Antes había que
+        // traer la lista entera del turno y mostrar todos los nombres juntos en la misma fila.
         .select(
-          'id, created_at, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, foto_url, confirmado_asistente, guardias!inner(fecha, hora_inicio, hora_fin, asistentes(nombre), guardia_pacientes(pacientes(id, nombre)))',
+          'id, created_at, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, foto_url, confirmado_asistente, pacientes!inner(id, nombre), guardias!inner(fecha, hora_inicio, hora_fin, asistentes(nombre))',
         )
         .gte('guardias.fecha', f.desde)
         .lte('guardias.fecha', f.hasta)
@@ -80,32 +66,19 @@ export function Reportes() {
     setRangoDe(() => buscador);
 
     setFilas(
-      (reportesData ?? []).map((r) => {
-        // Un turno puede haber cubierto a más de un Paciente, así que el reporte se muestra
-        // con todos los nombres. Se ordena por nombre para que dos turnos con la misma gente
-        // se lean igual.
-        const pacientes = (r.guardias?.guardia_pacientes ?? [])
-          .map((gp) => gp.pacientes)
-          .filter(Boolean)
-          .sort((a, b) => (a.nombre ?? '').localeCompare(b.nombre ?? ''));
-        const pacienteIds = pacientes.length ? pacientes.map((p) => p.id) : [null];
-        return {
-          ...r,
-          paciente_ids: pacienteIds,
-          paciente_nombre: textoDePacientes(
-            pacientes.map((p) => p.nombre),
-            t.guardias.pacientes_y_mas,
-          ),
-          asistente_nombre: r.guardias?.asistentes?.nombre || '—',
-          fecha: r.guardias?.fecha ?? null,
-          fuera_de_rango: pacienteIds.some((id) => tieneSignoFueraDeRango(r.signos_vitales, id, buscador)),
-        };
-      }),
+      (reportesData ?? []).map((r) => ({
+        ...r,
+        paciente_id: r.pacientes?.id ?? null,
+        paciente_nombre: r.pacientes?.nombre || '—',
+        asistente_nombre: r.guardias?.asistentes?.nombre || '—',
+        fecha: r.guardias?.fecha ?? null,
+        fuera_de_rango: tieneSignoFueraDeRango(r.signos_vitales, r.pacientes?.id ?? null, buscador),
+      })),
     );
     setEstado('listo');
     // Solo las dos fechas, no el objeto de filtros entero: el desplegable filtra las filas ya
     // traídas, y si dependiera de `f` cambiarlo volvería a pedirle todo al servidor.
-  }, [f.desde, f.hasta, usuario.prestadora_id, t]);
+  }, [f.desde, f.hasta, usuario.prestadora_id]);
 
   useEffect(() => {
     recargar();
@@ -240,7 +213,9 @@ function DetalleReporte({ reporte, rangoDe, onCerrar }) {
         <label>{t.reportes.campo_signos_vitales}</label>
         {claves.length > 0 &&
           claves.map((clave) => {
-            const rango = rangoDelTurno(rangoDe, reporte.paciente_ids, clave, reporte.signos_vitales[clave]);
+            // El rango normal es el de esta persona: la presión alta de uno es la presión de
+            // siempre de otro, y ahora se sabe de quién habla el reporte.
+            const rango = rangoDe(reporte.paciente_id, clave);
             const color = colorSigno(reporte.signos_vitales[clave], rango);
             return (
               <div key={clave} className={color ? `signo-vital-${color}` : ''}>

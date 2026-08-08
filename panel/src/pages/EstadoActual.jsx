@@ -159,15 +159,34 @@ export function EstadoActual() {
 
     // Los reportes que faltan solo tienen sentido sobre guardias ya terminadas: se pregunta
     // por esas y nada más, en vez de traer todos los reportes de la Prestadora.
-    const completadas = filas.filter((g) => g.estado === 'completada').map((g) => g.id);
+    //
+    // Falta el reporte mientras falte el de alguno de los Pacientes del turno: si el Asistente
+    // atendió a dos personas y escribió una sola hoja, el turno sigue incompleto.
+    const completadas = filas.filter((g) => g.estado === 'completada');
     let sinReporte = new Set();
     if (completadas.length > 0) {
       const { data: reportes } = await supabase
         .from('reportes')
-        .select('guardia_id')
-        .in('guardia_id', completadas);
-      const conReporte = new Set((reportes ?? []).map((r) => r.guardia_id));
-      sinReporte = new Set(completadas.filter((id) => !conReporte.has(id)));
+        .select('guardia_id, paciente_id')
+        .in(
+          'guardia_id',
+          completadas.map((g) => g.id),
+        );
+      const conReportePorGuardia = new Map();
+      for (const r of reportes ?? []) {
+        if (!conReportePorGuardia.has(r.guardia_id)) conReportePorGuardia.set(r.guardia_id, new Set());
+        conReportePorGuardia.get(r.guardia_id).add(r.paciente_id);
+      }
+      sinReporte = new Set(
+        completadas
+          .filter((g) => {
+            const hechos = conReportePorGuardia.get(g.id);
+            const esperados = g.paciente_ids?.length ? g.paciente_ids : [];
+            if (!hechos) return true;
+            return esperados.some((id) => !hechos.has(id));
+          })
+          .map((g) => g.id),
+      );
     }
 
     // Dos conjuntos otra vez, por el mismo motivo que los papeles: trabado es rojo y por vencer

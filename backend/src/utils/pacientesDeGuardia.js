@@ -18,28 +18,6 @@ import { supabase } from '../db/connection.js';
 /** Lo mínimo que necesita una pantalla para nombrar y ubicar a un Paciente. */
 export const CAMPOS_BASICOS = 'id, nombre, domicilio, lat, lng';
 
-/*
- * Cómo pedir "todo lo de este Paciente" cuando lo que se busca cuelga de la guardia.
- *
- * Los reportes y las calificaciones no dicen de qué Paciente hablan: lo dicen a través de la
- * guardia. Antes eso se preguntaba por la columna vieja, y el segundo Paciente de un turno
- * compartido se quedaba sin nada — sin reportes, sin historia, sin nada que mostrarle a su
- * Familia. Ahora se pregunta por la lista.
- *
- * Van de a dos y siempre juntas: la primera se mete adentro del `guardias!inner(...)` del
- * pedido, y la segunda es el camino por el que se filtra. Están acá, y no escritas a mano en
- * cada consulta, porque son la misma decisión repetida (regla 12 de CLAUDE.md §7): el día que
- * la tabla cambie de nombre, se cambia una vez.
- *
- *   .select(`id, texto_libre, guardias!inner(fecha, ${LISTA_DENTRO_DE_LA_GUARDIA})`)
- *   .eq(PACIENTE_DENTRO_DE_LA_GUARDIA, pacienteId)
- *
- * No se resuelve trayendo primero los ids de las guardias y filtrando por esa lista: un
- * Paciente de dos años tiene miles de guardias, y esa consulta se volvería impracticable.
- */
-export const LISTA_DENTRO_DE_LA_GUARDIA = 'guardia_pacientes!inner(paciente_id)';
-export const PACIENTE_DENTRO_DE_LA_GUARDIA = 'guardias.guardia_pacientes.paciente_id';
-
 /**
  * A quiénes atiende cada una de estas guardias.
  *
@@ -184,15 +162,4 @@ export async function anotarPacientesEnGuardias(guardiaIds, pacienteIds, prestad
     .from('guardia_pacientes')
     .upsert(filas, { onConflict: 'guardia_id,paciente_id', ignoreDuplicates: true });
   if (error) throw new Error(error.message);
-}
-
-/** Los ids de las guardias en las que estuvo este Paciente. */
-export async function guardiasDelPaciente(pacienteId, prestadoraId) {
-  const { data, error } = await supabase
-    .from('guardia_pacientes')
-    .select('guardia_id')
-    .eq('paciente_id', pacienteId)
-    .eq('prestadora_id', prestadoraId);
-  if (error) throw new Error(error.message);
-  return [...new Set((data ?? []).map((f) => f.guardia_id))];
 }

@@ -4,7 +4,6 @@ import { supabase } from '../db/connection.js';
 import { resolverVitalesHabilitados } from '../utils/vitalesReferencia.js';
 import { generarTokenQrCobro } from '../utils/qrCobroEfectivo.js';
 import { medicacionVigenteDelPaciente } from '../utils/medicacionIndicaciones.js';
-import { LISTA_DENTRO_DE_LA_GUARDIA, PACIENTE_DENTRO_DE_LA_GUARDIA } from '../utils/pacientesDeGuardia.js';
 
 export const appFamiliasRouter = Router();
 
@@ -137,12 +136,16 @@ appFamiliasRouter.get('/pacientes/:id/reportes', requiereRolFamilia, async (req,
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
 
+  // El reporte dice de quién habla, así que se piden directo. Antes se los buscaba por los
+  // turnos que cubrieron a esta persona, y eso traía también los reportes de los otros
+  // Pacientes del mismo turno: la Familia veía en la historia de su padre lo que se escribió
+  // sobre el vecino de cuarto.
   const { data, error } = await supabase
     .from('reportes')
     .select(
-      `id, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, foto_url, created_at, guardias!inner(fecha, asistente_id, asistentes(nombre), ${LISTA_DENTRO_DE_LA_GUARDIA})`
+      'id, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, foto_url, created_at, guardias!inner(fecha, asistente_id, asistentes(nombre))'
     )
-    .eq(PACIENTE_DENTRO_DE_LA_GUARDIA, paciente.id)
+    .eq('paciente_id', paciente.id)
     .order('created_at', { ascending: false })
     .limit(60);
   if (error) {

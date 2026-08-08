@@ -234,6 +234,24 @@ h2 {
   color: var(--texto-secundario);
 }
 
+/* ---------- Qué hace y qué no hace el Asistente ---------- */
+
+/* Las dos listas se ven iguales a propósito: la de "qué no hace" tiene que
+   pesar lo mismo que la otra, que es para lo que existe. */
+.lista-tareas {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.lista-tareas li {
+  background: #FFFFFF;
+  border-radius: 12px;
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+
 /* ---------- Guardias ---------- */
 
 .guardia-card {

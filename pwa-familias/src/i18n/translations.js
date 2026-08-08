@@ -91,8 +91,21 @@ export const T = {
       resuelta: 'Resuelta',
       ver_reportes_relacionados: 'Ver reportes relacionados',
     },
+    // Los tipos de Asistente que trae el producto de fábrica. En la base guardan
+    // una clave y el nombre visible sale de acá, en el idioma de quien mira. Los
+    // tipos que crea cada Prestadora guardan su nombre como dato y no se traducen.
+    tipos_asistente: {
+      tipo_cuidador: 'Cuidador/a',
+      tipo_enfermero: 'Enfermero/a',
+      tipo_kinesiologo: 'Kinesiólogo/a',
+      tipo_medico: 'Médico/a',
+    },
     asistente: {
       titulo: 'Asistente Asignado',
+      tipo: 'Tipo de Asistente',
+      tareas_corresponde: 'Qué hace',
+      tareas_no_corresponde: 'Qué no hace',
+      tareas_vacio: 'La Prestadora todavía no cargó esta lista.',
       especialidades: 'Especialidades',
       certificado_vigente: 'Certificado de Aptitud vigente',
       certificado_vencido: 'Certificado de Aptitud vencido',
@@ -275,8 +288,18 @@ export const T = {
       resuelta: 'Resolved',
       ver_reportes_relacionados: 'View related reports',
     },
+    tipos_asistente: {
+      tipo_cuidador: 'Caregiver',
+      tipo_enfermero: 'Nurse',
+      tipo_kinesiologo: 'Physical therapist',
+      tipo_medico: 'Physician',
+    },
     asistente: {
       titulo: 'Assigned Caregiver',
+      tipo: 'Caregiver type',
+      tareas_corresponde: 'What they do',
+      tareas_no_corresponde: 'What they don\'t do',
+      tareas_vacio: 'The Provider hasn\'t filled in this list yet.',
       especialidades: 'Specialties',
       certificado_vigente: 'Fitness Certificate valid',
       certificado_vencido: 'Fitness Certificate expired',
@@ -459,8 +482,18 @@ export const T = {
       resuelta: 'Resolvido',
       ver_reportes_relacionados: 'Ver relatórios relacionados',
     },
+    tipos_asistente: {
+      tipo_cuidador: 'Cuidador(a)',
+      tipo_enfermero: 'Enfermeiro(a)',
+      tipo_kinesiologo: 'Fisioterapeuta',
+      tipo_medico: 'Médico(a)',
+    },
     asistente: {
       titulo: 'Cuidador Atribuído',
+      tipo: 'Tipo de Cuidador',
+      tareas_corresponde: 'O que faz',
+      tareas_no_corresponde: 'O que não faz',
+      tareas_vacio: 'A Prestadora ainda não preencheu esta lista.',
       especialidades: 'Especialidades',
       certificado_vigente: 'Certificado de Aptidão válido',
       certificado_vencido: 'Certificado de Aptidão vencido',

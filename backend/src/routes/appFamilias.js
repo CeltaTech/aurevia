@@ -184,6 +184,10 @@ appFamiliasRouter.get('/pacientes/:id/alertas', requiereRolFamilia, async (req, 
 // Paciente (RLS de asistentes/certificados ya lo acota a eso, ver schema_pwa_familias_01.sql
 // §3-4), estado del Certificado de Aptitud, evaluaciones anteriores, y el id de la guardia
 // activa/última (para el botón de calificar).
+//
+// Además devuelve el tipo del Asistente con sus dos listas de tareas: qué le
+// corresponde hacer y qué no. Es el motivo por el que existe el catálogo de
+// tipos: que la Familia lo lea antes y no lo discuta en la puerta.
 // ============================================================================
 
 appFamiliasRouter.get('/pacientes/:id/asistente', requiereRolFamilia, async (req, res) => {
@@ -207,9 +211,40 @@ appFamiliasRouter.get('/pacientes/:id/asistente', requiereRolFamilia, async (req
 
   const { data: asistente } = await supabase
     .from('asistentes')
-    .select('id, nombre, foto_url, especialidades')
+    .select('id, nombre, foto_url, especialidades, tipo_asistente_id')
     .eq('id', guardia.asistente_id)
     .maybeSingle();
+
+  // El tipo y sus dos listas. Se consultan por separado y filtrando otra vez por
+  // Prestadora: acá entramos con service_role, así que las políticas de la base
+  // no nos frenan y el filtro tiene que estar escrito en el código (CLAUDE.md §7).
+  // Un tipo general no tiene Prestadora y lo ven todas; uno propio, solo la suya.
+  let tipo = null;
+  let tareas = { corresponde: [], no_corresponde: [] };
+
+  if (asistente?.tipo_asistente_id) {
+    const { data: tipoFila } = await supabase
+      .from('tipos_asistente')
+      .select('id, clave, nombre, prestadora_id')
+      .eq('id', asistente.tipo_asistente_id)
+      .or(`prestadora_id.is.null,prestadora_id.eq.${paciente.prestadora_id}`)
+      .maybeSingle();
+
+    if (tipoFila) {
+      tipo = tipoFila;
+
+      const { data: filas } = await supabase
+        .from('tareas_tipo_asistente')
+        .select('id, clase, clave, texto, orden')
+        .eq('tipo_asistente_id', tipoFila.id)
+        .or(`prestadora_id.is.null,prestadora_id.eq.${paciente.prestadora_id}`)
+        .order('orden', { ascending: true });
+
+      for (const fila of filas || []) {
+        if (tareas[fila.clase]) tareas[fila.clase].push(fila);
+      }
+    }
+  }
 
   const { data: certificado } = await supabase
     .from('certificados')
@@ -229,6 +264,8 @@ appFamiliasRouter.get('/pacientes/:id/asistente', requiereRolFamilia, async (req
 
   res.json({
     asistente: asistente || null,
+    tipo,
+    tareas,
     certificado: certificado || null,
     evaluaciones: evaluaciones || [],
     guardiaId: guardia.id,

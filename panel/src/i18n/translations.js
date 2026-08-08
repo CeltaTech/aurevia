@@ -608,6 +608,10 @@ export const T = {
     // acá, para que el Panel en inglés no muestre "enfermero". Los tipos que
     // crea cada Prestadora guardan su nombre como dato y no pasan por acá.
     tipos_asistente: {
+      tipo_cuidador: 'Cuidador/a',
+      tipo_enfermero: 'Enfermero/a',
+      tipo_kinesiologo: 'Kinesiólogo/a',
+      tipo_medico: 'Médico/a',
       matricula_enfermeria: 'Enfermería',
       matricula_kinesiologia: 'Kinesiología',
       matricula_medicina: 'Medicina',
@@ -2149,6 +2153,10 @@ export const T = {
       ya_convertida_familia: 'This request already has a Family associated.',
     },
     tipos_asistente: {
+      tipo_cuidador: 'Caregiver',
+      tipo_enfermero: 'Nurse',
+      tipo_kinesiologo: 'Physical therapist',
+      tipo_medico: 'Physician',
       matricula_enfermeria: 'Nursing',
       matricula_kinesiologia: 'Physiotherapy',
       matricula_medicina: 'Medicine',
@@ -3686,6 +3694,10 @@ export const T = {
       ya_convertida_familia: 'Esta solicitação já tem uma Família associada.',
     },
     tipos_asistente: {
+      tipo_cuidador: 'Cuidador(a)',
+      tipo_enfermero: 'Enfermeiro(a)',
+      tipo_kinesiologo: 'Fisioterapeuta',
+      tipo_medico: 'Médico(a)',
       matricula_enfermeria: 'Enfermagem',
       matricula_kinesiologia: 'Fisioterapia',
       matricula_medicina: 'Medicina',

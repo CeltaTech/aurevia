@@ -2,6 +2,35 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
+import { traducirValor } from '../i18n/valores';
+
+// El nombre del tipo sale de dos lados según de dónde venga el tipo: los que
+// trae el producto guardan una clave y se traducen; los que crea cada
+// Prestadora guardan el nombre escrito por ella y se muestra tal cual.
+function nombreTipo(tipo, t) {
+  if (!tipo) return null;
+  if (tipo.prestadora_id) return tipo.nombre || null;
+  return traducirValor(t.tipos_asistente, `tipo_${tipo.clave}`);
+}
+
+// Una de las dos listas. La de "qué no hace" pesa lo mismo que la otra a
+// propósito: es la que evita la discusión en la puerta.
+function ListaDeTareas({ titulo, tareas, vacio }) {
+  return (
+    <>
+      <h2 style={{ marginTop: '1.5rem' }}>{titulo}</h2>
+      {tareas.length === 0 ? (
+        <div className="estado-vacio">{vacio}</div>
+      ) : (
+        <ul className="lista-tareas">
+          {tareas.map((tarea) => (
+            <li key={tarea.id}>{tarea.texto || tarea.clave}</li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
 
 export default function AsistenteAsignado() {
   const { id } = useParams();
@@ -53,7 +82,8 @@ export default function AsistenteAsignado() {
   if (datos === null) return <div className="estado-cargando">{t.comun.cargando}</div>;
   if (!datos.asistente) return <div className="estado-vacio">{t.comun.vacio}</div>;
 
-  const { asistente, certificado, evaluaciones, guardiaId } = datos;
+  const { asistente, tipo, tareas, certificado, evaluaciones, guardiaId } = datos;
+  const nombreDelTipo = nombreTipo(tipo, t);
 
   return (
     <div>
@@ -62,12 +92,32 @@ export default function AsistenteAsignado() {
       </Link>
       <h1>{asistente.nombre}</h1>
       {asistente.foto_url && <img src={asistente.foto_url} alt={asistente.nombre} style={{ width: '100%', maxWidth: 200, borderRadius: '12px', marginBottom: '1rem' }} />}
+      {nombreDelTipo && (
+        <p className="guardia-card-detalle">
+          {t.asistente.tipo}: {nombreDelTipo}
+        </p>
+      )}
       <p className="guardia-card-detalle">
         {t.asistente.especialidades}: {(asistente.especialidades || []).join(', ') || '—'}
       </p>
       <p className="guardia-card-detalle">
         {certificado ? t.asistente.certificado_vigente : t.asistente.certificado_vencido}
       </p>
+
+      {tipo && (
+        <>
+          <ListaDeTareas
+            titulo={t.asistente.tareas_corresponde}
+            tareas={tareas?.corresponde || []}
+            vacio={t.asistente.tareas_vacio}
+          />
+          <ListaDeTareas
+            titulo={t.asistente.tareas_no_corresponde}
+            tareas={tareas?.no_corresponde || []}
+            vacio={t.asistente.tareas_vacio}
+          />
+        </>
+      )}
 
       <Link to={`/pacientes/${id}/escanear-asistente`} className="btn btn-primary btn-full" style={{ marginTop: '1rem' }}>
         {t.asistente.escanear_boton}

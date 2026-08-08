@@ -26,7 +26,7 @@ export function esTipoGeneral(tipo) {
 // `traducirValor` pone un guion si falta la traducción, y avisa en desarrollo.
 export function nombreTipo(tipo, t) {
   if (!tipo) return '—';
-  if (esTipoGeneral(tipo)) return traducirValor(t.tipos_asistente, tipo.clave);
+  if (esTipoGeneral(tipo)) return traducirValor(t.tipos_asistente, `tipo_${tipo.clave}`);
   return tipo.nombre || '—';
 }
 

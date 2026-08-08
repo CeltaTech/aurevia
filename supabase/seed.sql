@@ -526,6 +526,53 @@ SELECT guardar_credencial_smtp_prestadora(
 
 
 -- ----------------------------------------------------------------------------
+-- 6 bis. Qué hace y qué no hace cada Asistente
+-- ----------------------------------------------------------------------------
+-- El catálogo de tipos viene con cuatro tipos de fábrica que trae el producto.
+-- Acá se le da uno a cada Asistente y se arma un tipo propio de la Prestadora
+-- con sus dos listas, para poder ver en pantalla los dos casos: el nombre que
+-- se traduce y el nombre que escribió la Prestadora.
+--
+-- Las dos listas están cargadas a propósito con las cosas que en la vida real
+-- generan la discusión en la puerta: limpiar toda la casa, cocinar para la
+-- familia, dar una inyección.
+
+INSERT INTO public.tipos_asistente (id, prestadora_id, clave, nombre, descripcion, requiere_matricula, tipo_matricula, activo, orden)
+VALUES
+  ('3a000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+   NULL, 'Acompañante terapéutico', 'Tipo propio de la Prestadora Sandbox.', false, NULL, true, 50);
+
+INSERT INTO public.tareas_tipo_asistente (tipo_asistente_id, prestadora_id, clase, clave, texto, orden)
+VALUES
+  ('3a000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+   'corresponde', NULL, 'Acompañar al Paciente en sus actividades diarias', 10),
+  ('3a000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+   'corresponde', NULL, 'Ayudarlo a higienizarse y a vestirse', 20),
+  ('3a000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+   'corresponde', NULL, 'Prepararle la comida y acompañarlo a comer', 30),
+  ('3a000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+   'corresponde', NULL, 'Dejar por escrito cómo pasó el día', 40),
+  ('3a000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+   'no_corresponde', NULL, 'Limpiar la casa o hacer las tareas del hogar de la familia', 10),
+  ('3a000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+   'no_corresponde', NULL, 'Cocinar para el resto de la familia', 20),
+  ('3a000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+   'no_corresponde', NULL, 'Dar inyecciones o curar heridas', 30),
+  ('3a000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+   'no_corresponde', NULL, 'Cambiar la dosis de un remedio por su cuenta', 40);
+
+-- Ana lleva el tipo propio de la Prestadora; Clara, uno de fábrica, que se
+-- traduce al idioma de quien mira.
+UPDATE public.asistentes SET tipo_asistente_id = '3a000000-0000-4000-8000-000000000001'
+WHERE id = '30000000-0000-4000-8000-000000000001';
+
+UPDATE public.asistentes SET tipo_asistente_id = (
+  SELECT id FROM public.tipos_asistente WHERE prestadora_id IS NULL AND clave = 'enfermero'
+)
+WHERE id = '30000000-0000-4000-8000-000000000003';
+
+
+-- ----------------------------------------------------------------------------
 -- 7. Limpieza y aviso final
 -- ----------------------------------------------------------------------------
 -- Sin esto, la capa que sirve los datos puede seguir contestando 404 en tablas

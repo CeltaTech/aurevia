@@ -201,3 +201,78 @@ La primera versión de la definición, escrita esa misma mañana, se corrigió c
 - **Se borró `docs/QUE_ES_UN_SERVICIO.md`.** Era un documento de 244 líneas que definía qué es un Servicio. Palabras del Desarrollador: *"no merece la pena crear un documento que diga qué es un servicio, debe de ser una entrada más en el glosario"*, y *"si no sirve no guardemos basura"*. Su contenido se repartió: la definición se reescribió como entrada del glosario, y lo que faltaba construir —el horario es de cada prestación y no del Servicio, no toda prestación se convierte en Guardia, un mismo Cliente puede tener varios Servicios a la vez— se anotó en el pendiente #125.
 - **Regla nueva sobre cómo se escribe una definición**, agregada a `CLAUDE.md` §4: el glosario lo lee cualquiera, así que se dice qué es la cosa y no qué no es, sin nombres de tablas ni de archivos ni números de pendiente, y sin mandar a otro documento a buscar la definición completa. Sale de la corrección del Desarrollador: *"no es un lenguaje claro y entendible para la gente, no digas lo que no es, solo decí lo que es… pensá que el glosario ha de ser leído por cualquier persona"*.
 - **No reintroducir:** decir "el Paciente tiene la guardia" (es al revés); armar una guardia por cada Paciente cuando el Asistente cumplió un solo turno; la palabra **"visita"** para lo que hace un Asistente — de visita van los parientes y los amigos, el Asistente va a trabajar; y crear un documento aparte para definir una palabra que tiene que estar en el glosario.
+
+## Las decisiones de los primeros días del proyecto (2026-07-07 y 2026-07-08)
+
+Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de este archivo. Se traen acá, que es donde corresponde (§10), porque siguen mandando sobre lo que se construye hoy. Se dejaron afuera, a propósito, las anotaciones que eran pasos de una jornada de trabajo y no decisiones: qué se instaló ese día, qué se probó, qué se publicó.
+
+### Se rechazó la gamificación de Asistentes: niveles, rankings y puntos (2026-07-07)
+
+- **Qué se propuso:** darle al Asistente un sistema de juego — niveles, tabla de posiciones, puntos por desempeño —, tomado de un análisis de un producto ajeno al rubro que se revisó ese día.
+- **Qué se decidió:** **rechazarlo**, y dejarlo escrito para que no se vuelva a proponer.
+- **Motivo:** choca de frente con el riesgo legal que atraviesa todo el módulo de Asistentes (`CLAUDE.md` §3). Ponerle niveles y rankings a una persona que trabaja de forma independiente es de los indicios más fuertes de que en realidad está bajo las órdenes de la empresa — subordinación, en los términos del artículo 23 de la Ley de Contrato de Trabajo (ver `docs/legal/argentina.md`), y con el antecedente judicial de Cabify a la vista cuando se tomó la decisión. Es decir: la función se ve inofensiva y el que la paga es el que la usa.
+- **Ojo con no confundirlo:** `CLAUDE.md` §3 permite que una Prestadora active rankings y puntuaciones **si ella lo elige**, con la advertencia del riesgo delante. Eso es otra cosa. Lo rechazado es que el producto traiga la gamificación puesta de fábrica como una gracia del sistema.
+- **No reintroducir:** niveles, tablas de posiciones, insignias, puntos ni ninguna otra forma de gamificación de Asistentes, **sin resolver antes el riesgo legal**. Si alguien la vuelve a proponer, la respuesta ya está dada y el motivo es este.
+
+### Principio de negocio: el modelo tiene que poder operar con muy poca gente (2026-07-07)
+
+- **Qué se decidió:** queda registrado como principio de negocio que Careonys debe poder funcionar con muy poca gente administrando. De ahí se sigue que **automatizar con inteligencia artificial todo lo que no comprometa el riesgo legal es deseable**, no un lujo.
+- **Motivo:** decisión de negocio explícita del Desarrollador. Es lo que hace viable el modelo: si cada Prestadora nueva obligara a sumar gente en la administración, el producto no escala.
+- **Qué condiciona hacia adelante:** el alcance de las etapas de inteligencia artificial. Los niveles que `docs/BUILD_ORDER.md` marca como diferidos pueden re-priorizarse por este motivo, a evaluar caso por caso cuando se llegue a esa etapa. Y sirve como criterio para descartar cualquier función que solo funcione si hay alguien mirando la pantalla todo el día.
+
+### De dónde salieron cuatro costumbres de pantalla que todavía rigen (2026-07-07)
+
+- **Qué se decidió:** incorporar cuatro ideas de pantalla y de arquitectura tomadas de un análisis de un producto ajeno al rubro (un sistema de gestión para salones de belleza), ninguna de las cuales venía de un PRD del proyecto: (1) el teléfono siempre como enlace de WhatsApp (`wa.me/`); (2) las listas largas agrupadas por categoría, nunca una tirada infinita; (3) el avance del Proceso de Incorporación mostrado como una lista de tareas con porcentaje cumplido; (4) el color de una guardia definido solo por su estado, sin que nadie lo elija a mano. Se anotó además, como idea a futuro y no como algo construido, que los módulos se activaran por configuración — que es lo que después terminó siendo el catálogo de módulos comerciales.
+- **Motivo:** se registran para que se sepa de dónde salieron y no se pierdan. Las dos primeras siguen siendo convenciones vigentes de `docs/DESIGN_SYSTEM.md`.
+
+### En el cálculo de indemnización, el piso se aplica antes que el tope (2026-07-08)
+
+- **Qué se decidió:** dentro del cálculo de la indemnización por antigüedad, el piso mínimo (mejor remuneración × meses de piso) se calcula **antes** de aplicar el tope legal, nunca después.
+- **Motivo:** una prueba automática mostró que hacerlo al revés dejaba que el piso empujara el monto **por encima del tope legal**. O sea, la pantalla de Cese podía mostrar una cifra que la ley no permite. Se corrigió antes de construir la pantalla, no después.
+- **No reintroducir:** el orden invertido. Y no tocar ese cálculo sin correr las pruebas: el motivo por el que existen es exactamente este.
+
+### Los datos de vínculo y cese no los ve el Coordinador (2026-07-08)
+
+- **Qué se decidió:** todo lo de vínculo, cese, simulador de costos, score de riesgo y cobertura de ausencias queda visible únicamente para el rol de administración de la Prestadora. El Coordinador ve solamente el perfil del Asistente.
+- **Motivo:** es la misma línea que ya trazaba `docs/SECURITY.md`, que deja al Coordinador afuera de las escalas legales, de los ceses y de los datos laborales internos. Son datos sensibles de la relación laboral, no información operativa del día a día.
+
+### El rol Superadmin no salió de ningún PRD (2026-07-07)
+
+- **Qué se decidió:** crear el rol **Superadmin**, con su propio ingreso y con acceso técnico por encima de la administración de la Prestadora: configuración profunda, alta y baja de elementos sensibles, uso de inteligencia artificial para diagnosticar y corregir fallas.
+- **Motivo:** decisión de negocio explícita del Desarrollador. No estaba en ningún PRD original, así que sin este registro parecería que apareció solo.
+- **Qué cambió después:** entonces era el quinto de cinco roles. Hoy los roles del Panel son tres y están descritos en `CLAUDE.md` §5, que es lo vigente; el rol comercial que existía al lado se fue al panel de CeltaTech.
+
+### La base de datos pasó a ser Supabase desde el arranque (2026-07-07)
+
+- **Decía antes:** el plan era empezar con MySQL en Railway y recién migrar a Supabase en la etapa siguiente.
+- **Dice ahora:** Supabase (Postgres) desde el primer día, con las reglas de aislamiento de datos activadas desde que se crea cada tabla.
+- **Motivo:** lo notó el Desarrollador — armar una base para mudarla dos semanas después era trabajo hecho dos veces, porque las pantallas de la etapa siguiente trabajaban sobre las mismas tablas. El cambio se confirmó antes de escribir una línea de código.
+
+### Poder irse de Supabase sin drama (2026-07-07)
+
+- **Qué se decidió:** el producto no se ata a Supabase. La lógica de negocio vive siempre en el motor propio del sistema, nunca adentro de Supabase (ni funciones suyas ni disparadores complicados); las reglas de aislamiento se escriben en Postgres estándar; y hay un respaldo propio de los datos, aparte del que hace Supabase.
+- **Motivo:** el Desarrollador pidió explícitamente estar cubierto por si algún día hay que dejar ese proveedor, sin que eso ponga en riesgo los datos ni obligue a una mudanza traumática.
+- **No reintroducir:** lógica de negocio metida adentro de la base del proveedor. Lo que se gana en comodidad hoy es exactamente lo que hace imposible mudarse mañana.
+
+### El sitio público se rehízo para que lo encuentre el buscador (2026-07-08)
+
+- **Decía antes:** el sitio público estaba armado con una herramienta que resolvía el idioma recién en el navegador de quien entraba.
+- **Dice ahora:** se rehízo con Next.js, que arma cada página ya terminada y con su idioma propio en una dirección propia.
+- **Motivo:** palabras del Desarrollador: *"el seo es fundamental, si no nos ven no nos contactan, si no nos contactan no facturamos, si no facturamos todo esto no sirve para nada"*. Con la forma anterior el buscador solo llegaba a ver la versión en español. Se hizo en ese momento, con cero usuarios, que es cuando cambiar sale barato.
+- **Lo que sobrevive de esta decisión:** el criterio general que el Desarrollador pidió aplicar de ahí en adelante — ante una decisión de arquitectura, **elegir la opción más versátil a largo plazo por sobre la que "por ahora alcanza"**. El sitio público en sí ya no existe (dado de baja el 2026-07-18), el criterio sí.
+
+### El Panel no se hizo con la misma herramienta que el sitio (2026-07-08)
+
+- **Qué se decidió:** el Panel se construyó con React sobre Vite, y no con Next.js como el sitio público.
+- **Motivo:** el Panel es una herramienta interna, con sesión iniciada, que **nunca** debe aparecer en un buscador. El argumento que justificó Next.js en el sitio público —que lo encuentren— acá no aplica. Se discutió con el Desarrollador antes de escribir código (*"¿por qué en vite?"* / *"¿y cuál sería ese costo a pagar?"*), justamente para no arrastrar el mismo argumento a un lugar donde no corresponde. Es el mismo criterio que después siguieron las dos aplicaciones de pantalla.
+
+### Una regla de acceso a la base no puede consultarse a sí misma (2026-07-08)
+
+- **Qué pasó:** una regla de aislamiento sobre la tabla de usuarios preguntaba por esa misma tabla adentro de su propia condición. Postgres vuelve a evaluar la regla dentro de la consulta, así que se llamaba a sí misma sin fin y la base devolvía un error de recursión infinita. Se descubrió recién al probar con un usuario administrador real.
+- **Qué se decidió:** corregirla en la base y en el archivo de esquema, y dejar el motivo escrito como comentario en el propio SQL para que no se vuelva a escribir así.
+- **No reintroducir:** una regla de aislamiento que consulte la misma tabla que está protegiendo. Cuando hace falta ese dato, va en una función aparte que la regla llama (es, además, lo que después pidió la regla 12 de `CLAUDE.md` §7).
+
+### La apariencia tiene que superar a la de la competencia, no empatarla (2026-07-07)
+
+- **Qué se decidió:** que el listón visual del producto se fija mirando a los competidores del rubro y quedando claramente por encima, no solo igualando sus prestaciones. De ese estudio salieron recomendaciones concretas que quedaron en `docs/DESIGN_SYSTEM.md`: fondos de color completo, fotografía propia con dirección de arte, micro-interacciones e iconografía propia. Se sumó además la identidad visual para redes sociales, que ningún PRD contemplaba.
+- **Motivo:** pedido explícito del Desarrollador — superar ampliamente a los competidores desde lo estético, no solo desde lo que el producto hace.

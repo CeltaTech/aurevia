@@ -973,6 +973,8 @@ export const T = {
       dia_siguiente: 'Día siguiente',
       dia_hoy: 'Hoy',
       fila_sin_paciente: 'Sin Paciente',
+      pacientes_y_mas: 'y {n} más',
+      cubre_a_varios: 'Un solo turno para {n} Pacientes',
       elegir_guardia: 'Elegir esta guardia',
       hora_columna: '{hora} h',
       seleccion: {
@@ -2508,6 +2510,8 @@ export const T = {
       dia_siguiente: 'Next day',
       dia_hoy: 'Today',
       fila_sin_paciente: 'No Patient',
+      pacientes_y_mas: 'and {n} more',
+      cubre_a_varios: 'One single shift for {n} Patients',
       elegir_guardia: 'Select this shift',
       hora_columna: '{hora} h',
       seleccion: {
@@ -4039,6 +4043,8 @@ export const T = {
       dia_siguiente: 'Próximo dia',
       dia_hoy: 'Hoje',
       fila_sin_paciente: 'Sem Paciente',
+      pacientes_y_mas: 'e mais {n}',
+      cubre_a_varios: 'Um único plantão para {n} Pacientes',
       elegir_guardia: 'Escolher este plantão',
       hora_columna: '{hora} h',
       seleccion: {

@@ -8,6 +8,7 @@ import { NuevaGuardiaModal } from './guardias/NuevaGuardiaModal';
 import { GuardiaAcciones } from './guardias/GuardiaAcciones';
 import { GuardiasGrid } from './guardias/GuardiasGrid';
 import { COBERTURA, coberturaDeGuardia } from '../lib/cobertura';
+import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../lib/pacientesDeGuardia';
 import { reasignarGuardia } from '../lib/reasignarGuardia';
 
 const ESTADOS = ['programada', 'activa', 'completada', 'cancelada', 'ausente'];
@@ -64,10 +65,13 @@ export function Guardias() {
     const asistentesPorId = Object.fromEntries((asistentesData ?? []).map((a) => [a.id, a.nombre]));
     const pacientesPorId = Object.fromEntries((pacientesData ?? []).map((p) => [p.id, p.nombre]));
 
-    const filasConNombres = (guardiasData ?? []).map((g) => ({
+    // A quiénes atiende cada guardia: un turno puede cubrir a más de una persona, y esa lista
+    // no vive en la guardia sino en su propia tabla (ver `lib/pacientesDeGuardia.js`).
+    const pacientesPorGuardia = await cargarPacientesDeGuardias((guardiasData ?? []).map((g) => g.id));
+
+    const filasConNombres = conPacientes(guardiasData ?? [], pacientesPorGuardia, pacientesPorId).map((g) => ({
       ...g,
       asistente_nombre: asistentesPorId[g.asistente_id] || '—',
-      paciente_nombre: pacientesPorId[g.paciente_id] || '—',
     }));
 
     setFilas(filasConNombres);
@@ -80,16 +84,27 @@ export function Guardias() {
     recargar();
   }, [recargar]);
 
+  /* El nombre que se muestra en el chip se arma acá y no al cargar: el resumen depende del
+     idioma ("y 3 más"), y cambiar de idioma no tiene por qué volver a consultar la base. */
   const filasFiltradas = useMemo(() => {
     const b = f.busqueda.toLowerCase();
-    return filas.filter((g) => {
-      const coincideEstado = !f.estado || g.estado === f.estado;
-      const coincideCobertura = !f.sinCubrir || coberturaDeGuardia(g) !== COBERTURA.CUBIERTA;
-      const coincideBusqueda =
-        !b || g.asistente_nombre?.toLowerCase().includes(b) || g.paciente_nombre?.toLowerCase().includes(b);
-      return coincideEstado && coincideCobertura && coincideBusqueda;
-    });
-  }, [filas, f]);
+    return filas
+      .map((g) => ({
+        ...g,
+        paciente_nombre: textoDePacientes(g.pacientes_nombres, t.guardias.pacientes_y_mas),
+      }))
+      .filter((g) => {
+        const coincideEstado = !f.estado || g.estado === f.estado;
+        const coincideCobertura = !f.sinCubrir || coberturaDeGuardia(g) !== COBERTURA.CUBIERTA;
+        // La búsqueda mira TODOS los nombres del turno, no el resumen: en un asilo el resumen
+        // muestra dos y esconde dieciocho, y buscar a uno de esos dieciocho no daría nada.
+        const coincideBusqueda =
+          !b ||
+          g.asistente_nombre?.toLowerCase().includes(b) ||
+          (g.pacientes_nombres ?? []).some((n) => n?.toLowerCase().includes(b));
+        return coincideEstado && coincideCobertura && coincideBusqueda;
+      });
+  }, [filas, f, t]);
 
   function tieneAlertaCheckinSinCheckout(g) {
     if (g.estado !== 'activa' || !g.checkin_at || g.checkout_at) return false;

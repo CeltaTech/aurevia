@@ -15,6 +15,7 @@
 // Ver la migración 20260807190000_una_guardia_puede_cubrir_varios_pacientes.sql.
 
 import { supabase } from './supabaseClient';
+import { con } from './textos';
 
 /**
  * Identificador de la fila de la grilla cuando la guardia no tiene ningún Paciente.
@@ -91,18 +92,28 @@ export function atiendeAVarios(guardia, mapa) {
 /**
  * Le agrega a cada guardia sus Pacientes, ya con nombre.
  *
- * Deja dos campos nuevos: `paciente_ids` (los ids, en el orden en que vinieron) y
- * `pacientes_nombres` (los nombres, ordenados alfabéticamente para que dos guardias con la
- * misma gente se lean igual). Un Paciente cuyo nombre todavía no cargó no se inventa ni se
- * pierde: entra como `null` y cada pantalla decide qué poner en su lugar.
+ * Deja tres campos nuevos: `pacientes` (la lista de `{ id, nombre }`, ordenada por nombre para
+ * que dos guardias con la misma gente se lean igual) y, sacados de esa misma lista y en el
+ * mismo orden, `paciente_ids` y `pacientes_nombres`.
+ *
+ * El id y el nombre viajan **juntos, en el mismo objeto**, y no en dos listas paralelas: dos
+ * listas ordenadas por separado se desalinean sin avisar y terminan mostrando el nombre de
+ * una persona al lado del id de otra.
+ *
+ * Un Paciente cuyo nombre todavía no cargó no se inventa ni se pierde: su nombre entra como
+ * `null` y cada pantalla decide qué poner en su lugar.
  */
 export function conPacientes(guardias, mapa, nombresPorId) {
   return (guardias ?? []).map((g) => {
-    const ids = pacientesDeGuardia(g, mapa);
-    const nombres = ids
-      .map((id) => nombresPorId?.[id] ?? null)
-      .sort((a, b) => (a ?? '').localeCompare(b ?? ''));
-    return { ...g, paciente_ids: ids, pacientes_nombres: nombres };
+    const pacientes = pacientesDeGuardia(g, mapa)
+      .map((id) => ({ id, nombre: nombresPorId?.[id] ?? null }))
+      .sort((a, b) => (a.nombre ?? '').localeCompare(b.nombre ?? ''));
+    return {
+      ...g,
+      pacientes,
+      paciente_ids: pacientes.map((p) => p.id),
+      pacientes_nombres: pacientes.map((p) => p.nombre),
+    };
   });
 }
 
@@ -122,14 +133,33 @@ export function resumenDePacientes(nombres, maximo = 2) {
 }
 
 /**
- * Identificador de la fila cuando la grilla agrupa por Paciente.
+ * En qué filas aparece una guardia cuando la grilla agrupa por Paciente.
  *
  * Es la única vista que sigue necesitando un solo Paciente por fila: si un turno cubre a
  * tres personas, en la vista por Paciente aparece en las tres filas. Eso no duplica el
  * turno — es la misma guardia mirada desde tres lugares distintos, igual que un mismo
  * partido aparece en el calendario de los dos equipos.
+ *
+ * Recibe la guardia ya enriquecida por `conPacientes`, porque la grilla nunca habla con la
+ * base: dibuja lo que le pasan.
  */
-export function filasPorPaciente(guardia, mapa) {
-  const ids = pacientesDeGuardia(guardia, mapa);
-  return ids.length ? ids : [SIN_PACIENTES];
+export function filasPorPaciente(guardia) {
+  const lista = guardia?.pacientes ?? [];
+  if (lista.length) return lista.map((p) => p.id);
+  return guardia?.paciente_id ? [guardia.paciente_id] : [SIN_PACIENTES];
+}
+
+/**
+ * Los nombres, en una sola línea, para mostrar donde no entra una lista.
+ *
+ * Recibe los textos ya traducidos —no las claves— justamente para no depender del idioma:
+ * `plantillaMas` es la frase con el hueco `{n}` ("y {n} más") y `vacio` es lo que se escribe
+ * cuando la guardia no tiene a nadie.
+ */
+export function textoDePacientes(nombres, plantillaMas, vacio = '—') {
+  const { visibles, restantes } = resumenDePacientes(nombres);
+  if (visibles.length === 0) return vacio;
+  const partes = [...visibles];
+  if (restantes > 0) partes.push(con(plantillaMas, { n: restantes }));
+  return partes.join(' · ');
 }

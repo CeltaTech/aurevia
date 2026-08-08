@@ -426,6 +426,22 @@ INSERT INTO public.guardias (
    CURRENT_DATE + 1, '07:00', '13:00', 'presencial', 'programada', 'directa',
    NULL, NULL);
 
+-- ----------------------------------------------------------------------------
+-- 5.b La guardia de mañana a la mañana cubre a los dos del mismo domicilio.
+--
+--     Elena y Alberto viven juntos (sección 4). Ana va una sola vez a esa casa
+--     y los atiende a los dos: es UNA guardia con DOS Pacientes, no dos
+--     guardias. Se agrega acá para que el caso se pueda mirar en pantalla sin
+--     tener que tocar la base a mano.
+--
+--     Elena ya está en la lista: la puso sola el disparador que mantiene al día
+--     la columna vieja `guardias.paciente_id` mientras esa columna siga
+--     existiendo. Acá se suma únicamente Alberto.
+-- ----------------------------------------------------------------------------
+INSERT INTO public.guardia_pacientes (guardia_id, paciente_id, prestadora_id) VALUES
+  ('70000000-0000-4000-8000-000000000007', '50000000-0000-4000-8000-000000000004',
+   '11111111-1111-4111-8111-111111111111');
+
 
 -- ----------------------------------------------------------------------------
 -- 6. La configuración de avisos de la Prestadora de prueba

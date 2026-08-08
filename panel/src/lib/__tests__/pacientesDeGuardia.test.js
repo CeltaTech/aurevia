@@ -11,6 +11,7 @@ const {
   filasPorPaciente,
   pacientesDeGuardia,
   resumenDePacientes,
+  textoDePacientes,
 } = await import('../pacientesDeGuardia');
 
 const ELENA = '50000000-0000-4000-8000-000000000001';
@@ -51,9 +52,20 @@ describe('conPacientes', () => {
   it('agrega los ids y los nombres, ordenados alfabéticamente', () => {
     const mapa = new Map([['g1', [ELENA, ALBERTO]]]);
     const [fila] = conPacientes([{ id: 'g1', fecha: '2026-08-20' }], mapa, NOMBRES);
-    expect(fila.paciente_ids).toEqual([ELENA, ALBERTO]);
+    expect(fila.paciente_ids).toEqual([ALBERTO, ELENA]);
     expect(fila.pacientes_nombres).toEqual(['Alberto Gómez', 'Elena Gómez']);
     expect(fila.fecha).toBe('2026-08-20');
+  });
+
+  it('cada id viaja pegado a su nombre, aunque el orden cambie', () => {
+    const mapa = new Map([['g1', [ELENA, ALBERTO]]]);
+    const [fila] = conPacientes([{ id: 'g1' }], mapa, NOMBRES);
+    // Elena entró primera y sale segunda: si los ids y los nombres se ordenaran por separado,
+    // acá quedaría el nombre de una al lado del id de la otra.
+    expect(fila.pacientes).toEqual([
+      { id: ALBERTO, nombre: 'Alberto Gómez' },
+      { id: ELENA, nombre: 'Elena Gómez' },
+    ]);
   });
 
   it('un nombre que todavía no cargó entra como nulo, no desaparece', () => {
@@ -67,6 +79,24 @@ describe('conPacientes', () => {
 
   it('con una lista vacía de guardias devuelve una lista vacía', () => {
     expect(conPacientes([], new Map(), NOMBRES)).toEqual([]);
+  });
+});
+
+describe('textoDePacientes', () => {
+  it('junta los nombres con un separador', () => {
+    expect(textoDePacientes(['Alberto Gómez', 'Elena Gómez'], 'y {n} más')).toBe(
+      'Alberto Gómez · Elena Gómez'
+    );
+  });
+
+  it('el caso del asilo: muestra dos y dice cuántos faltan', () => {
+    const veinte = Array.from({ length: 20 }, (_, i) => `Paciente ${i + 1}`);
+    expect(textoDePacientes(veinte, 'y {n} más')).toBe('Paciente 1 · Paciente 2 · y 18 más');
+  });
+
+  it('sin nadie devuelve el texto de vacío que le pasen', () => {
+    expect(textoDePacientes([], 'y {n} más')).toBe('—');
+    expect(textoDePacientes(null, 'y {n} más', null)).toBe(null);
   });
 });
 
@@ -92,11 +122,21 @@ describe('resumenDePacientes', () => {
 
 describe('filasPorPaciente', () => {
   it('un turno de tres personas aparece en las tres filas de la vista por Paciente', () => {
-    const mapa = new Map([['g1', [ELENA, ALBERTO, 'tercero']]]);
-    expect(filasPorPaciente({ id: 'g1' }, mapa)).toHaveLength(3);
+    const guardia = conPacientes(
+      [{ id: 'g1' }],
+      new Map([['g1', [ELENA, ALBERTO, 'tercero']]]),
+      NOMBRES
+    )[0];
+    expect(filasPorPaciente(guardia)).toHaveLength(3);
+    expect(filasPorPaciente(guardia)).toContain(ELENA);
+    expect(filasPorPaciente(guardia)).toContain(ALBERTO);
+  });
+
+  it('si la lista todavía no llegó, cae al Paciente de la columna vieja', () => {
+    expect(filasPorPaciente({ id: 'g1', paciente_id: ELENA })).toEqual([ELENA]);
   });
 
   it('una guardia sin nadie va a la fila de los que no tienen Paciente', () => {
-    expect(filasPorPaciente({ id: 'g1' }, new Map())).toEqual([SIN_PACIENTES]);
+    expect(filasPorPaciente({ id: 'g1' })).toEqual([SIN_PACIENTES]);
   });
 });

@@ -11,6 +11,8 @@ import { GuardiaAcciones } from './guardias/GuardiaAcciones';
 import { filtrarPorExcepcion } from '../lib/excepciones';
 import { estaSinCubrir } from '../lib/cobertura';
 import { reasignarGuardia } from '../lib/reasignarGuardia';
+import { cambiarPacienteDeGuardia } from '../lib/cambiarPacienteDeGuardia';
+import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../lib/pacientesDeGuardia';
 import { correrHora, hoyISO, sumarDias } from '../lib/horarios';
 import { COLUMNAS_ESTADO_MATRICULA, URGENCIA, urgenciaDeVencimiento } from '../lib/matricula';
 
@@ -135,10 +137,14 @@ export function EstadoActual() {
     const nombresAsistente = Object.fromEntries((as.data ?? []).map((a) => [a.id, a.nombre]));
     const nombresPaciente = Object.fromEntries((ps.data ?? []).map((p) => [p.id, p.nombre]));
 
-    const filas = (gs.data ?? []).map((g) => ({
+    // A quiénes atiende cada guardia. Se pregunta después de traerlas, con los ids ya en la
+    // mano, porque un turno puede cubrir a más de una persona y esa lista no vive en la
+    // guardia sino en su propia tabla (ver `lib/pacientesDeGuardia.js`).
+    const pacientesPorGuardia = await cargarPacientesDeGuardias((gs.data ?? []).map((g) => g.id));
+
+    const filas = conPacientes(gs.data ?? [], pacientesPorGuardia, nombresPaciente).map((g) => ({
       ...g,
       asistente_nombre: nombresAsistente[g.asistente_id] ?? null,
-      paciente_nombre: nombresPaciente[g.paciente_id] ?? null,
     }));
 
     // Dos conjuntos, no uno: un papel que ya venció es rojo y uno que está por vencer es
@@ -201,9 +207,21 @@ export function EstadoActual() {
   // mirando momentos distintos y contradecirse.
   const ctx = useMemo(() => ({ ahora: new Date(), ...ctxExtra }), [ctxExtra]);
 
+  /* Los nombres de los Pacientes, resumidos en una línea para el chip de la grilla.
+     Se arma acá y no al cargar a propósito: el resumen depende del idioma ("y 3 más"), y
+     cambiar de idioma no tiene por qué obligar a volver a pedirle las guardias a la base. */
+  const guardiasConNombres = useMemo(
+    () =>
+      guardias.map((g) => ({
+        ...g,
+        paciente_nombre: textoDePacientes(g.pacientes_nombres, t.guardias.pacientes_y_mas, null),
+      })),
+    [guardias, t]
+  );
+
   const guardiasVisibles = useMemo(
-    () => filtrarPorExcepcion(guardias, excepcionActiva, ctx),
-    [guardias, excepcionActiva, ctx]
+    () => filtrarPorExcepcion(guardiasConNombres, excepcionActiva, ctx),
+    [guardiasConNombres, excepcionActiva, ctx]
   );
 
   const seleccionadasEnteras = useMemo(
@@ -245,16 +263,29 @@ export function EstadoActual() {
     cargar();
   }
 
-  async function moverGuardia({ guardiaId, fila, fecha, vista: vistaDelMovimiento, horaInicio, horaFin }) {
+  async function moverGuardia({ guardiaId, fila, filaOrigen, fecha, vista: vistaDelMovimiento, horaInicio, horaFin }) {
     const g = guardias.find((x) => x.id === guardiaId);
     if (!g) return;
 
-    const cambios = { fecha };
     // La vista viene con el movimiento, no se lee del estado de esta pantalla: la grilla
     // puede estar mostrando otra cosa de la que esta pantalla cree si nadie la controla, y
     // confundir Asistente con Paciente acá guardaría la guardia en la fila equivocada.
-    if ((vistaDelMovimiento ?? vista) === 'asistente') cambios.asistente_id = fila;
-    else cambios.paciente_id = fila;
+    const porPaciente = (vistaDelMovimiento ?? vista) !== 'asistente';
+
+    /* Mover una guardia entre filas de Pacientes no es escribir una columna. Un turno puede
+       cubrir a varias personas, así que sacarlo de una fila y ponerlo en otra toca la lista de
+       ese turno y deja a los demás donde estaban. Toda esa cuenta vive en un solo lugar
+       (regla 12 de CLAUDE.md §7), y esta pantalla solo la llama. */
+    if (porPaciente) {
+      const { error: falla } = await cambiarPacienteDeGuardia(g, filaOrigen, fila);
+      if (falla) {
+        setError(falla);
+        return;
+      }
+    }
+
+    const cambios = { fecha };
+    if (!porPaciente) cambios.asistente_id = fila;
 
     // Solo la vista de línea de tiempo manda horas: ahí la posición horizontal ES la hora.
     // En las otras, mover una guardia de una fila a otra no le toca el horario. Las dos

@@ -24,6 +24,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { FILA_SIN_CUBRIR, filaDeGuardia } from '../../lib/cobertura';
+import { SIN_PACIENTES, filasPorPaciente } from '../../lib/pacientesDeGuardia';
 import { ordenPorUrgencia, situacionDeGuardia, tonoDeGuardia } from '../../lib/semaforoGuardia';
 import { correrHora, finDeGuardia, hoyISO, inicioDeGuardia, sumarDias } from '../../lib/horarios';
 import { con } from '../../lib/textos';
@@ -32,12 +33,10 @@ import { con } from '../../lib/textos';
 const VISTAS = ['asistente', 'paciente'];
 const ZOOMS = ['dia', 'semana', 'linea'];
 
-/**
- * La fila donde caen las guardias que todavía no tienen Paciente asignado. Es el espejo de
- * `FILA_SIN_CUBRIR`, que hace lo mismo del lado de los Asistentes. Se usa una cadena y no
- * `null` por el mismo motivo que allá: `null` como clave se confunde con "no cargó todavía".
- */
-const FILA_SIN_PACIENTE = 'sin-paciente';
+/* La fila donde caen las guardias que todavía no tienen ningún Paciente es `SIN_PACIENTES`,
+   traída de `lib/pacientesDeGuardia.js`. Es el espejo de `FILA_SIN_CUBRIR`, que hace lo mismo
+   del lado de los Asistentes, y no se define acá una segunda marca para lo mismo: dos nombres
+   para la misma fila terminan comparándose entre sí y no coincidiendo nunca. */
 
 const HORAS_DEL_DIA = 24;
 const MS_POR_HORA = 60 * 60 * 1000;
@@ -78,19 +77,27 @@ function diasDelRango(desde, hasta) {
  */
 function filasDeGuardias(guardias, vista, t) {
   const porPaciente = vista === 'paciente';
-  const idHueco = porPaciente ? FILA_SIN_PACIENTE : FILA_SIN_CUBRIR;
+  const idHueco = porPaciente ? SIN_PACIENTES : FILA_SIN_CUBRIR;
   const nombreHueco = porPaciente ? t.guardias.fila_sin_paciente : t.guardias.fila_sin_cubrir;
 
   const porId = new Map();
   for (const g of guardias) {
-    const id = porPaciente ? (g.paciente_id ?? FILA_SIN_PACIENTE) : filaDeGuardia(g);
-    if (porId.has(id)) continue;
-    const hueco = id === idHueco;
-    porId.set(id, {
-      id,
-      hueco,
-      nombre: hueco ? nombreHueco : (porPaciente ? g.paciente_nombre : g.asistente_nombre) ?? '',
-    });
+    // Del lado del Asistente cada guardia entra en una fila sola. Del lado del Paciente puede
+    // entrar en varias, porque un turno cubre a más de una persona: la misma guardia aparece
+    // en la fila de cada una.
+    const entradas = porPaciente
+      ? (g.pacientes?.length ? g.pacientes : [{ id: SIN_PACIENTES, nombre: null }])
+      : [{ id: filaDeGuardia(g), nombre: g.asistente_nombre }];
+
+    for (const entrada of entradas) {
+      if (porId.has(entrada.id)) continue;
+      const hueco = entrada.id === idHueco;
+      porId.set(entrada.id, {
+        id: entrada.id,
+        hueco,
+        nombre: hueco ? nombreHueco : entrada.nombre ?? '',
+      });
+    }
   }
 
   const conNombre = Array.from(porId.values())
@@ -100,10 +107,13 @@ function filasDeGuardias(guardias, vista, t) {
   return hueco ? [hueco, ...conNombre] : conNombre;
 }
 
-/** A qué fila pertenece una guardia, según la vista. */
-function filaDeGuardiaSegunVista(guardia, vista) {
-  if (vista === 'paciente') return guardia.paciente_id ?? FILA_SIN_PACIENTE;
-  return filaDeGuardia(guardia);
+/**
+ * A qué filas pertenece una guardia, según la vista. Siempre devuelve una lista: por Asistente
+ * tiene un solo elemento, por Paciente tiene tantos como personas cubra el turno.
+ */
+function filasDeGuardiaSegunVista(guardia, vista) {
+  if (vista !== 'paciente') return [filaDeGuardia(guardia)];
+  return filasPorPaciente(guardia);
 }
 
 /**
@@ -204,9 +214,13 @@ export function GrillaGuardias({
   const porCelda = useMemo(() => {
     const mapa = new Map();
     for (const g of visibles) {
-      const clave = `${filaDeGuardiaSegunVista(g, vistaActiva)}__${g.fecha}`;
-      if (!mapa.has(clave)) mapa.set(clave, []);
-      mapa.get(clave).push(g);
+      // Una guardia que cubre a tres personas se dibuja en las tres filas. Es el mismo turno
+      // mirado desde tres lugares, no tres turnos.
+      for (const idFila of filasDeGuardiaSegunVista(g, vistaActiva)) {
+        const clave = `${idFila}__${g.fecha}`;
+        if (!mapa.has(clave)) mapa.set(clave, []);
+        mapa.get(clave).push(g);
+      }
     }
     for (const lista of mapa.values()) {
       lista.sort(
@@ -223,7 +237,7 @@ export function GrillaGuardias({
   const filasDeLinea = useMemo(() => {
     let hilera = HILERAS_ANTES_DE_LOS_DATOS + 1;
     return filas.map((fila) => {
-      const suyas = visibles.filter((g) => filaDeGuardiaSegunVista(g, vistaActiva) === fila.id);
+      const suyas = visibles.filter((g) => filasDeGuardiaSegunVista(g, vistaActiva).includes(fila.id));
       const { ubicadas, cantidadDeCarriles } = carrilesDeLaFila(suyas);
       const desdeHilera = hilera;
       hilera += cantidadDeCarriles;
@@ -290,7 +304,17 @@ export function GrillaGuardias({
     const guardia = guardias.find((g) => String(g.id) === String(guardiaId));
     if (!guardia) return;
 
-    const movimiento = { guardiaId, fila: fila.id, fecha: columna.fecha, vista: vistaActiva };
+    // De qué fila se la sacó. En la vista por Paciente hace toda la diferencia: un turno que
+    // cubre a dos personas está dibujado en dos filas, y sin saber de cuál se lo arrastró no
+    // hay forma de saber a quién se quiso cambiar. Sin este dato, la pantalla de arriba
+    // terminaría cambiando al Paciente equivocado.
+    const movimiento = {
+      guardiaId,
+      fila: fila.id,
+      filaOrigen: e.dataTransfer.getData('filaOrigen') || null,
+      fecha: columna.fecha,
+      vista: vistaActiva,
+    };
 
     if (zoomActivo === 'linea') {
       // Se corren las dos horas por la misma cantidad de minutos: así la duración queda igual
@@ -338,9 +362,13 @@ export function GrillaGuardias({
    * posición dentro de la grilla (qué columnas ocupa y en qué carril va): son medidas que
    * dependen del horario de cada guardia, no decisiones de diseño.
    */
-  function chipDeGuardia(guardia, estilo) {
+  function chipDeGuardia(guardia, estilo, filaOrigen) {
     const elegida = typeof elegidas.has === 'function' && elegidas.has(guardia.id);
     const espejo = vistaActiva === 'paciente' ? guardia.asistente_nombre : guardia.paciente_nombre;
+    // Cuántas personas cubre el turno. Se avisa solo cuando son más de una, y sobre todo en la
+    // vista por Paciente: ahí el mismo turno está dibujado en varias filas y sin este aviso
+    // parecen guardias distintas. Es una sola visita, no dos.
+    const cuantos = guardia.pacientes?.length ?? 0;
     // La palabra del chip es la SITUACIÓN, no la columna `estado` de la base. Dos guardias
     // pueden estar las dos como 'programada' y una estar en curso y la otra sin marca de
     // llegada: leer "Programada" en las dos escondería justo lo que hay que ver. El color
@@ -357,7 +385,10 @@ export function GrillaGuardias({
         data-tono={tonoDeGuardia(guardia, contexto)}
         style={estilo}
         draggable
-        onDragStart={(e) => e.dataTransfer.setData('guardiaId', guardia.id)}
+        onDragStart={(e) => {
+          e.dataTransfer.setData('guardiaId', guardia.id);
+          if (filaOrigen) e.dataTransfer.setData('filaOrigen', filaOrigen);
+        }}
         onClick={(e) => abrirOElegir(e, guardia)}
         onKeyDown={(e) => teclaEnChip(e, guardia)}
         role="button"
@@ -371,6 +402,9 @@ export function GrillaGuardias({
           {textoEstado && <span className="grilla-chip-detalle">{textoEstado}</span>}
         </div>
         {espejo && <div className="grilla-chip-detalle">{espejo}</div>}
+        {cuantos > 1 && (
+          <div className="grilla-chip-nota">{con(t.guardias.cubre_a_varios, { n: cuantos })}</div>
+        )}
         {/* La guardia que cruza la medianoche se corta al final del día. Para que no parezca
             que termina a las 24, se muestra su hora de fin real. No lleva ninguna palabra
             porque todavía no existe ese texto traducido, y un texto a mano se vería en un
@@ -521,10 +555,14 @@ export function GrillaGuardias({
 
                   {ubicadas.map(({ guardia, carril }) => {
                     const { primeraHora, lineaFinal } = tramoDelDia(guardia, diaActivo);
-                    return chipDeGuardia(guardia, {
-                      gridColumn: `${COLUMNAS_ANTES_DE_LOS_DATOS + 1 + primeraHora} / ${COLUMNAS_ANTES_DE_LOS_DATOS + 1 + lineaFinal}`,
-                      gridRow: desdeHilera + carril,
-                    });
+                    return chipDeGuardia(
+                      guardia,
+                      {
+                        gridColumn: `${COLUMNAS_ANTES_DE_LOS_DATOS + 1 + primeraHora} / ${COLUMNAS_ANTES_DE_LOS_DATOS + 1 + lineaFinal}`,
+                        gridRow: desdeHilera + carril,
+                      },
+                      fila.id,
+                    );
                   })}
                 </Fragment>
               ))
@@ -543,7 +581,7 @@ export function GrillaGuardias({
                         onDragLeave={() => setCeldaDestino((actual) => (actual === clave ? null : actual))}
                         onDrop={(e) => handleDrop(e, fila, { fecha })}
                       >
-                        {(porCelda.get(clave) ?? []).map((g) => chipDeGuardia(g))}
+                        {(porCelda.get(clave) ?? []).map((g) => chipDeGuardia(g, undefined, fila.id))}
                       </div>
                     );
                   })}

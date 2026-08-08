@@ -17,7 +17,9 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
   const [pacientes, setPacientes] = useState([]);
   const [diasGeneracion, setDiasGeneracion] = useState(DIAS_GENERACION_SIN_VIGENCIA_HASTA_DEFAULT);
   const [asistenteId, setAsistenteId] = useState('');
-  const [pacienteId, setPacienteId] = useState('');
+  // A quiénes atiende el turno. Es una lista y no un valor suelto porque una guardia puede
+  // cubrir a más de una persona: un matrimonio en su casa, o un grupo en un asilo.
+  const [pacienteIds, setPacienteIds] = useState([]);
   const [modalidad, setModalidad] = useState('');
   const [horaInicio, setHoraInicio] = useState('');
   const [horaFin, setHoraFin] = useState('');
@@ -32,7 +34,9 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
     async function cargarListas() {
       const [{ data: asistentesData }, { data: pacientesData }, { data: prestadoraData }] = await Promise.all([
         supabase.from('asistentes').select('id, nombre').eq('estado', 'activo').order('nombre'),
-        supabase.from('pacientes').select('id, nombre').is('deleted_at', null).order('nombre'),
+        // Se pide también el domicilio: cuando dos personas viven en la misma casa, verlo al
+        // lado del nombre es lo que hace evidente que ese turno los cubre a los dos.
+        supabase.from('pacientes').select('id, nombre, domicilio').is('deleted_at', null).order('nombre'),
         supabase.from('prestadoras').select('dias_generacion_series_guardia').eq('id', usuario.prestadora_id).single(),
       ]);
       setAsistentes(asistentesData ?? []);
@@ -43,6 +47,10 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
     }
     cargarListas();
   }, [usuario.prestadora_id]);
+
+  function togglePaciente(id) {
+    setPacienteIds((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
+  }
 
   function toggleDia(dia) {
     setDiasSemana((prev) => (prev.includes(dia) ? prev.filter((d) => d !== dia) : [...prev, dia]));
@@ -68,6 +76,11 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
     e.preventDefault();
     setError(null);
 
+    if (pacienteIds.length === 0) {
+      setError(t.guardias.nueva_guardia.error_sin_pacientes);
+      return;
+    }
+
     if (esSerie && diasSemana.length === 0) {
       setError(t.guardias.nueva_guardia.error_dias_semana);
       return;
@@ -75,21 +88,49 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
 
     setGuardando(true);
 
+    // La columna `paciente_id` está en retiro pero todavía la leen muchas pantallas, así que
+    // se le escribe el primero de la lista. Un disparador de la base se encarga de que ese
+    // Paciente quede también en `guardia_pacientes`; acá se agregan los demás.
+    // Ver la migración 20260807190000_una_guardia_puede_cubrir_varios_pacientes.sql.
+    const [primero, ...resto] = pacienteIds;
+
     if (!esSerie) {
-      const { error: errorInsert } = await supabase.from('guardias').insert({
-        prestadora_id: usuario.prestadora_id,
-        asistente_id: asistenteId || null,
-        paciente_id: pacienteId,
-        fecha,
-        hora_inicio: horaInicio,
-        hora_fin: horaFin,
-        modalidad,
-      });
-      setGuardando(false);
+      const { data: guardia, error: errorInsert } = await supabase
+        .from('guardias')
+        .insert({
+          prestadora_id: usuario.prestadora_id,
+          asistente_id: asistenteId || null,
+          paciente_id: primero,
+          fecha,
+          hora_inicio: horaInicio,
+          hora_fin: horaFin,
+          modalidad,
+        })
+        .select('id')
+        .single();
+
       if (errorInsert) {
+        setGuardando(false);
         setError(errorInsert.message);
         return;
       }
+
+      if (resto.length > 0) {
+        const { error: errorPacientes } = await supabase.from('guardia_pacientes').insert(
+          resto.map((id) => ({
+            guardia_id: guardia.id,
+            paciente_id: id,
+            prestadora_id: usuario.prestadora_id,
+          })),
+        );
+        if (errorPacientes) {
+          setGuardando(false);
+          setError(errorPacientes.message);
+          return;
+        }
+      }
+
+      setGuardando(false);
       onCreada();
       return;
     }
@@ -99,7 +140,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
       .insert({
         prestadora_id: usuario.prestadora_id,
         asistente_id: asistenteId || null,
-        paciente_id: pacienteId,
+        paciente_id: primero,
         dias_semana: diasSemana,
         hora_inicio: horaInicio,
         hora_fin: horaFin,
@@ -116,26 +157,65 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
       return;
     }
 
+    if (resto.length > 0) {
+      const { error: errorPacientesSerie } = await supabase.from('series_guardias_pacientes').insert(
+        resto.map((id) => ({
+          serie_id: serie.id,
+          paciente_id: id,
+          prestadora_id: usuario.prestadora_id,
+        })),
+      );
+      if (errorPacientesSerie) {
+        setGuardando(false);
+        setError(errorPacientesSerie.message);
+        return;
+      }
+    }
+
     const fechas = generarFechasSerie(vigenteDesde, vigenteHasta, diasSemana);
     const filasGuardias = fechas.map((f) => ({
       prestadora_id: usuario.prestadora_id,
       serie_id: serie.id,
       asistente_id: asistenteId || null,
-      paciente_id: pacienteId,
+      paciente_id: primero,
       fecha: f,
       hora_inicio: horaInicio,
       hora_fin: horaFin,
       modalidad,
     }));
 
-    const { error: errorGuardias } = await supabase.from('guardias').insert(filasGuardias);
-    setGuardando(false);
+    const { data: guardiasCreadas, error: errorGuardias } = await supabase
+      .from('guardias')
+      .insert(filasGuardias)
+      .select('id');
 
     if (errorGuardias) {
+      setGuardando(false);
       setError(errorGuardias.message);
       return;
     }
 
+    // Cada fecha de la serie es una guardia distinta, y cada una lleva su propia lista de a
+    // quiénes atiende. No alcanza con cargarla una vez en la serie.
+    if (resto.length > 0 && guardiasCreadas?.length > 0) {
+      const filasPacientes = guardiasCreadas.flatMap((g) =>
+        resto.map((id) => ({
+          guardia_id: g.id,
+          paciente_id: id,
+          prestadora_id: usuario.prestadora_id,
+        })),
+      );
+      const { error: errorPacientesGuardias } = await supabase
+        .from('guardia_pacientes')
+        .insert(filasPacientes);
+      if (errorPacientesGuardias) {
+        setGuardando(false);
+        setError(errorPacientesGuardias.message);
+        return;
+      }
+    }
+
+    setGuardando(false);
     onCreada();
   }
 
@@ -172,19 +252,34 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
           </FormField>
           <p className="panel-explicacion">{t.guardias.nueva_guardia.sin_asistente_ayuda}</p>
 
-          <FormField
-            label={t.guardias.nueva_guardia.paciente}
-            name="paciente_id"
-            type="select"
-            required
-            value={pacienteId}
-            onChange={(e) => setPacienteId(e.target.value)}
-          >
-            <option value="">{t.guardias.nueva_guardia.elegir}</option>
-            {pacientes.map((p) => (
-              <option key={p.id} value={p.id}>{p.nombre}</option>
-            ))}
-          </FormField>
+          {/* Una lista de marcar y no un desplegable: el desplegable deja elegir uno solo, y
+              acá el turno puede cubrir a varios. */}
+          <div className="form-field">
+            <label>
+              {t.guardias.nueva_guardia.pacientes}
+              <span className="required">*</span>
+            </label>
+            {pacientes.length === 0 ? (
+              <p className="panel-explicacion">{t.guardias.nueva_guardia.pacientes_sin_ninguno}</p>
+            ) : (
+              <div className="panel-lista-pacientes">
+                {pacientes.map((p) => (
+                  <label key={p.id}>
+                    <input
+                      type="checkbox"
+                      checked={pacienteIds.includes(p.id)}
+                      onChange={() => togglePaciente(p.id)}
+                    />
+                    <span>
+                      {p.nombre}
+                      {p.domicilio && <small>{p.domicilio}</small>}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+          <p className="panel-explicacion">{t.guardias.nueva_guardia.pacientes_ayuda}</p>
 
           <FormField
             label={t.guardias.nueva_guardia.modalidad}

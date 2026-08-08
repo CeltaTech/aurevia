@@ -1046,6 +1046,43 @@ h2 {
   font-size: 0.9rem;
 }
 
+/* La lista de a quiénes atiende una guardia. Tiene alto máximo y se desplaza porque en un
+   asilo pueden ser veinte o más: sin tope, la lista empujaría los botones fuera de la
+   pantalla y no se podría guardar. */
+.panel-lista-pacientes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--borde-card);
+  border-radius: 8px;
+  background: var(--superficie);
+  padding: 0.35rem;
+}
+
+.panel-lista-pacientes label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.panel-lista-pacientes label:hover {
+  background: var(--fondo-app);
+}
+
+/* El domicilio va abajo del nombre y más chico: sirve para reconocer que dos personas viven
+   en la misma casa, pero no compite con el nombre. */
+.panel-lista-pacientes small {
+  display: block;
+  color: var(--texto-secundario);
+  font-size: 0.8rem;
+}
+
 .panel-modal-acciones {
   display: flex;
   justify-content: flex-end;

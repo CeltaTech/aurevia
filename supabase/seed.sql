@@ -293,7 +293,17 @@ INSERT INTO public.pacientes (
   ('50000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111',
    '40000000-0000-4000-8000-000000000003', 'Rosa Morales', '1935-07-25',
    ARRAY['Demencia senil', 'Movilidad reducida'], 'III',
-   'Pasaje Inventado 55, Zona Sur', -34.7200, -58.3900, NULL, NULL);
+   'Pasaje Inventado 55, Zona Sur', -34.7200, -58.3900, NULL, NULL),
+
+  -- El marido de Elena: misma Familia, MISMO DOMICILIO, escrito igual letra por letra.
+  -- Está acá para que el domicilio compartido se pueda probar de verdad (pendiente #94):
+  -- el Asistente va una sola vez a esa casa y los atiende a los dos, y eso es UNA guardia
+  -- sola que cubre a dos Pacientes. Sin este cuarto Paciente, los tres domicilios de la
+  -- siembra eran todos distintos y el caso no se podía reproducir sin tocar la base a mano.
+  ('50000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111',
+   '40000000-0000-4000-8000-000000000001', 'Alberto Gómez', '1936-09-30',
+   ARRAY['EPOC'], 'II',
+   'Av. Siempreviva 742, CABA', -34.6037, -58.3816, 'Obra Social de Prueba', 'OSP-0004');
 
 INSERT INTO public.servicios (id, prestadora_id, familia_id, etiqueta, estado) VALUES
   ('60000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', 'Acompañamiento diurno de Elena',   'vigente'),

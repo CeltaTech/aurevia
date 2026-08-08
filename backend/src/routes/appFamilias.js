@@ -338,15 +338,23 @@ appFamiliasRouter.post('/guardias/:guardiaId/calificar', requiereRolFamilia, asy
     return res.status(400).json({ error: 'La calificación debe ser un número entero de 1 a 5' });
   }
 
-  const { data: guardia } = await supabase
-    .from('guardias')
-    .select('id, asistente_id, paciente_id, prestadora_id, pacientes!inner(familia_id)')
-    .eq('id', req.params.guardiaId)
-    .eq('pacientes.familia_id', req.usuarioFamilia.familiaId)
-    .maybeSingle();
-  if (!guardia) {
+  // El turno se busca por la lista de Pacientes, no por la columna vieja. Un turno puede cubrir
+  // a más de una persona de la misma casa, y la calificación es del Asistente por ese turno: se
+  // guarda contra el Paciente de la Familia que califica, tomando el primero por orden de
+  // nombre cuando son varios, para que dos calificaciones del mismo turno no queden colgadas de
+  // Pacientes distintos según el orden en que la base devuelva las filas.
+  const { data: filas } = await supabase
+    .from('guardia_pacientes')
+    .select('paciente_id, pacientes!inner(nombre, familia_id), guardias!inner(id, asistente_id, prestadora_id)')
+    .eq('guardia_id', req.params.guardiaId)
+    .eq('pacientes.familia_id', req.usuarioFamilia.familiaId);
+  const fila = (filas ?? [])
+    .slice()
+    .sort((a, b) => (a.pacientes?.nombre ?? '').localeCompare(b.pacientes?.nombre ?? ''))[0];
+  if (!fila) {
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
+  const guardia = { ...fila.guardias, paciente_id: fila.paciente_id };
   // Una guardia que quedó sin cubrir no tiene a quién calificar. Sin este corte, el INSERT
   // manda asistente_id en NULL contra una columna obligatoria y devuelve un 500 sin
   // explicación.

@@ -253,8 +253,8 @@ export default function GuardiaActiva() {
   if (error) return <div className="alert alert-error">{error}</div>;
   if (!guardia) return <div className="estado-cargando">{t.comun.cargando}</div>;
 
-  // Un turno puede cubrir a más de un Paciente: una sola visita a una casa donde viven dos, o
-  // un grupo entero en un asilo. Por eso acá siempre hay una lista, aunque casi siempre tenga
+  // Una guardia puede cubrir a más de un Paciente: una casa donde viven dos, o un grupo
+  // entero en una residencia. Por eso acá siempre hay una lista, aunque casi siempre tenga
   // un solo nombre — y por eso el check-in de más abajo es uno solo para todos.
   const pacientes = guardia.pacientes ?? [];
   const sonVarios = pacientes.length > 1;

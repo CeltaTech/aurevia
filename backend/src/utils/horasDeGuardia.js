@@ -2,7 +2,7 @@
  * Las horas de una guardia, y a quién se le cuentan.
  *
  * POR QUÉ ESTE ARCHIVO EXISTE. Desde que una guardia puede cubrir a más de un Paciente
- * (una sola visita a una casa donde viven dos), la misma guardia se mira desde dos lados
+ * (una sola guardia en una casa donde viven dos), la misma guardia se mira desde dos lados
  * distintos y las cuentas NO son la misma:
  *
  *   - Al Asistente se le pagan las horas ENTERAS, una sola vez. Estuvo ocho horas

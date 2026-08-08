@@ -60,7 +60,7 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
   if (!paciente) throw new Error('Paciente no encontrado en esta Prestadora');
 
   // Las guardias de este Paciente salen de la lista de Pacientes de cada guardia, no de la
-  // columna vieja `guardias.paciente_id`: esa columna guarda UNO solo, así que en una visita
+  // columna vieja `guardias.paciente_id`: esa columna guarda UNO solo, así que en una guardia
   // compartida el informe del otro Paciente salía vacío aunque lo hubieran atendido.
   const { data: enLista, error: errorLista } = await supabase
     .from('guardia_pacientes')

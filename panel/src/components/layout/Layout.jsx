@@ -107,7 +107,7 @@ export function Layout() {
 
      El Servicio va en "Clientes" y no en "Cobertura" porque es lo que la
      Prestadora vende, no la forma de cubrirlo: de él cuelgan las prestaciones y
-     de algunas de ellas las Guardias (`docs/QUE_ES_UN_SERVICIO.md`). */
+     de algunas de ellas las Guardias (ver el glosario, `CLAUDE.md` §4). */
   const grupos = [
     {
       titulo: t.nav.grupo_clientes,

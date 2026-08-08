@@ -325,7 +325,7 @@ INSERT INTO public.lista_precios (prestadora_id, tipo_servicio, modalidad, preci
 -- Las prestaciones: lo que cada Servicio incluye de verdad. Rosa muestra el caso
 -- que importa —un Servicio es una canasta, no una sola cosa—: cuidado permanente
 -- más kinesiología más limpieza, tres prestaciones distintas dentro del mismo
--- Servicio (`docs/QUE_ES_UN_SERVICIO.md`).
+-- Servicio (ver el glosario, `CLAUDE.md` §4).
 INSERT INTO public.prestaciones (
   prestadora_id, servicio_id, paciente_id, tipo_servicio, precio_final,
   precio_lista_snapshot, nota, estado

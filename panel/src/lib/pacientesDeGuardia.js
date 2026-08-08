@@ -1,9 +1,9 @@
 // Punto único de verdad de a quiénes atiende una guardia, dentro del Panel
 // (regla 12 de CLAUDE.md §7).
 //
-// Una guardia es un turno, no una visita a una persona. Adentro de ese turno el Asistente
-// puede atender a más de un Paciente: un matrimonio en su casa, o un grupo entero en un
-// asilo. Por eso la respuesta a "¿a quién atiende esta guardia?" es siempre una lista,
+// Una guardia son las horas que el Asistente pasa cuidando, no el cuidado de una persona.
+// Adentro de esas horas puede atender a más de un Paciente: un matrimonio en su casa, o un
+// grupo entero en una residencia. Por eso la respuesta a "¿a quién atiende esta guardia?" es siempre una lista,
 // aunque casi siempre tenga un solo nombre.
 //
 // La lista vive en la tabla `guardia_pacientes`. La columna vieja `guardias.paciente_id`

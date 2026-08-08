@@ -455,9 +455,9 @@ export const T = {
       col_cantidad_guardias: 'Cantidad de guardias',
       col_horas_totales: 'Horas totales',
       col_horas_imputadas: 'Horas de este Paciente',
-      visita_compartida: 'Entre {n} Pacientes',
-      nota_visita_compartida:
-        'Cuando una misma visita cubre a varios Pacientes, sus horas se reparten entre ellos: no se le imputan enteras a cada uno.',
+      guardia_compartida: 'Entre {n} Pacientes',
+      nota_guardia_compartida:
+        'Cuando una misma guardia cubre a varios Pacientes, sus horas se reparten entre ellos: no se le imputan enteras a cada uno.',
       col_periodo: 'Período',
       col_tipo: 'Tipo',
       col_estado_informe: 'Estado',
@@ -2000,9 +2000,9 @@ export const T = {
       col_cantidad_guardias: 'Number of shifts',
       col_horas_totales: 'Total hours',
       col_horas_imputadas: 'Hours for this Patient',
-      visita_compartida: 'Among {n} Patients',
-      nota_visita_compartida:
-        'When a single visit covers several Patients, its hours are split among them: they are not counted in full for each one.',
+      guardia_compartida: 'Among {n} Patients',
+      nota_guardia_compartida:
+        'When a single shift covers several Patients, its hours are split among them: they are not counted in full for each one.',
       col_periodo: 'Period',
       col_tipo: 'Type',
       col_estado_informe: 'Status',
@@ -3537,9 +3537,9 @@ export const T = {
       col_cantidad_guardias: 'Quantidade de plantões',
       col_horas_totales: 'Horas totais',
       col_horas_imputadas: 'Horas deste Paciente',
-      visita_compartida: 'Entre {n} Pacientes',
-      nota_visita_compartida:
-        'Quando uma mesma visita atende vários Pacientes, suas horas são divididas entre eles: não são contadas por inteiro para cada um.',
+      guardia_compartida: 'Entre {n} Pacientes',
+      nota_guardia_compartida:
+        'Quando um mesmo plantão atende vários Pacientes, suas horas são divididas entre eles: não são contadas por inteiro para cada um.',
       col_periodo: 'Período',
       col_tipo: 'Tipo',
       col_estado_informe: 'Status',

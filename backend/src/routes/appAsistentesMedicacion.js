@@ -11,8 +11,8 @@ import { asistenteAtiendeAlPaciente } from '../utils/pacientesDeGuardia.js';
 export const appAsistentesMedicacionRouter = Router();
 
 appAsistentesMedicacionRouter.get('/:pacienteId', requiereRolAsistente, async (req, res) => {
-  // El permiso se pregunta contra la lista de Pacientes del turno, no contra la columna vieja:
-  // el segundo Paciente de una visita compartida también es un Paciente que este Asistente
+  // El permiso se pregunta contra la lista de Pacientes de la guardia, no contra la columna
+  // vieja: el segundo Paciente de una guardia compartida también es un Paciente que este Asistente
   // atiende, y sus órdenes de medicación tienen que estar a la vista.
   if (!(await asistenteAtiendeAlPaciente(req.params.pacienteId, req.usuarioAsistente))) {
     return res.status(404).json({ error: 'Paciente no encontrado' });

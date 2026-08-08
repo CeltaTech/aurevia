@@ -153,9 +153,9 @@ export function PagosAsistentes() {
     const porAsistente = {};
 
     // ATENCIÓN antes de tocar este bucle: acá se cuenta UNA FILA POR GUARDIA, a propósito, y
-    // no se cruza con la lista de Pacientes de cada guardia. Desde que un mismo turno puede
-    // cubrir a varias personas (una sola visita a una casa donde viven dos), la tentación es
-    // "completar" esto uniéndolo con `guardia_pacientes`. No se hace: si se hiciera, un turno
+    // no se cruza con la lista de Pacientes de cada guardia. Desde que una misma guardia puede
+    // cubrir a varias personas (una sola guardia en una casa donde viven dos), la tentación es
+    // "completar" esto uniéndolo con `guardia_pacientes`. No se hace: si se hiciera, una guardia
     // de ocho horas para dos Pacientes aparecería dos veces y el Asistente cobraría dieciséis
     // horas por ocho trabajadas.
     //

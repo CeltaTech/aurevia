@@ -3,6 +3,7 @@ import { notificarCoordinador, enviarWhatsApp } from './whatsapp.js';
 import { enviarPushFamilia } from './push.js';
 import { configuracionEvento } from './email.js';
 import { necesitaNotificar } from './insistencia.js';
+import { pacientesDeGuardia } from './pacientesDeGuardia.js';
 
 // Punto 5 de docs/PRD_06_WhatsApp_IA.md: insistencia al Coordinador según premura, con
 // coordinador de respaldo si no hay reacción, parametrizado por prestadora
@@ -162,33 +163,38 @@ async function notificarFamiliaSiCorresponde({ prestadoraId, guardiaEntranteId, 
 
   const { data: guardia } = await supabase
     .from('guardias')
-    .select('paciente_id')
+    .select('id, paciente_id')
     .eq('id', guardiaEntranteId)
     .single();
-  if (!guardia?.paciente_id) return;
+  if (!guardia) return;
 
-  const { data: paciente } = await supabase
-    .from('pacientes')
-    .select('familia_id')
-    .eq('id', guardia.paciente_id)
-    .single();
-  if (!paciente?.familia_id) return;
+  // Un turno puede cubrir a más de un Paciente, y cada uno tiene su propia Familia esperando.
+  // Se avisa a todas: la Familia del segundo Paciente se quedó igual de sin cuidado que la del
+  // primero, y no enterarse es exactamente lo que este aviso existe para evitar.
+  let familiaIds;
+  try {
+    const pacientes = await pacientesDeGuardia(guardia, 'id, familia_id');
+    familiaIds = [...new Set(pacientes.map((p) => p.familia_id).filter(Boolean))];
+  } catch (err) {
+    console.error(`Error leyendo los Pacientes de la guardia ${guardiaEntranteId}:`, err.message);
+    return;
+  }
+  if (familiaIds.length === 0) return;
 
-  const { data: usuario } = await supabase
-    .from('usuarios')
-    .select('telefono')
-    .eq('id', paciente.familia_id)
-    .single();
+  const { data: usuarios } = await supabase.from('usuarios').select('id, telefono').in('id', familiaIds);
+  const telefonoPorFamilia = new Map((usuarios ?? []).map((u) => [u.id, u.telefono]));
 
-  await enviarPushFamilia(paciente.familia_id, {
-    titulo: 'Continuidad de guardia',
-    cuerpo: texto,
-    url: '/',
-  });
+  for (const familiaId of familiaIds) {
+    await enviarPushFamilia(familiaId, {
+      titulo: 'Continuidad de guardia',
+      cuerpo: texto,
+      url: '/',
+    });
 
-  if (usuario?.telefono) {
+    const telefono = telefonoPorFamilia.get(familiaId);
+    if (!telefono) continue;
     try {
-      await enviarWhatsApp({ prestadoraId, telefono: usuario.telefono, texto });
+      await enviarWhatsApp({ prestadoraId, telefono, texto });
     } catch (err) {
       console.error(`Error enviando WhatsApp a Familia (incidente_relevo_sin_resolver, guardia ${guardiaEntranteId}):`, err.message);
     }

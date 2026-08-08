@@ -5,6 +5,7 @@ import { distanciaKm } from '../lib/distancia';
 import { claseBadge } from '../lib/tonos';
 import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { cargarPacientesDeGuardias, pacientesDeGuardia, textoDePacientes } from '../lib/pacientesDeGuardia';
 
 // Umbral de cercanía para considerar un check-in/check-out "verificado" contra el
 // domicilio registrado del Paciente — mismo criterio de constante local ya usado en
@@ -27,6 +28,26 @@ function estadoVerificacion(punto, paciente) {
   if (!paciente?.lat || !paciente?.lng) return 'sin_domicilio';
   const distancia = distanciaKm(punto.lat, punto.lng, paciente.lat, paciente.lng);
   return distancia <= RADIO_VERIFICACION_KM ? 'verificado' : 'fuera_de_rango';
+}
+
+/*
+ * Dónde marcó el Asistente, cuando el turno cubre a más de un Paciente.
+ *
+ * Alcanza con haber llegado al domicilio de **alguno** de ellos: normalmente viven en la misma
+ * casa, y aunque cada domicilio esté cargado con coordenadas apenas distintas, estar en una de
+ * las dos puertas es estar donde había que estar. Exigirlo contra los dos daría "fuera de
+ * rango" a alguien que llegó bien.
+ *
+ * El orden en que se elige es de mejor a peor, no el primero que aparezca: verificado gana a
+ * fuera de rango, y fuera de rango gana a un domicilio sin cargar.
+ */
+const ORDEN_VERIFICACION = ['verificado', 'fuera_de_rango', 'sin_domicilio'];
+
+function estadoVerificacionDelTurno(punto, pacientes) {
+  if (!punto?.lat || !punto?.lng) return 'sin_datos';
+  if (!pacientes?.length) return 'sin_domicilio';
+  const estados = pacientes.map((p) => estadoVerificacion(punto, p));
+  return ORDEN_VERIFICACION.find((e) => estados.includes(e)) ?? 'sin_domicilio';
 }
 
 export function Evv() {
@@ -67,14 +88,31 @@ export function Evv() {
     const asistentesPorId = Object.fromEntries((asistentesData ?? []).map((a) => [a.id, a.nombre]));
     const pacientesPorId = Object.fromEntries((pacientesData ?? []).map((p) => [p.id, p]));
 
+    let pacientesPorGuardia;
+    try {
+      pacientesPorGuardia = await cargarPacientesDeGuardias((guardiasData ?? []).map((g) => g.id));
+    } catch (e) {
+      setError(e.message);
+      setEstadoCarga('error');
+      return;
+    }
+
     const filasConEstado = (guardiasData ?? []).map((g) => {
-      const paciente = pacientesPorId[g.paciente_id];
+      // Todos los Pacientes del turno, ordenados por nombre para que dos turnos con la misma
+      // gente se lean igual.
+      const pacientes = pacientesDeGuardia(g, pacientesPorGuardia)
+        .map((id) => pacientesPorId[id])
+        .filter(Boolean)
+        .sort((a, b) => (a.nombre ?? '').localeCompare(b.nombre ?? ''));
       return {
         ...g,
         asistente_nombre: asistentesPorId[g.asistente_id] || '—',
-        paciente_nombre: paciente?.nombre || '—',
-        estado_checkin: estadoVerificacion({ lat: g.checkin_lat, lng: g.checkin_lng }, paciente),
-        estado_checkout: estadoVerificacion({ lat: g.checkout_lat, lng: g.checkout_lng }, paciente),
+        paciente_nombre: textoDePacientes(
+          pacientes.map((p) => p.nombre),
+          t.guardias.pacientes_y_mas,
+        ),
+        estado_checkin: estadoVerificacionDelTurno({ lat: g.checkin_lat, lng: g.checkin_lng }, pacientes),
+        estado_checkout: estadoVerificacionDelTurno({ lat: g.checkout_lat, lng: g.checkout_lng }, pacientes),
       };
     });
 
@@ -82,7 +120,7 @@ export function Evv() {
     setEstadoCarga('listo');
     // Solo el rango de fechas se pide al servidor: el filtro de verificación se aplica acá,
     // en memoria, y no tiene que volver a consultar la base cada vez que cambia.
-  }, [f.desde, f.hasta]);
+  }, [f.desde, f.hasta, t]);
 
   useEffect(() => {
     recargar();

@@ -7,6 +7,7 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
+import { cargarPacientesDeGuardias, conPacientes, pacientesDeGuardia, textoDePacientes } from '../lib/pacientesDeGuardia';
 
 const TIPOS_RESOLUCION = ['suplente', 'franquero', 'emergencia', 'familiar'];
 
@@ -47,14 +48,18 @@ export function Continuidad() {
         ]),
       );
 
-      const [{ data: guardiasData }, { data: nivelesData }] = await Promise.all([
+      const [{ data: guardiasData }, { data: nivelesData }, pacientesPorGuardia] = await Promise.all([
         idsGuardias.length
           ? supabase.from('guardias').select('id, paciente_id, asistente_id, fecha, hora_inicio, hora_fin').in('id', idsGuardias)
           : Promise.resolve({ data: [] }),
         supabase.from('configuracion_escalada_relevo').select('*').order('nivel'),
+        cargarPacientesDeGuardias(idsGuardias),
       ]);
 
-      const idsPacientesGuardias = Array.from(new Set((guardiasData ?? []).map((g) => g.paciente_id)));
+      // Un turno puede cubrir a más de un Paciente. Se piden los nombres de todos: quien mira
+      // esta pantalla está decidiendo a quién manda a una casa donde faltó alguien, y saber si
+      // se quedó sin atender una persona o dos cambia la urgencia del asunto.
+      const idsPacientesGuardias = (guardiasData ?? []).flatMap((g) => pacientesDeGuardia(g, pacientesPorGuardia));
       const idsPacientesNotificaciones = (notificacionesData ?? []).map((n) => n.paciente_id);
       const idsPacientes = Array.from(new Set([...idsPacientesGuardias, ...idsPacientesNotificaciones]));
       const idsCoordinadores = Array.from(new Set((notificacionesData ?? []).map((n) => n.cerrado_por)));
@@ -65,8 +70,11 @@ export function Continuidad() {
         idsCoordinadores.length ? supabase.from('usuarios').select('id, nombre').in('id', idsCoordinadores) : Promise.resolve({ data: [] }),
       ]);
 
-      const guardiasPorId = Object.fromEntries((guardiasData ?? []).map((g) => [g.id, g]));
       const pacientesPorId = Object.fromEntries((pacientesData ?? []).map((p) => [p.id, p.nombre]));
+      const guardiasPorId = Object.fromEntries(
+        conPacientes(guardiasData ?? [], pacientesPorGuardia, pacientesPorId).map((g) => [g.id, g]),
+      );
+      const nombresDelTurno = (g) => (g ? textoDePacientes(g.pacientes_nombres, t.guardias.pacientes_y_mas) : '—');
       const asistentesPorId = Object.fromEntries((asistentesData ?? []).map((a) => [a.id, a.nombre]));
       const coordinadoresPorId = Object.fromEntries((coordinadoresData ?? []).map((c) => [c.id, c.nombre]));
       const nivelesPorNumero = Object.fromEntries((nivelesData ?? []).map((n) => [n.nivel, n]));
@@ -83,7 +91,7 @@ export function Continuidad() {
         const gSaliente = i.guardia_saliente_id ? guardiasPorId[i.guardia_saliente_id] : null;
         return {
           ...i,
-          paciente_nombre: gEntrante ? pacientesPorId[gEntrante.paciente_id] || '—' : '—',
+          paciente_nombre: nombresDelTurno(gEntrante),
           asistente_ausente_nombre: gEntrante ? asistentesPorId[gEntrante.asistente_id] || '—' : '—',
           asistente_saliente_nombre: gSaliente ? asistentesPorId[gSaliente.asistente_id] || '—' : null,
           fecha: gEntrante?.fecha,
@@ -97,7 +105,7 @@ export function Continuidad() {
         const g = guardiasPorId[a.guardia_id];
         return {
           ...a,
-          paciente_nombre: g ? pacientesPorId[g.paciente_id] || '—' : '—',
+          paciente_nombre: nombresDelTurno(g),
           asistente_nombre: g ? asistentesPorId[g.asistente_id] || '—' : '—',
           fecha: g?.fecha,
           horario: g ? `${g.hora_inicio} – ${g.hora_fin}` : '—',
@@ -113,7 +121,7 @@ export function Continuidad() {
       setError(err.message);
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   async function resolverAlerta(alerta) {
     if (!(await confirmarDestructivo(t.continuidad.confirmar_resolver_alerta))) return;

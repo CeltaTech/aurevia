@@ -8,6 +8,7 @@ import { con } from '../../lib/textos';
 import { candidatosParaGuardia } from '../../lib/candidatos';
 import { avisosDeAsignacion } from '../../lib/avisosAsignacion';
 import { COLUMNAS_ESTADO_MATRICULA, mensajeDeBloqueo } from '../../lib/matricula';
+import { cargarPacientesDeGuardias, pacientesDeGuardia } from '../../lib/pacientesDeGuardia';
 
 /* El panel lateral para cubrir una vacante.
    ==========================================================================
@@ -103,9 +104,21 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
       return;
     }
 
+    // A quiénes cubre cada guardia del contexto. Hace falta para medir la continuidad: si un
+    // turno atendía a dos personas de la misma casa, el Asistente las atendió a las dos, y
+    // preguntando solo por la columna vieja la mitad de esa historia no aparecía.
+    let pacientesPorGuardia = new Map();
+    try {
+      pacientesPorGuardia = await cargarPacientesDeGuardias((gs.data ?? []).map((g) => g.id));
+    } catch (e) {
+      setError(e.message);
+      setEstado('error');
+      return;
+    }
+
     setDatos({
       asistentes: asistentes ?? [],
-      guardias: gs.data ?? [],
+      guardias: (gs.data ?? []).map((g) => ({ ...g, paciente_ids: pacientesDeGuardia(g, pacientesPorGuardia) })),
       matriculas: hs.data ?? [],
       documentos: ds.data ?? [],
       ofertas: os.data ?? [],

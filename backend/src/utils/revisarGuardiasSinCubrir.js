@@ -1,6 +1,7 @@
 import { supabase } from '../db/connection.js';
 import { notificarCoordinador } from './whatsapp.js';
 import { necesitaNotificar } from './insistencia.js';
+import { pacientesDeGuardias } from './pacientesDeGuardia.js';
 
 // Aviso al Coordinador cuando se viene una guardia que todavía no tiene a nadie
 // (pendiente #106, docs/PENDIENTES.md).
@@ -57,7 +58,7 @@ async function revisarPrestadora({ prestadora_id: prestadoraId, horas_antes: hor
   // decide después contra la hora de inicio, que la base guarda en otra columna.
   const { data: guardias, error } = await supabase
     .from('guardias')
-    .select('id, fecha, hora_inicio, hora_fin, ofrecida_at, aviso_sin_cubrir_at, aviso_sin_cubrir_veces, pacientes(nombre), ofertas_guardia(respuesta)')
+    .select('id, paciente_id, fecha, hora_inicio, hora_fin, ofrecida_at, aviso_sin_cubrir_at, aviso_sin_cubrir_veces, ofertas_guardia(respuesta)')
     .eq('prestadora_id', prestadoraId)
     .is('asistente_id', null)
     .eq('estado', 'programada')
@@ -66,6 +67,18 @@ async function revisarPrestadora({ prestadora_id: prestadoraId, horas_antes: hor
 
   if (error) {
     console.error(`Error consultando guardias sin cubrir (prestadora ${prestadoraId}):`, error.message);
+    return;
+  }
+
+  // A quiénes se queda sin atender cada hueco. Se piden los nombres de todos los Pacientes del
+  // turno y no el de uno: un aviso que nombra a una sola persona cuando el turno cubría a dos
+  // le esconde al Coordinador la mitad del problema, y de ese tamaño depende con qué urgencia
+  // sale a buscar quien lo tape.
+  let pacientesPorGuardia;
+  try {
+    pacientesPorGuardia = await pacientesDeGuardias(guardias ?? [], 'id, nombre');
+  } catch (e) {
+    console.error(`Error leyendo los Pacientes de las guardias sin cubrir (prestadora ${prestadoraId}):`, e.message);
     return;
   }
 
@@ -88,7 +101,7 @@ async function revisarPrestadora({ prestadora_id: prestadoraId, horas_antes: hor
       evento: EVENTO,
       prestadoraId,
       asunto: asuntoDelAviso({ inicio, ahora }),
-      texto: textoDelAviso({ guardia, inicio, ahora, veces }),
+      texto: textoDelAviso({ guardia, pacientes: pacientesPorGuardia.get(guardia.id) ?? [], inicio, ahora, veces }),
     });
 
     const { error: errorUpdate } = await supabase
@@ -111,8 +124,14 @@ function asuntoDelAviso({ inicio, ahora }) {
 // de quién dice en qué punto está la búsqueda: si todavía no se ofreció a nadie, si se
 // ofreció y nadie contestó, o si contestaron todos que no. Son tres situaciones con tres
 // acciones distintas, y sin esa línea el Coordinador tiene que entrar al Panel a averiguarlo.
-function textoDelAviso({ guardia, inicio, ahora, veces }) {
-  const paciente = guardia.pacientes?.nombre ?? 'Paciente sin nombre cargado';
+function textoDelAviso({ guardia, pacientes, inicio, ahora, veces }) {
+  const nombres = pacientes.map((p) => p.nombre).filter(Boolean);
+  // "Elena y Alberto", no "Elena, Alberto": el aviso lo lee una persona apurada, no una
+  // pantalla. Con tres o más, la coma separa y la "y" cierra, como se escribe en castellano.
+  const paciente =
+    nombres.length === 0
+      ? 'Paciente sin nombre cargado'
+      : [nombres.slice(0, -1).join(', '), nombres.at(-1)].filter(Boolean).join(' y ');
   const horas = Math.round(Math.abs(inicio.getTime() - ahora.getTime()) / MS_POR_HORA);
   const cuando = inicio.getTime() <= ahora.getTime()
     ? `Tendría que haber empezado hace ${horas} h.`

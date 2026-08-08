@@ -59,6 +59,7 @@ import {
   matriculaQueMandaAl,
   motivoDeBloqueo,
 } from './matricula';
+import { idsDePacientes } from './pacientesDeGuardia';
 
 /**
  * Cuánto suma o resta cada criterio.
@@ -316,20 +317,26 @@ export function papelQueVencePrimero(asistenteId, documentos) {
 }
 
 /**
- * Cuántas veces este Asistente ya atendió a este Paciente.
+ * Cuántas veces este Asistente ya atendió a esta gente.
  *
  * "Ya atendió" significa que la guardia empezó antes de ahora y no se canceló ni quedó como
  * ausencia. Una guardia futura ya asignada no es continuidad todavía: es una intención.
  *
+ * Recibe la lista de Pacientes del hueco, no uno solo, y cuenta la guardia si el Asistente ya
+ * atendió a **alguno** de ellos: quien viene atendiendo hace meses a la señora de la casa no
+ * es un desconocido porque ahora el turno incluya también al marido. Contar por un solo
+ * Paciente le borraba toda la historia y lo mandaba al fondo de la lista de candidatos.
+ *
  * El número depende del rango de guardias que la pantalla haya cargado. Si trajo un mes, el
  * conteo es de ese mes. Es una limitación conocida y no se disimula: se cuenta lo que hay.
  */
-export function vecesQueAtendio(asistenteId, pacienteId, guardias, ahora) {
-  if (!pacienteId) return 0;
+export function vecesQueAtendio(asistenteId, pacienteIds, guardias, ahora) {
+  const buscados = new Set((pacienteIds ?? []).filter(Boolean));
+  if (buscados.size === 0) return 0;
   return lista(guardias).filter(
     (g) =>
       g.asistente_id === asistenteId &&
-      g.paciente_id === pacienteId &&
+      idsDePacientes(g).some((id) => buscados.has(id)) &&
       g.estado !== 'cancelada' &&
       g.estado !== 'ausente' &&
       inicioDeGuardia(g) < ahora
@@ -442,7 +449,7 @@ function evaluarAsistente(asistente, ctx) {
 
   // --- 1. Continuidad. El criterio que más pesa: para el Paciente y su Familia, que venga
   //        alguien conocido vale más que cualquier comodidad de la agenda.
-  const veces = vecesQueAtendio(asistente.id, hueco.paciente_id, guardias, ahora);
+  const veces = vecesQueAtendio(asistente.id, idsDePacientes(hueco), guardias, ahora);
   if (veces > 0) {
     const puntos = Math.min(veces * pesos.continuidad_por_vez, pesos.continuidad_maxima);
     suma(aFavor, MOTIVO.CONTINUIDAD, { n: veces }, puntos);

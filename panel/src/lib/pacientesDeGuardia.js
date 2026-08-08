@@ -101,6 +101,19 @@ export function pacientesDeGuardia(guardia, mapa) {
   return guardia?.paciente_id ? [guardia.paciente_id] : [];
 }
 
+/**
+ * Los ids de los Pacientes de una guardia que ya viene enriquecida.
+ *
+ * Es la versión de `pacientesDeGuardia` para cuando la pantalla ya pasó por `conPacientes` y
+ * no tiene el Map a mano — el caso de una guardia que viaja de una pantalla a otra. Si por lo
+ * que sea llega sin enriquecer, se cae al Paciente de la columna vieja, la misma red de
+ * seguridad de siempre.
+ */
+export function idsDePacientes(guardia) {
+  if (guardia?.paciente_ids?.length) return guardia.paciente_ids;
+  return guardia?.paciente_id ? [guardia.paciente_id] : [];
+}
+
 /** ¿Este turno cubre a más de una persona? */
 export function atiendeAVarios(guardia, mapa) {
   return pacientesDeGuardia(guardia, mapa).length > 1;

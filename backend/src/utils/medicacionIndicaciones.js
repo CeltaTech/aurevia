@@ -47,15 +47,20 @@ export async function asistenteTieneMatriculaVigente(asistenteId, tipoRequerido)
 // Asistentes con alguna Guardia futura o de hoy para ese Paciente — no hace falta un vínculo
 // dedicado "asistente asignado", guardias ya es la fuente real de asignación en el resto del
 // sistema (mismo criterio que appFamilias.js:/pacientes/:id/asistente).
+//
+// Se pregunta por la lista de la guardia y no por la columna vieja: si un turno cubre a dos
+// personas de la misma casa, el Asistente atiende a las dos, y para la segunda no aparecía
+// nadie. De acá cuelga si se puede aceptar una indicación de medicación que requiere
+// matrícula, así que quedarse corto significa rechazar un pedido que sí se podía cumplir.
 export async function asistentesAsignadosAlPaciente(pacienteId) {
   const hoyISO = new Date().toISOString().slice(0, 10);
   const { data } = await supabase
-    .from('guardias')
-    .select('asistente_id')
+    .from('guardia_pacientes')
+    .select('guardias!inner(asistente_id)')
     .eq('paciente_id', pacienteId)
-    .not('asistente_id', 'is', null)
-    .gte('fecha', hoyISO);
-  return [...new Set((data || []).map((g) => g.asistente_id))];
+    .not('guardias.asistente_id', 'is', null)
+    .gte('guardias.fecha', hoyISO);
+  return [...new Set((data || []).map((f) => f.guardias?.asistente_id).filter(Boolean))];
 }
 
 export async function hayAsistenteAsignadoConMatricula(pacienteId, tipoRequerido) {

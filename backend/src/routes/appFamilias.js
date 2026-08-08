@@ -4,6 +4,7 @@ import { supabase } from '../db/connection.js';
 import { resolverVitalesHabilitados } from '../utils/vitalesReferencia.js';
 import { generarTokenQrCobro } from '../utils/qrCobroEfectivo.js';
 import { medicacionVigenteDelPaciente } from '../utils/medicacionIndicaciones.js';
+import { LISTA_DENTRO_DE_LA_GUARDIA, PACIENTE_DENTRO_DE_LA_GUARDIA } from '../utils/pacientesDeGuardia.js';
 
 export const appFamiliasRouter = Router();
 
@@ -138,8 +139,10 @@ appFamiliasRouter.get('/pacientes/:id/reportes', requiereRolFamilia, async (req,
 
   const { data, error } = await supabase
     .from('reportes')
-    .select('id, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, foto_url, created_at, guardias!inner(paciente_id, fecha, asistente_id, asistentes(nombre))')
-    .eq('guardias.paciente_id', paciente.id)
+    .select(
+      `id, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, foto_url, created_at, guardias!inner(fecha, asistente_id, asistentes(nombre), ${LISTA_DENTRO_DE_LA_GUARDIA})`
+    )
+    .eq(PACIENTE_DENTRO_DE_LA_GUARDIA, paciente.id)
     .order('created_at', { ascending: false })
     .limit(60);
   if (error) {

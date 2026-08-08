@@ -3,6 +3,7 @@ import { analizarAlertaIA } from './alertasIA.js';
 import { notificarCoordinador } from './whatsapp.js';
 import { enviarPushFamilia } from './push.js';
 import { medicacionVigenteDelPaciente } from './medicacionIndicaciones.js';
+import { LISTA_DENTRO_DE_LA_GUARDIA, PACIENTE_DENTRO_DE_LA_GUARDIA } from './pacientesDeGuardia.js';
 
 const REPORTES_A_ANALIZAR = 7;
 
@@ -24,8 +25,8 @@ export async function revisarAlertasIA() {
   for (const paciente of pacientes ?? []) {
     let query = supabase
       .from('reportes')
-      .select('id, created_at, guardias!inner(paciente_id)')
-      .eq('guardias.paciente_id', paciente.id)
+      .select(`id, created_at, guardias!inner(${LISTA_DENTRO_DE_LA_GUARDIA})`)
+      .eq(PACIENTE_DENTRO_DE_LA_GUARDIA, paciente.id)
       .limit(1);
     if (paciente.ultimo_analisis_ia_at) {
       query = query.gt('created_at', paciente.ultimo_analisis_ia_at);
@@ -53,8 +54,10 @@ export async function analizarPaciente(pacienteId, prestadoraId) {
 
   const { data: reportes, error: errorReportes } = await supabase
     .from('reportes')
-    .select('id, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, created_at, guardias!inner(paciente_id)')
-    .eq('guardias.paciente_id', pacienteId)
+    .select(
+      `id, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, created_at, guardias!inner(${LISTA_DENTRO_DE_LA_GUARDIA})`
+    )
+    .eq(PACIENTE_DENTRO_DE_LA_GUARDIA, pacienteId)
     .order('created_at', { ascending: false })
     .limit(REPORTES_A_ANALIZAR);
 

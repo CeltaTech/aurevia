@@ -25,6 +25,23 @@ import { con } from './textos';
  */
 export const SIN_PACIENTES = 'sin-pacientes';
 
+/*
+ * Cómo pedir "todo lo de este Paciente" cuando lo que se busca cuelga de la guardia.
+ *
+ * Los reportes y las calificaciones no dicen de qué Paciente hablan: lo dicen a través de la
+ * guardia. Antes eso se preguntaba por la columna vieja, y el segundo Paciente de un turno
+ * compartido se quedaba sin nada. Ahora se pregunta por la lista.
+ *
+ * Van de a dos y siempre juntas: la primera se mete adentro del `guardias!inner(...)` del
+ * pedido, y la segunda es el camino por el que se filtra. Es el gemelo de lo mismo en
+ * `backend/src/utils/pacientesDeGuardia.js`.
+ *
+ *   .select(`id, texto_libre, guardias!inner(fecha, ${LISTA_DENTRO_DE_LA_GUARDIA})`)
+ *   .eq(PACIENTE_DENTRO_DE_LA_GUARDIA, pacienteId)
+ */
+export const LISTA_DENTRO_DE_LA_GUARDIA = 'guardia_pacientes!inner(paciente_id)';
+export const PACIENTE_DENTRO_DE_LA_GUARDIA = 'guardias.guardia_pacientes.paciente_id';
+
 /**
  * Trae de la base a quiénes atiende cada guardia de la lista.
  *

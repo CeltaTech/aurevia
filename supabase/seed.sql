@@ -427,18 +427,33 @@ INSERT INTO public.guardias (
    NULL, NULL);
 
 -- ----------------------------------------------------------------------------
--- 5.b La guardia de mañana a la mañana cubre a los dos del mismo domicilio.
+-- 5.b Dos visitas compartidas: una que ya se cumplió y otra por venir.
 --
 --     Elena y Alberto viven juntos (sección 4). Ana va una sola vez a esa casa
 --     y los atiende a los dos: es UNA guardia con DOS Pacientes, no dos
---     guardias. Se agrega acá para que el caso se pueda mirar en pantalla sin
+--     guardias. Se agregan acá para que el caso se pueda mirar en pantalla sin
 --     tener que tocar la base a mano.
 --
---     Elena ya está en la lista: la puso sola el disparador que mantiene al día
---     la columna vieja `guardias.paciente_id` mientras esa columna siga
+--     Elena ya está en las dos listas: la puso sola el disparador que mantiene
+--     al día la columna vieja `guardias.paciente_id` mientras esa columna siga
 --     existiendo. Acá se suma únicamente Alberto.
+--
+--     Hacen falta las dos, porque cada una muestra una cosa distinta:
+--
+--       - la de anteayer está `completada`, y es la única que sirve para ver el
+--         reparto de horas en el informe de obra social: ocho horas de visita
+--         para dos Pacientes son cuatro horas para cada informe, no ocho y ocho
+--         (ver `backend/src/utils/horasDeGuardia.js`). Una guardia que todavía
+--         no se prestó no suma horas en ningún lado;
+--
+--       - la de mañana está `programada`, y es la que sirve para ver la grilla y
+--         Estado actual: una sola fila con los dos nombres.
 -- ----------------------------------------------------------------------------
 INSERT INTO public.guardia_pacientes (guardia_id, paciente_id, prestadora_id) VALUES
+  -- la que ya se cumplió
+  ('70000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000004',
+   '11111111-1111-4111-8111-111111111111'),
+  -- la que viene
   ('70000000-0000-4000-8000-000000000007', '50000000-0000-4000-8000-000000000004',
    '11111111-1111-4111-8111-111111111111');
 

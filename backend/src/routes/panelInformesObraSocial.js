@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 import { tienePermiso } from '../utils/permisos.js';
+import { horasEntre, horasImputadasAlPaciente } from '../utils/horasDeGuardia.js';
 
 export const panelInformesObraSocialRouter = Router();
 
@@ -22,12 +23,27 @@ function requierePermiso(accion) {
   };
 }
 
-function horasEntre(horaInicio, horaFin) {
-  const [hi, mi] = horaInicio.split(':').map(Number);
-  const [hf, mf] = horaFin.split(':').map(Number);
-  let minutos = hf * 60 + mf - (hi * 60 + mi);
-  if (minutos < 0) minutos += 24 * 60; // guardia que cruza medianoche
-  return minutos / 60;
+/**
+ * A cuántos Pacientes cubrió cada uno de estos turnos.
+ *
+ * Devuelve un mapa `id de guardia → cantidad`. Hace falta para repartir las horas: un turno
+ * que cubrió a dos personas no le imputa las horas enteras a cada una (ver
+ * `utils/horasDeGuardia.js`).
+ */
+async function cuantosPacientesPorGuardia(guardiaIds) {
+  if (guardiaIds.length === 0) return {};
+
+  const { data, error } = await supabase
+    .from('guardia_pacientes')
+    .select('guardia_id')
+    .in('guardia_id', guardiaIds);
+  if (error) throw new Error(error.message);
+
+  const cantidad = {};
+  for (const fila of data || []) {
+    cantidad[fila.guardia_id] = (cantidad[fila.guardia_id] || 0) + 1;
+  }
+  return cantidad;
 }
 
 // Recalcula el contenido del informe server-side siempre (preview y validación usan esta
@@ -43,19 +59,36 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
   if (errorPaciente) throw new Error(errorPaciente.message);
   if (!paciente) throw new Error('Paciente no encontrado en esta Prestadora');
 
-  const { data: guardias, error: errorGuardias } = await supabase
-    .from('guardias')
-    .select('id, fecha, hora_inicio, hora_fin, modalidad, estado, asistente_id')
-    .eq('prestadora_id', prestadoraId)
-    .eq('paciente_id', pacienteId)
-    .gte('fecha', periodoDesde)
-    .lte('fecha', periodoHasta)
-    .order('fecha', { ascending: true });
-  if (errorGuardias) throw new Error(errorGuardias.message);
+  // Las guardias de este Paciente salen de la lista de Pacientes de cada guardia, no de la
+  // columna vieja `guardias.paciente_id`: esa columna guarda UNO solo, así que en una visita
+  // compartida el informe del otro Paciente salía vacío aunque lo hubieran atendido.
+  const { data: enLista, error: errorLista } = await supabase
+    .from('guardia_pacientes')
+    .select('guardia_id')
+    .eq('paciente_id', pacienteId);
+  if (errorLista) throw new Error(errorLista.message);
+
+  const idsDeSusGuardias = [...new Set((enLista || []).map((f) => f.guardia_id))];
+
+  let guardias = [];
+  if (idsDeSusGuardias.length > 0) {
+    const { data, error: errorGuardias } = await supabase
+      .from('guardias')
+      .select('id, fecha, hora_inicio, hora_fin, modalidad, estado, asistente_id')
+      .eq('prestadora_id', prestadoraId)
+      .in('id', idsDeSusGuardias)
+      .gte('fecha', periodoDesde)
+      .lte('fecha', periodoHasta)
+      .order('fecha', { ascending: true });
+    if (errorGuardias) throw new Error(errorGuardias.message);
+    guardias = data || [];
+  }
+
+  const pacientesPorGuardia = await cuantosPacientesPorGuardia(guardias.map((g) => g.id));
 
   // .filter(Boolean) porque una guardia puede estar sin cubrir: sin este filtro el NULL
   // llega al .in('id', …) contra una columna uuid y la consulta revienta con un 500.
-  const asistenteIds = [...new Set((guardias || []).map((g) => g.asistente_id).filter(Boolean))];
+  const asistenteIds = [...new Set(guardias.map((g) => g.asistente_id).filter(Boolean))];
   const nombresAsistente = {};
   if (asistenteIds.length > 0) {
     const { data: usuariosAsistentes } = await supabase
@@ -65,26 +98,38 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
     for (const u of usuariosAsistentes || []) nombresAsistente[u.id] = u.nombre;
   }
 
-  const guardiasDetalle = (guardias || []).map((g) => ({
-    fecha: g.fecha,
-    hora_inicio: g.hora_inicio,
-    hora_fin: g.hora_fin,
-    modalidad: g.modalidad,
-    estado: g.estado,
-    asistente_nombre: nombresAsistente[g.asistente_id] || null,
-  }));
+  // Cada renglón lleva escrito a cuánta gente cubrió ese turno y cuántas horas le tocan a
+  // este Paciente. Se muestran las dos cosas juntas a propósito: si el informe dijera
+  // "cuatro horas" en un turno de ocho sin explicar por qué, parecería un error de carga.
+  const guardiasDetalle = guardias.map((g) => {
+    const cuantos = pacientesPorGuardia[g.id] || 1;
+    return {
+      fecha: g.fecha,
+      hora_inicio: g.hora_inicio,
+      hora_fin: g.hora_fin,
+      modalidad: g.modalidad,
+      estado: g.estado,
+      asistente_nombre: nombresAsistente[g.asistente_id] || null,
+      pacientes_en_el_turno: cuantos,
+      horas_imputadas: horasImputadasAlPaciente(horasEntre(g.hora_inicio, g.hora_fin), cuantos),
+    };
+  });
 
   // Totales por modalidad: se agrupa por el valor real usado en cada guardia, sin catálogo
   // cerrado de códigos (ver plan aprobado — el PRD original de "Planillas IOMA" asumía una
   // codificación S4/S6/F4/F6 que nunca llegó a existir en el modelo de datos). Solo cuentan
   // las guardias efectivamente prestadas ('completada'), no las programadas/canceladas.
+  //
+  // Las horas que se suman son las IMPUTADAS a este Paciente, no las que duró el turno: un
+  // turno de ocho horas para dos Pacientes aporta cuatro horas al informe de cada uno. Si se
+  // sumaran las ocho a los dos, la obra social vería dieciséis horas de cuidado donde hubo
+  // ocho de trabajo, o sea le estaríamos cobrando dos veces la misma hora.
   const totalesPorModalidad = {};
-  for (const g of guardias || []) {
+  for (const g of guardiasDetalle) {
     if (g.estado !== 'completada') continue;
-    const horas = horasEntre(g.hora_inicio, g.hora_fin);
     if (!totalesPorModalidad[g.modalidad]) totalesPorModalidad[g.modalidad] = { cantidad_guardias: 0, horas_totales: 0 };
     totalesPorModalidad[g.modalidad].cantidad_guardias += 1;
-    totalesPorModalidad[g.modalidad].horas_totales += horas;
+    totalesPorModalidad[g.modalidad].horas_totales += g.horas_imputadas;
   }
 
   return {

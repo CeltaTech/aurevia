@@ -1377,6 +1377,21 @@ h2 {
   margin-bottom: 0.5rem;
 }
 
+/* La aclaración de una visita compartida va pegada al número de horas, en chico: el que lee
+   la planilla tiene que ver por qué ese turno de 8 horas aporta 4. */
+.informe-obra-social-compartida {
+  color: var(--texto-secundario);
+  font-size: 0.8rem;
+  margin-left: 0.4rem;
+  white-space: nowrap;
+}
+
+.informe-obra-social-nota {
+  color: var(--texto-secundario);
+  font-size: 0.85rem;
+  margin-top: 0.6rem;
+}
+
 .informe-obra-social-firma {
   margin-top: 3rem;
   max-width: 320px;

@@ -152,6 +152,16 @@ export function PagosAsistentes() {
     const ahora = new Date();
     const porAsistente = {};
 
+    // ATENCIÓN antes de tocar este bucle: acá se cuenta UNA FILA POR GUARDIA, a propósito, y
+    // no se cruza con la lista de Pacientes de cada guardia. Desde que un mismo turno puede
+    // cubrir a varias personas (una sola visita a una casa donde viven dos), la tentación es
+    // "completar" esto uniéndolo con `guardia_pacientes`. No se hace: si se hiciera, un turno
+    // de ocho horas para dos Pacientes aparecería dos veces y el Asistente cobraría dieciséis
+    // horas por ocho trabajadas.
+    //
+    // Al Asistente se le pagan las horas enteras, una sola vez, atienda a uno o a cinco. El
+    // reparto entre Pacientes es otra cuenta distinta, la que va a los informes de la obra
+    // social, y vive en `backend/src/utils/horasDeGuardia.js`.
     for (const g of guardias) {
       const acumulado = (porAsistente[g.asistente_id] ??= { guardias: 0, horas: 0, sinCerrar: 0 });
       if (g.estado === ESTADO_HECHA) {

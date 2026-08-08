@@ -9,6 +9,7 @@ import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { traducirValor } from '../i18n/valores';
 import { claseBadge } from '../lib/tonos';
+import { con } from '../lib/textos';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -42,6 +43,11 @@ function mesActualISO() {
 
 function ContenidoInforme({ contenido, t }) {
   const modalidades = Object.entries(contenido.totales_por_modalidad || {});
+  // Los informes ya validados guardan una foto del contenido de ese momento. Las fotos
+  // anteriores al reparto de horas no traen estos dos datos, y se siguen mostrando igual:
+  // en aquel entonces una guardia cubría a un solo Paciente, así que la visita no era
+  // compartida y las horas imputadas eran las del turno entero.
+  const hayVisitaCompartida = (contenido.guardias || []).some((g) => (g.pacientes_en_el_turno || 1) > 1);
   return (
     <div className="informe-obra-social-contenido">
       <h3>{contenido.paciente.nombre}</h3>
@@ -89,22 +95,40 @@ function ContenidoInforme({ contenido, t }) {
               <th>{t.informesObraSocial.col_modalidad}</th>
               <th>{t.informesObraSocial.col_asistente}</th>
               <th>{t.informesObraSocial.col_estado}</th>
+              {hayVisitaCompartida && <th>{t.informesObraSocial.col_horas_imputadas}</th>}
             </tr>
           </thead>
           <tbody>
-            {contenido.guardias.map((g, i) => (
-              <tr key={i}>
-                <td>{g.fecha}</td>
-                <td>{g.hora_inicio}</td>
-                <td>{g.hora_fin}</td>
-                <td>{g.modalidad}</td>
-                <td>{g.asistente_nombre || '—'}</td>
-                <td>{traducirValor(t.guardias, `estado_${g.estado}`)}</td>
-              </tr>
-            ))}
+            {contenido.guardias.map((g, i) => {
+              const enElTurno = g.pacientes_en_el_turno || 1;
+              return (
+                <tr key={i}>
+                  <td>{g.fecha}</td>
+                  <td>{g.hora_inicio}</td>
+                  <td>{g.hora_fin}</td>
+                  <td>{g.modalidad}</td>
+                  <td>{g.asistente_nombre || '—'}</td>
+                  <td>{traducirValor(t.guardias, `estado_${g.estado}`)}</td>
+                  {hayVisitaCompartida && (
+                    <td>
+                      {(g.horas_imputadas ?? 0).toFixed(1)}
+                      {enElTurno > 1 && (
+                        <span className="informe-obra-social-compartida">
+                          {con(t.informesObraSocial.visita_compartida, { n: enElTurno })}
+                        </span>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
+
+      {hayVisitaCompartida && (
+        <p className="informe-obra-social-nota">{t.informesObraSocial.nota_visita_compartida}</p>
+      )}
 
       <div className="informe-obra-social-firma">
         <div className="informe-obra-social-firma-linea" />

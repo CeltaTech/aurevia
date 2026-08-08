@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch --env-file=.env.local src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "test": "node --test src/**/__tests__/*.test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.0",

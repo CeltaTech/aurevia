@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { supabase } from '../db/connection.js';
 import { enviarEmail } from './email.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
+import { marcaDeLaPrestadora } from './marcaPrestadora.js';
 
 const DIAS_VALIDEZ_TOKEN = 7;
 
@@ -12,19 +13,35 @@ function urlAppPorRol(rol) {
   return process.env.PWA_FAMILIAS_URL;
 }
 
-function textosActivacionCuenta(nombre, link) {
+// Este correo lo recibe una Familia o un Asistente, y para ellos la empresa es
+// la Prestadora: es a quien llamaron, con quien firmaron y de quien esperan un
+// correo. Por eso el nombre que va adelante es el de ella, no el del producto
+// (`CLAUDE.md` §7, regla 1). El producto queda en la línea del pie, que se
+// apaga si la Prestadora tiene contratada esa función.
+//
+// `marca` viene de `marcaPrestadora.js`. Si por lo que sea llegara vacía, se
+// usa el nombre del producto: es preferible un correo que dice Careonys a un
+// correo que dice "Activá tu cuenta en undefined".
+function textosActivacionCuenta(nombre, link, marca) {
+  const empresa = marca?.nombre || IDENTIDAD.nombre;
+  const pie = {
+    'es-AR': marca?.mostrarMarcaProducto ? `\n\n—\nCon la tecnología de ${IDENTIDAD.nombre}` : '',
+    en: marca?.mostrarMarcaProducto ? `\n\n—\nPowered by ${IDENTIDAD.nombre}` : '',
+    'pt-BR': marca?.mostrarMarcaProducto ? `\n\n—\nCom a tecnologia de ${IDENTIDAD.nombre}` : '',
+  };
+
   return {
     'es-AR': {
-      asunto: `Activá tu cuenta en ${IDENTIDAD.nombre}`,
-      texto: `Hola ${nombre},\n\nTe invitamos a activar tu cuenta en ${IDENTIDAD.nombre} para poder acceder desde tu celular.\n\nActivá tu cuenta acá (el link vence en ${DIAS_VALIDEZ_TOKEN} días):\n${link}\n\nSi no esperabas este email, podés ignorarlo.`,
+      asunto: `Activá tu cuenta en ${empresa}`,
+      texto: `Hola ${nombre},\n\nTe invitamos a activar tu cuenta en ${empresa} para poder acceder desde tu celular.\n\nActivá tu cuenta acá (el link vence en ${DIAS_VALIDEZ_TOKEN} días):\n${link}\n\nSi no esperabas este email, podés ignorarlo.${pie['es-AR']}`,
     },
     en: {
-      asunto: `Activate your ${IDENTIDAD.nombre} account`,
-      texto: `Hi ${nombre},\n\nYou've been invited to activate your ${IDENTIDAD.nombre} account so you can access it from your phone.\n\nActivate your account here (this link expires in ${DIAS_VALIDEZ_TOKEN} days):\n${link}\n\nIf you weren't expecting this email, you can ignore it.`,
+      asunto: `Activate your ${empresa} account`,
+      texto: `Hi ${nombre},\n\nYou've been invited to activate your ${empresa} account so you can access it from your phone.\n\nActivate your account here (this link expires in ${DIAS_VALIDEZ_TOKEN} days):\n${link}\n\nIf you weren't expecting this email, you can ignore it.${pie.en}`,
     },
     'pt-BR': {
-      asunto: `Ative sua conta na ${IDENTIDAD.nombre}`,
-      texto: `Olá ${nombre},\n\nVocê foi convidado a ativar sua conta na ${IDENTIDAD.nombre} para acessar pelo celular.\n\nAtive sua conta aqui (o link expira em ${DIAS_VALIDEZ_TOKEN} dias):\n${link}\n\nSe você não esperava este email, pode ignorá-lo.`,
+      asunto: `Ative sua conta na ${empresa}`,
+      texto: `Olá ${nombre},\n\nVocê foi convidado a ativar sua conta na ${empresa} para acessar pelo celular.\n\nAtive sua conta aqui (o link expira em ${DIAS_VALIDEZ_TOKEN} dias):\n${link}\n\nSe você não esperava este email, pode ignorá-lo.${pie['pt-BR']}`,
     },
   };
 }
@@ -33,7 +50,7 @@ function textosActivacionCuenta(nombre, link) {
 // el SMTP que ya existe (email.js) — usado por crearCuentaConPerfil cuando la cuenta nueva
 // es de Familia/Asistente/Círculo (pendiente #75, docs/PENDIENTES.md), nunca para
 // Coordinador/Admin_prestadora/Superadmin (esos siguen con el flujo manual existente).
-export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, idioma = 'es-AR' }) {
+export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, prestadoraId = null, idioma = 'es-AR' }) {
   const appUrl = urlAppPorRol(rol);
   if (!appUrl) {
     // Sin URL configurada (ej. entorno local sin la variable seteada) no se puede armar un
@@ -52,7 +69,9 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, i
   if (error) throw new Error(error.message);
 
   const link = `${appUrl}/activar-cuenta?token=${token}`;
-  const textos = textosActivacionCuenta(nombre, link)[idioma] ?? textosActivacionCuenta(nombre, link)['es-AR'];
+  const marca = await marcaDeLaPrestadora(prestadoraId);
+  const porIdioma = textosActivacionCuenta(nombre, link, marca);
+  const textos = porIdioma[idioma] ?? porIdioma['es-AR'];
   await enviarEmail({ to: email, asunto: textos.asunto, texto: textos.texto });
 }
 
@@ -60,12 +79,18 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, i
 export async function reenviarActivacionCuenta(usuarioId) {
   const { data: usuario, error: errorUsuario } = await supabase
     .from('usuarios')
-    .select('email, nombre, rol')
+    .select('email, nombre, rol, prestadora_id')
     .eq('id', usuarioId)
     .single();
   if (errorUsuario || !usuario) throw new Error('Cuenta no encontrada');
 
-  await invitarActivacionCuenta({ usuarioId, email: usuario.email, nombre: usuario.nombre, rol: usuario.rol });
+  await invitarActivacionCuenta({
+    usuarioId,
+    email: usuario.email,
+    nombre: usuario.nombre,
+    rol: usuario.rol,
+    prestadoraId: usuario.prestadora_id,
+  });
 }
 
 // Consumido por el endpoint público POST /api/activar-cuenta — valida el token (existe, no

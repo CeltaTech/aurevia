@@ -11,6 +11,9 @@ export const T = {
       perfil: 'Mi Perfil',
       cerrar_sesion: 'Cerrar sesión',
     },
+    marca: {
+      con_tecnologia_de: 'con la tecnología de {{producto}}',
+    },
     auth: {
       titulo: '{{producto}} — Familias',
       subtitulo: 'Ingresá con tu cuenta para seguir el servicio de tu Paciente',
@@ -208,6 +211,9 @@ export const T = {
       perfil: 'My Profile',
       cerrar_sesion: 'Log out',
     },
+    marca: {
+      con_tecnologia_de: 'powered by {{producto}}',
+    },
     auth: {
       titulo: '{{producto}} — Families',
       subtitulo: 'Sign in to follow your Patient\'s care',
@@ -401,6 +407,9 @@ export const T = {
       pacientes: 'Meus Pacientes',
       perfil: 'Meu Perfil',
       cerrar_sesion: 'Sair',
+    },
+    marca: {
+      con_tecnologia_de: 'com a tecnologia de {{producto}}',
     },
     auth: {
       titulo: '{{producto}} — Famílias',

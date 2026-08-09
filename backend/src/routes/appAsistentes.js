@@ -11,6 +11,7 @@ import {
   pacientesDeGuardia,
   asistenteAtiendeAlPaciente,
 } from '../utils/pacientesDeGuardia.js';
+import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
 
 export const appAsistentesRouter = Router();
 
@@ -91,7 +92,14 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
     .limit(1)
     .maybeSingle();
 
-  res.json({ perfil, certificado: certificado || null });
+  // La marca de su Prestadora viaja con el perfil, no en una dirección aparte:
+  // el encabezado la necesita ni bien la persona entra, que es cuando la
+  // aplicación ya pide esto. Y para el Asistente de marketplace es lo que hace
+  // que una sola aplicación sirva para varias Prestadoras: cambia la marca de
+  // arriba según dónde esté parado.
+  const marca = await marcaDeLaPrestadora(req.usuarioAsistente.prestadoraId);
+
+  res.json({ perfil, certificado: certificado || null, marca });
 });
 
 // ============================================================================

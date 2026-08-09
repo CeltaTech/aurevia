@@ -1,5 +1,5 @@
 import { precacheAndRoute } from 'workbox-precaching';
-import { IDENTIDAD } from './config/identidadProducto.js';
+import { leerMarcaGuardada } from './lib/marcaGuardada.js';
 
 precacheAndRoute(self.__WB_MANIFEST);
 
@@ -14,22 +14,30 @@ self.addEventListener('activate', (event) => {
 // Notificaciones push a Familias — docs/PRD_04_05_App_Servicio.md:58,76 (Asistente llegó al
 // domicilio, reporte confirmado, alerta ROJA). El payload lo arma el backend
 // (backend/src/utils/push.js) como { titulo, cuerpo, url }.
+//
+// El nombre que encabeza el aviso es el de la Prestadora, no el del producto: es a ella a
+// quien la Familia llamó (`CLAUDE.md` §7, regla 1). Como acá no hay sesión abierta, se lee
+// del depósito que dejó la aplicación (lib/marcaGuardada.js).
 self.addEventListener('push', (event) => {
-  let datos = { titulo: IDENTIDAD.nombreCorto, cuerpo: '' };
+  event.waitUntil(mostrarAviso(event));
+});
+
+async function mostrarAviso(event) {
+  let datos = { titulo: '', cuerpo: '' };
   try {
     datos = event.data.json();
   } catch {
     // payload no vino en formato JSON, se usa el título/cuerpo por defecto
   }
 
-  event.waitUntil(
-    self.registration.showNotification(datos.titulo || IDENTIDAD.nombreCorto, {
-      body: datos.cuerpo || '',
-      icon: '/favicon.svg',
-      data: { url: datos.url || '/' },
-    })
-  );
-});
+  const marca = await leerMarcaGuardada();
+
+  await self.registration.showNotification(datos.titulo || marca?.nombre || '', {
+    body: datos.cuerpo || '',
+    icon: '/favicon.svg',
+    data: { url: datos.url || '/' },
+  });
+}
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();

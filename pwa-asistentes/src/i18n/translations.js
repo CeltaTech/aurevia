@@ -16,6 +16,9 @@ export const T = {
       perfil: 'Mi Perfil',
       cerrar_sesion: 'Cerrar sesión',
     },
+    marca: {
+      con_tecnologia_de: 'con la tecnología de {{producto}}',
+    },
     auth: {
       titulo: '{{producto}} — Asistentes',
       subtitulo: 'Ingresá con tu cuenta para ver tus guardias',
@@ -200,6 +203,9 @@ export const T = {
       perfil: 'My Profile',
       cerrar_sesion: 'Log out',
     },
+    marca: {
+      con_tecnologia_de: 'powered by {{producto}}',
+    },
     auth: {
       titulo: '{{producto}} — Caregivers',
       subtitulo: 'Sign in to see your shifts',
@@ -380,6 +386,9 @@ export const T = {
       guardias: 'Meus Plantões',
       perfil: 'Meu Perfil',
       cerrar_sesion: 'Sair',
+    },
+    marca: {
+      con_tecnologia_de: 'com a tecnologia de {{producto}}',
     },
     auth: {
       titulo: '{{producto}} — Cuidadores',

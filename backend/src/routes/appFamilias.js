@@ -4,6 +4,7 @@ import { supabase } from '../db/connection.js';
 import { resolverVitalesHabilitados } from '../utils/vitalesReferencia.js';
 import { generarTokenQrCobro } from '../utils/qrCobroEfectivo.js';
 import { medicacionVigenteDelPaciente } from '../utils/medicacionIndicaciones.js';
+import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
 
 export const appFamiliasRouter = Router();
 
@@ -44,12 +45,19 @@ appFamiliasRouter.get('/perfil', requiereRolFamilia, async (req, res) => {
     .eq('id', req.usuarioFamilia.familiaId)
     .maybeSingle();
 
+  // La marca va acá y no en una dirección aparte porque el encabezado la
+  // necesita ni bien la persona entra, que es exactamente cuando la aplicación
+  // ya pide el perfil. Dos pedidos para dibujar una misma pantalla es un
+  // pedido de más.
+  const marca = await marcaDeLaPrestadora(req.usuarioFamilia.prestadoraId);
+
   res.json({
     perfil: {
       ...usuario,
       plan: familia?.plan ?? null,
       rolCirculo: req.usuarioFamilia.rolCirculo,
     },
+    marca,
   });
 });
 

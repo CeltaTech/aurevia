@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { MarcaProvider } from './context/MarcaContext';
 import { LocaleProvider } from './i18n/LocaleContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -51,9 +52,11 @@ export default function App() {
   return (
     <LocaleProvider>
       <AuthProvider>
-        <BrowserRouter>
-          <Rutas />
-        </BrowserRouter>
+        <MarcaProvider>
+          <BrowserRouter>
+            <Rutas />
+          </BrowserRouter>
+        </MarcaProvider>
       </AuthProvider>
     </LocaleProvider>
   );

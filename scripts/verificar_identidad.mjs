@@ -88,6 +88,20 @@ function esLineaDeComentario(linea) {
   return INICIOS_DE_COMENTARIO.some((inicio) => limpia.startsWith(inicio));
 }
 
+// Las claves de entitlement (`aurevia.marca.personalizada`) son identificadores
+// guardados: se nombran una vez y no se renombran nunca, ni aunque la marca
+// cambie (CLAUDE.md §7, regla 13, y la excepción escrita en el glosario, §4).
+// En JavaScript se arman con IDENTIDAD.codigo; en un archivo .sql no se puede,
+// porque una migración no importa código. Ahí van escritas, y este chequeo las
+// deja pasar: lo que persigue es la marca visible en una pantalla, no un
+// identificador que ya está guardado adentro de datos que existen.
+const CLAVE_DE_ENTITLEMENT = new RegExp(`\\b${IDENTIDAD.codigo}(\\.[a-z0-9_]+)+`, 'gi');
+
+function sinClavesDeEntitlement(linea, rutaRelativa) {
+  if (extname(rutaRelativa) !== '.sql') return linea;
+  return linea.replace(CLAVE_DE_ENTITLEMENT, '');
+}
+
 function* recorrer(directorio) {
   for (const entrada of readdirSync(directorio)) {
     if (DIRECTORIOS_IGNORADOS.has(entrada)) continue;
@@ -120,7 +134,7 @@ for (const rutaAbsoluta of recorrer(RAIZ)) {
   const lineas = readFileSync(rutaAbsoluta, 'utf8').split(/\r?\n/);
   lineas.forEach((linea, indice) => {
     if (esLineaDeComentario(linea)) return;
-    const enMinuscula = linea.toLowerCase();
+    const enMinuscula = sinClavesDeEntitlement(linea, rutaRelativa).toLowerCase();
     if (LITERALES.some((literal) => enMinuscula.includes(literal))) {
       fallasLiteral.push({ ruta: rutaRelativa, numero: indice + 1, texto: linea.trim() });
     }

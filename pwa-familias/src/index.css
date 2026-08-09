@@ -192,6 +192,24 @@ h2 {
   margin: 0;
 }
 
+/* El logo de la Prestadora, cuando lo cargó. Se limita la altura y no el ancho para que
+   entren tanto un logo cuadrado como uno alargado sin deformarse ni tapar el botón de
+   cerrar sesión. */
+.logo-prestadora {
+  max-height: 2rem;
+  max-width: 60%;
+  object-fit: contain;
+}
+
+/* La línea del producto al pie: la única mención de Careonys en esta aplicación, y a
+   propósito discreta — quien la lee contrató a su Prestadora, no a nosotros. */
+.marca-del-producto {
+  margin: 2rem 0 0;
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--texto-secundario);
+}
+
 .app-content {
   flex: 1;
   padding: 1rem 1.25rem 5.5rem;

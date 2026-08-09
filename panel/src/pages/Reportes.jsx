@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
+import { mensajeDeError } from '../lib/errores';
 import {
   SIGNOS_VITALES,
   SIGNOS_VITALES_LEGADO,
@@ -57,7 +58,7 @@ export function Reportes() {
     ]);
 
     if (errorReportes) {
-      setError(errorReportes.message);
+      setError(mensajeDeError(errorReportes, t));
       setEstado('error');
       return;
     }
@@ -78,7 +79,7 @@ export function Reportes() {
     setEstado('listo');
     // Solo las dos fechas, no el objeto de filtros entero: el desplegable filtra las filas ya
     // traídas, y si dependiera de `f` cambiarlo volvería a pedirle todo al servidor.
-  }, [f.desde, f.hasta, usuario.prestadora_id]);
+  }, [f.desde, f.hasta, usuario.prestadora_id, t]);
 
   useEffect(() => {
     recargar();

@@ -6,6 +6,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { TiposAsistenteTab } from './TiposAsistenteTab';
+import { mensajeDeError } from '../../lib/errores';
 
 /* Cómo es el plantel: qué tipos de Asistente existen —con sus tareas y su
    matrícula— y qué documentación se les exige. */
@@ -38,10 +39,10 @@ function TabDocumentos() {
       setDiasAviso(String(dias_aviso_vencimiento_documentos));
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -56,7 +57,7 @@ function TabDocumentos() {
       });
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setActualizandoId(null);
     }
@@ -73,7 +74,7 @@ function TabDocumentos() {
       });
       setPlazoGuardado(true);
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardandoPlazo(false);
     }
@@ -148,7 +149,7 @@ function NuevoTipoDocumento({ onClose, onCreado }) {
       });
       onCreado();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardando(false);
     }

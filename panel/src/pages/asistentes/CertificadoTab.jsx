@@ -7,6 +7,7 @@ import { claseBadge } from '../../lib/tonos';
 import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
+import { mensajeDeError } from '../../lib/errores';
 
 export function CertificadoTab({ asistente }) {
   const { t } = useLocale();
@@ -28,7 +29,7 @@ export function CertificadoTab({ asistente }) {
       .limit(1)
       .maybeSingle();
     if (errorConsulta) {
-      setError(errorConsulta.message);
+      setError(mensajeDeError(errorConsulta, t));
       setEstado('error');
       return;
     }
@@ -37,7 +38,7 @@ export function CertificadoTab({ asistente }) {
       setQrDataUrl(await QRCode.toDataURL(asistente.qr_token, { width: 280, margin: 1 }));
     }
     setEstado('listo');
-  }, [asistente.id, asistente.qr_token]);
+  }, [asistente.id, asistente.qr_token, t]);
 
   useEffect(() => {
     recargar();

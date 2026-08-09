@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
+import { mensajeDeError } from '../../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -49,13 +50,13 @@ export function MonitoreoVitalesPaciente({ paciente, onClose }) {
       .eq('vigente', true)
       .maybeSingle();
     if (errorConsulta) {
-      setError(errorConsulta.message);
+      setError(mensajeDeError(errorConsulta, t));
       setEstado('error');
       return;
     }
     setAutorizacion(data);
     setEstado('listo');
-  }, [paciente.id]);
+  }, [paciente.id, t]);
 
   useEffect(() => {
     recargar();
@@ -69,7 +70,7 @@ export function MonitoreoVitalesPaciente({ paciente, onClose }) {
       setUrlArchivo(url);
       window.open(url, '_blank', 'noreferrer');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setCargandoUrl(false);
     }
@@ -119,7 +120,7 @@ export function MonitoreoVitalesPaciente({ paciente, onClose }) {
       setArchivo(null);
       recargar();
     } catch (err) {
-      setErrorForm(err.message);
+      setErrorForm(mensajeDeError(err, t));
     } finally {
       setGuardando(false);
     }

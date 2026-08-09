@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../ui/Button';
 import { Alert } from '../ui/Alert';
 import { EstadoLista } from '../layout/EstadoLista';
+import { mensajeDeError } from '../../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -52,7 +53,7 @@ export function HiloWhatsapp({ conversacionId, onCambio }) {
       .order('created_at', { ascending: true });
 
     if (errorConsulta) {
-      setError(errorConsulta.message);
+      setError(mensajeDeError(errorConsulta, t));
       setEstado('error');
       return;
     }
@@ -64,7 +65,7 @@ export function HiloWhatsapp({ conversacionId, onCambio }) {
     const borrador = [...filas].reverse().find(esBorrador);
     setTexto(borrador ? borrador.texto : '');
     setEstado('listo');
-  }, [conversacionId]);
+  }, [conversacionId, t]);
 
   useEffect(() => {
     recargar();

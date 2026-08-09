@@ -7,6 +7,7 @@ import { claseBadgeTono, TONO } from '../lib/tonos';
 import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Alert } from '../components/ui/Alert';
+import { mensajeDeError } from '../lib/errores';
 
 /* Lo que la Prestadora le paga al Asistente. Es la otra mitad del dinero: hasta ahora el
    Panel solo mostraba lo que se le cobra a la Familia (facturación, lista de precios,
@@ -134,7 +135,7 @@ export function PagosAsistentes() {
     ]);
 
     if (fallaGuardias || fallaAsistentes) {
-      setError((fallaGuardias ?? fallaAsistentes).message);
+      setError(mensajeDeError(fallaGuardias ?? fallaAsistentes, t));
       setEstado('error');
       return;
     }
@@ -142,7 +143,7 @@ export function PagosAsistentes() {
     setGuardias(gu ?? []);
     setAsistentes(asis ?? []);
     setEstado('listo');
-  }, [mes]);
+  }, [mes, t]);
 
   useEffect(() => {
     recargar();

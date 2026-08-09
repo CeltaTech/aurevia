@@ -13,6 +13,7 @@ import { SimuladorVinculoTab } from './SimuladorVinculoTab';
 import { ScoreRiesgoTab } from './ScoreRiesgoTab';
 import { AusenciasCoberturaTab } from './AusenciasCoberturaTab';
 import { ComunicacionTab } from './ComunicacionTab';
+import { mensajeDeError } from '../../lib/errores';
 
 const TABS = ['perfil', 'verificacion', 'certificado', 'matriculas', 'vinculo_cese', 'simulador', 'score_riesgo', 'ausencias', 'comunicacion'];
 // Ausencias y Cobertura es operativo (tipo/fechas/sustituto), no datos laborales sensibles —
@@ -42,13 +43,13 @@ export function AsistenteDetalle() {
     const tabla = esAdmin ? 'asistentes' : 'asistentes_coordinador';
     const { data, error: errorConsulta } = await supabase.from(tabla).select('*').eq('id', id).single();
     if (errorConsulta) {
-      setError(errorConsulta.code === 'PGRST116' ? null : errorConsulta.message);
+      setError(errorConsulta.code === 'PGRST116' ? null : mensajeDeError(errorConsulta, t));
       setEstado(errorConsulta.code === 'PGRST116' ? 'no_encontrado' : 'error');
       return;
     }
     setAsistente(data);
     setEstado('listo');
-  }, [id, esAdmin]);
+  }, [id, esAdmin, t]);
 
   useEffect(() => {
     recargar();

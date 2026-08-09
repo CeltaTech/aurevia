@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
+import { mensajeDeError } from '../../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -45,7 +46,7 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
       }
       onCreado();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardando(false);
     }

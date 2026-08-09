@@ -8,6 +8,7 @@ import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
+import { mensajeDeError } from '../lib/errores';
 
 // Se piden `paciente_id` de las prestaciones y de las guardias, y no un conteo, porque de
 // esas dos listas sale la tercera cifra de la tarjeta: a cuántos Pacientes cubre el
@@ -34,14 +35,14 @@ export function Servicios() {
       .order('created_at', { ascending: false });
 
     if (errorConsulta) {
-      setError(errorConsulta.message);
+      setError(mensajeDeError(errorConsulta, t));
       setEstado('error');
       return;
     }
 
     setFilas(data ?? []);
     setEstado('listo');
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();

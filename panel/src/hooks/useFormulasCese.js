@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { mensajeDeError } from '../lib/errores';
+import { useLocale } from '../i18n/LocaleContext';
 
 // Análogo a useEscalasLegales.js — trae las fórmulas de cese (pendiente #72) de la
 // jurisdicción de la Prestadora activa. Mismo criterio: contenido legal curado por CeltaTech
 // por país, nunca decidido por una Prestadora individual (CLAUDE.md §3).
 export function useFormulasCese(prestadoraId) {
+  const { t } = useLocale();
   const [filas, setFilas] = useState([]);
   const [jurisdiccion, setJurisdiccion] = useState(null);
   const [estado, setEstado] = useState('cargando'); // cargando | error | listo
@@ -21,7 +24,7 @@ export function useFormulasCese(prestadoraId) {
       .eq('id', prestadoraId)
       .single();
     if (errorPrestadora || !prestadora) {
-      setError(errorPrestadora?.message ?? 'No se pudo resolver el país de la Prestadora.');
+      setError(mensajeDeError(errorPrestadora ?? { code: 'PGRST116' }, t));
       setEstado('error');
       return;
     }
@@ -34,14 +37,14 @@ export function useFormulasCese(prestadoraId) {
       .order('vigencia_desde', { ascending: false });
 
     if (errorFormulas) {
-      setError(errorFormulas.message);
+      setError(mensajeDeError(errorFormulas, t));
       setEstado('error');
       return;
     }
 
     setFilas(data ?? []);
     setEstado('listo');
-  }, [prestadoraId]);
+  }, [prestadoraId, t]);
 
   useEffect(() => {
     recargar();

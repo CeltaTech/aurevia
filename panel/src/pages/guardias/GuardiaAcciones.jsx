@@ -9,6 +9,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { COBERTURA, claveTextoCobertura, coberturaDeGuardia } from '../../lib/cobertura';
+import { mensajeDeError } from '../../lib/errores';
 
 export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose, onActualizada }) {
   const { t } = useLocale();
@@ -43,7 +44,7 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
     const { error: errorUpdate } = await supabase.from('guardias').update(cambios).eq('id', guardia.id);
     if (errorUpdate) {
       setProcesando(false);
-      setError(errorUpdate.message);
+      setError(mensajeDeError(errorUpdate, t));
       return;
     }
     // Se espera a que termine la recarga del listado antes de cerrar el modal,
@@ -83,7 +84,7 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
     const { error: errorUpdate } = await supabase.from('guardias').update({ estado: 'ausente' }).eq('id', guardia.id);
     if (errorUpdate) {
       setProcesando(false);
-      setError(errorUpdate.message);
+      setError(mensajeDeError(errorUpdate, t));
       return;
     }
 
@@ -109,7 +110,7 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
     });
     if (errorIncidente) {
       setProcesando(false);
-      setError(errorIncidente.message);
+      setError(mensajeDeError(errorIncidente, t));
       return;
     }
 
@@ -132,7 +133,7 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
     });
     if (errorAlerta) {
       setProcesando(false);
-      setError(errorAlerta.message);
+      setError(mensajeDeError(errorAlerta, t));
       return;
     }
 

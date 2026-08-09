@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { mensajeDeError } from './errores';
 
 /* Mover una guardia de la fila de un Paciente a la de otro, en la vista por Paciente.
    =========================================================================================
@@ -29,9 +30,11 @@ import { supabase } from './supabaseClient';
  *                          arrastra desde la fila de "sin Paciente", acá llega esa marca y no
  *                          hay nada que sacar.
  * @param {string} pacienteDestino  A qué fila se la llevó.
+ * @param {object} t  Los textos del idioma en que está el Panel, para que un error de la base
+ *                          no llegue a la pantalla escrito en inglés. Ver `lib/errores.js`.
  * @returns {Promise<{ error: string | null }>} El motivo si algo falló, o null si salió todo.
  */
-export async function cambiarPacienteDeGuardia(guardia, pacienteOrigen, pacienteDestino) {
+export async function cambiarPacienteDeGuardia(guardia, pacienteOrigen, pacienteDestino, t = null) {
   if (!guardia?.id || !pacienteDestino) return { error: null };
   if (pacienteOrigen === pacienteDestino) return { error: null };
 
@@ -42,7 +45,7 @@ export async function cambiarPacienteDeGuardia(guardia, pacienteOrigen, paciente
       .from('guardias')
       .update({ paciente_id: pacienteDestino })
       .eq('id', guardia.id);
-    return { error: error ? error.message : null };
+    return { error: error ? mensajeDeError(error, t) : null };
   }
 
   // Primero se agrega y después se saca. Al revés, un corte de conexión en el medio dejaría la
@@ -54,14 +57,14 @@ export async function cambiarPacienteDeGuardia(guardia, pacienteOrigen, paciente
       { guardia_id: guardia.id, paciente_id: pacienteDestino, prestadora_id: guardia.prestadora_id },
       { onConflict: 'guardia_id,paciente_id', ignoreDuplicates: true }
     );
-  if (errorAlta) return { error: errorAlta.message };
+  if (errorAlta) return { error: mensajeDeError(errorAlta, t) };
 
   const { error: errorBaja } = await supabase
     .from('guardia_pacientes')
     .delete()
     .eq('guardia_id', guardia.id)
     .eq('paciente_id', pacienteOrigen);
-  if (errorBaja) return { error: errorBaja.message };
+  if (errorBaja) return { error: mensajeDeError(errorBaja, t) };
 
   return { error: null };
 }

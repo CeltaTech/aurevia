@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
+import { mensajeDeError } from '../../lib/errores';
 
 const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
 const DIAS_GENERACION_SIN_VIGENCIA_HASTA_DEFAULT = 90;
@@ -111,7 +112,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
 
       if (errorInsert) {
         setGuardando(false);
-        setError(errorInsert.message);
+        setError(mensajeDeError(errorInsert, t));
         return;
       }
 
@@ -125,7 +126,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
         );
         if (errorPacientes) {
           setGuardando(false);
-          setError(errorPacientes.message);
+          setError(mensajeDeError(errorPacientes, t));
           return;
         }
       }
@@ -153,7 +154,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
 
     if (errorSerie) {
       setGuardando(false);
-      setError(errorSerie.message);
+      setError(mensajeDeError(errorSerie, t));
       return;
     }
 
@@ -167,7 +168,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
       );
       if (errorPacientesSerie) {
         setGuardando(false);
-        setError(errorPacientesSerie.message);
+        setError(mensajeDeError(errorPacientesSerie, t));
         return;
       }
     }
@@ -191,7 +192,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
 
     if (errorGuardias) {
       setGuardando(false);
-      setError(errorGuardias.message);
+      setError(mensajeDeError(errorGuardias, t));
       return;
     }
 
@@ -210,7 +211,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
         .insert(filasPacientes);
       if (errorPacientesGuardias) {
         setGuardando(false);
-        setError(errorPacientesGuardias.message);
+        setError(mensajeDeError(errorPacientesGuardias, t));
         return;
       }
     }

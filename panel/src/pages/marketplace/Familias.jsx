@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
+import { mensajeDeError } from '../../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 const LECTOR_ID = 'lector-qr-cobro-efectivo';
@@ -50,10 +51,10 @@ export function MarketplaceFamilias() {
       setSuscripciones(filas);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -94,7 +95,7 @@ export function MarketplaceFamilias() {
       setFormEfectivo(null);
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardandoEfectivo(false);
     }
@@ -133,7 +134,7 @@ export function MarketplaceFamilias() {
             setExpandida(null);
             recargar();
           } catch (err) {
-            setError(err.message);
+            setError(mensajeDeError(err, t));
           }
         },
         () => {}

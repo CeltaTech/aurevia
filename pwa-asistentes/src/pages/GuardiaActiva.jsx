@@ -5,6 +5,7 @@ import { useLocale } from '../i18n/LocaleContext';
 import { agregarACola, nuevoId, pendientesDeGuardia } from '../lib/colaOffline';
 import { sincronizarCola, suscribirseASincronizacion } from '../lib/sincronizarCola';
 import { con } from '../lib/textos';
+import { mensajeDeError } from '../lib/errores';
 
 /**
  * Lo que se puede consultar de UN Paciente durante el turno: sus reportes anteriores y sus
@@ -205,7 +206,7 @@ export default function GuardiaActiva() {
         sincronizarCola();
       }
     } catch (e) {
-      setError(e.message === 'sin_geo' ? t.guardia_activa.geo_no_disponible : t.comun.error_generico);
+      setError(e.message === 'sin_geo' ? t.guardia_activa.geo_no_disponible : mensajeDeError(e, t));
     } finally {
       setHaciendoCheckin(false);
     }

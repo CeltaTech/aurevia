@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { mensajeDeError } from '../lib/errores';
+import { useLocale } from '../i18n/LocaleContext';
 
 // Trae únicamente las escalas legales de la jurisdicción de la Prestadora activa (resuelta
 // vía prestadoras.pais, mismo patrón que AdvertenciaLegalContext.jsx:29-33) — pendiente #72.
@@ -8,6 +10,7 @@ import { supabase } from '../lib/supabaseClient';
 // por prestadora_id. La resolución por fecha del hecho se hace después con
 // resolverEscalasVigentes, nunca acá.
 export function useEscalasLegales(prestadoraId) {
+  const { t } = useLocale();
   const [filas, setFilas] = useState([]);
   const [jurisdiccion, setJurisdiccion] = useState(null);
   const [estado, setEstado] = useState('cargando'); // cargando | error | listo
@@ -24,7 +27,7 @@ export function useEscalasLegales(prestadoraId) {
       .eq('id', prestadoraId)
       .single();
     if (errorPrestadora || !prestadora) {
-      setError(errorPrestadora?.message ?? 'No se pudo resolver el país de la Prestadora.');
+      setError(mensajeDeError(errorPrestadora ?? { code: 'PGRST116' }, t));
       setEstado('error');
       return;
     }
@@ -37,14 +40,14 @@ export function useEscalasLegales(prestadoraId) {
       .order('vigencia_desde', { ascending: false });
 
     if (errorEscalas) {
-      setError(errorEscalas.message);
+      setError(mensajeDeError(errorEscalas, t));
       setEstado('error');
       return;
     }
 
     setFilas(data ?? []);
     setEstado('listo');
-  }, [prestadoraId]);
+  }, [prestadoraId, t]);
 
   useEffect(() => {
     recargar();

@@ -6,8 +6,9 @@
 //
 // Comprueba dos cosas y devuelve código de salida 1 si alguna falla:
 //
-//   1. SINCRONÍA — las 5 copias de identidadProducto.js son idénticas byte a
-//      byte. Si alguien edita una sola, esto lo caza.
+//   1. SINCRONÍA — los archivos que existen repetidos en varias carpetas son
+//      idénticos byte a byte a su original. Si alguien edita una sola copia,
+//      esto lo caza. La lista de cuáles son está en copias_entre_apps.mjs.
 //
 //   2. LITERAL — el nombre del producto no aparece escrito a mano en ninguna
 //      parte del código. Es lo importante: sin esto, cambiar el nombre vuelve a
@@ -34,6 +35,8 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, relative, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { TODAS_LAS_RUTAS, copiasDespegadas } from './copias_entre_apps.mjs';
+
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 // El literal a perseguir sale de la config, no está escrito acá: si mañana el
@@ -44,14 +47,6 @@ const { IDENTIDAD } = await import(
 const LITERALES = [...new Set([IDENTIDAD.nombre, IDENTIDAD.nombreCorto, IDENTIDAD.codigo])]
   .filter(Boolean)
   .map((valor) => valor.toLowerCase());
-
-const COPIAS_IDENTIDAD = [
-  'backend/src/config/identidadProducto.js',
-  'panel/src/config/identidadProducto.js',
-  'pwa-asistentes/src/config/identidadProducto.js',
-  'pwa-familias/src/config/identidadProducto.js',
-  'sitio-web/src/config/identidadProducto.js',
-];
 
 const DIRECTORIOS_IGNORADOS = new Set([
   'node_modules',
@@ -76,9 +71,10 @@ const EXTENSIONES_REVISADAS = new Set([
 
 // Única lista blanca. Que sea corta es la señal de que la etapa está bien hecha.
 const ARCHIVOS_PERMITIDOS = new Set([
-  ...COPIAS_IDENTIDAD,
+  ...TODAS_LAS_RUTAS,
   'scripts/verificar_identidad.mjs',
-  'scripts/sincronizar_identidad.mjs',
+  'scripts/sincronizar_copias.mjs',
+  'scripts/copias_entre_apps.mjs',
 ]);
 
 const INICIOS_DE_COMENTARIO = ['//', '*', '/*', '--', '#'];
@@ -114,15 +110,9 @@ function* recorrer(directorio) {
   }
 }
 
-// --- 1. Sincronía de las 4 copias ------------------------------------------
+// --- 1. Sincronía de los archivos repetidos --------------------------------
 
-const fallasSincronia = [];
-const original = readFileSync(join(RAIZ, COPIAS_IDENTIDAD[0]), 'utf8');
-for (const ruta of COPIAS_IDENTIDAD.slice(1)) {
-  if (readFileSync(join(RAIZ, ruta), 'utf8') !== original) {
-    fallasSincronia.push(ruta);
-  }
-}
+const fallasSincronia = copiasDespegadas();
 
 // --- 2. El literal escrito a mano ------------------------------------------
 
@@ -144,10 +134,13 @@ for (const rutaAbsoluta of recorrer(RAIZ)) {
 // --- Informe ----------------------------------------------------------------
 
 if (fallasSincronia.length > 0) {
-  console.error('\n✗ Las copias de identidadProducto.js no coinciden con la original:\n');
-  for (const ruta of fallasSincronia) console.error(`    ${ruta}`);
-  console.error('\n  Se edita siempre backend/src/config/identidadProducto.js y después se corre:');
-  console.error('    node scripts/sincronizar_identidad.mjs\n');
+  console.error('\n✗ Hay copias que no coinciden con su original:\n');
+  for (const falla of fallasSincronia) {
+    console.error(`    ${falla.copia}`);
+    console.error(`      (${falla.que} — el original es ${falla.original})`);
+  }
+  console.error('\n  Se edita siempre el original y después se corre:');
+  console.error('    node scripts/sincronizar_copias.mjs\n');
 }
 
 if (fallasLiteral.length > 0) {

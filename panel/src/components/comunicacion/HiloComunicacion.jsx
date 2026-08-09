@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../ui/Button';
 import { Alert } from '../ui/Alert';
 import { EstadoLista } from '../layout/EstadoLista';
+import { mensajeDeError } from '../../lib/errores';
 
 export function HiloComunicacion({ asistenteId, mostrarEncabezado = true, onEnviado }) {
   const { t } = useLocale();
@@ -25,13 +26,13 @@ export function HiloComunicacion({ asistenteId, mostrarEncabezado = true, onEnvi
       .order('created_at', { ascending: true });
 
     if (errorConsulta) {
-      setError(errorConsulta.message);
+      setError(mensajeDeError(errorConsulta, t));
       setEstado('error');
       return;
     }
     setMensajes(data ?? []);
     setEstado('listo');
-  }, [asistenteId]);
+  }, [asistenteId, t]);
 
   useEffect(() => {
     recargar();

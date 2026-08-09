@@ -9,6 +9,7 @@ import { candidatosParaGuardia } from '../../lib/candidatos';
 import { avisosDeAsignacion } from '../../lib/avisosAsignacion';
 import { COLUMNAS_ESTADO_MATRICULA, mensajeDeBloqueo } from '../../lib/matricula';
 import { cargarPacientesDeGuardias, pacientesDeGuardia } from '../../lib/pacientesDeGuardia';
+import { mensajeDeError } from '../../lib/errores';
 
 /* El panel lateral para cubrir una vacante.
    ==========================================================================
@@ -65,8 +66,8 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
      a la vez, o una Matrícula que se venció con el panel abierto—. Cuando eso pasa, el mensaje
      crudo de la base no se muestra nunca: se traduce al motivo y a qué hacer al respecto. */
   const mostrarFalla = useCallback(
-    (falla) => setError(mensajeDeBloqueo(falla, tm) ?? falla.message),
-    [tm]
+    (falla) => setError(mensajeDeBloqueo(falla, tm) ?? mensajeDeError(falla, t)),
+    [tm, t]
   );
 
   const cargar = useCallback(async () => {
@@ -99,7 +100,7 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
 
     const fallo = gs.error || hs.error || ds.error || os.error || em.error;
     if (fallo) {
-      setError(fallo.message);
+      setError(mensajeDeError(fallo, t));
       setEstado('error');
       return;
     }
@@ -111,7 +112,7 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
     try {
       pacientesPorGuardia = await cargarPacientesDeGuardias((gs.data ?? []).map((g) => g.id));
     } catch (e) {
-      setError(e.message);
+      setError(mensajeDeError(e, t));
       setEstado('error');
       return;
     }
@@ -126,7 +127,7 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
       ahora: new Date(),
     });
     setEstado('listo');
-  }, [guardia, asistentes]);
+  }, [guardia, asistentes, t]);
 
   useEffect(() => {
     cargar();

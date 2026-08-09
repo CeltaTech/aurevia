@@ -15,6 +15,7 @@ import { cambiarPacienteDeGuardia } from '../lib/cambiarPacienteDeGuardia';
 import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../lib/pacientesDeGuardia';
 import { correrHora, hoyISO, sumarDias } from '../lib/horarios';
 import { COLUMNAS_ESTADO_MATRICULA, URGENCIA, urgenciaDeVencimiento } from '../lib/matricula';
+import { mensajeDeError } from '../lib/errores';
 
 /* El Estado actual.
    ==========================================================================
@@ -129,7 +130,7 @@ export function EstadoActual() {
     ]);
 
     if (gs.error) {
-      setError(gs.error.message);
+      setError(mensajeDeError(gs.error, t));
       setEstado('error');
       return;
     }
@@ -215,7 +216,7 @@ export function EstadoActual() {
       asistentesConMatriculaPorVencer: matriculaPorVencer,
     });
     setEstado('listo');
-  }, [desde, hasta]);
+  }, [desde, hasta, t]);
 
   useEffect(() => {
     cargar();
@@ -274,7 +275,7 @@ export function EstadoActual() {
   async function reasignarUna(guardiaId, asistenteId, fecha) {
     const g = guardias.find((x) => x.id === guardiaId);
     if (!g) return;
-    const { error: falla } = await reasignarGuardia(g, asistenteId, fecha, t.matricula);
+    const { error: falla } = await reasignarGuardia(g, asistenteId, fecha, t);
     if (falla) {
       setError(falla);
       return;
@@ -296,7 +297,7 @@ export function EstadoActual() {
        ese turno y deja a los demás donde estaban. Toda esa cuenta vive en un solo lugar
        (regla 12 de CLAUDE.md §7), y esta pantalla solo la llama. */
     if (porPaciente) {
-      const { error: falla } = await cambiarPacienteDeGuardia(g, filaOrigen, fila);
+      const { error: falla } = await cambiarPacienteDeGuardia(g, filaOrigen, fila, t);
       if (falla) {
         setError(falla);
         return;
@@ -322,7 +323,7 @@ export function EstadoActual() {
 
     const { error: falla } = await supabase.from('guardias').update(cambios).eq('id', guardiaId);
     if (falla) {
-      setError(falla.message);
+      setError(mensajeDeError(falla, t));
       return;
     }
     cargar();

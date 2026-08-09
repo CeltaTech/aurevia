@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { useConfirmarDestructivo } from '../context/TenantSessionContext';
+import { mensajeDeError } from '../lib/errores';
 
 // Etapa 2 de la separación CeltaTech / Careonys (2026-07-28, docs/ETAPA_2_INVENTARIO.md §5):
 // estas dos secciones venían adentro de AdminPlataforma.jsx, el panel comercial del SaaS.
@@ -62,10 +63,10 @@ function CambiosPrecioIASeccion() {
       setCambios(filas);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -78,7 +79,7 @@ function CambiosPrecioIASeccion() {
       await llamarApi(`/cambios-precio-ia/${cambio.id}/confirmar`, { method: 'POST' });
       await recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setResolviendo(null);
     }
@@ -90,7 +91,7 @@ function CambiosPrecioIASeccion() {
       await llamarApi(`/cambios-precio-ia/${cambio.id}/descartar`, { method: 'POST' });
       await recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setResolviendo(null);
     }
@@ -156,10 +157,10 @@ function UsoIASeccion() {
       setResumen(filas);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();

@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
+import { mensajeDeError } from '../../lib/errores';
 
 /* Las reglas del cuidado en sí: cómo se arman los Servicios y sus guardias, qué
    signos vitales se toman, y qué matrícula hace falta para cada vía de medicación. */
@@ -60,10 +61,10 @@ function TabServicios() {
       setMetrosTolerancia(String(configuracion.metros_tolerancia_checkin));
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -80,7 +81,7 @@ function TabServicios() {
       });
       setHorizonteGuardado(true);
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardandoHorizonte(false);
     }
@@ -101,7 +102,7 @@ function TabServicios() {
       });
       setAusenciaGuardada(true);
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardandoAusencia(false);
     }
@@ -114,7 +115,7 @@ function TabServicios() {
       await llamarApi(`/escalada-relevo/${fila.id}`, { method: 'DELETE' });
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setActualizandoId(null);
     }
@@ -220,10 +221,10 @@ function TabServiciosMotivosAvisoPrevio() {
       setMotivos(filas);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -238,7 +239,7 @@ function TabServiciosMotivosAvisoPrevio() {
       });
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setActualizandoId(null);
     }
@@ -253,7 +254,7 @@ function TabServiciosMotivosAvisoPrevio() {
       setCreandoNuevo(false);
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardando(false);
     }
@@ -323,10 +324,10 @@ function TabServiciosEtapasIncorporacion() {
       setEtapas(filas);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -341,7 +342,7 @@ function TabServiciosEtapasIncorporacion() {
       });
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setActualizandoId(null);
     }
@@ -353,7 +354,7 @@ function TabServiciosEtapasIncorporacion() {
       await llamarApi(`/etapas-incorporacion/${fila.id}/mover`, { method: 'PATCH', body: JSON.stringify({ direccion }) });
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setActualizandoId(null);
     }
@@ -369,7 +370,7 @@ function TabServiciosEtapasIncorporacion() {
       setCreandoNueva(false);
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardando(false);
     }
@@ -451,10 +452,10 @@ function TabServiciosPersonalEmergencia() {
       setAsistentes(asistentesData ?? []);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -469,7 +470,7 @@ function TabServiciosPersonalEmergencia() {
       });
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setActualizandoId(null);
     }
@@ -482,7 +483,7 @@ function TabServiciosPersonalEmergencia() {
       await llamarApi(`/personal-emergencia/${fila.id}`, { method: 'DELETE' });
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setActualizandoId(null);
     }
@@ -557,7 +558,7 @@ function NuevoPersonalEmergencia({ asistentes, onClose, onCreado }) {
       });
       onCreado();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardando(false);
     }
@@ -631,7 +632,7 @@ function NuevoNivelEscalada({ onClose, onCreado }) {
       });
       onCreado();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardando(false);
     }
@@ -696,13 +697,13 @@ function TabVitales() {
       .is('paciente_id', null)
       .order('signo');
     if (errorConsulta) {
-      setError(errorConsulta.message);
+      setError(mensajeDeError(errorConsulta, t));
       setEstado('error');
       return;
     }
     setRangos(data ?? []);
     setEstado('listo');
-  }, [usuario.prestadora_id]);
+  }, [usuario.prestadora_id, t]);
 
   useEffect(() => {
     recargar();
@@ -727,7 +728,7 @@ function TabVitales() {
       .eq('id', fila.id);
     setGuardandoSigno(null);
     if (errorUpdate) {
-      setError(errorUpdate.message);
+      setError(mensajeDeError(errorUpdate, t));
       return;
     }
     recargar();
@@ -793,13 +794,13 @@ function TabMatriculaMedicacion() {
       .eq('prestadora_id', usuario.prestadora_id)
       .order('via_administracion');
     if (errorConsulta) {
-      setError(errorConsulta.message);
+      setError(mensajeDeError(errorConsulta, t));
       setEstado('error');
       return;
     }
     setFilas(data ?? []);
     setEstado('listo');
-  }, [usuario.prestadora_id]);
+  }, [usuario.prestadora_id, t]);
 
   useEffect(() => {
     recargar();

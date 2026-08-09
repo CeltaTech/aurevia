@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 import { claseBadge } from '../lib/tonos';
 import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { mensajeDeError } from '../lib/errores';
 
 function hoyISO() {
   return new Date().toISOString().slice(0, 10);
@@ -49,7 +50,7 @@ export function Documentacion() {
     ]);
 
     if (errorDocs) {
-      setError(errorDocs.message);
+      setError(mensajeDeError(errorDocs, t));
       setEstado('error');
       return;
     }
@@ -71,7 +72,7 @@ export function Documentacion() {
 
     setFilas(filasConEstado);
     setEstado('listo');
-  }, [usuario.prestadora_id]);
+  }, [usuario.prestadora_id, t]);
 
   useEffect(() => {
     recargar();

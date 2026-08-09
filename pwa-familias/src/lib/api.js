@@ -19,7 +19,11 @@ async function pedido(ruta, opciones = {}) {
   });
   const datos = await respuesta.json().catch(() => ({}));
   if (!respuesta.ok) {
-    throw new Error(datos.error || 'Error de red');
+    const error = new Error(datos.error || 'Error de red');
+    // El número de la respuesta viaja con el error: es lo que le permite a lib/errores.js
+    // distinguir una sesión vencida (401) de un permiso que falta (403) sin leer el texto.
+    error.status = respuesta.status;
+    throw error;
   }
   return datos;
 }

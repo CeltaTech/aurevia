@@ -10,6 +10,7 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { supabase } from '../lib/supabaseClient';
+import { mensajeDeError } from '../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -170,10 +171,10 @@ export function Dashboard() {
       setEquipoTieneCoordinador(usuariosEquipo.some((u) => u.rol === 'coordinador'));
       setEquipoEstado('listo');
     } catch (err) {
-      setErrorEquipo(err.message);
+      setErrorEquipo(mensajeDeError(err, t));
       setEquipoEstado('error');
     }
-  }, [mostrarOnboarding]);
+  }, [mostrarOnboarding, t]);
 
   useEffect(() => {
     cargarEquipo();

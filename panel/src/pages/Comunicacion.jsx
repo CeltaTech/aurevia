@@ -8,6 +8,7 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { Alert } from '../components/ui/Alert';
 import { HiloComunicacion } from '../components/comunicacion/HiloComunicacion';
 import { HiloWhatsapp } from '../components/comunicacion/HiloWhatsapp';
+import { mensajeDeError } from '../lib/errores';
 
 // Bandeja única: las conversaciones internas con cada Asistente y los WhatsApp que entran
 // al número de la Prestadora se ven en la misma lista. Antes el WhatsApp no se veía en
@@ -66,14 +67,14 @@ export function Comunicacion() {
     ]);
 
     if (errorAsistentes) {
-      setError(errorAsistentes.message);
+      setError(mensajeDeError(errorAsistentes, t));
       setEstado('error');
       return;
     }
 
     // Si el canal de WhatsApp falla (por ejemplo, porque este rol no lo tiene habilitado),
     // la bandeja igual muestra el canal interno y avisa qué quedó afuera.
-    if (errorConversaciones) setAvisoWhatsapp(errorConversaciones.message);
+    if (errorConversaciones) setAvisoWhatsapp(mensajeDeError(errorConversaciones, t));
 
     const ultimoInterno = ultimoPorClave(mensajesInternos ?? [], 'asistente_id');
     const ultimoWhatsapp = ultimoPorClave(mensajesWhatsapp ?? [], 'conversacion_id');
@@ -119,7 +120,7 @@ export function Comunicacion() {
 
     setConversaciones(items);
     setEstado('listo');
-  }, [esAdmin]);
+  }, [esAdmin, t]);
 
   useEffect(() => {
     recargar();

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { supabase } from '../lib/supabaseClient';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { mensajeDeError } from '../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -32,10 +33,10 @@ export function Auditoria() {
       setEventos(filas);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();

@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { mensajeDeError } from '../lib/errores';
+import { useLocale } from '../i18n/LocaleContext';
 
 // Catálogo de motivos de aviso previo de guardia, configurable por Prestadora —
 // pendiente #18 candidato 3 (docs/PENDIENTES.md). Reemplaza los 4 valores fijos que
 // antes tenía GuardiaAcciones.jsx (Salud/Transporte/Familiar/Otro).
 export function useMotivosAvisoPrevio(prestadoraId) {
+  const { t } = useLocale();
   const [filas, setFilas] = useState([]);
   const [estado, setEstado] = useState('cargando'); // cargando | error | listo
   const [error, setError] = useState(null);
@@ -21,14 +24,14 @@ export function useMotivosAvisoPrevio(prestadoraId) {
       .order('nombre');
 
     if (errorConsulta) {
-      setError(errorConsulta.message);
+      setError(mensajeDeError(errorConsulta, t));
       setEstado('error');
       return;
     }
 
     setFilas(data ?? []);
     setEstado('listo');
-  }, [prestadoraId]);
+  }, [prestadoraId, t]);
 
   useEffect(() => {
     recargar();

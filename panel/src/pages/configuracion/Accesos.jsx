@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
+import { mensajeDeError } from '../../lib/errores';
 
 /* Quién puede hacer qué: los permisos de cada rol y, para el rol técnico de
    CeltaTech, el segundo factor de ingreso. */
@@ -45,10 +46,10 @@ function TabPermisos() {
       setPolitica(politica_verificacion_alta_manual);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -88,7 +89,7 @@ function TabPermisos() {
         }),
       });
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardandoAccion(null);
     }
@@ -102,7 +103,7 @@ function TabPermisos() {
       await llamarApi('/politica-verificacion', { method: 'PATCH', body: JSON.stringify({ politica }) });
       setPoliticaGuardada(true);
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardandoPolitica(false);
     }
@@ -213,10 +214,10 @@ function TabSeguridad() {
       setMfaObligatorio(resultado.configuracion.mfa_admin_obligatorio);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -238,7 +239,7 @@ function TabSeguridad() {
       if (!respuesta.ok) throw new Error(resultado.error);
       setMfaObligatorio(nuevoValor);
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardando(false);
     }

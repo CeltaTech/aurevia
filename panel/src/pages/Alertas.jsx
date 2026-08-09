@@ -7,6 +7,7 @@ import { claseBadge } from '../lib/tonos';
 import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
+import { mensajeDeError } from '../lib/errores';
 
 // Alertas de la IA Nivel 2 (backend/src/utils/revisarAlertasIA.js): la IA lee los últimos
 // reportes de cada Paciente y, si detecta un patrón preocupante, deja una alerta con dos
@@ -42,7 +43,7 @@ export function Alertas() {
       .order('created_at', { ascending: false });
 
     if (errorConsulta) {
-      setError(errorConsulta.message);
+      setError(mensajeDeError(errorConsulta, t));
       setEstado('error');
       return;
     }
@@ -54,7 +55,7 @@ export function Alertas() {
       })),
     );
     setEstado('listo');
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -72,7 +73,7 @@ export function Alertas() {
       setAbierta(null);
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setResolviendoId(null);
     }

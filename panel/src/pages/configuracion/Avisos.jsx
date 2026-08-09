@@ -9,6 +9,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
+import { mensajeDeError } from '../../lib/errores';
 
 /* A quién se le avisa y por dónde: los correos de cada evento, la casilla desde la
    que salen, el aviso de cese y todo lo de WhatsApp. */
@@ -41,10 +42,10 @@ function TabNotificaciones() {
       setNotificaciones(filas);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -63,7 +64,7 @@ function TabNotificaciones() {
         body: JSON.stringify({ emails: fila.emails, activo: fila.activo, whatsapp_activo: fila.whatsapp_activo, notificar_familia: fila.notificar_familia }),
       });
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardandoEvento(null);
     }
@@ -145,10 +146,10 @@ function TabEmailRemitente() {
       setForm(emailRemitente);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -178,7 +179,7 @@ function TabEmailRemitente() {
       setGuardado(true);
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardando(false);
     }
@@ -236,13 +237,13 @@ function TabAvisoCese() {
       .eq('prestadora_id', usuario.prestadora_id)
       .maybeSingle();
     if (errorConsulta) {
-      setError(errorConsulta.message);
+      setError(mensajeDeError(errorConsulta, t));
       setEstado('error');
       return;
     }
     setConfig(data ?? { activo: true, horas_plazo_aviso_verbal: 24 });
     setEstado('listo');
-  }, [usuario.prestadora_id]);
+  }, [usuario.prestadora_id, t]);
 
   useEffect(() => {
     recargar();
@@ -258,7 +259,7 @@ function TabAvisoCese() {
     });
     setGuardando(false);
     if (errorUpsert) {
-      setError(errorUpsert.message);
+      setError(mensajeDeError(errorUpsert, t));
       return;
     }
     recargar();
@@ -314,7 +315,7 @@ function TabAvisoGuardiaSinCubrir() {
       .eq('prestadora_id', usuario.prestadora_id)
       .maybeSingle();
     if (errorConsulta) {
-      setError(errorConsulta.message);
+      setError(mensajeDeError(errorConsulta, t));
       setEstado('error');
       return;
     }
@@ -323,7 +324,7 @@ function TabAvisoGuardiaSinCubrir() {
     // el usuario toque "Guardar", y el que manda sigue siendo el de la base.
     setConfig(data ?? { activo: true, horas_antes: 48, horas_entre_avisos: 12 });
     setEstado('listo');
-  }, [usuario.prestadora_id]);
+  }, [usuario.prestadora_id, t]);
 
   useEffect(() => {
     recargar();
@@ -340,7 +341,7 @@ function TabAvisoGuardiaSinCubrir() {
     });
     setGuardando(false);
     if (errorUpsert) {
-      setError(errorUpsert.message);
+      setError(mensajeDeError(errorUpsert, t));
       return;
     }
     recargar();
@@ -410,10 +411,10 @@ function TabWhatsappCredenciales() {
       setForm(whatsapp);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -442,7 +443,7 @@ function TabWhatsappCredenciales() {
       setGuardado(true);
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardando(false);
     }
@@ -499,10 +500,10 @@ function TabWhatsappPlantillas() {
       setPlantillas(filas);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -517,7 +518,7 @@ function TabWhatsappPlantillas() {
       });
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setActualizandoId(null);
     }
@@ -530,7 +531,7 @@ function TabWhatsappPlantillas() {
       await llamarApi(`/whatsapp/plantillas/${fila.id}`, { method: 'DELETE' });
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setActualizandoId(null);
     }
@@ -607,7 +608,7 @@ function NuevaPlantillaWhatsapp({ onClose, onCreada }) {
       });
       onCreada();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardando(false);
     }
@@ -658,10 +659,10 @@ function TabWhatsappEscaladaCoordinador() {
       setCoordinadores(usuariosData ?? []);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -688,7 +689,7 @@ function TabWhatsappEscaladaCoordinador() {
       });
       setGuardado(true);
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardando(false);
     }

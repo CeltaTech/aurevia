@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { mensajeDeError } from '../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -43,10 +44,10 @@ export function UsuariosPanel() {
       setUsuarios(filas);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -147,7 +148,7 @@ function NuevoUsuarioPanel({ esSuperadmin, onClose, onCreado }) {
       setCreado({ email, passwordTemporal: resultado.passwordTemporal });
       onCreado();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardando(false);
     }
@@ -232,7 +233,7 @@ function EditarUsuarioPanel({ usuario, onClose, onActualizado }) {
       });
       onActualizado();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setGuardando(false);
     }
   }
@@ -247,7 +248,7 @@ function EditarUsuarioPanel({ usuario, onClose, onActualizado }) {
       await llamarApi(`/${usuario.id}`, { method: 'DELETE' });
       onActualizado();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setBorrando(false);
     }
   }

@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
+import { mensajeDeError } from '../../lib/errores';
 import {
   COLUMNAS_ESTADO_MATRICULA,
   URGENCIA,
@@ -101,7 +102,7 @@ export function MatriculasTab({ asistente }) {
 
     const fallo = ms.error || tp.error;
     if (fallo) {
-      setError(fallo.message);
+      setError(mensajeDeError(fallo, t));
       setEstado('error');
       return;
     }
@@ -110,7 +111,7 @@ export function MatriculasTab({ asistente }) {
     setEstadoMatricula(em.data ?? null);
     setTiposDeMatricula([...new Set((tp.data ?? []).map((x) => x.tipo_matricula))].sort());
     setEstado('listo');
-  }, [asistente.id]);
+  }, [asistente.id, t]);
 
   useEffect(() => {
     recargar();
@@ -321,10 +322,10 @@ function NuevaMatriculaModal({ asistente, usuario, tipos, tipoSugerido, onClose,
         archivo_url: archivoUrl,
         registrado_por: usuario.id,
       });
-      if (errorInsert) throw new Error(errorInsert.message);
+      if (errorInsert) throw errorInsert;
       onCreada();
     } catch (err) {
-      setError(err.message || t.comun.error_generico);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardando(false);
     }
@@ -394,7 +395,7 @@ function VerificarMatriculaModal({ fila, usuario, onClose, onVerificada }) {
       .eq('id', fila.id);
     setGuardando(false);
     if (errorUpdate) {
-      setError(errorUpdate.message);
+      setError(mensajeDeError(errorUpdate, t));
       return;
     }
     onVerificada();

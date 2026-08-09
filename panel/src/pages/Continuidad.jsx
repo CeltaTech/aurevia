@@ -8,6 +8,7 @@ import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { cargarPacientesDeGuardias, conPacientes, pacientesDeGuardia, textoDePacientes } from '../lib/pacientesDeGuardia';
+import { mensajeDeError } from '../lib/errores';
 
 const TIPOS_RESOLUCION = ['suplente', 'franquero', 'emergencia', 'familiar'];
 
@@ -118,7 +119,7 @@ export function Continuidad() {
       setAsistentesDisponibles(asistentesData ?? []);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
   }, [t]);
@@ -134,7 +135,7 @@ export function Continuidad() {
       if (errorUpdate) throw errorUpdate;
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setActualizandoId(null);
     }
@@ -154,7 +155,7 @@ export function Continuidad() {
       if (errorUpdate) throw errorUpdate;
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setActualizandoId(null);
     }
@@ -170,7 +171,7 @@ export function Continuidad() {
       if (errorUpdate) throw errorUpdate;
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setActualizandoId(null);
     }
@@ -348,7 +349,7 @@ function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto
 
       onResuelto();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardando(false);
     }

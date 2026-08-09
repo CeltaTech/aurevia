@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { traducirValor } from '../i18n/valores';
+import { mensajeDeError } from '../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -44,10 +45,10 @@ export function Prestadoras() {
       setPrestadoras(filas);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, [recargarSesion]);
+  }, [recargarSesion, t]);
 
   useEffect(() => {
     recargar();
@@ -63,7 +64,7 @@ export function Prestadoras() {
       });
       await recargarSesion();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setEntrando(null);
     }
@@ -75,7 +76,7 @@ export function Prestadoras() {
     try {
       await salir();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setSaliendo(false);
     }

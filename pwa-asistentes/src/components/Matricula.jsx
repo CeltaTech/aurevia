@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { con } from '../lib/textos';
+import { mensajeDeError } from '../lib/errores';
 
 // ============================================================================
 // Mi Matrícula, en el teléfono del Asistente.
@@ -85,7 +86,7 @@ export default function Matricula() {
       setAviso(tm.cargada);
       await cargar();
     } catch (err) {
-      setErrorForm(err.message || t.comun.error_generico);
+      setErrorForm(mensajeDeError(err, t));
     } finally {
       setGuardando(false);
     }

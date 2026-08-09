@@ -2,6 +2,17 @@
 
 > Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§10) — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
 
+## Regla 1: un mensaje de error es texto visible, y sale de las traducciones (2026-08-09)
+
+- **Antes:** la regla decía "nada de texto visible escrito fuera de las traducciones" y nadie la había leído aplicada a los errores. Había **158 lugares en 52 archivos** que hacían `setError(err.message)` y volcaban a la pantalla lo que devolvía el navegador o la base: `Failed to fetch`, `permission denied for table familias`, `Could not find the table 'public.…' in the schema cache`.
+- **Ahora:** hay una sola función. Recibe el error, lo clasifica en **una de ocho situaciones** y devuelve la frase del idioma de quien está mirando. Las ocho salieron de mirar qué puede fallar de verdad, no de inventar categorías: sin conexión, sesión vencida, sin permiso, no encontrado, duplicado, en uso, dato mal cargado y falla del sistema.
+- **Motivo:** el 2026-08-02 el Desarrollador mandó tres capturas del Panel con franjas rojas en inglés. Las tres causas de fondo se arreglaron ese día; esto arregla la forma, que era el problema que quedaba.
+- **Cómo clasifica, y en qué orden:** primero el **código** que manda la base (`23505` = duplicado, `42501` = sin permiso, `PGRST116` = no encontrado…), después el **número** de la respuesta (401, 403, 404, 409…), y recién al final el **texto**. El orden importa: un código es un dato, un texto es una frase que puede cambiar de redacción o de idioma cuando al proveedor se le ocurra. Si nada se reconoce, la culpa es nuestra y se dice así — "algo falló de nuestro lado" —, nunca se le echa al usuario.
+- **Lo que no se aplastó, a propósito.** Hay errores que ya tenían un mensaje pensado y bueno, y ésos siguen primero: la matrícula trabada, la guardia que no se puede cerrar sin relevo, el teléfono que no consigue señal satelital, el enlace de activación vencido, y "esta fila no existe" en las pantallas de detalle, que no es un error sino una ficha vacía. La función genérica es la red de abajo, no el primer manotazo.
+- **Un cambio de forma que hizo falta:** cuando el navegador rebota una respuesta con error, el número (401, 403…) se perdía por el camino. Ahora viaja pegado al error, que es lo único que permite distinguir una sesión vencida de un permiso que falta sin leer el texto.
+- **Efecto colateral bueno:** el archivo no se puede importar entre carpetas que se despliegan por separado, así que existe una vez por aplicación. En vez de duplicar el script que las sincronizaba, la lista de copias se sacó a un archivo aparte (`scripts/copias_entre_apps.mjs`) y ahora los dos scripts —el que copia y el que verifica— leen la misma lista. `scripts/sincronizar_identidad.mjs` pasó a llamarse `scripts/sincronizar_copias.mjs`, porque ya no sincroniza solo la identidad.
+- **No reintroducir:** `setError(err.message)`. Si un error nuevo necesita un mensaje propio, se agrega la situación a las ocho y a los tres idiomas, no se muestra el texto crudo.
+
 ## Regla 1: la marca que ven la Familia y el Asistente pasa a ser la de su Prestadora (2026-08-08)
 
 - **Antes:** la regla ya decía que la marca principal de esas dos pantallas tenía que ser la de la Prestadora, pero terminaba admitiendo que *"hoy no se cumple"*, y por eso llevaba pegada una prohibición temporal: mientras el pendiente `#95` siguiera abierto, no se podía agregar ningún uso nuevo de `IDENTIDAD` en las dos aplicaciones.

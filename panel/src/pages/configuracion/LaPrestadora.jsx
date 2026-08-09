@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
+import { mensajeDeError } from '../../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -63,10 +64,10 @@ function TabEmpresa() {
       setForm(empresa);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -84,7 +85,7 @@ function TabEmpresa() {
       await llamarApi('/empresa', { method: 'PATCH', body: JSON.stringify(form) });
       setGuardado(true);
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardando(false);
     }
@@ -125,10 +126,10 @@ function TabModalidades() {
       setModalidades(filas);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -144,7 +145,7 @@ function TabModalidades() {
       });
       await Promise.all([recargar(), recargarMenu()]);
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setActualizandoModalidad(null);
     }
@@ -201,10 +202,10 @@ function TabZonas() {
       setZonas(filas);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -219,7 +220,7 @@ function TabZonas() {
       });
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setActualizandoZona(null);
     }
@@ -232,7 +233,7 @@ function TabZonas() {
       await llamarApi(`/zonas/${zona.id}`, { method: 'DELETE' });
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setActualizandoZona(null);
     }
@@ -295,7 +296,7 @@ function NuevaZona({ onClose, onCreada }) {
       await llamarApi('/zonas', { method: 'POST', body: JSON.stringify({ codigo, nombre, categoria }) });
       onCreada();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setGuardando(false);
     }
@@ -338,10 +339,10 @@ function TabPasarela() {
       setPasarelas(filas);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -360,7 +361,7 @@ function TabPasarela() {
       setProveedorAbierto(null);
       await recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setAccionEnCurso(null);
     }
@@ -376,7 +377,7 @@ function TabPasarela() {
       });
       await recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setAccionEnCurso(null);
     }

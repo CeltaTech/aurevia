@@ -10,6 +10,7 @@ import { GuardiasGrid } from './guardias/GuardiasGrid';
 import { COBERTURA, coberturaDeGuardia } from '../lib/cobertura';
 import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../lib/pacientesDeGuardia';
 import { reasignarGuardia } from '../lib/reasignarGuardia';
+import { mensajeDeError } from '../lib/errores';
 
 const ESTADOS = ['programada', 'activa', 'completada', 'cancelada', 'ausente'];
 const HORAS_ALERTA_CHECKIN_SIN_CHECKOUT = 2;
@@ -56,7 +57,7 @@ export function Guardias() {
     ]);
 
     if (errorGuardias) {
-      setError(errorGuardias.message);
+      setError(mensajeDeError(errorGuardias, t));
       setEstadoCarga('error');
       return;
     }
@@ -78,7 +79,7 @@ export function Guardias() {
     setEstadoCarga('listo');
     // Solo el rango de fechas se pide al servidor: los demás filtros se aplican acá, en
     // memoria, y no tienen que volver a consultar la base cada vez que cambian.
-  }, [f.desde, f.hasta]);
+  }, [f.desde, f.hasta, t]);
 
   useEffect(() => {
     recargar();
@@ -125,7 +126,7 @@ export function Guardias() {
     const guardiaActual = filas.find((g) => g.id === guardiaId);
     if (!guardiaActual) return;
 
-    const { error: falla } = await reasignarGuardia(guardiaActual, asistenteId, fecha, t.matricula);
+    const { error: falla } = await reasignarGuardia(guardiaActual, asistenteId, fecha, t);
     if (falla) {
       setError(falla);
       return;

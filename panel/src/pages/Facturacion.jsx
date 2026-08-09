@@ -7,6 +7,7 @@ import { claseBadge } from '../lib/tonos';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { mensajeDeError } from '../lib/errores';
 
 function primerDiaDelMes(fechaISO) {
   return `${fechaISO.slice(0, 7)}-01`;
@@ -40,14 +41,14 @@ export function Facturacion() {
       .order('fecha_emision', { ascending: false });
 
     if (errorConsulta) {
-      setError(errorConsulta.message);
+      setError(mensajeDeError(errorConsulta, t));
       setEstado('error');
       return;
     }
 
     setFacturas(data ?? []);
     setEstado('listo');
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -69,7 +70,7 @@ export function Facturacion() {
       .is('deleted_at', null);
 
     if (errorFamilias) {
-      setError(errorFamilias.message);
+      setError(mensajeDeError(errorFamilias, t));
       setGenerando(false);
       return;
     }
@@ -85,7 +86,7 @@ export function Facturacion() {
       : { data: [], error: null };
 
     if (errorPrestaciones) {
-      setError(errorPrestaciones.message);
+      setError(mensajeDeError(errorPrestaciones, t));
       setGenerando(false);
       return;
     }
@@ -131,7 +132,7 @@ export function Facturacion() {
         .single();
 
       if (errorFactura) {
-        setError(errorFactura.message);
+        setError(mensajeDeError(errorFactura, t));
         setGenerando(false);
         return;
       }
@@ -141,7 +142,7 @@ export function Facturacion() {
         .insert(items.map((i) => ({ ...i, factura_id: facturaCreada.id })));
 
       if (errorItems) {
-        setError(errorItems.message);
+        setError(mensajeDeError(errorItems, t));
         setGenerando(false);
         return;
       }
@@ -159,7 +160,7 @@ export function Facturacion() {
     const { error: errorUpdate } = await supabase.from('facturas_familia').update({ estado: 'pagada' }).eq('id', factura.id);
     setActualizandoId(null);
     if (errorUpdate) {
-      setError(errorUpdate.message);
+      setError(mensajeDeError(errorUpdate, t));
       return;
     }
     recargar();

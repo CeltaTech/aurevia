@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
+import { mensajeDeError } from '../../lib/errores';
 
 const ESTADOS = ['pendiente', 'aprobada', 'rechazada'];
 
@@ -27,13 +28,13 @@ export function VerificacionTab({ asistente }) {
       .select('*')
       .eq('asistente_id', asistente.id);
     if (errorConsulta) {
-      setError(errorConsulta.message);
+      setError(mensajeDeError(errorConsulta, t));
       setEstadoCarga('error');
       return;
     }
     setVerificaciones(data ?? []);
     setEstadoCarga('listo');
-  }, [asistente.id]);
+  }, [asistente.id, t]);
 
   useEffect(() => {
     recargar();

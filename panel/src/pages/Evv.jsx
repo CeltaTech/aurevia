@@ -6,6 +6,7 @@ import { claseBadge } from '../lib/tonos';
 import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { cargarPacientesDeGuardias, pacientesDeGuardia, textoDePacientes } from '../lib/pacientesDeGuardia';
+import { mensajeDeError } from '../lib/errores';
 
 // Umbral de cercanía para considerar un check-in/check-out "verificado" contra el
 // domicilio registrado del Paciente — mismo criterio de constante local ya usado en
@@ -80,7 +81,7 @@ export function Evv() {
     ]);
 
     if (errorGuardias) {
-      setError(errorGuardias.message);
+      setError(mensajeDeError(errorGuardias, t));
       setEstadoCarga('error');
       return;
     }
@@ -92,7 +93,7 @@ export function Evv() {
     try {
       pacientesPorGuardia = await cargarPacientesDeGuardias((guardiasData ?? []).map((g) => g.id));
     } catch (e) {
-      setError(e.message);
+      setError(mensajeDeError(e, t));
       setEstadoCarga('error');
       return;
     }

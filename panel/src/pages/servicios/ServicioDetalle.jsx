@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { claseBadge } from '../../lib/tonos';
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
+import { mensajeDeError } from '../../lib/errores';
 
 // Cuántas guardias se traen a la ficha. Un Servicio de meses puede tener cientos, y esta
 // pantalla no es la grilla de guardias: acá alcanza con las más próximas para entender de
@@ -42,7 +43,7 @@ export function ServicioDetalle() {
     if (fallaServicio) {
       // PGRST116 es "la consulta no devolvió ninguna fila": no es una falla, es que ese
       // Servicio no existe, y se avisa distinto.
-      setError(fallaServicio.code === 'PGRST116' ? null : fallaServicio.message);
+      setError(fallaServicio.code === 'PGRST116' ? null : mensajeDeError(fallaServicio, t));
       setEstado(fallaServicio.code === 'PGRST116' ? 'no_encontrado' : 'error');
       return;
     }
@@ -65,7 +66,7 @@ export function ServicioDetalle() {
     ]);
 
     if (fallaPrestaciones || fallaGuardias) {
-      setError((fallaPrestaciones ?? fallaGuardias).message);
+      setError(mensajeDeError(fallaPrestaciones ?? fallaGuardias, t));
       setEstado('error');
       return;
     }
@@ -88,7 +89,7 @@ export function ServicioDetalle() {
     setNombresPaciente(Object.fromEntries((pacientes.data ?? []).map((p) => [p.id, p.nombre])));
     setNombresAsistente(Object.fromEntries((asistentes.data ?? []).map((a) => [a.id, a.nombre])));
     setEstado('listo');
-  }, [id]);
+  }, [id, t]);
 
   useEffect(() => {
     recargar();

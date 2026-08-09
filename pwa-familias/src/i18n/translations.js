@@ -1,5 +1,18 @@
 export const T = {
   'es-AR': {
+    // Las ocho situaciones en las que algo puede salir mal, dichas de manera que se
+    // entiendan. Ningún error técnico llega a la pantalla: lib/errores.js lo clasifica en
+    // una de estas ocho y muestra la frase; el texto crudo queda en la consola.
+    errores: {
+      sin_conexion: 'No hay conexión con el servidor. Revisá tu internet y probá de nuevo.',
+      sesion_vencida: 'Pasó demasiado tiempo sin actividad. Volvé a entrar.',
+      sin_permiso: 'Tu usuario no tiene permiso para hacer esto.',
+      no_encontrado: 'No encontramos lo que buscabas. Puede que ya no exista.',
+      duplicado: 'Ya existe un registro con esos datos.',
+      en_uso: 'No se puede borrar: hay otros registros que dependen de esto.',
+      dato_invalido: 'Hay un dato mal cargado. Revisá lo que escribiste.',
+      falla_del_sistema: 'Algo falló de nuestro lado. Probá de nuevo en un rato.',
+    },
     comun: {
       cargando: 'Cargando…',
       error_generico: 'Ocurrió un error. Probá de nuevo.',
@@ -200,6 +213,19 @@ export const T = {
     },
   },
   en: {
+    // Las ocho situaciones en las que algo puede salir mal, dichas de manera que se
+    // entiendan. Ningún error técnico llega a la pantalla: lib/errores.js lo clasifica en
+    // una de estas ocho y muestra la frase; el texto crudo queda en la consola.
+    errores: {
+      sin_conexion: 'No connection to the server. Check your internet and try again.',
+      sesion_vencida: 'You were inactive for too long. Please sign in again.',
+      sin_permiso: 'Your account does not have permission to do this.',
+      no_encontrado: 'We could not find what you were looking for. It may no longer exist.',
+      duplicado: 'A record with that information already exists.',
+      en_uso: 'This cannot be deleted: other records depend on it.',
+      dato_invalido: 'Something was entered incorrectly. Please check what you typed.',
+      falla_del_sistema: 'Something failed on our side. Please try again shortly.',
+    },
     comun: {
       cargando: 'Loading…',
       error_generico: 'Something went wrong. Please try again.',
@@ -397,6 +423,19 @@ export const T = {
     },
   },
   'pt-BR': {
+    // Las ocho situaciones en las que algo puede salir mal, dichas de manera que se
+    // entiendan. Ningún error técnico llega a la pantalla: lib/errores.js lo clasifica en
+    // una de estas ocho y muestra la frase; el texto crudo queda en la consola.
+    errores: {
+      sin_conexion: 'Sem conexão com o servidor. Verifique sua internet e tente de novo.',
+      sesion_vencida: 'Passou muito tempo sem atividade. Entre novamente.',
+      sin_permiso: 'Seu usuário não tem permissão para fazer isso.',
+      no_encontrado: 'Não encontramos o que você procurava. Pode ser que não exista mais.',
+      duplicado: 'Já existe um registro com esses dados.',
+      en_uso: 'Não é possível apagar: outros registros dependem disto.',
+      dato_invalido: 'Há um dado carregado errado. Revise o que você escreveu.',
+      falla_del_sistema: 'Algo falhou do nosso lado. Tente de novo daqui a pouco.',
+    },
     comun: {
       cargando: 'Carregando…',
       error_generico: 'Ocorreu um erro. Tente novamente.',

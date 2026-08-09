@@ -13,6 +13,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
+import { mensajeDeError } from '../../lib/errores';
 import {
   generarLiquidacionFinal, generarTelegramaCese, generarNotificacionFinPeriodoPrueba, descargarPDF,
 } from '../../lib/generarDocumentoCese';
@@ -60,7 +61,7 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
     supabase.from('ceses').select('*').eq('asistente_id', asistente.id).order('created_at', { ascending: false })
       .then(({ data, error: errorConsulta }) => {
         if (errorConsulta) {
-          setErrorCeses(errorConsulta.message);
+          setErrorCeses(mensajeDeError(errorConsulta, t));
           setEstadoCeses('error');
           return;
         }

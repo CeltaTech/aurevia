@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabaseClient';
 import { FormField } from '../components/ui/FormField';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
+import { mensajeDeError } from '../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -34,7 +35,7 @@ export function Mfa() {
       const { data, error: errorEnroll } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
       if (!activo) return;
       if (errorEnroll) {
-        setError(errorEnroll.message);
+        setError(mensajeDeError(errorEnroll, t));
         return;
       }
       setFactorId(data.id);
@@ -44,7 +45,7 @@ export function Mfa() {
     return () => {
       activo = false;
     };
-  }, [mfaEstado]);
+  }, [mfaEstado, t]);
 
   useEffect(() => {
     if (mfaEstado !== 'requiere_challenge') return;
@@ -77,7 +78,7 @@ export function Mfa() {
 
     const { data: challenge, error: errorChallenge } = await supabase.auth.mfa.challenge({ factorId });
     if (errorChallenge) {
-      setError(errorChallenge.message);
+      setError(mensajeDeError(errorChallenge, t));
       setEnviando(false);
       return;
     }
@@ -121,7 +122,7 @@ export function Mfa() {
       if (!respuesta.ok) throw new Error(resultado.error);
       setCodigoSolicitado(true);
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setEnviandoRecuperacion(false);
     }
@@ -145,7 +146,7 @@ export function Mfa() {
       if (!respuesta.ok) throw new Error(resultado.error);
       await refrescarMfa();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setEnviandoRecuperacion(false);
     }

@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { mensajeDeError } from '../lib/errores';
+import { useLocale } from '../i18n/LocaleContext';
 
 // Etapas del Proceso de Incorporación de Asistentes configuradas por cada Prestadora —
 // pendiente #18 candidato 7 (docs/PENDIENTES.md). Reemplaza el arreglo fijo de 5 etapas
 // que antes compartían todas las Prestadoras.
 export function useEtapasIncorporacion(prestadoraId) {
+  const { t } = useLocale();
   const [filas, setFilas] = useState([]);
   const [estado, setEstado] = useState('cargando'); // cargando | error | listo
   const [error, setError] = useState(null);
@@ -21,14 +24,14 @@ export function useEtapasIncorporacion(prestadoraId) {
       .order('orden');
 
     if (errorConsulta) {
-      setError(errorConsulta.message);
+      setError(mensajeDeError(errorConsulta, t));
       setEstado('error');
       return;
     }
 
     setFilas(data ?? []);
     setEstado('listo');
-  }, [prestadoraId]);
+  }, [prestadoraId, t]);
 
   useEffect(() => {
     recargar();

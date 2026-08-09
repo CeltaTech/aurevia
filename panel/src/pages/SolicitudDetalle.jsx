@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
+import { mensajeDeError } from '../lib/errores';
 
 const ESTADOS = ['nueva', 'en_gestion', 'asignada', 'cancelada', 'completada'];
 const API_URL = import.meta.env.VITE_API_URL;
@@ -46,7 +47,7 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
       }
       onActualizada();
     } catch (err) {
-      setErrorConversion(err.message);
+      setErrorConversion(mensajeDeError(err, t));
     } finally {
       setConvirtiendo(false);
     }

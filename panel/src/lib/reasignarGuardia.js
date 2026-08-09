@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { mensajeDeBloqueo } from './matricula';
+import { mensajeDeError } from './errores';
 
 /* Cambiarle el Asistente a una guardia: un solo lugar para las tres cosas que hay que hacer.
    =========================================================================================
@@ -25,13 +26,13 @@ import { mensajeDeBloqueo } from './matricula';
  *                          ofrecida y si estaba ausente. Con el id solo no alcanzaría.
  * @param {string} asistenteId  Quién pasa a hacerla.
  * @param {string} fecha  En qué fecha queda. Puede ser la misma que ya tenía.
- * @param {object} textosMatricula  El bloque `t.matricula` ya traducido. Se pide desde afuera
- *                          porque acá no se sabe en qué idioma está el Panel, y hace falta para
- *                          el único caso en que la base puede rechazar la operación con un
- *                          mensaje que nunca debe verse crudo: la Matrícula del Asistente.
+ * @param {object} t  Los textos del idioma en que está el Panel. Se piden desde afuera porque
+ *                          acá no se sabe en qué idioma está, y hacen falta para las dos cosas
+ *                          que nunca deben verse crudas: el rechazo por Matrícula vencida y
+ *                          cualquier otro error de la base.
  * @returns {Promise<{ error: string | null }>} El motivo si algo falló, o null si salió todo.
  */
-export async function reasignarGuardia(guardia, asistenteId, fecha, textosMatricula = null) {
+export async function reasignarGuardia(guardia, asistenteId, fecha, t = null) {
   const estabaSinCobertura = guardia?.estado === 'ausente';
 
   const cambios = { asistente_id: asistenteId, fecha };
@@ -44,7 +45,7 @@ export async function reasignarGuardia(guardia, asistenteId, fecha, textosMatric
 
   const { error: errorUpdate } = await supabase.from('guardias').update(cambios).eq('id', guardia.id);
   if (errorUpdate) {
-    return { error: mensajeDeBloqueo(errorUpdate, textosMatricula) ?? errorUpdate.message };
+    return { error: mensajeDeBloqueo(errorUpdate, t?.matricula) ?? mensajeDeError(errorUpdate, t) };
   }
 
   if (estabaSinCobertura) {
@@ -57,7 +58,7 @@ export async function reasignarGuardia(guardia, asistenteId, fecha, textosMatric
       })
       .eq('guardia_entrante_id', guardia.id)
       .is('resuelto_at', null);
-    if (errorIncidente) return { error: errorIncidente.message };
+    if (errorIncidente) return { error: mensajeDeError(errorIncidente, t) };
   }
 
   return { error: null };

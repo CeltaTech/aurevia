@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { mensajeDeError } from '../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -44,10 +45,10 @@ export function Medicacion() {
       setPendientes(filas);
       setEstado('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();
@@ -64,7 +65,7 @@ export function Medicacion() {
       await llamarApi(`/${fila.id}/aceptar`, { method: 'POST' });
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setAccionEnCurso(null);
     }
@@ -80,7 +81,7 @@ export function Medicacion() {
       setMotivoRechazo('');
       recargar();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setAccionEnCurso(null);
     }

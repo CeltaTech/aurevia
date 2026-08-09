@@ -15,6 +15,7 @@ import { EditarPacienteModal } from './EditarPacienteModal';
 import { NuevoPacienteModal } from './NuevoPacienteModal';
 import { MonitoreoVitalesPaciente } from './MonitoreoVitalesPaciente';
 import { InvitarCirculoModal } from './InvitarCirculoModal';
+import { mensajeDeError } from '../../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -57,7 +58,7 @@ export function FamiliaDetalle() {
       .single();
 
     if (errorConsulta) {
-      setError(errorConsulta.code === 'PGRST116' ? null : errorConsulta.message);
+      setError(errorConsulta.code === 'PGRST116' ? null : mensajeDeError(errorConsulta, t));
       setEstado(errorConsulta.code === 'PGRST116' ? 'no_encontrado' : 'error');
       return;
     }
@@ -71,7 +72,7 @@ export function FamiliaDetalle() {
       plan: data.plan || '',
     });
     setEstado('listo');
-  }, [id]);
+  }, [id, t]);
 
   const recargarCirculo = useCallback(async () => {
     setEstadoCirculo('cargando');
@@ -115,7 +116,7 @@ export function FamiliaDetalle() {
       }
       recargarCirculo();
     } catch (err) {
-      setErrorCirculo(err.message);
+      setErrorCirculo(mensajeDeError(err, t));
     } finally {
       setQuitandoUsuarioId(null);
     }

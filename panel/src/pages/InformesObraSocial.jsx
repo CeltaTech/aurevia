@@ -10,6 +10,7 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { traducirValor } from '../i18n/valores';
 import { claseBadge } from '../lib/tonos';
 import { con } from '../lib/textos';
+import { mensajeDeError } from '../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -241,10 +242,10 @@ export function InformesObraSocial() {
       setHistorial(data);
       setEstadoHistorial('listo');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setEstadoHistorial('error');
     }
-  }, [pacienteId]);
+  }, [pacienteId, t]);
 
   useEffect(() => {
     recargarHistorial();
@@ -261,7 +262,7 @@ export function InformesObraSocial() {
       const data = await llamarApi(`/preview?${params.toString()}`);
       setPreview(data.contenido);
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setCargandoPreview(false);
     }
@@ -282,7 +283,7 @@ export function InformesObraSocial() {
       setPreview(null);
       recargarHistorial();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setValidando(false);
     }
@@ -294,7 +295,7 @@ export function InformesObraSocial() {
       const data = await llamarApi(`/${id}`);
       setInformeAbierto(data);
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     }
   }
 
@@ -310,7 +311,7 @@ export function InformesObraSocial() {
       setInformeAAnular(null);
       recargarHistorial();
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setAnulandoId(null);
     }

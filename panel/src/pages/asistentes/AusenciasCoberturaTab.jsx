@@ -8,6 +8,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { generarConstanciaAusencia, descargarPDF } from '../../lib/generarDocumentoCese';
+import { mensajeDeError } from '../../lib/errores';
 
 const TIPOS = ['enfermedad_inculpable', 'accidente_inculpable', 'otra_licencia', 'ausencia_no_justificada'];
 const API_URL = import.meta.env.VITE_API_URL;
@@ -47,7 +48,7 @@ export function AusenciasCoberturaTab({ asistente }) {
       supabase.from('asistentes').select('id, nombre').eq('estado', 'activo').neq('id', asistente.id),
     ]);
     if (errorAusencias) {
-      setError(errorAusencias.message);
+      setError(mensajeDeError(errorAusencias, t));
       setEstado('error');
       return;
     }
@@ -107,7 +108,7 @@ export function AusenciasCoberturaTab({ asistente }) {
       const { url } = await llamarApiAusencias(`/${ausenciaId}/certificado-url`);
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch (err) {
-      setErrorCertificado(err.message);
+      setErrorCertificado(mensajeDeError(err, t));
     }
   }
 

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
+import { mensajeDeError } from '../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -67,7 +68,7 @@ export function Importacion() {
       setMapeo(resultadoJson.mapeoPropuesto);
       setPaso(2);
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setCargando(false);
     }
@@ -90,7 +91,7 @@ export function Importacion() {
       setResultado(resultadoJson);
       setPaso(3);
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setCargando(false);
     }
@@ -104,7 +105,7 @@ export function Importacion() {
       setRevision(resultadoJson);
       setPaso(4);
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setCargando(false);
     }
@@ -117,7 +118,7 @@ export function Importacion() {
       await llamarApi(`/conformar/${resultado.importacionId}`, { method: 'POST' });
       setRevisionFinal('conformada');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setCargando(false);
     }
@@ -131,7 +132,7 @@ export function Importacion() {
       await llamarApi(`/rechazar/${resultado.importacionId}`, { method: 'POST' });
       setRevisionFinal('rechazada');
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
     } finally {
       setCargando(false);
     }

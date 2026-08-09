@@ -7,6 +7,7 @@ import { TONO, claseBadgeTono } from '../../lib/tonos';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
+import { mensajeDeError } from '../../lib/errores';
 
 function calcularPrecioFinal(precioLista, tipoDescuento, valorDescuento) {
   const base = Number(precioLista) || 0;
@@ -90,7 +91,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     ]);
 
     if (listaResp.error || prestacionesResp.error || paquetesResp.error || cierreResp.error || hospResp.error || alertasResp.error) {
-      setError((listaResp.error || prestacionesResp.error || paquetesResp.error || cierreResp.error || hospResp.error || alertasResp.error).message);
+      setError(mensajeDeError(listaResp.error || prestacionesResp.error || paquetesResp.error || cierreResp.error || hospResp.error || alertasResp.error, t));
       setEstado('error');
       return;
     }
@@ -113,7 +114,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     }
 
     setEstado('listo');
-  }, [paciente.id]);
+  }, [paciente.id, t]);
 
   useEffect(() => {
     recargar();
@@ -216,7 +217,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       .single();
     if (errorInsert) {
       setCerrandoServicio(false);
-      setErrorCierre(errorInsert.message);
+      setErrorCierre(mensajeDeError(errorInsert, t));
       return;
     }
 
@@ -271,7 +272,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     const errorCascada = resultados.find((r) => r.error)?.error;
     setCerrandoServicio(false);
     if (errorCascada) {
-      setErrorCierre(errorCascada.message);
+      setErrorCierre(mensajeDeError(errorCascada, t));
       return;
     }
 
@@ -328,7 +329,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       .single();
 
     if (errorInsert) {
-      setErrorHosp(errorInsert.message);
+      setErrorHosp(mensajeDeError(errorInsert, t));
       setGuardandoHosp(false);
       return;
     }
@@ -392,7 +393,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       .eq('id', hospitalizacionActiva.id);
 
     if (errorUpdate) {
-      setErrorHosp(errorUpdate.message);
+      setErrorHosp(mensajeDeError(errorUpdate, t));
       setCerrandoHosp(false);
       return;
     }

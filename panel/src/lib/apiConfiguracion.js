@@ -32,6 +32,12 @@ export async function llamarApiConfiguracion(path, opciones = {}) {
     },
   });
   const resultado = await respuesta.json();
-  if (!respuesta.ok) throw new Error(resultado.error);
+  if (!respuesta.ok) {
+    const error = new Error(resultado.error);
+    // El número de la respuesta viaja con el error: es lo que le permite a lib/errores.js
+    // distinguir una sesión vencida (401) de un permiso que falta (403) sin leer el texto.
+    error.status = respuesta.status;
+    throw error;
+  }
   return resultado;
 }

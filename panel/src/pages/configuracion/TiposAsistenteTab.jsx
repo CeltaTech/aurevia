@@ -9,6 +9,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { esTipoGeneral, nombreTipo, nombreMatricula, viasVedadasPorMatricula } from '../../lib/tiposAsistente';
+import { mensajeDeError } from '../../lib/errores';
 
 /* Los tipos de Asistente y sus tareas.
    Tres cosas conviven en esta pantalla y conviene no confundirlas:
@@ -46,7 +47,7 @@ export function TiposAsistenteTab() {
       llamarApiConfiguracion('/modo-control-matricula').catch(() => null),
     ]);
     if (resTipos.error || resVias.error) {
-      setError((resTipos.error || resVias.error).message);
+      setError(mensajeDeError(resTipos.error || resVias.error, t));
       setEstado('error');
       return;
     }
@@ -54,7 +55,7 @@ export function TiposAsistenteTab() {
     setVias(resVias.data ?? []);
     setModoControl(resModo?.modo ?? 'flexible');
     setEstado('listo');
-  }, [usuario.prestadora_id]);
+  }, [usuario.prestadora_id, t]);
 
   useEffect(() => {
     recargar();
@@ -245,13 +246,13 @@ function TareasDelTipo({ tipo, vias, prestadoraId }) {
       .eq('tipo_asistente_id', tipo.id)
       .order('orden');
     if (errorConsulta) {
-      setError(errorConsulta.message);
+      setError(mensajeDeError(errorConsulta, t));
       setEstado('error');
       return;
     }
     setTareas(data ?? []);
     setEstado('listo');
-  }, [tipo]);
+  }, [tipo, t]);
 
   useEffect(() => {
     recargar();

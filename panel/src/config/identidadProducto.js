@@ -20,7 +20,7 @@
 //
 // CÓMO SE LE CAMBIA EL NOMBRE AL PRODUCTO
 //   1. Editar los valores de IDENTIDAD en este archivo.
-//   2. Correr `node scripts/sincronizar_identidad.mjs` desde la raíz del repo.
+//   2. Correr `node scripts/sincronizar_copias.mjs` desde la raíz del repo.
 //   3. Listo. No hay que tocar ningún otro archivo: todo texto visible usa los
 //      marcadores {{producto}} / {{productoCorto}} / {{dominio}} y se resuelve en
 //      tiempo de ejecución.

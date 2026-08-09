@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
+import { mensajeDeError } from '../lib/errores';
 
 const ESTADOS = ['pendiente', 'en_revision', 'aprobado', 'rechazado'];
 const API_URL = import.meta.env.VITE_API_URL;
@@ -50,7 +51,7 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
       if (!respuesta.ok) throw new Error(resultado.error);
       navigate(`/asistentes/${resultado.asistenteId}`);
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err, t));
       setIniciandoVerificacion(false);
     }
   }

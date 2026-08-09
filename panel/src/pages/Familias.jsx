@@ -9,6 +9,7 @@ import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
 import { NuevaFamiliaModal } from './familias/NuevaFamiliaModal';
+import { mensajeDeError } from '../lib/errores';
 
 export function Familias() {
   const { t } = useLocale();
@@ -33,14 +34,14 @@ export function Familias() {
       .order('created_at', { ascending: false });
 
     if (errorConsulta) {
-      setError(errorConsulta.message);
+      setError(mensajeDeError(errorConsulta, t));
       setEstado('error');
       return;
     }
 
     setFilas(data ?? []);
     setEstado('listo');
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     recargar();

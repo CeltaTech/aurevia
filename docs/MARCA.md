@@ -43,13 +43,25 @@ Tres cosas que la decisión **descartó** explícitamente, para que nadie las re
   solo build para todas las Prestadoras. Es el punto donde el límite técnico y el estándar de
   la industria coinciden.
 
-**Hoy la regla no se cumple** — las dos PWA muestran el nombre del producto como marca
-principal, y el email de activación también. Es anterior a la Etapa 0.5 y está registrado como
-**pendiente `#95`**.
+**Desde el 2026-08-08 la regla se cumple** (pendiente `#95`, cerrado). La Prestadora tiene
+dónde guardar su logo, y las dos aplicaciones muestran su marca arriba y la del producto al
+pie.
 
-Para implementarlo, la Prestadora va a necesitar sus propios archivos de marca (logo,
-colores), que la base **no tiene todavía**: `prestadoras` no tiene ni un campo de branding.
-Ese es otro contrato, distinto de este, y va a vivir en su propio documento.
+**Dónde viven los archivos de marca de la Prestadora.** En el depósito `marca-prestadoras`, y
+cada Prestadora tiene su carpeta, que se llama como su identificador:
+
+    marca-prestadoras/<id de la Prestadora>/logo.png
+
+No es un nombre bonito: es de lo que se agarran las reglas del depósito para saber de quién es
+cada archivo. Leer lo puede cualquiera —un logo está en la puerta del local—, pero escribir
+solo dentro de la carpeta propia.
+
+**El logo es opcional.** Sin logo la pantalla no se rompe: muestra el nombre de la Prestadora
+escrito.
+
+**Lo que todavía no se puede.** La pantalla de ingreso —antes de escribir el usuario— sigue
+mostrando la marca del producto, porque hasta que alguien no entra la aplicación no sabe de
+qué Prestadora se trata. Anotado como pendiente `#141`.
 
 ## 1. Los dos nombres, y por qué importa la diferencia
 

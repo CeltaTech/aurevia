@@ -4,6 +4,7 @@ import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcan
 import { supabase } from '../db/connection.js';
 import { ACCIONES_PERMISOS } from '../utils/permisos.js';
 import { avisoDelCatalogo, mezclarAvisosConCatalogo, VALORES_POR_DEFECTO_AVISO } from '../utils/catalogoAvisos.js';
+import { cosaDelCatalogo, mezclarVisibilidadConCatalogo } from '../utils/catalogoVisibilidad.js';
 import { LIMITES_ALERTAS_IA, VALORES_POR_DEFECTO_ALERTAS_IA } from '../utils/revisarAlertasIA.js';
 import { validarUmbralesPremura } from '../utils/umbralesPremura.js';
 import { LIMITES_AVISO_PREVIO_GUARDIA } from '../utils/revisarRecordatoriosPush.js';
@@ -377,6 +378,45 @@ panelConfiguracionRouter.patch('/alertas-ia', async (req, res) => {
     amarilla_avisa_coordinador: Boolean(amarilla_avisa_coordinador),
     updated_at: new Date().toISOString(),
   });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// --- Qué muestran las dos aplicaciones de teléfono. La lista completa sale del catálogo del
+//     motor (utils/catalogoVisibilidad.js) y la pantalla la muestra entera, tenga o no fila
+//     guardada cada perilla; la tabla solo guarda lo que la Prestadora cambió. Mismo patrón
+//     que /notificaciones. ---
+panelConfiguracionRouter.get('/visibilidad-app', async (req, res) => {
+  const { data, error } = await supabase
+    .from('configuracion_visibilidad_app')
+    .select('clave, visible')
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ visibilidad: mezclarVisibilidadConCatalogo(data) });
+});
+
+// Inserción-o-actualización, no actualización a secas: la primera vez que la Prestadora toca
+// una perilla la fila todavía no existe, y un UPDATE guardaría en silencio sin guardar nada.
+// La clave se valida contra el catálogo: lo que mande el navegador que no esté en la lista no
+// se guarda, para que no queden filas de perillas que no existen.
+panelConfiguracionRouter.patch('/visibilidad-app/:clave', async (req, res) => {
+  const cosa = cosaDelCatalogo(req.params.clave);
+  if (!cosa) return res.status(400).json({ error: 'Esa opción no existe' });
+
+  const { visible } = req.body || {};
+  if (typeof visible !== 'boolean') {
+    return res.status(400).json({ error: 'Falta decir si se muestra o no' });
+  }
+
+  const { error } = await supabase.from('configuracion_visibilidad_app').upsert(
+    {
+      prestadora_id: req.usuarioPanel.prestadoraId,
+      clave: cosa.clave,
+      visible,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'prestadora_id,clave' }
+  );
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });

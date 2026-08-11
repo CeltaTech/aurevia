@@ -5,16 +5,34 @@ import { resolverVitalesHabilitados } from '../utils/vitalesReferencia.js';
 import { generarTokenQrCobro } from '../utils/qrCobroEfectivo.js';
 import { medicacionVigenteDelPaciente } from '../utils/medicacionIndicaciones.js';
 import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
+import { visibilidadDelPedido, exigeVisible } from '../utils/visibilidadPrestadora.js';
+import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
 
 export const appFamiliasRouter = Router();
 
 // pacientes.medicacion_habitual queda deprecado (pendiente #62, docs/PENDIENTES.md): la
 // medicación vigente se deriva de indicaciones_medicacion (estado='aceptada'), nunca de
 // este JSONB suelto.
-async function pacienteDeLaFamilia(pacienteId, usuarioFamilia) {
+//
+// Las patologías y las coordenadas del domicilio solo se piden si la Prestadora las tiene
+// prendidas: lo que no se puede ver, no se manda (tarea 65). `nivel_complejidad` ya no se pide
+// —ninguna pantalla de la Familia lo mostró nunca— y era una etiqueta clínica de más viajando
+// al teléfono.
+async function pacienteDeLaFamilia(pacienteId, usuarioFamilia, visibilidad) {
+  const columnas = columnasSegunVisibilidad([
+    'id',
+    'nombre',
+    'domicilio',
+    ['lat', 'familia_ubicacion_en_vivo'],
+    ['lng', 'familia_ubicacion_en_vivo'],
+    ['patologias', 'familia_patologias_del_paciente'],
+    'familia_id',
+    'prestadora_id',
+  ], visibilidad);
+
   const { data } = await supabase
     .from('pacientes')
-    .select('id, nombre, domicilio, lat, lng, patologias, nivel_complejidad, familia_id, prestadora_id')
+    .select(columnas)
     .eq('id', pacienteId)
     .eq('familia_id', usuarioFamilia.familiaId)
     .eq('prestadora_id', usuarioFamilia.prestadoraId)
@@ -51,6 +69,12 @@ appFamiliasRouter.get('/perfil', requiereRolFamilia, async (req, res) => {
   // pedido de más.
   const marca = await marcaDeLaPrestadora(req.usuarioFamilia.prestadoraId);
 
+  // Qué eligió mostrar esta Prestadora, por el mismo motivo que la marca: la aplicación lo
+  // necesita para dibujar el menú y las pantallas desde el primer momento, y ya está pidiendo
+  // el perfil. Es una lista de qué dibujar, no un permiso: el candado de verdad está en cada
+  // consulta del motor, que directamente no manda lo apagado.
+  const visibilidad = await visibilidadDelPedido(req);
+
   res.json({
     perfil: {
       ...usuario,
@@ -58,6 +82,7 @@ appFamiliasRouter.get('/perfil', requiereRolFamilia, async (req, res) => {
       rolCirculo: req.usuarioFamilia.rolCirculo,
     },
     marca,
+    visibilidad,
   });
 });
 
@@ -86,14 +111,26 @@ appFamiliasRouter.get('/pacientes', requiereRolFamilia, async (req, res) => {
 // ============================================================================
 
 appFamiliasRouter.get('/pacientes/:id', requiereRolFamilia, async (req, res) => {
-  const paciente = await pacienteDeLaFamilia(req.params.id, req.usuarioFamilia);
+  const visibilidad = await visibilidadDelPedido(req);
+  const paciente = await pacienteDeLaFamilia(req.params.id, req.usuarioFamilia, visibilidad);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
 
+  // Dónde está el Asistente en este momento solo se pide si la Prestadora tiene prendido el
+  // mapa en vivo. Apagado, el dato ni siquiera sale de la base: la Familia sigue viendo que
+  // llegó (`checkin_at`) y quién es, que es lo que no depende de seguirle el recorrido.
+  const columnasGuardiaActiva = columnasSegunVisibilidad([
+    'id', 'fecha', 'hora_inicio', 'hora_fin', 'estado', 'checkin_at',
+    ['ubicacion_actual_lat', 'familia_ubicacion_en_vivo'],
+    ['ubicacion_actual_lng', 'familia_ubicacion_en_vivo'],
+    ['ubicacion_actual_at', 'familia_ubicacion_en_vivo'],
+    'asistente_id', 'asistentes(nombre, foto_url)',
+  ], visibilidad);
+
   const { data: guardiaActiva } = await supabase
     .from('guardias')
-    .select('id, fecha, hora_inicio, hora_fin, estado, checkin_at, ubicacion_actual_lat, ubicacion_actual_lng, ubicacion_actual_at, asistente_id, asistentes(nombre, foto_url)')
+    .select(columnasGuardiaActiva)
     .eq('paciente_id', paciente.id)
     .eq('estado', 'activa')
     .order('fecha', { ascending: false })
@@ -117,20 +154,29 @@ appFamiliasRouter.get('/pacientes/:id', requiereRolFamilia, async (req, res) => 
     guardiaProxima = data || null;
   }
 
-  const { data: alertasActivas } = await supabase
-    .from('alertas')
-    .select('id, nivel, descripcion, created_at')
-    .eq('paciente_id', paciente.id)
-    .is('resuelta_at', null)
-    .order('created_at', { ascending: false });
+  // Las alertas de la revisión automática y la medicación vigente solo se consultan si esta
+  // Prestadora las muestra. Apagadas, la revisión sigue corriendo y el Coordinador se sigue
+  // enterando igual — lo que cambia es que no viajan al teléfono de la Familia.
+  let alertasActivas = [];
+  if (visibilidad.familia_alertas_de_la_revision) {
+    const { data } = await supabase
+      .from('alertas')
+      .select('id, nivel, descripcion, created_at')
+      .eq('paciente_id', paciente.id)
+      .is('resuelta_at', null)
+      .order('created_at', { ascending: false });
+    alertasActivas = data || [];
+  }
 
-  const medicacionVigente = await medicacionVigenteDelPaciente(paciente.id);
+  const medicacionVigente = visibilidad.familia_medicacion_del_paciente
+    ? await medicacionVigenteDelPaciente(paciente.id)
+    : [];
 
   res.json({
     paciente: { ...paciente, medicacionVigente },
     guardiaActiva: guardiaActiva || null,
     guardiaProxima,
-    alertasActivas: alertasActivas || [],
+    alertasActivas,
   });
 });
 
@@ -139,7 +185,8 @@ appFamiliasRouter.get('/pacientes/:id', requiereRolFamilia, async (req, res) => 
 // ============================================================================
 
 appFamiliasRouter.get('/pacientes/:id/reportes', requiereRolFamilia, async (req, res) => {
-  const paciente = await pacienteDeLaFamilia(req.params.id, req.usuarioFamilia);
+  const visibilidad = await visibilidadDelPedido(req);
+  const paciente = await pacienteDeLaFamilia(req.params.id, req.usuarioFamilia, visibilidad);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -148,11 +195,20 @@ appFamiliasRouter.get('/pacientes/:id/reportes', requiereRolFamilia, async (req,
   // turnos que cubrieron a esta persona, y eso traía también los reportes de los otros
   // Pacientes del mismo turno: la Familia veía en la historia de su padre lo que se escribió
   // sobre el vecino de cuarto.
+  //
+  // `texto_libre` ya no se pide: es el relato crudo que dictó el Asistente antes de ordenarlo
+  // en campos, ninguna pantalla de la Familia lo mostró nunca, y era el dato más delicado del
+  // reporte viajando al teléfono sin que nadie lo leyera.
+  const columnas = columnasSegunVisibilidad([
+    'id', 'alimentacion', 'medicacion',
+    ['signos_vitales', 'familia_signos_vitales'],
+    'estado_animo', 'incidentes', 'observaciones', 'foto_url', 'created_at',
+    'guardias!inner(fecha, asistente_id, asistentes(nombre))',
+  ], visibilidad);
+
   const { data, error } = await supabase
     .from('reportes')
-    .select(
-      'id, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, foto_url, created_at, guardias!inner(fecha, asistente_id, asistentes(nombre))'
-    )
+    .select(columnas)
     .eq('paciente_id', paciente.id)
     .order('created_at', { ascending: false })
     .limit(60);
@@ -160,7 +216,12 @@ appFamiliasRouter.get('/pacientes/:id/reportes', requiereRolFamilia, async (req,
     return res.status(500).json({ error: error.message });
   }
 
-  const vitales = await resolverVitalesHabilitados(paciente.id, paciente.prestadora_id);
+  // Los rangos normales solo tienen sentido junto a los valores: sin signos vitales en
+  // pantalla, mandar el semáforo de "fuera del rango normal" es mandar información clínica de
+  // esa persona sin nada a lo que aplicarla.
+  const vitales = visibilidad.familia_signos_vitales
+    ? await resolverVitalesHabilitados(paciente.id, paciente.prestadora_id)
+    : { rangos: null };
 
   res.json({ reportes: data, rangosVitales: vitales.rangos });
 });
@@ -169,8 +230,8 @@ appFamiliasRouter.get('/pacientes/:id/reportes', requiereRolFamilia, async (req,
 // Alertas del Paciente (activas + historial resuelto — ver AI_PROMPTS.md IA Nivel 2)
 // ============================================================================
 
-appFamiliasRouter.get('/pacientes/:id/alertas', requiereRolFamilia, async (req, res) => {
-  const paciente = await pacienteDeLaFamilia(req.params.id, req.usuarioFamilia);
+appFamiliasRouter.get('/pacientes/:id/alertas', requiereRolFamilia, exigeVisible('familia_alertas_de_la_revision'), async (req, res) => {
+  const paciente = await pacienteDeLaFamilia(req.params.id, req.usuarioFamilia, await visibilidadDelPedido(req));
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -199,7 +260,8 @@ appFamiliasRouter.get('/pacientes/:id/alertas', requiereRolFamilia, async (req, 
 // ============================================================================
 
 appFamiliasRouter.get('/pacientes/:id/asistente', requiereRolFamilia, async (req, res) => {
-  const paciente = await pacienteDeLaFamilia(req.params.id, req.usuarioFamilia);
+  const visibilidad = await visibilidadDelPedido(req);
+  const paciente = await pacienteDeLaFamilia(req.params.id, req.usuarioFamilia, visibilidad);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -263,19 +325,26 @@ appFamiliasRouter.get('/pacientes/:id/asistente', requiereRolFamilia, async (req
     .limit(1)
     .maybeSingle();
 
-  const { data: evaluaciones } = await supabase
-    .from('calificaciones_asistente')
-    .select('id, estrellas, comentario, created_at')
-    .eq('asistente_id', guardia.asistente_id)
-    .eq('paciente_id', paciente.id)
-    .order('created_at', { ascending: false });
+  // Las calificaciones anteriores solo se piden si esta Prestadora deja calificar. Donde la
+  // función está apagada, mostrar las estrellas que alguien puso antes sería seguir puntuando
+  // a un trabajador por la ventana.
+  let evaluaciones = [];
+  if (visibilidad.familia_califica_al_asistente) {
+    const { data } = await supabase
+      .from('calificaciones_asistente')
+      .select('id, estrellas, comentario, created_at')
+      .eq('asistente_id', guardia.asistente_id)
+      .eq('paciente_id', paciente.id)
+      .order('created_at', { ascending: false });
+    evaluaciones = data || [];
+  }
 
   res.json({
     asistente: asistente || null,
     tipo,
     tareas,
     certificado: certificado || null,
-    evaluaciones: evaluaciones || [],
+    evaluaciones,
     guardiaId: guardia.id,
   });
 });
@@ -286,8 +355,8 @@ appFamiliasRouter.get('/pacientes/:id/asistente', requiereRolFamilia, async (req
 // ver docs/claude_history.md).
 // ============================================================================
 
-appFamiliasRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRolFamilia, async (req, res) => {
-  const paciente = await pacienteDeLaFamilia(req.params.id, req.usuarioFamilia);
+appFamiliasRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRolFamilia, exigeVisible('familia_verifica_con_codigo'), async (req, res) => {
+  const paciente = await pacienteDeLaFamilia(req.params.id, req.usuarioFamilia, await visibilidadDelPedido(req));
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -390,7 +459,7 @@ appFamiliasRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRol
 // ya existente desde el pendiente #13(b)).
 // ============================================================================
 
-appFamiliasRouter.post('/guardias/:guardiaId/calificar', requiereRolFamilia, async (req, res) => {
+appFamiliasRouter.post('/guardias/:guardiaId/calificar', requiereRolFamilia, exigeVisible('familia_califica_al_asistente'), async (req, res) => {
   // Un miembro invitado con acceso de solo lectura ve todo lo mismo que el titular, pero no
   // puede calificar guardias — es la única acción de escritura real hoy expuesta a la
   // Familia en la PWA (ver docs/claude_history.md, Fase 5).
@@ -499,7 +568,7 @@ appFamiliasRouter.delete('/push/suscribir', requiereRolFamilia, async (req, res)
 // el Panel vía service_role, nunca como UPDATE directo desde acá.
 // ============================================================================
 
-appFamiliasRouter.get('/suscripcion/:pacienteId', requiereRolFamilia, async (req, res) => {
+appFamiliasRouter.get('/suscripcion/:pacienteId', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), async (req, res) => {
   const { data, error } = await supabase
     .from('suscripciones_marketplace')
     .select('id, estado, monto_mensual, trial_fin, proximo_cobro, cancelada_en')
@@ -510,7 +579,7 @@ appFamiliasRouter.get('/suscripcion/:pacienteId', requiereRolFamilia, async (req
   res.json({ suscripcion: data });
 });
 
-appFamiliasRouter.post('/qr-cobro', requiereRolFamilia, async (req, res) => {
+appFamiliasRouter.post('/qr-cobro', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), async (req, res) => {
   const { suscripcion_id: suscripcionId } = req.body || {};
   if (!suscripcionId) {
     return res.status(400).json({ error: 'Falta suscripcion_id' });
@@ -544,7 +613,7 @@ appFamiliasRouter.post('/qr-cobro', requiereRolFamilia, async (req, res) => {
   res.json({ qr: data });
 });
 
-appFamiliasRouter.get('/qr-cobro/:id', requiereRolFamilia, async (req, res) => {
+appFamiliasRouter.get('/qr-cobro/:id', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), async (req, res) => {
   const { data, error } = await supabase
     .from('qr_cobro_efectivo')
     .select('id, expira_en, usado_en, cobro_id')

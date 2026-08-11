@@ -12,8 +12,29 @@ import {
   asistenteAtiendeAlPaciente,
 } from '../utils/pacientesDeGuardia.js';
 import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
+import { visibilidadDelPedido, exigeVisible } from '../utils/visibilidadPrestadora.js';
+import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
 
 export const appAsistentesRouter = Router();
+
+// Con qué datos del Paciente se dibuja la pantalla del Asistente en esta Prestadora. El
+// domicilio exacto y las patologías tienen cada uno su perilla: hay quien da la dirección
+// recién al confirmar el turno, y hay quien no manda datos clínicos al teléfono de nadie.
+// Lo que está apagado no se pide, así que tampoco viaja (tarea 65).
+//
+// Las patologías se piden solamente en la pantalla de una guardia, que es donde el Asistente
+// las necesita para trabajar. En la lista de sus turnos no van ni aunque estén prendidas: ahí
+// alcanza con saber a quién y a qué hora.
+function camposDePacienteParaElAsistente(visibilidad, { conPatologias = false } = {}) {
+  return columnasSegunVisibilidad([
+    'id',
+    'nombre',
+    ['domicilio', 'asistente_domicilio_del_paciente'],
+    ['lat', 'asistente_domicilio_del_paciente'],
+    ['lng', 'asistente_domicilio_del_paciente'],
+    ...(conPatologias ? [['patologias', 'asistente_patologias_del_paciente']] : []),
+  ], visibilidad);
+}
 
 const TIPOS_FOTO_PERMITIDOS = ['image/jpeg', 'image/png'];
 const TAMANO_MAXIMO_FOTO = 8 * 1024 * 1024; // 8 MB
@@ -99,7 +120,13 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   // arriba según dónde esté parado.
   const marca = await marcaDeLaPrestadora(req.usuarioAsistente.prestadoraId);
 
-  res.json({ perfil, certificado: certificado || null, marca });
+  // Qué muestra esta Prestadora, por el mismo camino y por el mismo motivo que la marca: la
+  // aplicación necesita saberlo antes de dibujar la primera pantalla, y pedirlo aparte sería
+  // un viaje más para lo mismo. Acá viaja para que la aplicación no dibuje lo que está
+  // apagado; que el dato apagado no salga de la base lo resuelve cada consulta por su cuenta.
+  const visibilidad = await visibilidadDelPedido(req);
+
+  res.json({ perfil, certificado: certificado || null, marca, visibilidad });
 });
 
 // ============================================================================
@@ -124,7 +151,8 @@ appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
   }
 
   try {
-    res.json({ guardias: await conPacientes(data ?? []) });
+    const visibilidad = await visibilidadDelPedido(req);
+    res.json({ guardias: await conPacientes(data ?? [], camposDePacienteParaElAsistente(visibilidad)) });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -143,9 +171,11 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
 
+  const visibilidad = await visibilidadDelPedido(req);
+
   let guardia;
   try {
-    [guardia] = await conPacientes([data], 'id, nombre, domicilio, lat, lng, patologias');
+    [guardia] = await conPacientes([data], camposDePacienteParaElAsistente(visibilidad, { conPatologias: true }));
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
@@ -153,10 +183,16 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
   // Los signos vitales son de una persona, no de un turno: la presión normal de la señora de
   // la casa no es la del marido. Por eso van por Paciente, y la autorización de monitoreo
   // también —puede estar firmada para uno y no para el otro.
+  //
+  // Si la Prestadora no toma signos vitales, ni siquiera se pregunta cuáles corresponden: la
+  // pantalla no va a mostrar el bloque, y los valores de referencia de una persona son un dato
+  // de salud que no tiene por qué llegar al teléfono.
   const vitalesPorPaciente = {};
-  for (const p of guardia.pacientes ?? []) {
-    const vitales = await resolverVitalesHabilitados(p.id, req.usuarioAsistente.prestadoraId);
-    vitalesPorPaciente[p.id] = vitales;
+  if (visibilidad.asistente_signos_vitales) {
+    for (const p of guardia.pacientes ?? []) {
+      const vitales = await resolverVitalesHabilitados(p.id, req.usuarioAsistente.prestadoraId);
+      vitalesPorPaciente[p.id] = vitales;
+    }
   }
 
   // La pantalla necesita saber a quiénes les falta el reporte: ofrece el cierre recién cuando
@@ -270,7 +306,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, async (r
 // Reporte Diario — estructurar (IA Nivel 1, no persiste todavía)
 // ============================================================================
 
-appAsistentesRouter.post('/guardias/:id/reporte/estructurar', requiereRolAsistente, async (req, res) => {
+appAsistentesRouter.post('/guardias/:id/reporte/estructurar', requiereRolAsistente, exigeVisible('asistente_relato_con_ia'), async (req, res) => {
   const { textoLibre } = req.body;
   if (!textoLibre || typeof textoLibre !== 'string') {
     return res.status(400).json({ error: 'Falta el texto del reporte' });
@@ -293,6 +329,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/estructurar', requiereRolAsisten
 appAsistentesRouter.post(
   '/guardias/:id/reporte/foto',
   requiereRolAsistente,
+  exigeVisible('asistente_foto_en_el_reporte'),
   upload.single('foto'),
   manejarErrorMulter,
   async (req, res) => {
@@ -365,6 +402,11 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
     return res.status(400).json({ error: `${paciente.nombre} ya tiene su Reporte Diario cargado en este turno`, yaRegistrado: true });
   }
 
+  // Lo que la Prestadora apagó tampoco se guarda, aunque venga en el pedido: la pantalla no lo
+  // pidió, así que si llega es porque alguien lo mandó a mano. Guardarlo sería meter en la
+  // historia clínica de un Paciente un dato que esa Prestadora decidió no tomar.
+  const visibilidad = await visibilidadDelPedido(req);
+
   const { data: reporte, error: errorReporte } = await supabase
     .from('reportes')
     .insert({
@@ -374,11 +416,11 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
       texto_libre: textoLibre || null,
       alimentacion: alimentacion || null,
       medicacion: medicacion || [],
-      signos_vitales: signosVitales || null,
+      signos_vitales: visibilidad.asistente_signos_vitales ? signosVitales || null : null,
       estado_animo: estadoAnimo || null,
       incidentes: incidentes || null,
       observaciones: observaciones || null,
-      foto_url: fotoUrl || null,
+      foto_url: visibilidad.asistente_foto_en_el_reporte ? fotoUrl || null : null,
       ia_procesado: true,
       confirmado_asistente: true,
     })
@@ -509,7 +551,7 @@ appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, async (
 // Ping de ubicación en vivo durante una guardia activa — la Familia lo lee vía Supabase
 // Realtime, nunca por HTTP (PRD_04_05_App_Servicio.md, mapa en tiempo real de la Pantalla
 // del Paciente).
-appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, async (req, res) => {
+appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, exigeVisible('asistente_ubicacion_en_vivo'), async (req, res) => {
   const { lat, lng } = req.body || {};
   if (typeof lat !== 'number' || typeof lng !== 'number') {
     return res.status(400).json({ error: 'Faltan coordenadas GPS' });
@@ -532,7 +574,7 @@ appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, async
 });
 
 // Reportes anteriores del mismo Paciente (botón "Ver reportes anteriores" en Guardia Activa).
-appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, async (req, res) => {
+appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, exigeVisible('asistente_reportes_anteriores'), async (req, res) => {
   if (!(await asistenteAtiendeAlPaciente(req.params.id, req.usuarioAsistente))) {
     return res.status(403).json({ error: 'No tenés guardias asignadas a este Paciente' });
   }
@@ -540,9 +582,15 @@ appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, async (
   // El reporte dice de quién habla, así que se piden directo. Antes había que buscar primero
   // todos los turnos que cubrieron a esta persona y después los reportes de esos turnos —una
   // vuelta que además traía los reportes de los otros Pacientes del mismo turno.
+  //
+  // Se piden la fecha y las observaciones, que es lo único que esta pantalla muestra. Hasta
+  // hoy viajaban además el relato entero, la comida, la medicación, los signos vitales, el
+  // ánimo, los incidentes y la foto: ocho datos de salud que llegaban al teléfono y que
+  // ninguna pantalla dibujaba. Si alguna vez hace falta mostrar alguno, se agrega acá con su
+  // perilla, no se deja "por las dudas" (tarea 65).
   const { data, error } = await supabase
     .from('reportes')
-    .select('id, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, foto_url, created_at, guardias!inner(fecha)')
+    .select('id, observaciones, created_at, guardias!inner(fecha)')
     .eq('paciente_id', req.params.id)
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .order('created_at', { ascending: false })

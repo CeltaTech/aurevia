@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
 import { medicacionVigenteDelPaciente, tipoMatriculaRequerida, asistenteTieneMatriculaVigente } from '../utils/medicacionIndicaciones.js';
 import { asistenteAtiendeAlPaciente } from '../utils/pacientesDeGuardia.js';
+import { exigeVisible } from '../utils/visibilidadPrestadora.js';
 
 // Cierra pendiente #62 (docs/PENDIENTES.md): órdenes de medicación de solo lectura para el
 // Asistente asignado — nunca muestra una vía que este Asistente en particular no está
@@ -10,7 +11,7 @@ import { asistenteAtiendeAlPaciente } from '../utils/pacientesDeGuardia.js';
 
 export const appAsistentesMedicacionRouter = Router();
 
-appAsistentesMedicacionRouter.get('/:pacienteId', requiereRolAsistente, async (req, res) => {
+appAsistentesMedicacionRouter.get('/:pacienteId', requiereRolAsistente, exigeVisible('asistente_medicacion_del_paciente'), async (req, res) => {
   // El permiso se pregunta contra la lista de Pacientes de la guardia, no contra la columna
   // vieja: el segundo Paciente de una guardia compartida también es un Paciente que este Asistente
   // atiende, y sus órdenes de medicación tienen que estar a la vista.

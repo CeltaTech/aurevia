@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
 import { supabase } from '../db/connection.js';
+import { exigeVisible } from '../utils/visibilidadPrestadora.js';
 
 // ============================================================================
 // La Matrícula, vista desde el teléfono del Asistente.
@@ -103,11 +104,17 @@ appAsistentesMatriculaRouter.get('/', requiereRolAsistente, async (req, res) => 
 // Llega en un solo envío —los datos y el archivo juntos— para que no pueda
 // quedar a mitad de camino: un archivo subido sin su fila sería un papel
 // suelto en el depósito que nadie va a mirar nunca.
+//
+// Hay Prestadoras que prefieren recibir el papel por la oficina y cargarlo
+// ellas. Por eso la carga desde el teléfono se puede apagar (tarea 65). Ver
+// cómo está la propia Matrícula no se apaga nunca: si la base lo está frenando
+// para trabajar, tiene derecho a saber por qué.
 // ---------------------------------------------------------------------------
 
 appAsistentesMatriculaRouter.post(
   '/',
   requiereRolAsistente,
+  exigeVisible('asistente_carga_su_matricula'),
   upload.single('archivo'),
   manejarErrorMulter,
   async (req, res) => {

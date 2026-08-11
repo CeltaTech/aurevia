@@ -4,6 +4,7 @@ import { enviarPushFamilia } from './push.js';
 import { configuracionEvento } from './email.js';
 import { necesitaNotificar } from './insistencia.js';
 import { pacientesDeGuardia } from './pacientesDeGuardia.js';
+import { intervaloParaPremura } from './umbralesPremura.js';
 
 // Punto 5 de docs/PRD_06_WhatsApp_IA.md: insistencia al Coordinador según premura, con
 // coordinador de respaldo si no hay reacción, parametrizado por prestadora
@@ -31,16 +32,6 @@ export async function revisarNotificacionesCoordinador() {
     await revisarAlertas(config, ahora);
     await revisarIncidentes(config, ahora);
   }
-}
-
-function intervaloParaPremura(umbrales, minutosPremura) {
-  const tramos = Array.isArray(umbrales) ? umbrales : [];
-  for (const tramo of tramos) {
-    if (tramo.maximo_minutos === null || minutosPremura <= tramo.maximo_minutos) {
-      return tramo.intervalo_minutos;
-    }
-  }
-  return 60;
 }
 
 async function revisarAlertas(config, ahora) {

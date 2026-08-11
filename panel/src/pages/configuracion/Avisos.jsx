@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
 import { supabase } from '../../lib/supabaseClient';
 import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion';
+import { ordenarTramosPremura } from '../../lib/tramosPremura';
 import { traducirValor } from '../../i18n/valores';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
@@ -12,7 +13,8 @@ import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 
 /* A quién se le avisa y por dónde: los correos de cada evento, la casilla desde la
-   que salen, el aviso de cese y todo lo de WhatsApp. */
+   que salen, el aviso de cese, la revisión con inteligencia artificial y todo lo de
+   WhatsApp. */
 export function ConfiguracionAvisos() {
   const { t } = useLocale();
 
@@ -20,6 +22,7 @@ export function ConfiguracionAvisos() {
     <>
       <h2>{t.configuracion.tab_notificaciones}</h2>
       <TabNotificaciones />
+      <TabAlertasIA />
       <TabWhatsapp />
     </>
   );
@@ -27,6 +30,21 @@ export function ConfiguracionAvisos() {
 
 const CATEGORIAS_PLANTILLA = ['utility', 'marketing', 'authentication'];
 
+/* La lista de avisos que se pueden prender y apagar.
+   ==========================================================================
+
+   El servidor devuelve TODOS los avisos que el producto sabe mandar, tenga o no tenga
+   guardada la elección de esta Prestadora. Antes devolvía solo los guardados, y un aviso sin
+   fila era invisible: existía, salía igual y no había forma de apagarlo desde acá.
+
+   El nombre de cada aviso sale de las traducciones, nunca de la columna `descripcion` de la
+   base, que está escrita en español y sola (CLAUDE.md §7 regla 1). Esa columna queda de
+   respaldo por si algún día llega un aviso que las traducciones todavía no conocen: es
+   preferible un renglón en español antes que un renglón en blanco.
+
+   Y las dos casillas —avisar por WhatsApp, avisar también a la Familia— se dibujan según lo
+   que el propio aviso dice de sí mismo (`admite_whatsapp`, `admite_familia`), no según una
+   comparación con un nombre de aviso escrita acá adentro. */
 function TabNotificaciones() {
   const { t } = useLocale();
   const [notificaciones, setNotificaciones] = useState([]);
@@ -100,17 +118,27 @@ function TabNotificaciones() {
                   <input type="checkbox" checked={fila.activo} onChange={(e) => set(fila.evento, 'activo', e.target.checked)} />
                 </td>
                 <td>
-                  <input type="checkbox" checked={fila.whatsapp_activo || false} onChange={(e) => set(fila.evento, 'whatsapp_activo', e.target.checked)} />
+                  {fila.admite_whatsapp
+                    ? (
+                      <input
+                        type="checkbox"
+                        checked={fila.whatsapp_activo || false}
+                        onChange={(e) => set(fila.evento, 'whatsapp_activo', e.target.checked)}
+                      />
+                    )
+                    : <span className="panel-dato-vacio" title={t.configuracion.notificaciones_canal_no_disponible}>—</span>}
                 </td>
                 <td>
-                  {fila.evento === 'incidente_relevo_sin_resolver' && (
-                    <input
-                      type="checkbox"
-                      checked={fila.notificar_familia || false}
-                      title={t.configuracion.notificaciones_notificar_familia_ayuda}
-                      onChange={(e) => set(fila.evento, 'notificar_familia', e.target.checked)}
-                    />
-                  )}
+                  {fila.admite_familia
+                    ? (
+                      <input
+                        type="checkbox"
+                        checked={fila.notificar_familia || false}
+                        title={t.configuracion.notificaciones_notificar_familia_ayuda}
+                        onChange={(e) => set(fila.evento, 'notificar_familia', e.target.checked)}
+                      />
+                    )
+                    : <span className="panel-dato-vacio" title={t.configuracion.notificaciones_canal_no_disponible}>—</span>}
                 </td>
                 <td>
                   <button onClick={() => guardar(fila)} disabled={guardandoEvento === fila.evento}>
@@ -124,8 +152,194 @@ function TabNotificaciones() {
       </EstadoLista>
       <TabAvisoCese />
       <TabAvisoGuardiaSinCubrir />
+      <TabAvisoPrevioGuardia />
       <TabEmailRemitente />
     </>
+  );
+}
+
+/* Cuánto antes se le recuerda a la Asistente su próxima guardia.
+   ==========================================================================
+
+   Estaba escrito fijo en una hora para todas las Prestadoras, y una hora no le sirve a todas:
+   quien trabaja con guardias de doce horas quiere avisar la noche anterior. */
+function TabAvisoPrevioGuardia() {
+  const { t } = useLocale();
+  const [minutos, setMinutos] = useState('');
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+  const [guardado, setGuardado] = useState(false);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const { minutos_aviso_previo_guardia } = await llamarApi('/aviso-previo-guardia');
+      setMinutos(minutos_aviso_previo_guardia);
+      setEstado('listo');
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+      setEstado('error');
+    }
+  }, [t]);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  async function guardar() {
+    setGuardando(true);
+    setError(null);
+    try {
+      await llamarApi('/aviso-previo-guardia', {
+        method: 'PATCH',
+        body: JSON.stringify({ minutos: Number(minutos) }),
+      });
+      setGuardado(true);
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <div>
+      <h2>{t.configuracion.aviso_previo_guardia_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.aviso_previo_guardia_explicacion}</p>
+      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+        <div>
+          {error && <Alert variant="error">{error}</Alert>}
+          {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
+          <FormField
+            label={t.configuracion.aviso_previo_guardia_minutos}
+            name="minutos_aviso_previo_guardia"
+            type="number"
+            value={minutos}
+            onChange={(e) => { setMinutos(e.target.value); setGuardado(false); }}
+          />
+          <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+        </div>
+      </EstadoLista>
+    </div>
+  );
+}
+
+/* La revisión de los reportes con inteligencia artificial.
+   ==========================================================================
+
+   Todo esto estaba escrito fijo adentro del programa: cuántos reportes se miraban, y a quién
+   le llegaba cada nivel de alerta. Las palabras clave existían en la base pero no tenían
+   pantalla, así que la única forma de cambiarlas era entrar a la base a mano.
+
+   Lo único que no se elige: una alerta roja siempre le llega al Coordinador. Si la revisión
+   encontró algo urgente sobre un Paciente, alguien de la Prestadora tiene que enterarse. */
+function TabAlertasIA() {
+  const { t } = useLocale();
+  const [form, setForm] = useState(null);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+  const [guardado, setGuardado] = useState(false);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const { configuracion } = await llamarApi('/alertas-ia');
+      setForm(configuracion);
+      setEstado('listo');
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+      setEstado('error');
+    }
+  }, [t]);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  function set(campo, valor) {
+    setForm((f) => ({ ...f, [campo]: valor }));
+    setGuardado(false);
+  }
+
+  async function guardar() {
+    setGuardando(true);
+    setError(null);
+    try {
+      await llamarApi('/alertas-ia', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          palabras_clave: form.palabras_clave ?? [],
+          reportes_a_analizar: Number(form.reportes_a_analizar),
+          roja_avisa_familia: form.roja_avisa_familia,
+          amarilla_avisa_familia: form.amarilla_avisa_familia,
+          amarilla_avisa_coordinador: form.amarilla_avisa_coordinador,
+        }),
+      });
+      setGuardado(true);
+      recargar();
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <div>
+      <h2>{t.configuracion.alertas_ia_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.alertas_ia_explicacion}</p>
+      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+        {form && (
+          <div>
+            {error && <Alert variant="error">{error}</Alert>}
+            {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
+            <FormField
+              label={t.configuracion.alertas_ia_palabras_clave}
+              name="palabras_clave"
+              value={(form.palabras_clave ?? []).join(', ')}
+              placeholder={t.configuracion.alertas_ia_palabras_clave_placeholder}
+              ayuda={t.configuracion.alertas_ia_palabras_clave_ayuda}
+              onChange={(e) => set('palabras_clave', e.target.value.split(',').map((p) => p.trim()).filter(Boolean))}
+            />
+            <FormField
+              label={t.configuracion.alertas_ia_reportes_a_analizar}
+              name="reportes_a_analizar"
+              type="number"
+              value={form.reportes_a_analizar ?? ''}
+              ayuda={t.configuracion.alertas_ia_reportes_a_analizar_ayuda}
+              onChange={(e) => set('reportes_a_analizar', e.target.value)}
+            />
+            <p className="panel-explicacion">{t.configuracion.alertas_ia_roja_siempre_coordinador}</p>
+            <FormField
+              label={t.configuracion.alertas_ia_roja_avisa_familia}
+              name="roja_avisa_familia"
+              type="checkbox"
+              checked={form.roja_avisa_familia || false}
+              onChange={(e) => set('roja_avisa_familia', e.target.checked)}
+            />
+            <FormField
+              label={t.configuracion.alertas_ia_amarilla_avisa_coordinador}
+              name="amarilla_avisa_coordinador"
+              type="checkbox"
+              checked={form.amarilla_avisa_coordinador || false}
+              onChange={(e) => set('amarilla_avisa_coordinador', e.target.checked)}
+            />
+            <FormField
+              label={t.configuracion.alertas_ia_amarilla_avisa_familia}
+              name="amarilla_avisa_familia"
+              type="checkbox"
+              checked={form.amarilla_avisa_familia || false}
+              onChange={(e) => set('amarilla_avisa_familia', e.target.checked)}
+            />
+            <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+          </div>
+        )}
+      </EstadoLista>
+    </div>
   );
 }
 
@@ -676,17 +890,24 @@ function TabWhatsappEscaladaCoordinador() {
   async function guardar() {
     setGuardando(true);
     setError(null);
+    // Se ordenan antes de mandarlos: el motor lee la lista de arriba hacia abajo y se
+    // queda con el primer tramo que le sirve, así que un tramo fuera de orden no se
+    // alcanza nunca. Y el servidor además la rechaza si llega desordenada.
+    const ordenados = ordenarTramosPremura(form.umbrales_premura);
     try {
       await llamarApi('/escalada-coordinador', {
         method: 'PATCH',
         body: JSON.stringify({
           coordinador_backup_id: form.coordinador_backup_id || null,
           minutos_antes_backup: Number(form.minutos_antes_backup),
-          umbrales_premura: form.umbrales_premura,
+          umbrales_premura: ordenados,
           fase_automatica_activa: form.fase_automatica_activa,
           minutos_antes_fase_automatica: Number(form.minutos_antes_fase_automatica),
         }),
       });
+      // La pantalla se queda con la lista tal como quedó guardada, no como se tipeó: si
+      // alguien puso un tramo fuera de lugar, lo ve en su sitio sin tener que recargar.
+      setForm((f) => ({ ...f, umbrales_premura: ordenados }));
       setGuardado(true);
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -723,6 +944,7 @@ function TabWhatsappEscaladaCoordinador() {
               value={form.minutos_antes_backup ?? ''}
               onChange={(e) => set('minutos_antes_backup', e.target.value)}
             />
+            <EditorTramosPremura tramos={form.umbrales_premura ?? []} onCambiar={(tramos) => set('umbrales_premura', tramos)} />
             <FormField
               label={t.configuracion.whatsapp_escalada_fase_automatica}
               name="fase_automatica_activa"
@@ -741,6 +963,84 @@ function TabWhatsappEscaladaCoordinador() {
           </div>
         )}
       </EstadoLista>
+    </div>
+  );
+}
+
+/* Los tramos con los que se le insiste al Coordinador.
+   ==========================================================================
+
+   Cada tramo dice una frase: "mientras no pasen más de X minutos desde que se detectó el
+   problema, volvé a avisarle cada Y minutos". El último no lleva un "hasta": vale de ahí en
+   adelante, y es el que evita que un incidente viejo se quede sin ningún intervalo.
+
+   Estos números ya se guardaban, pero no había forma de escribirlos desde el Panel: llegaban
+   del servidor, viajaban de vuelta sin que nadie los mirara y solo se podían cambiar entrando
+   a la base a mano.
+
+   El renglón de abajo es siempre el abierto. Agregar un tramo lo mete arriba de ese; quitar
+   el último convierte en abierto al que queda de última. */
+function EditorTramosPremura({ tramos, onCambiar }) {
+  const { t } = useLocale();
+  const lista = tramos.length > 0 ? tramos : [{ maximo_minutos: null, intervalo_minutos: 60 }];
+
+  function cambiar(indice, campo, valor) {
+    onCambiar(lista.map((tramo, i) => (i === indice ? { ...tramo, [campo]: valor } : tramo)));
+  }
+
+  function agregar() {
+    const anteUltimo = lista.length >= 2 ? lista[lista.length - 2] : null;
+    const nuevoMaximo = Number(anteUltimo?.maximo_minutos ?? 0) + 60;
+    const nuevo = { maximo_minutos: nuevoMaximo, intervalo_minutos: 30 };
+    onCambiar([...lista.slice(0, -1), nuevo, lista[lista.length - 1]]);
+  }
+
+  function quitar(indice) {
+    const quedan = lista.filter((_, i) => i !== indice);
+    if (quedan.length === 0) return;
+    // El de abajo siempre es el abierto: si se fue el que estaba abierto, se abre el nuevo último.
+    return onCambiar(quedan.map((tramo, i) => (i === quedan.length - 1 ? { ...tramo, maximo_minutos: null } : tramo)));
+  }
+
+  return (
+    <div>
+      <h3>{t.configuracion.premura_titulo}</h3>
+      <p className="panel-explicacion">{t.configuracion.premura_explicacion}</p>
+      <div className="panel-tramos">
+        {lista.map((tramo, indice) => {
+          const esUltimo = indice === lista.length - 1;
+          return (
+            <div className="panel-tramo" key={indice}>
+              {esUltimo
+                ? <span>{t.configuracion.premura_de_ahi_en_adelante}</span>
+                : (
+                  <>
+                    <span>{t.configuracion.premura_hasta}</span>
+                    <input
+                      type="number"
+                      aria-label={t.configuracion.premura_hasta}
+                      value={tramo.maximo_minutos ?? ''}
+                      onChange={(e) => cambiar(indice, 'maximo_minutos', e.target.value)}
+                    />
+                    <span>{t.configuracion.premura_minutos}</span>
+                  </>
+                )}
+              <span>{t.configuracion.premura_avisar_cada}</span>
+              <input
+                type="number"
+                aria-label={t.configuracion.premura_avisar_cada}
+                value={tramo.intervalo_minutos ?? ''}
+                onChange={(e) => cambiar(indice, 'intervalo_minutos', e.target.value)}
+              />
+              <span>{t.configuracion.premura_minutos}</span>
+              {lista.length > 1 && (
+                <Button variant="secondary" onClick={() => quitar(indice)}>{t.comun.borrar}</Button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <Button variant="secondary" onClick={agregar}>{t.configuracion.premura_agregar_tramo}</Button>
     </div>
   );
 }

@@ -12,7 +12,7 @@ const SYSTEM_PROMPT = `Eres un sistema de monitoreo clínico para pacientes con 
 Analizarás los últimos N reportes diarios de un paciente y detectarás patrones preocupantes.
 
 Datos del paciente: [patologías conocidas, medicación habitual]
-Reportes: [array JSON de los últimos 7 reportes]
+Reportes: [array JSON de los últimos N reportes]
 
 Evalúa:
 1. Tendencia en alimentación (baja de apetito sostenida)

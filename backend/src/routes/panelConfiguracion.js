@@ -3,6 +3,10 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { supabase } from '../db/connection.js';
 import { ACCIONES_PERMISOS } from '../utils/permisos.js';
+import { avisoDelCatalogo, mezclarAvisosConCatalogo, VALORES_POR_DEFECTO_AVISO } from '../utils/catalogoAvisos.js';
+import { LIMITES_ALERTAS_IA, VALORES_POR_DEFECTO_ALERTAS_IA } from '../utils/revisarAlertasIA.js';
+import { validarUmbralesPremura } from '../utils/umbralesPremura.js';
+import { LIMITES_AVISO_PREVIO_GUARDIA } from '../utils/revisarRecordatoriosPush.js';
 
 export const panelConfiguracionRouter = Router();
 
@@ -245,22 +249,134 @@ panelConfiguracionRouter.delete('/personal-emergencia/:id', async (req, res) => 
 // configuracion_notificaciones pasó a ser por prestadora el 2026-07-13
 // (backend/src/db/schema_whatsapp_ia_01.sql sección 0) — antes era una fila global por
 // evento, compartida sin darse cuenta por todas las prestadoras licenciatarias.
+//
+// La pantalla muestra SIEMPRE los ocho avisos del catálogo (utils/catalogoAvisos.js), tenga
+// o no tenga fila guardada cada uno. Antes devolvía solo las filas existentes, así que un
+// aviso sin sembrar era invisible y no se podía apagar aunque se siguiera mandando.
 panelConfiguracionRouter.get('/notificaciones', async (req, res) => {
-  let query = supabase.from('configuracion_notificaciones').select('*').order('evento');
+  let query = supabase
+    .from('configuracion_notificaciones')
+    .select('evento, descripcion, emails, activo, whatsapp_activo, notificar_familia');
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ notificaciones: data });
+  res.json({ notificaciones: mezclarAvisosConCatalogo(data) });
 });
 
+// Inserción-o-actualización, no actualización a secas: la primera vez que la Prestadora toca
+// un aviso, la fila todavía no existe y un UPDATE no hacía nada (guardaba en silencio y no
+// guardaba nada). La descripción sale del catálogo, nunca del navegador.
 panelConfiguracionRouter.patch('/notificaciones/:evento', async (req, res) => {
+  const aviso = avisoDelCatalogo(req.params.evento);
+  if (!aviso) return res.status(400).json({ error: 'Aviso desconocido' });
+
   const { emails, activo, whatsapp_activo, notificar_familia } = req.body;
-  let query = supabase
-    .from('configuracion_notificaciones')
-    .update({ emails, activo, whatsapp_activo, notificar_familia })
-    .eq('evento', req.params.evento);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { error } = await query;
+  const { error } = await supabase.from('configuracion_notificaciones').upsert(
+    {
+      prestadora_id: req.usuarioPanel.prestadoraId,
+      evento: aviso.evento,
+      descripcion: aviso.descripcion,
+      emails: Array.isArray(emails) ? emails.map((correo) => String(correo).trim()).filter(Boolean) : [...VALORES_POR_DEFECTO_AVISO.emails],
+      activo: activo === undefined ? VALORES_POR_DEFECTO_AVISO.activo : Boolean(activo),
+      // Un canal que este aviso no usa se guarda apagado aunque el navegador lo mande
+      // encendido: dejarlo prendido haría creer que el aviso sale por ahí, y no sale.
+      whatsapp_activo: aviso.admite_whatsapp ? Boolean(whatsapp_activo) : false,
+      notificar_familia: aviso.admite_familia ? Boolean(notificar_familia) : false,
+    },
+    { onConflict: 'evento,prestadora_id' }
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// --- Cuánto antes se le recuerda a la Asistente su próxima guardia. Estaba escrito fijo en
+//     una hora para todas las Prestadoras (utils/revisarRecordatoriosPush.js), y una hora no
+//     le sirve a todas: quien trabaja con guardias de doce horas quiere avisar la noche
+//     anterior. Mismo patrón que /guardias/horizonte-generacion: el valor vive en
+//     "prestadoras" y se expone acá para reusar el acotado por Prestadora de este router. ---
+panelConfiguracionRouter.get('/aviso-previo-guardia', async (req, res) => {
+  const { data, error } = await supabase
+    .from('prestadoras')
+    .select('minutos_aviso_previo_guardia')
+    .eq('id', req.usuarioPanel.prestadoraId)
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ minutos_aviso_previo_guardia: data.minutos_aviso_previo_guardia });
+});
+
+panelConfiguracionRouter.patch('/aviso-previo-guardia', async (req, res) => {
+  const { minutos } = req.body;
+  if (
+    !Number.isInteger(minutos)
+    || minutos < LIMITES_AVISO_PREVIO_GUARDIA.minimo
+    || minutos > LIMITES_AVISO_PREVIO_GUARDIA.maximo
+  ) {
+    return res.status(400).json({
+      error: `El aviso previo tiene que ser un número entero de minutos, entre ${LIMITES_AVISO_PREVIO_GUARDIA.minimo} y ${LIMITES_AVISO_PREVIO_GUARDIA.maximo}.`,
+    });
+  }
+  const { error } = await supabase
+    .from('prestadoras')
+    .update({ minutos_aviso_previo_guardia: minutos })
+    .eq('id', req.usuarioPanel.prestadoraId);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// --- Revisión con IA de los reportes (IA Nivel 2): palabras clave que disparan la revisión
+//     inmediata, cuántos reportes se miran y a quién se entera de cada nivel de alerta.
+//     Hasta ahora las palabras clave solo se podían cambiar por SQL directo contra la base, y
+//     el resto estaba escrito fijo en utils/revisarAlertasIA.js — las dos cosas en contra de
+//     "Configuración sobre programación" (CLAUDE.md §2). Mismo patrón que /ausencia-automatica. ---
+panelConfiguracionRouter.get('/alertas-ia', async (req, res) => {
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+  const { data, error } = await supabase
+    .from('configuracion_alertas_ia')
+    .select('palabras_clave, reportes_a_analizar, roja_avisa_familia, amarilla_avisa_familia, amarilla_avisa_coordinador')
+    .eq('prestadora_id', prestadoraId)
+    .maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ configuracion: data || { ...VALORES_POR_DEFECTO_ALERTAS_IA } });
+});
+
+panelConfiguracionRouter.patch('/alertas-ia', async (req, res) => {
+  const {
+    palabras_clave, reportes_a_analizar,
+    roja_avisa_familia, amarilla_avisa_familia, amarilla_avisa_coordinador,
+  } = req.body;
+
+  if (!Array.isArray(palabras_clave)) {
+    return res.status(400).json({ error: 'palabras_clave debe ser una lista de textos' });
+  }
+  if (
+    !Number.isInteger(reportes_a_analizar)
+    || reportes_a_analizar < LIMITES_ALERTAS_IA.reportes_a_analizar_minimo
+    || reportes_a_analizar > LIMITES_ALERTAS_IA.reportes_a_analizar_maximo
+  ) {
+    return res.status(400).json({
+      error: `reportes_a_analizar debe ser un entero entre ${LIMITES_ALERTAS_IA.reportes_a_analizar_minimo} y ${LIMITES_ALERTAS_IA.reportes_a_analizar_maximo}`,
+    });
+  }
+
+  // "Fiebre", " fiebre" y "FIEBRE" son la misma palabra: el disparo inmediato compara en
+  // minúsculas (routes/appAsistentes.js), así que se guardan ya normalizadas y sin repetir.
+  const palabrasNormalizadas = [
+    ...new Set(
+      palabras_clave
+        .map((palabra) => String(palabra).trim().toLowerCase())
+        .filter(Boolean)
+    ),
+  ];
+
+  const { error } = await supabase.from('configuracion_alertas_ia').upsert({
+    prestadora_id: req.usuarioPanel.prestadoraId,
+    palabras_clave: palabrasNormalizadas,
+    reportes_a_analizar,
+    roja_avisa_familia: Boolean(roja_avisa_familia),
+    amarilla_avisa_familia: Boolean(amarilla_avisa_familia),
+    amarilla_avisa_coordinador: Boolean(amarilla_avisa_coordinador),
+    updated_at: new Date().toISOString(),
+  });
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });
@@ -747,6 +863,14 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
     coordinador_backup_id, minutos_antes_backup, umbrales_premura,
     fase_automatica_activa, minutos_antes_fase_automatica,
   } = req.body;
+
+  // Los tramos deciden cada cuánto se le vuelve a insistir al Coordinador. Antes se guardaban
+  // sin mirarlos, y una lista mal armada no rompía nada acá: rompía después, callada, en
+  // intervaloParaPremura() — que ante un tramo raro cae a su intervalo de respaldo y le
+  // termina avisando cada una hora a alguien que había pedido que le avisen cada diez minutos.
+  const problema = validarUmbralesPremura(umbrales_premura);
+  if (problema) return res.status(400).json({ error: problema });
+
   const { error } = await supabase
     .from('configuracion_escalada_coordinador')
     .upsert({

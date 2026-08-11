@@ -528,6 +528,32 @@ SELECT guardar_credencial_smtp_prestadora(
 
 
 -- ----------------------------------------------------------------------------
+--    6.d Cómo revisa esta Prestadora los reportes con inteligencia artificial.
+--        Sin esta fila el producto igual funciona —los valores de fábrica están
+--        en el backend—, pero la lista de palabras quedaría vacía y no se podría
+--        probar en la máquina lo único que no tiene valor de fábrica: que un
+--        reporte con una de estas palabras dispare la revisión en el momento en
+--        vez de esperar al horario de siempre. Ver `backend/src/routes/
+--        appAsistentes.js`, donde se leen al recibir el reporte.
+--
+--        Los números quedan distintos de los de fábrica a propósito (5 reportes
+--        en vez de 7, la amarilla también le llega a la Familia), así se ve en
+--        pantalla que lo guardado le gana al valor de fábrica.
+-- ----------------------------------------------------------------------------
+INSERT INTO public.configuracion_alertas_ia (
+  prestadora_id, palabras_clave, reportes_a_analizar,
+  roja_avisa_familia, amarilla_avisa_familia, amarilla_avisa_coordinador
+) VALUES (
+  '11111111-1111-4111-8111-111111111111',
+  ARRAY['caída', 'caida', 'sangrado', 'no responde', 'desorientado', 'fiebre alta', 'ahogo'],
+  5,
+  true,
+  true,
+  true
+);
+
+
+-- ----------------------------------------------------------------------------
 -- 6 bis. Qué hace y qué no hace cada Asistente
 -- ----------------------------------------------------------------------------
 -- El catálogo de tipos viene con cuatro tipos de fábrica que trae el producto.

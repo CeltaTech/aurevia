@@ -9,7 +9,17 @@ import { configuracionEvento } from './email.js';
 // cada evento tiene su propia columna *_enviado_at, se manda una sola vez, y el cron corre
 // cada pocos minutos recorriendo TODAS las prestadoras por igual.
 
-const MINUTOS_ANTES_RECORDATORIO = 60;
+// Cuánto antes se le recuerda a la Asistente su próxima guardia, mientras la Prestadora no
+// haya elegido otra cosa. Es el mismo valor que la columna `prestadoras.minutos_aviso_previo_guardia`
+// tiene por defecto: está escrito en los dos lados a propósito, así una Prestadora que nunca
+// tocó el número se comporta igual que una que guardó el de fábrica.
+export const MINUTOS_ANTES_RECORDATORIO = 60;
+
+// Los mismos topes que la regla de la base (migración 20260811150000). Se exponen para que el
+// backend rechace el número antes que la base, y el Panel reciba un mensaje en castellano en
+// vez del error crudo de Postgres.
+export const LIMITES_AVISO_PREVIO_GUARDIA = { minimo: 5, maximo: 1440 };
+
 const EVENTO_AVISO_RUTINA = 'aviso_rutina_asistente';
 
 // Fase 11: estos avisos son de rutina, no críticos — van solo por push. Si el push falla
@@ -104,7 +114,17 @@ async function revisarMensajesCoordinador() {
 
 async function revisarRecordatoriosGuardiaProxima() {
   const ahora = new Date();
-  const limite = new Date(ahora.getTime() + MINUTOS_ANTES_RECORDATORIO * 60_000);
+
+  // Con cuánta anticipación se avisa lo elige cada Prestadora (pendiente #64).
+  // Se traen los números de una sola vez y no de a uno por guardia: el proceso
+  // recorre todas las Prestadoras juntas y una consulta por guardia sería una
+  // consulta por cada guardia programada del sistema.
+  const { data: prestadoras } = await supabase
+    .from('prestadoras')
+    .select('id, minutos_aviso_previo_guardia');
+  const minutosPorPrestadora = new Map(
+    (prestadoras ?? []).map((p) => [p.id, p.minutos_aviso_previo_guardia ?? MINUTOS_ANTES_RECORDATORIO])
+  );
 
   const { data: guardias, error } = await supabase
     .from('guardias')
@@ -120,6 +140,8 @@ async function revisarRecordatoriosGuardiaProxima() {
   }
 
   for (const guardia of guardias ?? []) {
+    const minutosAntes = minutosPorPrestadora.get(guardia.prestadora_id) ?? MINUTOS_ANTES_RECORDATORIO;
+    const limite = new Date(ahora.getTime() + minutosAntes * 60_000);
     const inicio = new Date(`${guardia.fecha}T${guardia.hora_inicio}`);
     if (inicio.getTime() > limite.getTime() || inicio.getTime() < ahora.getTime()) continue;
 

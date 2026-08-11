@@ -2,6 +2,16 @@
 
 > Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§10) — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
 
+## Glosario: "especialidades" queda retirada; el Asistente tiene un Tipo (2026-08-11)
+
+- **Antes:** cada Asistente tenía una casilla de texto libre (`asistentes.especialidades`) donde cada quien escribía lo que le parecía: "cuidadora", "Cuidado adulto mayor", "Enf.". Servía para mostrar algo en pantalla y para nada más. Ninguna regla del sistema podía apoyarse en eso, porque no hay forma de saber que "Enf." significa enfermería.
+- **Ahora:** el Asistente apunta al catálogo de Tipos (`asistentes.tipo_asistente_id`). El Tipo es el que decide qué Tareas le corresponden y si se le exige Matrícula vigente para poder atender.
+- **Motivo:** mientras hubo dos lugares que decían qué sabe hacer un Asistente, los dos se desencontraban, y el que manda —el catálogo— era el que casi nadie cargaba. El glosario había dado por retirada la palabra "especialidad" hacía tiempo, pero la columna seguía viva y en uso en siete rutas del backend y en la pantalla que ve la Familia.
+- **Por qué la columna vieja no se borra:** por la regla 13 de `CLAUDE.md` — lo que ya está guardado no se toca. Queda marcada como retirada, con su contenido intacto, y se lee únicamente para mostrarle a una persona qué decía antes de que ella elija el Tipo.
+- **Por qué la elección la hace una persona y no el sistema:** al pasar los Asistentes viejos al catálogo, el Panel propone un Tipo solo cuando el texto coincide sin lugar a dudas; si dice "Acompañamiento terapéutico" y el catálogo tiene "Acompañante terapéutico", deja la casilla vacía a propósito. Lo mismo al aprobar una postulación: el Tipo lo elige quien aprueba, mirando lo que la persona escribió, y sin él no se puede dar de alta al Asistente. El motivo es que del Tipo depende si se le va a exigir Matrícula, y una suposición equivocada ahí deja a alguien atendiendo sin estar autorizado a hacerlo.
+- **Lo que no cambia:** el formulario público de postulación sigue teniendo su propia casilla escrita a mano. Ahí escribe la persona que se postula, antes de existir como Asistente, y es justamente el dato que quien aprueba mira para elegir el Tipo.
+- **No reintroducir:** ninguna pantalla ni ruta vuelve a decidir nada leyendo `asistentes.especialidades`.
+
 ## Regla 1: un mensaje de error es texto visible, y sale de las traducciones (2026-08-09)
 
 - **Antes:** la regla decía "nada de texto visible escrito fuera de las traducciones" y nadie la había leído aplicada a los errores. Había **158 lugares en 52 archivos** que hacían `setError(err.message)` y volcaban a la pantalla lo que devolvía el navegador o la base: `Failed to fetch`, `permission denied for table familias`, `Could not find the table 'public.…' in the schema cache`.

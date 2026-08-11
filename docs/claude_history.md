@@ -2,6 +2,15 @@
 
 > Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§10) — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
 
+## Toda alerta se configura desde el Panel (2026-08-11)
+
+- **Decía antes:** ocho avisos distintos podían configurarse en teoría, pero la pantalla solo mostraba los que ya tenían una fila guardada en la base — o sea, ninguno hasta que alguien lo tocara por primera vez. Y cinco decisiones estaban escritas a mano en el código: cuántos reportes lee la revisión con inteligencia artificial (siete), a quién le llega cada color de alerta, con cuánta anticipación se le avisa a la Asistente de su próxima guardia (una hora), y cada cuánto se le vuelve a insistir al Coordinador cuando un problema no se resuelve. Ninguna Prestadora podía cambiar nada de eso.
+- **Dice ahora:** los ocho avisos aparecen siempre en la lista, tengan o no una fila guardada, y las cinco decisiones son columnas de la base con su pantalla en Configuración › Avisos. Cada Prestadora las ajusta a su forma de trabajar.
+- **Motivo:** el principio de `CLAUDE.md` §2 — *configuración sobre programación*. Una diferencia entre Prestadoras es una característica del negocio, no una excusa para tener versiones especiales del código.
+- **Por qué la lista de avisos se arma en el motor y no en la pantalla:** el catálogo de los ocho avisos vive una sola vez, en `backend/src/utils/catalogoAvisos.js`, y ahí también está escrito qué avisos pueden salir por WhatsApp y cuáles pueden llegarle a la Familia. La pantalla muestra un guion en vez de una casilla cuando ese canal no corresponde, en lugar de ofrecer algo que después no iba a pasar.
+- **Lo que quedó a propósito sin configurar:** una alerta roja siempre le llega al Coordinador.
+- **No reintroducir:** un número de días, de minutos o de reportes escrito a mano en el código; una lista de avisos que dependa de que alguien ya haya guardado esa fila; ni una casilla que se pueda marcar para un canal por el que ese aviso nunca va a salir.
+
 ## Glosario: "especialidades" queda retirada; el Asistente tiene un Tipo (2026-08-11)
 
 - **Antes:** cada Asistente tenía una casilla de texto libre (`asistentes.especialidades`) donde cada quien escribía lo que le parecía: "cuidadora", "Cuidado adulto mayor", "Enf.". Servía para mostrar algo en pantalla y para nada más. Ninguna regla del sistema podía apoyarse en eso, porque no hay forma de saber que "Enf." significa enfermería.

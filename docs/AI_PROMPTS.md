@@ -51,7 +51,7 @@ Eres un sistema de monitoreo clínico para pacientes con cuidado domiciliario.
 Analizarás los últimos N reportes diarios de un paciente y detectarás patrones preocupantes.
 
 Datos del paciente: [patologías conocidas, medicación habitual]
-Reportes: [array JSON de los últimos 7 reportes]
+Reportes: [array JSON de los últimos N reportes]
 
 Evalúa:
 1. Tendencia en alimentación (baja de apetito sostenida)
@@ -75,8 +75,20 @@ Si todo está bien: nivel "verde", descripcion "Sin novedades destacadas esta se
 registrar el chequeo en un log de auditoría separado si se necesita trazabilidad, pero no
 en la tabla `alertas`.
 
-**Notificación:** alerta ROJA → Coordinador + Familia (push inmediato). Alerta AMARILLA →
-solo Coordinador. Ver tabla de notificaciones en `PRD_02_Panel_Admin.md`.
+**Cuánto se mira y a quién se le avisa: lo decide cada Prestadora, no el código.** Desde el
+2026-08-11 las cinco perillas viven en la tabla `configuracion_alertas_ia` y se tocan desde el
+Panel, en Configuración › Avisos:
+
+- **N** — cuántos reportes se leen en cada revisión (de 1 a 30; de fábrica, 7).
+- **Palabras clave** — las que hacen que la revisión no espere a la noche y se haga en el momento.
+- **Alerta roja → Familia**, **alerta amarilla → Coordinador**, **alerta amarilla → Familia**:
+  cada una se prende o se apaga.
+
+Lo único que **no** se configura: una alerta roja siempre le llega al Coordinador. Si la revisión
+encontró algo urgente, alguien de la Prestadora tiene que enterarse, y eso no se puede apagar. La
+pantalla lo dice con todas las letras en vez de mostrar una perilla trabada.
+
+Ver tabla de notificaciones en `PRD_02_Panel_Admin.md`.
 
 ## Reglas comunes a ambos niveles
 

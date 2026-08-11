@@ -128,12 +128,21 @@ export const T = {
       animo_mal: 'Mal',
       animo_muy_mal: 'Muy mal',
     },
+    // Los tipos de Asistente que trae el producto de fábrica. En la base guardan
+    // una clave y el nombre visible sale de acá, en el idioma de quien mira. Los
+    // tipos que crea cada Prestadora guardan su nombre como dato y no se traducen.
+    tipos_asistente: {
+      tipo_cuidador: 'Cuidador/a',
+      tipo_enfermero: 'Enfermero/a',
+      tipo_kinesiologo: 'Kinesiólogo/a',
+      tipo_medico: 'Médico/a',
+    },
     perfil: {
       titulo: 'Mi Perfil',
       nombre: 'Nombre',
       email: 'Email',
       telefono: 'Teléfono',
-      especialidades: 'Especialidades',
+      tipo: 'Tipo de Asistente',
       zonas: 'Zonas',
       estado: 'Estado',
       estado_activo: 'Activo',
@@ -328,12 +337,21 @@ export const T = {
       animo_mal: 'Bad',
       animo_muy_mal: 'Very bad',
     },
+    // Los tipos de Asistente que trae el producto de fábrica. En la base guardan
+    // una clave y el nombre visible sale de acá, en el idioma de quien mira. Los
+    // tipos que crea cada Prestadora guardan su nombre como dato y no se traducen.
+    tipos_asistente: {
+      tipo_cuidador: 'Caregiver',
+      tipo_enfermero: 'Nurse',
+      tipo_kinesiologo: 'Physical therapist',
+      tipo_medico: 'Doctor',
+    },
     perfil: {
       titulo: 'My Profile',
       nombre: 'Name',
       email: 'Email',
       telefono: 'Phone',
-      especialidades: 'Specialties',
+      tipo: 'Assistant type',
       zonas: 'Zones',
       estado: 'Status',
       estado_activo: 'Active',
@@ -525,12 +543,21 @@ export const T = {
       animo_mal: 'Mal',
       animo_muy_mal: 'Muito mal',
     },
+    // Los tipos de Asistente que trae el producto de fábrica. En la base guardan
+    // una clave y el nombre visible sale de acá, en el idioma de quien mira. Los
+    // tipos que crea cada Prestadora guardan su nombre como dato y no se traducen.
+    tipos_asistente: {
+      tipo_cuidador: 'Cuidador/a',
+      tipo_enfermero: 'Enfermeiro/a',
+      tipo_kinesiologo: 'Fisioterapeuta',
+      tipo_medico: 'Médico/a',
+    },
     perfil: {
       titulo: 'Meu Perfil',
       nombre: 'Nome',
       email: 'Email',
       telefono: 'Telefone',
-      especialidades: 'Especialidades',
+      tipo: 'Tipo de Assistente',
       zonas: 'Zonas',
       estado: 'Status',
       estado_activo: 'Ativo',

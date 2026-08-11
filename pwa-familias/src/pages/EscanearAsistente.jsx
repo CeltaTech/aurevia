@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
+import { nombreTipo } from '../lib/tipoDeAsistente';
 
 const LECTOR_ID = 'lector-qr-asistente';
 
@@ -124,9 +125,11 @@ export default function EscanearAsistente() {
               />
             )}
             <div className="guardia-card-paciente">{resultado.asistenteEscaneado.nombre}</div>
-            <div className="guardia-card-detalle">
-              {t.asistente.especialidades}: {(resultado.asistenteEscaneado.especialidades || []).join(', ') || '—'}
-            </div>
+            {resultado.tipoEscaneado && (
+              <div className="guardia-card-detalle">
+                {t.asistente.tipo}: {nombreTipo(resultado.tipoEscaneado, t)}
+              </div>
+            )}
             <div className="guardia-card-detalle">
               {resultado.certificado ? t.escaneo.certificado_vigente : t.escaneo.certificado_vencido}
             </div>

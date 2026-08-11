@@ -219,7 +219,7 @@ appFamiliasRouter.get('/pacientes/:id/asistente', requiereRolFamilia, async (req
 
   const { data: asistente } = await supabase
     .from('asistentes')
-    .select('id, nombre, foto_url, especialidades, tipo_asistente_id')
+    .select('id, nombre, foto_url, tipo_asistente_id')
     .eq('id', guardia.asistente_id)
     .maybeSingle();
 
@@ -294,13 +294,27 @@ appFamiliasRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRol
 
   const { data: asistenteEscaneado } = await supabase
     .from('asistentes')
-    .select('id, nombre, foto_url, especialidades')
+    .select('id, nombre, foto_url, tipo_asistente_id')
     .eq('qr_token', req.params.qrToken)
     .eq('prestadora_id', paciente.prestadora_id)
     .maybeSingle();
 
   if (!asistenteEscaneado) {
     return res.status(404).json({ error: 'qr_no_reconocido' });
+  }
+
+  // Qué es esta persona —cuidador/a, enfermero/a…—, para que la pantalla no
+  // muestre solo un nombre y una foto. Mismo filtro por Prestadora que arriba:
+  // entramos con la llave maestra, así que se escribe a mano.
+  let tipoEscaneado = null;
+  if (asistenteEscaneado.tipo_asistente_id) {
+    const { data: tipoFila } = await supabase
+      .from('tipos_asistente')
+      .select('id, clave, nombre, prestadora_id')
+      .eq('id', asistenteEscaneado.tipo_asistente_id)
+      .or(`prestadora_id.is.null,prestadora_id.eq.${paciente.prestadora_id}`)
+      .maybeSingle();
+    tipoEscaneado = tipoFila || null;
   }
 
   const hoyISO = new Date().toISOString().slice(0, 10);
@@ -319,6 +333,7 @@ appFamiliasRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRol
       coincide: false,
       motivo: 'sin_guardia_hoy',
       asistenteEscaneado,
+      tipoEscaneado,
       guardia: null,
       certificado: null,
     });
@@ -333,6 +348,7 @@ appFamiliasRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRol
       coincide: false,
       motivo: 'guardia_sin_cubrir',
       asistenteEscaneado,
+      tipoEscaneado,
       guardia: {
         id: guardiaHoy.id,
         estado: guardiaHoy.estado,
@@ -358,6 +374,7 @@ appFamiliasRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRol
     coincide,
     motivo: coincide ? 'asignado' : 'no_asignado',
     asistenteEscaneado,
+    tipoEscaneado,
     guardia: {
       id: guardiaHoy.id,
       estado: guardiaHoy.estado,

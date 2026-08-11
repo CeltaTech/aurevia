@@ -6,10 +6,10 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 const PRESTADORA_ID = '4e84b0e7-1729-4d07-9e70-56fdbd54cd89'; // Prestadora Demo
 const PASSWORD = 'DemoPrestadora2026!';
 
-const ESPECIALIDADES = [
-  'Cuidado de adultos mayores', 'Cuidado paliativo', 'Rehabilitación', 'Enfermería domiciliaria',
-  'Acompañamiento terapéutico', 'Movilidad reducida', 'Cuidado de pacientes oncológicos', 'Estimulación cognitiva',
-];
+// Qué es cada Asistente de la demo. Son las claves de los tipos generales que
+// trae el producto; el identificador real se busca en la base al arrancar,
+// porque cambia de una instalación a otra.
+const CLAVES_TIPO = ['cuidador', 'enfermero', 'kinesiologo', 'medico'];
 const ZONAS = [
   'CABA', 'San Isidro', 'Vicente López', 'Tigre', 'Quilmes', 'Lomas de Zamora', 'La Matanza', 'Morón', 'San Martín', 'Avellaneda',
 ];
@@ -33,7 +33,6 @@ const NOMBRES_ASISTENTES = [
 
 function construirAsistente(nombre, idx) {
   const esDependencia = idx % 5 === 2 || idx % 5 === 4; // ~40% dependencia
-  const especialidades = [ESPECIALIDADES[idx % 8], ESPECIALIDADES[(idx + 3) % 8]];
   const zonas = [ZONAS[idx % 10], ZONAS[(idx + 4) % 10]];
   const canalesOpciones = [['directo', 'marketplace'], ['directo'], ['marketplace'], ['directo', 'marketplace']];
   const canales = canalesOpciones[idx % 4];
@@ -62,7 +61,7 @@ function construirAsistente(nombre, idx) {
     valor_hora: esDependencia ? null : 3500 + (idx % 6) * 450,
     sueldo_basico: esDependencia ? 950000 + (idx % 5) * 65000 : null,
     horas_semanales: esDependencia ? 30 + (idx % 4) * 6 : null,
-    especialidades,
+    claveTipo: CLAVES_TIPO[idx % CLAVES_TIPO.length],
     zonas,
     canales,
     estado,
@@ -96,8 +95,20 @@ async function crearUsuarioAuth(email, nombre, rol) {
   return data.user.id;
 }
 
+// Los tipos generales, buscados una sola vez: la clave es estable, el
+// identificador no.
+async function tiposGeneralesPorClave() {
+  const { data } = await supabase
+    .from('tipos_asistente')
+    .select('id, clave')
+    .is('prestadora_id', null)
+    .throwOnError();
+  return Object.fromEntries((data || []).map((tipo) => [tipo.clave, tipo.id]));
+}
+
 async function main() {
   const resumen = { familias: [], pacientes: [], asistentes: [] };
+  const tipoPorClave = await tiposGeneralesPorClave();
 
   // --- 14 familias + pacientes nuevos (más la ya existente = 15) ---
   for (const p of PACIENTES) {
@@ -142,7 +153,7 @@ async function main() {
       telefono: perfil.telefono,
       email: perfil.email,
       dni: perfil.dni,
-      especialidades: perfil.especialidades,
+      tipo_asistente_id: tipoPorClave[perfil.claveTipo] || null,
       zonas: perfil.zonas,
       canales: perfil.canales,
       estado: perfil.estado,
@@ -161,12 +172,12 @@ async function main() {
 
   // Completar los 2 asistentes DEMO ya existentes (Marta Gómez, Lucía Paredes)
   await supabase.from('asistentes').update({
-    especialidades: ['Cuidado de adultos mayores', 'Enfermería domiciliaria'],
+    tipo_asistente_id: tipoPorClave.cuidador || null,
     zonas: ['CABA', 'San Isidro'],
     dni: '30499001',
   }).eq('id', 'f93e3e6e-286b-45bc-a101-37b93f7f95ff').throwOnError();
   await supabase.from('asistentes').update({
-    especialidades: ['Acompañamiento terapéutico', 'Movilidad reducida'],
+    tipo_asistente_id: tipoPorClave.enfermero || null,
     zonas: ['CABA', 'Vicente López'],
     dni: '30499002',
   }).eq('id', '152c76f6-c94f-49fa-8715-07b0c502e64d').throwOnError();

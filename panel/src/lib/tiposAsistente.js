@@ -1,34 +1,17 @@
 // El catálogo de tipos de Asistente, visto desde el Panel.
 //
-// Un tipo puede venir de dos lados y eso cambia de dónde sale su nombre:
-//
-//   prestadora_id vacío  → tipo general de CeltaTech. En la base guarda una
-//                          clave (`enfermero`) y el nombre visible sale de los
-//                          archivos de traducción, en el idioma de quien mira.
-//   prestadora_id cargado → tipo que creó esa Prestadora. Guarda el nombre como
-//                          dato, escrito por ella, y no se traduce.
-//
-// Esa distinción se necesita en la pantalla de configuración, en la ficha del
-// Asistente y en lo que ve la Familia. Vive acá una sola vez para que las tres
-// muestren lo mismo (`CLAUDE.md` §7, regla 12).
+// Cómo se llama un tipo —los generales se traducen, los propios de cada
+// Prestadora no— vive en `tipoDeAsistente.js`, que es el mismo archivo en las
+// tres aplicaciones. Acá quedan solamente las cosas que solo existen en el
+// Panel: las tareas, la matrícula y la correspondencia con el texto viejo.
 
-import { traducirValor } from '../i18n/valores';
+import { esTipoGeneral, nombreTipo } from './tipoDeAsistente';
+
+export { esTipoGeneral, nombreTipo };
 
 // Las dos listas de tareas: lo que le toca hacer y lo que no. Los mismos dos
 // valores que acepta la base en `tareas_tipo_asistente.clase`.
 export const CLASES_TAREA = ['corresponde', 'no_corresponde'];
-
-export function esTipoGeneral(tipo) {
-  return !tipo?.prestadora_id;
-}
-
-// El nombre para mostrar. No devuelve nunca la clave cruda en producción:
-// `traducirValor` pone un guion si falta la traducción, y avisa en desarrollo.
-export function nombreTipo(tipo, t) {
-  if (!tipo) return '—';
-  if (esTipoGeneral(tipo)) return traducirValor(t.tipos_asistente, `tipo_${tipo.clave}`);
-  return tipo.nombre || '—';
-}
 
 // El nombre de la matrícula que exige un tipo. Las tres de fábrica están
 // traducidas; una Prestadora puede escribir cualquier otra, y en ese caso se
@@ -54,4 +37,67 @@ export function viasVedadasPorMatricula(tipo, configuracionVias) {
     .filter((via) => via.tipo_matricula_requerida)
     .filter((via) => via.tipo_matricula_requerida !== tipo.tipo_matricula)
     .map((via) => via.via_administracion);
+}
+
+// ---------------------------------------------------------------------------
+// La correspondencia con lo que estaba escrito a mano
+//
+// Hasta ahora el tipo se escribía a mano, con lo cual una misma cosa quedó
+// guardada de varias formas: "Enfermera", "enfermería", "Enf.". Eso ya no se
+// escribe más, pero lo cargado no se borra: se ofrece la correspondencia una
+// vez y la mira una persona antes de guardarla.
+//
+// Lo que sigue es una SUGERENCIA, no una conversión automática. Si duda, no
+// sugiere nada: es preferible una casilla vacía que un tipo equivocado, porque
+// el tipo es lo que decide si a esa persona se le exige matrícula.
+// ---------------------------------------------------------------------------
+
+// Deja el texto comparable: sin mayúsculas, sin tildes, sin nada que no sea
+// letra. "Enfermería" y "ENFERMERIA" tienen que dar lo mismo.
+//
+// `normalize('NFD')` separa la letra de su tilde —la "é" pasa a ser "e" más un
+// signito aparte—; el último paso, que se queda solo con la a a la z, tira ese
+// signito junto con espacios, puntos y números.
+function comparable(texto) {
+  return (texto || '')
+    .normalize('NFD')
+    .toLowerCase()
+    .replace(/[^a-z]/g, '');
+}
+
+// La raíz de la palabra, sin las vocales del final. Es lo que hace que
+// "enfermero", "enfermera" y "enfermería" se reconozcan como la misma cosa sin
+// tener que enumerar cada variante a mano.
+function raiz(texto) {
+  return comparable(texto).replace(/[aeiou]+$/, '');
+}
+
+const LARGO_MINIMO_PARA_ARRIESGAR = 5;
+
+function parecenLaMismaPalabra(unTexto, otroTexto) {
+  const a = raiz(unTexto);
+  const b = raiz(otroTexto);
+  if (a.length < LARGO_MINIMO_PARA_ARRIESGAR || b.length < LARGO_MINIMO_PARA_ARRIESGAR) return false;
+  return a.startsWith(b) || b.startsWith(a);
+}
+
+/**
+ * Qué tipo del catálogo se parece a lo que había escrito a mano.
+ *
+ * `textos` son los valores viejos de ese Asistente. `tipos` es el catálogo que
+ * ve esa Prestadora. Devuelve el id del tipo, o cadena vacía si no encuentra
+ * ninguno o si encuentra más de uno.
+ */
+export function sugerirTipo(textos, tipos, t) {
+  const escritos = (textos || []).filter(Boolean);
+  if (escritos.length === 0) return '';
+
+  const candidatos = (tipos || []).filter((tipo) =>
+    escritos.some((texto) =>
+      parecenLaMismaPalabra(texto, nombreTipo(tipo, t)) ||
+      (esTipoGeneral(tipo) && parecenLaMismaPalabra(texto, tipo.clave)),
+    ),
+  );
+
+  return candidatos.length === 1 ? candidatos[0].id : '';
 }

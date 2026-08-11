@@ -104,7 +104,7 @@ panelImportacionRouter.post(
   }
 );
 
-const CAMPOS_ASISTENTE_ARRAY = new Set(['especialidades', 'zonas']);
+const CAMPOS_ASISTENTE_ARRAY = new Set(['zonas']);
 const CAMPOS_FAMILIA_ARRAY = new Set(['patologiasPaciente']);
 
 function valorDesdeFila(fila, mapeo, campo, esArray) {

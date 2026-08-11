@@ -77,7 +77,7 @@ async function pacientesSinReporte(guardia) {
 appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   const { data: perfil, error } = await supabase
     .from('asistentes')
-    .select('id, nombre, telefono, email, foto_url, especialidades, zonas, estado, tipo_vinculo, qr_token')
+    .select('id, nombre, telefono, email, foto_url, tipo_asistente_id, zonas, estado, tipo_vinculo, qr_token, tipos_asistente(id, clave, nombre, prestadora_id)')
     .eq('id', req.usuarioAsistente.id)
     .single();
   if (error || !perfil) {

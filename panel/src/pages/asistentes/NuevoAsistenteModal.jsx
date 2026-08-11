@@ -5,6 +5,8 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
+import { nombreTipo } from '../../lib/tiposAsistente';
+import { useTiposAsistente } from '../../hooks/useTiposAsistente';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -14,8 +16,9 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
   const [dni, setDni] = useState('');
   const [telefono, setTelefono] = useState('');
   const [email, setEmail] = useState('');
-  const [especialidades, setEspecialidades] = useState('');
+  const [tipoAsistenteId, setTipoAsistenteId] = useState('');
   const [zonas, setZonas] = useState('');
+  const { paraElegir: tiposAsistente } = useTiposAsistente();
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
 
@@ -36,7 +39,7 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
           dni,
           telefono,
           email,
-          especialidades: especialidades.split(',').map((s) => s.trim()).filter(Boolean),
+          tipo_asistente_id: tipoAsistenteId || null,
           zonas: zonas.split(',').map((s) => s.trim()).filter(Boolean),
         }),
       });
@@ -64,7 +67,12 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
           <FormField label={t.asistentes.dni} name="dni" value={dni} onChange={(e) => setDni(e.target.value)} />
           <FormField label={t.asistentes.telefono} name="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
           <FormField label={t.asistentes.email} name="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-          <FormField label={t.asistentes.col_especialidades} name="especialidades" value={especialidades} onChange={(e) => setEspecialidades(e.target.value)} />
+          <FormField label={t.asistentes.col_tipo} name="tipo_asistente_id" type="select" value={tipoAsistenteId} onChange={(e) => setTipoAsistenteId(e.target.value)}>
+            <option value="">{t.asistentes.tipo_sin_asignar}</option>
+            {tiposAsistente.map((tipo) => (
+              <option key={tipo.id} value={tipo.id}>{nombreTipo(tipo, t)}</option>
+            ))}
+          </FormField>
           <FormField label={t.asistentes.col_zonas} name="zonas" value={zonas} onChange={(e) => setZonas(e.target.value)} />
           <p className="panel-explicacion">{t.asistentes.nuevo.ayuda_estado}</p>
 

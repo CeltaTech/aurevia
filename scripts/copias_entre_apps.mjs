@@ -44,6 +44,11 @@ export const GRUPOS = [
     original: 'panel/src/lib/reglaVencimientos.js',
     copias: ['pwa-asistentes/src/lib/reglaVencimientos.js', 'backend/src/utils/reglaVencimientos.js'],
   },
+  {
+    que: 'cómo se muestra el tipo de un Asistente',
+    original: 'panel/src/lib/tipoDeAsistente.js',
+    copias: ['pwa-asistentes/src/lib/tipoDeAsistente.js', 'pwa-familias/src/lib/tipoDeAsistente.js'],
+  },
 ];
 
 // Todas las rutas de todos los grupos, original incluido. La usan los chequeos

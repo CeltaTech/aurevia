@@ -20,7 +20,7 @@ const MODELO = 'claude-sonnet-5';
 // desde la ficha de la Familia, no como parte de este import (ver docs/PENDIENTES.md).
 export const CAMPOS_IMPORTACION = {
   asistente: [
-    'nombre', 'telefono', 'email', 'dni', 'especialidades', 'zonas',
+    'nombre', 'telefono', 'email', 'dni', 'tipo_asistente', 'zonas',
     'tipo_vinculo', 'categoria_cct', 'valor_hora', 'sueldo_basico', 'horas_semanales',
   ],
   familia: [

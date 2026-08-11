@@ -4,6 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import { usePermisos } from '../../context/PermisosContext';
 import { useEmpresa } from '../../context/EmpresaContext';
 import { esAdminOSuperior } from '../../lib/roles';
+import { nombreTipo } from '../../lib/tiposAsistente';
+import { useTiposAsistente } from '../../hooks/useTiposAsistente';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
@@ -20,12 +22,13 @@ export function PerfilTab({ asistente, onActualizado }) {
   const esAdmin = esAdminOSuperior(usuario?.rol);
   const { puede } = usePermisos();
   const puedeEditarIdentidad = esAdmin || puede('editar_identidad_asistente');
+  const { paraElegir: tiposAsistente, porId: tiposPorId } = useTiposAsistente();
   const [form, setForm] = useState({
     nombre: asistente.nombre || '',
     dni: asistente.dni || '',
     telefono: asistente.telefono || '',
     email: asistente.email || '',
-    especialidades: (asistente.especialidades || []).join(', '),
+    tipo_asistente_id: asistente.tipo_asistente_id || '',
     zonas: (asistente.zonas || []).join(', '),
     estado: asistente.estado,
     tipo_vinculo: asistente.tipo_vinculo,
@@ -53,7 +56,7 @@ export function PerfilTab({ asistente, onActualizado }) {
       dni: form.dni.trim() || null,
       telefono: form.telefono.trim() || null,
       email: form.email.trim() || null,
-      especialidades: form.especialidades.split(',').map((s) => s.trim()).filter(Boolean),
+      tipo_asistente_id: form.tipo_asistente_id || null,
       zonas: form.zonas.split(',').map((s) => s.trim()).filter(Boolean),
       estado: form.estado,
       ...(esAdmin && {
@@ -118,7 +121,34 @@ export function PerfilTab({ asistente, onActualizado }) {
         <dd>{new Date(asistente.fecha_alta).toLocaleDateString()}</dd>
       </dl>
 
-      <FormField label={t.asistentes.col_especialidades} name="especialidades" value={form.especialidades} onChange={(e) => set('especialidades', e.target.value)} disabled={!puedeEditarIdentidad} />
+      <FormField
+        label={t.asistentes.col_tipo}
+        name="tipo_asistente_id"
+        type="select"
+        value={form.tipo_asistente_id}
+        onChange={(e) => set('tipo_asistente_id', e.target.value)}
+        disabled={!puedeEditarIdentidad}
+      >
+        <option value="">{t.asistentes.tipo_sin_asignar}</option>
+        {/* El tipo que tiene puesto puede haberse apagado después; igual se
+            muestra, para que no aparezca vacío ni se pierda al guardar. */}
+        {tiposAsistente.some((tipo) => tipo.id === form.tipo_asistente_id) === false && form.tipo_asistente_id && (
+          <option value={form.tipo_asistente_id}>{nombreTipo(tiposPorId.get(form.tipo_asistente_id), t)}</option>
+        )}
+        {tiposAsistente.map((tipo) => (
+          <option key={tipo.id} value={tipo.id}>{nombreTipo(tipo, t)}</option>
+        ))}
+      </FormField>
+
+      {/* Lo que estaba escrito a mano antes de que existiera el catálogo. Se
+          muestra solo mientras este Asistente no tenga tipo, para que quien
+          mira sepa qué decía la ficha y pueda elegir el que corresponde. */}
+      {!form.tipo_asistente_id && (asistente.especialidades || []).length > 0 && (
+        <p className="panel-explicacion">
+          {t.asistentes.tipo_antes_decia}: {asistente.especialidades.join(', ')}
+        </p>
+      )}
+
       <FormField label={t.asistentes.col_zonas} name="zonas" value={form.zonas} onChange={(e) => set('zonas', e.target.value)} disabled={!puedeEditarIdentidad} />
 
       {asistente.estado === 'cesado' ? (

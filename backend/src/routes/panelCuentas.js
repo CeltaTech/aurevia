@@ -9,6 +9,7 @@ import {
   crearFamiliaDirecta,
   invitarMiembroCirculo,
   revocarMiembroCirculo,
+  validarTipoAsistente,
 } from '../utils/cuentasPanel.js';
 import { reenviarActivacionCuenta } from '../utils/activacionCuenta.js';
 import { tienePermiso, ACCIONES_PERMISOS } from '../utils/permisos.js';
@@ -171,9 +172,15 @@ panelCuentasRouter.post('/familia-directa', requiereRolPanel, exigirOrganizacion
 // La primera etapa (menor "orden") queda aprobada de entrada porque ya se cumplió: es la
 // postulación misma, que ya pasó.
 panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva, requiereAdmin, async (req, res) => {
-  const { postulacionId } = req.body;
+  // `tipo_asistente_id` es obligatorio: el tipo decide si a esta persona se le va a exigir
+  // Matrícula vigente para poder atender. Lo elige quien aprueba, mirando la postulación —
+  // no se adivina a partir del texto que la persona escribió en el formulario público.
+  const { postulacionId, tipo_asistente_id } = req.body;
   if (!postulacionId) {
     return res.status(400).json({ error: 'Falta postulacionId' });
+  }
+  if (!tipo_asistente_id) {
+    return res.status(400).json({ error: 'Falta indicar el tipo de Asistente' });
   }
 
   let queryPostulacion = supabase.from('postulaciones').select('*').eq('id', postulacionId);
@@ -191,6 +198,8 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
 
   let asistenteId;
   try {
+    const tipoAsistenteId = await validarTipoAsistente(tipo_asistente_id, prestadoraId);
+
     ({ userId: asistenteId } = await crearCuentaConPerfil({
       email: postulacion.email,
       nombre: postulacion.nombre,
@@ -207,7 +216,7 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
       dni: postulacion.dni,
       telefono: postulacion.telefono,
       email: postulacion.email,
-      especialidades: postulacion.especialidades.split(',').map((e) => e.trim()).filter(Boolean),
+      tipo_asistente_id: tipoAsistenteId,
       zonas: postulacion.zonas.split(',').map((z) => z.trim()).filter(Boolean),
       estado: 'inactivo',
       prestadora_id: prestadoraId,
@@ -261,10 +270,10 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
 // (equivalente al default 'omitir' del pendiente #18 — política de verificación por
 // prestadora; la Fase 2 de este trabajo suma la configuración para cambiar este comportamiento).
 panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('alta_manual_asistente'), async (req, res) => {
-  const { nombre, telefono, email, dni, especialidades, zonas, estado, tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales } = req.body;
+  const { nombre, telefono, email, dni, tipo_asistente_id, zonas, estado, tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales } = req.body;
   try {
     const { asistenteId } = await crearAsistenteDirecto({
-      nombre, telefono, email, dni, especialidades, zonas, estado,
+      nombre, telefono, email, dni, tipo_asistente_id, zonas, estado,
       tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales,
       prestadoraId: req.usuarioPanel.prestadoraId,
       usuarioPanelId: req.usuarioPanel.id,

@@ -3,6 +3,7 @@ import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { activarPush, desactivarPush, pushSoportado, suscripcionActual } from '../lib/push';
 import { traducirValor } from '../i18n/valores';
+import { nombreTipo } from '../lib/tipoDeAsistente';
 import Matricula from '../components/Matricula';
 import Consentimientos from '../components/Consentimientos';
 
@@ -74,8 +75,8 @@ export default function MiPerfil() {
         <div>{perfil.email}</div>
         <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.telefono}</div>
         <div>{perfil.telefono || '—'}</div>
-        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.especialidades}</div>
-        <div>{(perfil.especialidades || []).join(', ') || '—'}</div>
+        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.tipo}</div>
+        <div>{nombreTipo(perfil.tipos_asistente, t)}</div>
         <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.zonas}</div>
         <div>{(perfil.zonas || []).join(', ') || '—'}</div>
         <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.estado}</div>

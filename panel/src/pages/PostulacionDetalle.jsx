@@ -4,7 +4,9 @@ import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
 import { useConfirmarDestructivo } from '../context/TenantSessionContext';
 import { useZonasCobertura } from '../hooks/useZonasCobertura';
+import { useTiposAsistente } from '../hooks/useTiposAsistente';
 import { esAdminOSuperior } from '../lib/roles';
+import { nombreTipo } from '../lib/tiposAsistente';
 import { traducirCodigos } from '../lib/postulacionCodigos';
 import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
@@ -25,7 +27,9 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
     () => Object.fromEntries(zonas.map((z) => [z.codigo, z.nombre])),
     [zonas],
   );
+  const { paraElegir: tiposAsistente } = useTiposAsistente();
   const [nuevoEstado, setNuevoEstado] = useState(postulacion.estado);
+  const [tipoAsistenteId, setTipoAsistenteId] = useState('');
   const [nota, setNota] = useState(postulacion.nota_interna || '');
   const [guardando, setGuardando] = useState(false);
   const [iniciandoVerificacion, setIniciandoVerificacion] = useState(false);
@@ -45,7 +49,7 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${data.session?.access_token}`,
         },
-        body: JSON.stringify({ postulacionId: postulacion.id }),
+        body: JSON.stringify({ postulacionId: postulacion.id, tipo_asistente_id: tipoAsistenteId }),
       });
       const resultado = await respuesta.json();
       if (!respuesta.ok) throw new Error(resultado.error);
@@ -154,7 +158,29 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
           ) : (
             <div>
               <p className="panel-explicacion">{t.postulaciones.iniciar_verificacion_explicacion}</p>
-              <Button variant="secondary" onClick={handleIniciarVerificacion} disabled={iniciandoVerificacion}>
+
+              {/* Qué va a ser esta persona en la Prestadora. Se elige acá, mirando la
+                  postulación, y no se copia de lo que la persona escribió en el
+                  formulario público: el tipo decide si se le va a exigir Matrícula
+                  vigente para poder atender, así que es una decisión de quien aprueba. */}
+              <FormField
+                label={t.postulaciones.tipo_asistente}
+                name="tipo_asistente_id"
+                type="select"
+                value={tipoAsistenteId}
+                onChange={(e) => setTipoAsistenteId(e.target.value)}
+              >
+                <option value="">{t.postulaciones.tipo_asistente_elegir}</option>
+                {tiposAsistente.map((tipo) => (
+                  <option key={tipo.id} value={tipo.id}>{nombreTipo(tipo, t)}</option>
+                ))}
+              </FormField>
+
+              <Button
+                variant="secondary"
+                onClick={handleIniciarVerificacion}
+                disabled={iniciandoVerificacion || !tipoAsistenteId}
+              >
                 {iniciandoVerificacion ? t.comun.guardando : t.postulaciones.iniciar_verificacion}
               </Button>
             </div>

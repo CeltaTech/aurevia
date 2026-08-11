@@ -173,10 +173,12 @@ FROM personas p;
 --    Tres en actividad y una dada de baja, para que las pantallas que filtran
 --    por estado tengan algo distinto que mostrar en cada solapa.
 --
---    Nota: la columna `especialidades` está deprecada — el reemplazo es el
---    vínculo al catálogo de tipos de Asistente, que todavía no existe como
---    columna (pendiente #88 / tarea 88). Cuando exista, esta siembra se
---    actualiza junto con esa tarea.
+--    Qué es cada uno sale del catálogo de tipos, más abajo. La columna vieja
+--    `especialidades` —la casilla de texto libre de antes— quedó retirada y no
+--    se escribe más; acá se carga a propósito en un solo Asistente, Bruno, que
+--    además no tiene tipo, para poder ver funcionando la pantalla que pasa los
+--    viejos al catálogo. Delia tampoco tiene tipo y no tiene texto viejo: es el
+--    otro caso que esa pantalla tiene que saber mostrar.
 --
 --    Los datos de plata van en dos columnas distintas y no en una sola, porque
 --    quien está por monotributo cobra por hora (`valor_hora`) y quien está en
@@ -193,7 +195,7 @@ INSERT INTO public.asistentes (
 ) VALUES
   ('30000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
    'Ana Álvarez', '+54 11 4001-0001', 'ana.asistente@sandbox.local',
-   ARRAY['Cuidado de adultos mayores'], ARRAY['caba'],
+   NULL, ARRAY['caba'],
    'activo', 'monotributo', CURRENT_DATE - 300, NULL, NULL,
    4500.00, NULL, 40, '20000001', ARRAY['directo']),
 
@@ -205,13 +207,13 @@ INSERT INTO public.asistentes (
 
   ('30000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111',
    'Clara Cabrera', '+54 11 4001-0003', 'clara.asistente@sandbox.local',
-   ARRAY['Enfermería domiciliaria'], ARRAY['zona_sur'],
+   NULL, ARRAY['zona_sur'],
    'activo', 'monotributo', CURRENT_DATE - 90, NULL, NULL,
    5200.00, NULL, 24, '20000003', ARRAY['marketplace']),
 
   ('30000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111',
    'Delia Duarte', '+54 11 4001-0004', 'delia.asistente@sandbox.local',
-   ARRAY['Cuidado de adultos mayores'], ARRAY['zona_norte'],
+   NULL, ARRAY['zona_norte'],
    'cesado', 'monotributo', CURRENT_DATE - 500, CURRENT_DATE - 40, 'renuncia',
    4200.00, NULL, 40, '20000004', ARRAY['directo']);
 

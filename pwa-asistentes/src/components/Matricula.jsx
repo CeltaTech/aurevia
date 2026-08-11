@@ -3,6 +3,7 @@ import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
+import { URGENCIA, urgenciaDeVencimiento } from '../lib/reglaVencimientos';
 
 // ============================================================================
 // Mi Matrícula, en el teléfono del Asistente.
@@ -25,12 +26,6 @@ import { mensajeDeError } from '../lib/errores';
 // teléfono.
 // ============================================================================
 
-/** Sin fecha de vencimiento no hay nada que avisar: hay títulos que no caducan. */
-function hayQueAvisar(dias, diasAviso) {
-  if (dias === null || dias === undefined) return false;
-  const ventana = Number(diasAviso) > 0 ? Number(diasAviso) : 30;
-  return dias <= ventana;
-}
 
 export default function Matricula() {
   const { t, locale } = useLocale();
@@ -128,7 +123,7 @@ export default function Matricula() {
         .filter(Boolean)
         .join(' '),
     };
-  } else if (hayQueAvisar(dias, datos.diasAviso)) {
+  } else if (urgenciaDeVencimiento(dias, datos.diasAviso) !== URGENCIA.NINGUNA) {
     let frase = con(tm.vence_en_dias, { dias });
     if (dias === 0) frase = tm.vence_hoy;
     else if (dias === 1) frase = tm.vence_manana;

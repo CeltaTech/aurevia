@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
+import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
@@ -14,7 +15,17 @@ import { reasignarGuardia } from '../lib/reasignarGuardia';
 import { cambiarPacienteDeGuardia } from '../lib/cambiarPacienteDeGuardia';
 import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../lib/pacientesDeGuardia';
 import { correrHora, hoyISO, sumarDias } from '../lib/horarios';
-import { COLUMNAS_ESTADO_MATRICULA, URGENCIA, urgenciaDeVencimiento } from '../lib/matricula';
+import { COLUMNAS_ESTADO_MATRICULA } from '../lib/matricula';
+import {
+  DIAS_AVISO_POR_DEFECTO,
+  ESTADO_VENCIMIENTO,
+  URGENCIA,
+  diasParaVencer,
+  estadoDeVencimiento,
+  fechaLimiteDeAviso,
+  urgenciaDeVencimiento,
+} from '../lib/reglaVencimientos';
+import { diasDeAvisoDeLaPrestadora } from '../lib/plazoDeAviso';
 import { mensajeDeError } from '../lib/errores';
 
 /* El Estado actual.
@@ -35,11 +46,6 @@ import { mensajeDeError } from '../lib/errores';
    hace falta solo para cubrir un hueco (matriculas, invitaciones ya hechas) lo carga el
    panel lateral cuando se abre, no antes: nadie tiene que pagar esa consulta por entrar. */
 
-const API_URL = import.meta.env.VITE_API_URL;
-
-/** Con cuántos días de anticipación avisa esta Prestadora si no se pudo averiguar. */
-const DIAS_AVISO_POR_DEFECTO = 30;
-
 /** Cuántos días muestra la pantalla de entrada: la semana que viene. */
 const DIAS_A_LA_VISTA = 7;
 
@@ -51,20 +57,9 @@ const DIAS_A_LA_VISTA = 7;
    el fin de semana largo sin traer media base. */
 const DIAS_HACIA_ATRAS = 2;
 
-// Reutiliza el mismo endpoint que ya usa el tablero anterior — es la única fuente de verdad
-// de "con cuánta anticipación avisa esta Prestadora" (regla 12).
-async function obtenerDiasAvisoDocumentos() {
-  const { data } = await supabase.auth.getSession();
-  const respuesta = await fetch(`${API_URL}/api/panel/configuracion/documentos-tipo`, {
-    headers: { Authorization: `Bearer ${data.session?.access_token}` },
-  });
-  const resultado = await respuesta.json();
-  if (!respuesta.ok) throw new Error(resultado.error);
-  return resultado.dias_aviso_vencimiento_documentos;
-}
-
 export function EstadoActual() {
   const { t } = useLocale();
+  const { usuario } = useAuth();
 
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -94,16 +89,8 @@ export function EstadoActual() {
     setEstado('cargando');
     setError(null);
 
-    // Los días de aviso vienen del backend y el backend puede no estar levantado. Que eso
-    // pase no puede voltear la pantalla entera: se usa el valor por defecto y se sigue.
-    let diasAviso = DIAS_AVISO_POR_DEFECTO;
-    try {
-      diasAviso = (await obtenerDiasAvisoDocumentos()) ?? DIAS_AVISO_POR_DEFECTO;
-    } catch {
-      diasAviso = DIAS_AVISO_POR_DEFECTO;
-    }
-
-    const limitePapeles = sumarDias(hoyISO(), diasAviso);
+    const diasAviso = await diasDeAvisoDeLaPrestadora(usuario.prestadora_id);
+    const limitePapeles = fechaLimiteDeAviso(diasAviso);
 
     const [gs, as, ps, ds, em] = await Promise.all([
       supabase
@@ -150,11 +137,14 @@ export function EstadoActual() {
 
     // Dos conjuntos, no uno: un papel que ya venció es rojo y uno que está por vencer es
     // naranja. Meterlos en la misma bolsa haría que el contador no pudiera distinguirlos.
-    const hoy = hoyISO();
+    // Quién cae en cuál lo decide `reglaVencimientos.js`, igual que en la pantalla de
+    // Documentación: si acá se contara distinto, el número de arriba y la lista de allá
+    // dirían cosas diferentes sobre los mismos papeles.
     const porVencer = new Set();
     const vencidos = new Set();
     for (const d of ds.data ?? []) {
-      if (d.fecha_vencimiento < hoy) vencidos.add(d.asistente_id);
+      const estadoPapel = estadoDeVencimiento(diasParaVencer(d.fecha_vencimiento), diasAviso);
+      if (estadoPapel === ESTADO_VENCIMIENTO.VENCIDO) vencidos.add(d.asistente_id);
       else porVencer.add(d.asistente_id);
     }
 
@@ -216,7 +206,7 @@ export function EstadoActual() {
       asistentesConMatriculaPorVencer: matriculaPorVencer,
     });
     setEstado('listo');
-  }, [desde, hasta, t]);
+  }, [desde, hasta, t, usuario.prestadora_id]);
 
   useEffect(() => {
     cargar();

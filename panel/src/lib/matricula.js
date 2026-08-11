@@ -40,6 +40,12 @@
 //
 // Este archivo no arma texto ni sabe en qué idioma está el Panel: devuelve claves de
 // traducción, y la pantalla arma la frase (regla 2 de CLAUDE.md §7).
+//
+// Lo que acá NO está. Cuánto falta para que algo venza y si eso ya es para avisar no se decide
+// acá: es la misma pregunta que se hacen los papeles del Asistente, así que vive una sola vez en
+// `lib/reglaVencimientos.js`. Este archivo la usa, no la repite.
+
+import { diaISO } from './reglaVencimientos';
 
 /**
  * Los tres motivos por los que la Matrícula puede frenar a un Asistente.
@@ -67,51 +73,7 @@ export const MOTIVOS_DE_BLOQUEO = [
   BLOQUEO.SIN_VERIFICAR,
 ];
 
-/**
- * Qué tan apurado es un vencimiento que todavía no ocurrió.
- *
- * "Empieza a avisar 30 días antes y aprieta al acercarse": son dos escalones, no uno. El primero
- * es informativo —conviene renovarla—; el segundo ya es urgente.
- */
-export const URGENCIA = {
-  NINGUNA: 'ninguna',
-  AVISO: 'aviso',
-  URGENTE: 'urgente',
-  VENCIDA: 'vencida',
-};
-
-/**
- * Cuántos días antes se empieza a avisar, cuando la Prestadora no configuró el suyo.
- *
- * Es un valor de arranque, no una regla escrita en piedra: cada Prestadora lo cambia desde
- * Configuración (`prestadoras.dias_aviso_vencimiento_documentos`). Está acá solo para el caso en
- * que la pantalla todavía no cargó ese dato.
- */
-export const DIAS_AVISO_POR_DEFECTO = 30;
-
-/**
- * A partir de qué momento el aviso pasa de "conviene" a "urgente".
- *
- * Es el último tercio de la ventana de aviso: con 30 días de ventana, aprieta en los últimos 10.
- * Se calcula a partir del número que la Prestadora ya configuró en vez de pedirle un segundo
- * número, porque dos perillas para la misma decisión terminan siempre desalineadas.
- */
-export const PROPORCION_URGENTE = 1 / 3;
-
 const lista = (x) => (Array.isArray(x) ? x : []);
-
-/** Una fecha —Date o texto— en el formato de día que usa la base: `AAAA-MM-DD`. */
-export function diaISO(momento) {
-  if (!momento) return null;
-  if (typeof momento === 'string') return momento.slice(0, 10);
-  if (momento instanceof Date && !Number.isNaN(momento.getTime())) {
-    const anio = momento.getFullYear();
-    const mes = String(momento.getMonth() + 1).padStart(2, '0');
-    const dia = String(momento.getDate()).padStart(2, '0');
-    return `${anio}-${mes}-${dia}`;
-  }
-  return null;
-}
 
 /**
  * La Matrícula que manda para un Asistente en un día dado, o `null` si ninguna está vigente.
@@ -201,34 +163,6 @@ export function motivoDeBloqueo(asistenteId, estado, matriculas, dia) {
 export function estadoDe(asistenteId, estados) {
   if (!asistenteId) return null;
   return lista(estados).find((e) => e.asistente_id === asistenteId) ?? null;
-}
-
-/**
- * Cuántos días faltan para que venza una Matrícula. `null` si no vence o no hay fecha.
- *
- * Se cuenta en días de calendario, no en horas: a nadie le sirve "vence en 0,3 días".
- */
-export function diasParaVencer(vigenteHasta, desde = new Date()) {
-  if (!vigenteHasta) return null;
-  const hoy = diaISO(desde);
-  if (!hoy) return null;
-  const unDia = 24 * 60 * 60 * 1000;
-  return Math.round((Date.parse(`${vigenteHasta}T00:00:00`) - Date.parse(`${hoy}T00:00:00`)) / unDia);
-}
-
-/**
- * Qué tan apurado es el vencimiento: `ninguna`, `aviso`, `urgente` o `vencida`.
- *
- * @param dias        cuántos días faltan (lo que devuelve `diasParaVencer`).
- * @param diasAviso   la ventana que configuró la Prestadora.
- */
-export function urgenciaDeVencimiento(dias, diasAviso = DIAS_AVISO_POR_DEFECTO) {
-  if (dias === null || dias === undefined) return URGENCIA.NINGUNA;
-  if (dias < 0) return URGENCIA.VENCIDA;
-  const ventana = Number(diasAviso) > 0 ? Number(diasAviso) : DIAS_AVISO_POR_DEFECTO;
-  if (dias > ventana) return URGENCIA.NINGUNA;
-  if (dias <= Math.ceil(ventana * PROPORCION_URGENTE)) return URGENCIA.URGENTE;
-  return URGENCIA.AVISO;
 }
 
 /**

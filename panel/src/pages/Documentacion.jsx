@@ -6,31 +6,13 @@ import { claseBadge } from '../lib/tonos';
 import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError } from '../lib/errores';
-
-function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function diasHasta(fechaISO) {
-  const hoy = new Date(`${hoyISO()}T00:00:00`);
-  const fecha = new Date(`${fechaISO}T00:00:00`);
-  return Math.round((fecha.getTime() - hoy.getTime()) / 86400000);
-}
-
-function estadoDocumento(fechaVencimiento, diasAviso) {
-  const dias = diasHasta(fechaVencimiento);
-  if (dias < 0) return 'vencido';
-  if (dias <= diasAviso) return 'por_vencer';
-  return 'vigente';
-}
+import { diasParaVencer, estadoDeVencimiento } from '../lib/reglaVencimientos';
+import { diasDeAvisoDeLaPrestadora } from '../lib/plazoDeAviso';
 
 export function Documentacion() {
   const { t } = useLocale();
   const { usuario } = useAuth();
   const [filas, setFilas] = useState([]);
-  // No es un filtro de la lista: lo trae el servidor (configuración de la Prestadora) y sirve
-  // para calcular el estado de cada documento, no para elegir qué se muestra.
-  const [diasAviso, setDiasAviso] = useState(30);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   // La pantalla abre ya filtrada a lo vencido o por vencer: ese es el valor de arranque y el
@@ -41,12 +23,12 @@ export function Documentacion() {
     setEstado('cargando');
     setError(null);
 
-    const [{ data: docsData, error: errorDocs }, { data: prestadoraData }] = await Promise.all([
+    const [{ data: docsData, error: errorDocs }, aviso] = await Promise.all([
       supabase
         .from('documentos_asistente')
         .select('id, fecha_vencimiento, tipos_documento_asistente(nombre, requiere_vencimiento), asistentes(nombre, estado)')
         .not('fecha_vencimiento', 'is', null),
-      supabase.from('prestadoras').select('dias_aviso_vencimiento_documentos').eq('id', usuario.prestadora_id).single(),
+      diasDeAvisoDeLaPrestadora(usuario.prestadora_id),
     ]);
 
     if (errorDocs) {
@@ -55,19 +37,19 @@ export function Documentacion() {
       return;
     }
 
-    const aviso = prestadoraData?.dias_aviso_vencimiento_documentos ?? 30;
-    setDiasAviso(aviso);
-
     const filasConEstado = (docsData ?? [])
       .filter((d) => d.tipos_documento_asistente?.requiere_vencimiento && d.asistentes?.estado === 'activo')
-      .map((d) => ({
-        id: d.id,
-        asistente_nombre: d.asistentes?.nombre || '—',
-        tipo_nombre: d.tipos_documento_asistente?.nombre || '—',
-        fecha_vencimiento: d.fecha_vencimiento,
-        dias: diasHasta(d.fecha_vencimiento),
-        estado_documento: estadoDocumento(d.fecha_vencimiento, aviso),
-      }))
+      .map((d) => {
+        const dias = diasParaVencer(d.fecha_vencimiento);
+        return {
+          id: d.id,
+          asistente_nombre: d.asistentes?.nombre || '—',
+          tipo_nombre: d.tipos_documento_asistente?.nombre || '—',
+          fecha_vencimiento: d.fecha_vencimiento,
+          dias,
+          estado_documento: estadoDeVencimiento(dias, aviso),
+        };
+      })
       .sort((a, b) => a.dias - b.dias);
 
     setFilas(filasConEstado);

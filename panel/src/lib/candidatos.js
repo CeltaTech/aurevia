@@ -59,6 +59,7 @@ import {
   matriculaQueMandaAl,
   motivoDeBloqueo,
 } from './matricula';
+import { DIAS_AVISO_POR_DEFECTO } from './reglaVencimientos';
 import { idsDePacientes } from './pacientesDeGuardia';
 
 /**
@@ -140,8 +141,13 @@ export const TOPES = {
   /** Desde qué proporción del tope semanal ya conviene avisar que se está acercando. */
   proporcion_horas_para_avisar: 0.75,
 
-  /** Con cuántos días de anticipación se avisa que un papel o una Matrícula vence. */
-  dias_aviso_vencimiento: 30,
+  /**
+   * Con cuántos días de anticipación se avisa que un papel o una Matrícula vence.
+   *
+   * Arranca en el mismo número que el resto del producto: si mañana se cambia el valor de
+   * arranque, no puede quedar un rincón avisando con otro plazo.
+   */
+  dias_aviso_vencimiento: DIAS_AVISO_POR_DEFECTO,
 
   /** Qué día arranca la semana para contar horas. 1 = lunes (0 sería domingo). */
   dia_inicio_semana: 1,

@@ -11,21 +11,10 @@ import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { supabase } from '../lib/supabaseClient';
 import { mensajeDeError } from '../lib/errores';
+import { fechaLimiteDeAviso } from '../lib/reglaVencimientos';
+import { diasDeAvisoDeLaPrestadora } from '../lib/plazoDeAviso';
 
 const API_URL = import.meta.env.VITE_API_URL;
-
-// El plazo de aviso vive en "prestadoras", tabla de RLS exclusiva de superadmin — se pide acá
-// por el mismo endpoint que ya usa Configuracion.jsx (backend con service role key), nunca por
-// consulta directa del cliente a esa tabla.
-async function obtenerDiasAvisoDocumentos() {
-  const { data } = await supabase.auth.getSession();
-  const respuesta = await fetch(`${API_URL}/api/panel/configuracion/documentos-tipo`, {
-    headers: { Authorization: `Bearer ${data.session?.access_token}` },
-  });
-  const resultado = await respuesta.json();
-  if (!respuesta.ok) throw new Error(resultado.error);
-  return resultado.dias_aviso_vencimiento_documentos;
-}
 
 // Reutiliza el mismo endpoint que ya usa UsuariosPanel.jsx (backend/src/routes/panelUsuarios.js)
 // en vez de crear una ruta nueva solo para contar — es la única fuente de verdad de "quién es
@@ -111,36 +100,16 @@ export function Dashboard() {
       .is('resuelto_at', null)
       .is('guardia_saliente_id', null);
 
-    // "prestadoras" es de RLS exclusiva de superadmin — el plazo configurable solo se puede
-    // pedir por el endpoint backend (requiere rol admin+). Coordinador no tiene acceso a ese
-    // endpoint, así que usa el mismo default del schema (schema_documentos_asistente.sql:82)
-    // que ya usa el cron de vencimientos.js cuando no hay valor configurado.
-    let diasAviso = 30;
-    let errorPlazo = null;
-    if (esAdmin) {
-      try {
-        diasAviso = await obtenerDiasAvisoDocumentos();
-      } catch (err) {
-        errorPlazo = err;
-      }
-    }
+    // El plazo de aviso y hasta qué día hay que mirar salen del mismo lugar que en el Estado
+    // actual y en Documentación, así que los tres contadores dicen lo mismo (regla 12).
+    const diasAviso = await diasDeAvisoDeLaPrestadora(usuario.prestadora_id);
+    const { count: countDocumentos, error: errorDocumentos } = await supabase
+      .from('documentos_asistente')
+      .select('id', { count: 'exact', head: true })
+      .not('fecha_vencimiento', 'is', null)
+      .lte('fecha_vencimiento', fechaLimiteDeAviso(diasAviso));
 
-    let countDocumentos = null;
-    let errorDocumentos = null;
-    if (!errorPlazo) {
-      const limite = new Date();
-      limite.setDate(limite.getDate() + (diasAviso ?? 30));
-      const limiteISO = limite.toISOString().slice(0, 10);
-      const respuesta = await supabase
-        .from('documentos_asistente')
-        .select('id', { count: 'exact', head: true })
-        .not('fecha_vencimiento', 'is', null)
-        .lte('fecha_vencimiento', limiteISO);
-      countDocumentos = respuesta.count;
-      errorDocumentos = respuesta.error;
-    }
-
-    if (errorAusentes || errorPlazo || errorDocumentos) {
+    if (errorAusentes || errorDocumentos) {
       setErrorAlertas(t.comun.error_generico);
       return;
     }
@@ -152,7 +121,7 @@ export function Dashboard() {
     setAusentesSinRelevo(filasAusentes?.length ?? 0);
     setAusentesPorModalidad(porModalidad);
     setDocumentosPorVencer(countDocumentos ?? 0);
-  }, [usuario?.prestadora_id, esAdmin, t]);
+  }, [usuario?.prestadora_id, t]);
 
   useEffect(() => {
     cargarAlertas();

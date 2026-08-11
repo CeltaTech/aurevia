@@ -1,8 +1,8 @@
 import { supabase } from '../db/connection.js';
 import { enviarEmailCoordinador } from './email.js';
+import { DIAS_AVISO_POR_DEFECTO, fechaLimiteDeAviso, ventanaDeAviso } from './reglaVencimientos.js';
 
 const EVENTO_VENCIMIENTO_DOCUMENTO = 'vencimiento_documento_asistente';
-const DIAS_ANTICIPACION_DEFAULT = 30;
 
 // Revisa vencimientos de los documentos que cada prestadora eligió trackear (catálogo en
 // tipos_documento_asistente, configurable por prestadora — ver docs/PENDIENTES.md #18 punto 1,
@@ -22,10 +22,10 @@ export async function revisarVencimientos() {
   }
 
   for (const { id: prestadoraId, dias_aviso_vencimiento_documentos: diasAviso } of prestadoras ?? []) {
-    const anticipacion = diasAviso ?? DIAS_ANTICIPACION_DEFAULT;
-    const limite = new Date();
-    limite.setDate(limite.getDate() + anticipacion);
-    const limiteISO = limite.toISOString().slice(0, 10);
+    // Con cuántos días avisa esta Prestadora y hasta qué día hay que mirar: la misma cuenta que
+    // hacen el Panel y la aplicación del Asistente, en `reglaVencimientos.js` (regla 12).
+    const anticipacion = ventanaDeAviso(diasAviso ?? DIAS_AVISO_POR_DEFECTO);
+    const limiteISO = fechaLimiteDeAviso(anticipacion);
 
     const { data: tipos, error: errorTipos } = await supabase
       .from('tipos_documento_asistente')

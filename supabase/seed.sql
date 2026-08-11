@@ -573,6 +573,52 @@ WHERE id = '30000000-0000-4000-8000-000000000003';
 
 
 -- ----------------------------------------------------------------------------
+-- 6 ter. Los papeles que vencen
+-- ----------------------------------------------------------------------------
+-- Sin estas filas, las tres pantallas que avisan vencimientos —Documentación,
+-- Estado actual y el tablero— se ven vacías en la máquina y no hay forma de
+-- comprobar que las tres clasifican igual.
+--
+-- Las fechas se calculan contra el día en que se siembra, no escritas a mano,
+-- así el ejemplo no se pudre con el tiempo. Quedan los tres casos a la vista:
+-- uno ya vencido, uno adentro del plazo de aviso y uno tranquilo.
+--
+-- El plazo de aviso de la Prestadora se dejó en 45 días a propósito, distinto
+-- del valor de arranque de 30: si una pantalla estuviera usando el número de
+-- fábrica en vez del configurado, el papel de 40 días se vería verde en una y
+-- amarillo en otra, y el desacuerdo salta a la vista.
+
+UPDATE public.prestadoras
+SET dias_aviso_vencimiento_documentos = 45
+WHERE id = '11111111-1111-4111-8111-111111111111';
+
+INSERT INTO public.tipos_documento_asistente (id, prestadora_id, nombre, requiere_vencimiento, activo)
+VALUES
+  ('3d000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+   'Libreta sanitaria', true, true),
+  ('3d000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111',
+   'Certificado de antecedentes', true, true),
+  ('3d000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111',
+   'Título', false, true);
+
+INSERT INTO public.documentos_asistente (prestadora_id, asistente_id, tipo_documento_id, fecha_vencimiento)
+VALUES
+  -- Ana: vencido hace una semana. Es el que tiene que salir en rojo.
+  ('11111111-1111-4111-8111-111111111111', '30000000-0000-4000-8000-000000000001',
+   '3d000000-0000-4000-8000-000000000001', CURRENT_DATE - 7),
+  -- Ana: le quedan 40 días. Adentro del plazo de 45 que configuró la Prestadora,
+  -- pero afuera del de fábrica: es el que delata a una pantalla desincronizada.
+  ('11111111-1111-4111-8111-111111111111', '30000000-0000-4000-8000-000000000001',
+   '3d000000-0000-4000-8000-000000000002', CURRENT_DATE + 40),
+  -- Bruno: le quedan 10 días. Adentro del último tercio, o sea que apura.
+  ('11111111-1111-4111-8111-111111111111', '30000000-0000-4000-8000-000000000002',
+   '3d000000-0000-4000-8000-000000000001', CURRENT_DATE + 10),
+  -- Clara: le queda medio año. Es el que tiene que quedarse callado.
+  ('11111111-1111-4111-8111-111111111111', '30000000-0000-4000-8000-000000000003',
+   '3d000000-0000-4000-8000-000000000001', CURRENT_DATE + 180);
+
+
+-- ----------------------------------------------------------------------------
 -- 7. Limpieza y aviso final
 -- ----------------------------------------------------------------------------
 -- Sin esto, la capa que sirve los datos puede seguir contestando 404 en tablas

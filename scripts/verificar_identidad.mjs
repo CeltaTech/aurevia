@@ -35,7 +35,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, relative, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { TODAS_LAS_RUTAS, copiasDespegadas } from './copias_entre_apps.mjs';
+import { GRUPOS, TODAS_LAS_RUTAS, copiasDespegadas } from './copias_entre_apps.mjs';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -159,7 +159,12 @@ if (fallasLiteral.length > 0) {
 }
 
 if (fallasSincronia.length === 0 && fallasLiteral.length === 0) {
-  console.log('✓ Identidad del producto: 5 copias sincronizadas y ningún nombre escrito a mano.');
+  // El número se cuenta, no se escribe: agregar un grupo a copias_entre_apps.mjs no tiene que
+  // obligar a acordarse de corregir este cartel.
+  const cuantasCopias = GRUPOS.reduce((total, g) => total + g.copias.length, 0);
+  console.log(
+    `✓ ${cuantasCopias} copias sincronizadas (${GRUPOS.length} grupos) y ningún nombre del producto escrito a mano.`
+  );
   process.exit(0);
 }
 

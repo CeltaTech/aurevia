@@ -39,6 +39,11 @@ export const GRUPOS = [
     original: 'panel/src/lib/errores.js',
     copias: ['pwa-asistentes/src/lib/errores.js', 'pwa-familias/src/lib/errores.js'],
   },
+  {
+    que: 'la regla de cuándo algo está por vencer',
+    original: 'panel/src/lib/reglaVencimientos.js',
+    copias: ['pwa-asistentes/src/lib/reglaVencimientos.js', 'backend/src/utils/reglaVencimientos.js'],
+  },
 ];
 
 // Todas las rutas de todos los grupos, original incluido. La usan los chequeos

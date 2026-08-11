@@ -9,12 +9,8 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
-import {
-  COLUMNAS_ESTADO_MATRICULA,
-  URGENCIA,
-  diasParaVencer,
-  urgenciaDeVencimiento,
-} from '../../lib/matricula';
+import { COLUMNAS_ESTADO_MATRICULA } from '../../lib/matricula';
+import { URGENCIA, diasParaVencer, urgenciaDeVencimiento } from '../../lib/reglaVencimientos';
 
 /* La solapa de Matrículas de un Asistente.
    ==========================================================================

@@ -41,6 +41,7 @@ import { ConfiguracionPrestadora } from './pages/configuracion/LaPrestadora';
 import { ConfiguracionAsistentes } from './pages/configuracion/Asistentes';
 import { ConfiguracionCuidado } from './pages/configuracion/ElCuidado';
 import { ConfiguracionAvisos } from './pages/configuracion/Avisos';
+import { ConfiguracionAplicaciones } from './pages/configuracion/LasAplicaciones';
 import { ConfiguracionAccesos } from './pages/configuracion/Accesos';
 import { Medicacion } from './pages/Medicacion';
 import { Importacion } from './pages/Importacion';
@@ -119,16 +120,17 @@ function App() {
                     <Route path="usuarios-panel" element={<ProtectedRoute soloAdmin><UsuariosPanel /></ProtectedRoute>} />
                     <Route path="prestadoras" element={<ProtectedRoute roles={['superadmin']}><Prestadoras /></ProtectedRoute>} />
                     <Route path="costos-ia" element={<ProtectedRoute roles={['superadmin']}><CostosIA /></ProtectedRoute>} />
-                    {/* Configuración dejó de ser una pantalla sola con trece solapas: son cinco
+                    {/* Configuración dejó de ser una pantalla sola con trece solapas: son
                         secciones, cada una con su propia dirección, para poder entrar derecho a
                         la que uno busca y guardarse el enlace. El candado de administrador está
-                        una sola vez, arriba: las cinco cuelgan de él. */}
+                        una sola vez, arriba: todas cuelgan de él. */}
                     <Route path="configuracion" element={<ProtectedRoute soloAdmin><Configuracion /></ProtectedRoute>}>
                       <Route index element={<Navigate to="prestadora" replace />} />
                       <Route path="prestadora" element={<ConfiguracionPrestadora />} />
                       <Route path="asistentes" element={<ConfiguracionAsistentes />} />
                       <Route path="cuidado" element={<ConfiguracionCuidado />} />
                       <Route path="avisos" element={<ConfiguracionAvisos />} />
+                      <Route path="aplicaciones" element={<ConfiguracionAplicaciones />} />
                       <Route path="accesos" element={<ConfiguracionAccesos />} />
                     </Route>
                     <Route path="auditoria" element={<ProtectedRoute roles={['admin_prestadora', 'superadmin']}><Auditoria /></ProtectedRoute>} />

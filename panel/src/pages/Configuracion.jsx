@@ -1,8 +1,8 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 
-/* Configuración es una cáscara: el título, la barra de las cinco secciones y el
-   hueco donde entra la que esté elegida.
+/* Configuración es una cáscara: el título, la barra de las secciones y el hueco
+   donde entra la que esté elegida.
 
    Antes era un solo archivo de 2.443 líneas con trece solapas guardadas en la
    memoria de la pantalla. Eso tenía dos problemas: no se podía guardar el enlace
@@ -14,7 +14,7 @@ import { useLocale } from '../i18n/LocaleContext';
    uno abajo del otro con su título, que es como resuelven esto los programas que
    tienen muchas opciones: una lista de secciones arriba, y adentro de cada
    sección todo a la vista sin más clics. */
-const SECCIONES = ['prestadora', 'asistentes', 'cuidado', 'avisos', 'accesos'];
+const SECCIONES = ['prestadora', 'asistentes', 'cuidado', 'avisos', 'aplicaciones', 'accesos'];
 
 export function Configuracion() {
   const { t } = useLocale();

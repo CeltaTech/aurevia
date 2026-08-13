@@ -2,6 +2,18 @@
 
 > Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§10) — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
 
+## La página pública le vende software a las empresas de cuidado, no cuidado a las familias (2026-08-13)
+
+- **Decía antes:** `PRD_01_Sitio_Web.md` describía una página con dos públicos —familias que buscan un cuidador y personas que buscan trabajo de cuidador—, con un formulario para pedir el servicio, otro para postularse, ocho servicios de cuidado con sus precios y el lema *"Cuida tus afectos"* en la portada.
+- **Dice ahora:** la página le habla a **quien dirige una empresa de cuidado**, para que licencie el software. Una familia que llega buscando un cuidador se va sin él, y está bien que así sea.
+- **Motivo:** `CLAUDE.md` §1 dice textualmente que Careonys *"no presta servicios de cuidado"*. Una página que invitara a una familia a pedir un cuidador estaría vendiendo algo que la empresa no vende, y encima le haría competencia a sus propios clientes. El documento no estaba mal escrito: estaba viejo, era de cuando el producto era el sitio de una sola empresa de cuidados, antes de la separación CeltaTech/Careonys.
+- **Nada de eso se había construido**, así que no hubo página que corregir: se reescribió el documento antes de empezar. Lo único que existe hoy en `careonys.com` es una página que dice "En construcción".
+- **El lema no es del producto:** *"Cuida tus afectos"* era de la empresa de cuidados original. Careonys no tiene lema propio y no hace falta inventarle uno.
+- **Dónde se postula quien busca trabajo de cuidador:** en la empresa que lo va a contratar, no en la página de Careonys. Por eso el formulario público de postulación dejó de ser parte de la Etapa 1.
+- **La otra pregunta que traía el pendiente `#104`** —si la página que sí le habla a las familias, la de cada Prestadora, la hace el producto— quedó contestada que **no**: es otro oficio, nos volvería dueños de un problema sin fin, y nadie la pidió.
+- **Los datos de quien pide una demostración no tienen dónde vivir todavía:** un interesado en comprar es dato de CeltaTech, no de una Prestadora, y toda tabla del producto lleva dueño obligatorio. Meterlo ahí sería inventarle un dueño y guardar información comercial de la empresa dentro de la caja de un cliente, contra §2. Hasta que exista la base de CeltaTech, la página no guarda nada: correo electrónico y un botón de WhatsApp.
+- **No reintroducir:** ninguna oferta de cuidado, ningún formulario de postulación y ningún precio escrito a mano en la página de Careonys; ni el lema de la empresa de cuidados original en ninguna pantalla del producto.
+
 ## Cada Prestadora elige qué muestran las dos aplicaciones (2026-08-13)
 
 - **Decía antes:** las dos aplicaciones del teléfono mostraban todo lo que el producto sabe hacer, igual para todas las Prestadoras. Una que no quisiera darle el mapa en vivo a las Familias, o que no quisiera que sus Asistentes tomaran la presión, no tenía forma de sacarlo.

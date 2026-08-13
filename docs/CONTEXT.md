@@ -76,28 +76,27 @@ que se apruebe explícitamente.
 ## Stack por etapa
 
 ```
-Etapa 1 — Sitio web público
-  Frontend:  Next.js 15 (App Router) + React 18 — SSR/SSG, no Vite (decisión 2026-07-08,
-             ver nota abajo)
-  Rutas:     /es-AR, /en, /pt-BR (locale-prefixed, vía app/[locale]/) — cada idioma tiene
-             URL propia indexable, en vez del Context+localStorage anterior
-  Estilos:   CSS custom con variables de marca (no Tailwind, no CSS-in-JS)
-  Backend:   Node.js + Express (solo formularios) — sin cambios
-  DB:        Supabase (PostgreSQL + RLS) — mismo proyecto que usará el panel en Etapa 2,
-             el backend escribe con la Service Role Key (bypassea RLS por diseño, es server-only)
-  Email:     Nodemailer + Gmail SMTP App Password
-  PWA:       app/manifest.js (Next.js metadata API) — manifest básico; service worker
-             offline completo queda pendiente (no bloquea)
-  Deploy:    Vercel (frontend) + Railway (backend Express)
+Etapa 1 — La página pública de Careonys (le vende el software a empresas de cuidado)
+  Estado:    no construida. Lo único que hay hoy en careonys.com es una sola página
+             estática que dice "En construcción" (sitio-web/index.html + construir.mjs),
+             publicada a mano a Cloudflare Pages, proyecto careonys-sitio.
+  Requisito: el texto tiene que llegar ya escrito desde el servidor, para que los
+             buscadores lo lean, y cada idioma con su propia dirección (/es-AR, /en,
+             /pt-BR). Motivo del Desarrollador, 2026-07-08: "el seo es fundamental, si no
+             nos ven no nos contactan, si no nos contactan no facturamos".
+  Con qué:   sin decidir. La recomendación es estirar lo que ya hay —páginas estáticas sin
+             framework— y traer una herramienta solo si el sitio crece. La decisión de
+             2026-07-08 de usar Next.js quedó sin efecto junto con el documento que la
+             contenía (pendiente #104). Ver docs/PRD_01_Sitio_Web.md §8.
+  Datos:     ninguno. Un interesado en comprar el software es un dato de CeltaTech, no del
+             producto, y esa base todavía no existe: por ahora la página ofrece correo y
+             WhatsApp y no guarda nada (PRD_01_Sitio_Web.md §5).
 
-  Nota (2026-07-08): el frontend de Etapa 1 migró de Vite+React Router a Next.js App
-  Router. Motivo explícito del usuario: "el seo es fundamental, si no nos ven no nos
-  contactan, si no nos contactan no facturamos". Vite servía todo el contenido client-side
-  bajo una sola URL, con el idioma resuelto en el navegador (Context + localStorage) — Google
-  solo indexaba español y nunca veía contenido pre-renderizado. Next.js da SSR/SSG real y
-  URLs propias por idioma. Esta migración es solo de Etapa 1; las PWA de Asistentes/Familias
-  (Etapas 3-4) siguen en Vite, que sigue siendo la mejor herramienta ahí (sin necesidad de
-  SSR detrás de auth, plugin de PWA maduro).
+  Lo que esta parte decía antes —Next.js, formularios de pedido de servicio y de
+  postulación, MySQL, Vercel, Nodemailer— describía el sitio de una empresa de cuidados, que
+  no es este producto. Se reencuadró el 2026-08-13. Nada de eso llegó a construirse. La
+  decisión de que las PWA de Asistentes/Familias (Etapas 3-4) sigan en Vite no cambia: no
+  necesitan que el servidor arme el texto, viven detrás de un ingreso con contraseña.
 
 Etapa 2 — Panel de administración
   Frontend:  React 18 + Vite, proyecto separado (`panel/`) — SPA detrás de auth, nunca
@@ -180,30 +179,22 @@ Nunca un string literal en un componente. Estructura mínima:
 ```js
 // src/i18n/translations.js
 export const T = {
-  'es-AR': { hero_title: 'Cuida tus afectos', /* ... */ },
-  'en':    { hero_title: 'Care for your loved ones', /* ... */ },
-  'pt-BR': { hero_title: 'Cuide de quem você ama', /* ... */ },
+  'es-AR': { guardar: 'Guardar', /* ... */ },
+  'en':    { guardar: 'Save', /* ... */ },
+  'pt-BR': { guardar: 'Salvar', /* ... */ },
 };
 ```
 
-**Regla de slogan (resuelta 2026-07-09): no hay una forma "definitiva" — conviven dos, según
-contexto de uso**, siguiendo la guía de voz de marca (histórica, documento fuera del repo):
-voz institucional en primera persona del plural ("Verificamos...", "Nuestros Asistentes..."):
+**El lema "Cuida tus afectos" no es del producto y no va en ninguna pantalla de Careonys.**
+Es el lema de la empresa de cuidados original, de cuando el proyecto era el sitio de una sola
+empresa del rubro. Careonys no cuida a nadie: le vende el software a las empresas que cuidan
+(`CLAUDE.md` §1), así que un lema que le habla a una familia está fuera de lugar tanto en el
+producto como en `careonys.com` (ver `docs/PRD_01_Sitio_Web.md` §0). La regla de las dos
+formas —"Cuida" para hablarle a quien mira, "Cuidamos" para hablar de sí misma— era de esa
+empresa y se fue con ella; los archivos que citaba (`sitio-web/src/i18n/translations.js`,
+`sitio-web/src/components/Footer.jsx`) nunca existieron en este repositorio.
 
-- **"Cuida tus afectos"** (imperativo, segunda persona) — el sitio le habla directamente a
-  quien lo visita: `hero_title` de la Home, titulares publicitarios, meta descriptions
-  SEO/clic. Es la forma correcta en `T.hero_title` (`sitio-web/src/i18n/translations.js`) y
-  en la meta description de `/` (`docs/PRD_01_Sitio_Web.md`).
-- **"Cuidamos tus afectos"** (primera persona del plural, voz institucional) — la prestadora habla
-  de sí misma: el logo/isotipo (manual de identidad, documento histórico fuera del repo, correcto así, no tocar),
-  taglines de footer, la ficha de identidad de marca. Hoy el footer del sitio
-  (`sitio-web/src/components/Footer.jsx`) no tiene ningún tagline — si se agrega uno a
-  futuro, esta es la forma que le corresponde.
-
-No son dos valores en pugna de una sola clave de `T`, son dos claves con función distinta.
-Si en algún momento se agrega el tagline institucional al footer o a otra pieza de voz de
-marca, evaluar entonces una clave separada (por ejemplo `brand_tagline`) en vez de reutilizar
-`hero_title` fuera de su contexto de Home.
+Careonys todavía no tiene lema propio, y no hace falta inventarle uno para poder trabajar.
 
 ## Identidad visual
 

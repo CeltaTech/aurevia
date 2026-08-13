@@ -8,7 +8,7 @@
 | Etapa | Qué se construye | Estado | Condición de entrada | Estimación | PRD de referencia |
 |---|---|---|---|---|---|
 | 0 | Setup: repo, estructura, variables de entorno | 🟢 Completo | — | — | `CLAUDE.md` |
-| 1 | Sitio web público (6-8 páginas + formularios + backend Express/MySQL) | 🟡 En progreso | Ninguna, arranca ahora | 2-3 semanas | `PRD_01_Sitio_Web.md` |
+| 1 | La página pública de Careonys — le vende software de gestión a empresas de cuidado, no cuidado a familias | 🔴 No iniciado — reencuadrada el 2026-08-13 (pendiente `#104`). Lo que esta fila decía antes ("6-8 páginas + formularios + backend Express/MySQL") era el sitio de una empresa de cuidados, que no es este producto; nunca se construyó. Lo único que existe hoy es una página que dice "En construcción" en `careonys.com` | Ninguna | 2-3 semanas | `PRD_01_Sitio_Web.md` |
 | 2 | Panel de administración (web desktop, migra a Supabase) | 🟢 Desplegado a producción (2026-07-08). Incluye Módulos 1-5, primer corte de precios/Prestaciones, gestión de usuarios del Panel, Proceso de Incorporación, Certificado de Aptitud, rol Superadmin real y Módulo 8 (Configuración). Falta la Parte 3 del Módulo 6 y el Módulo 7 — ver la fila "Módulo 6 — Guardias" más abajo | Sitio web activo | 1-2 semanas | `PRD_02_Panel_Admin.md` |
 | 2B | Gestión de Personal (vínculo, cese, riesgo, cobertura) | 🟢 Completo — código listo y SQL aplicado y verificado contra Supabase real | Panel de admin funcionando, Módulo 4 del panel construido | Integrada a Etapa 2 | `PRD_02B_Gestion_Personal.md` |
 | 3 | PWA Asistentes (login, guardias, GPS check-in/out, reporte diario + IA Nivel 1) | 🟡 En progreso — primer corte construido, verificado en navegador real y desplegado a producción. Quedaron afuera de este corte, a pedido del Desarrollador: notificaciones push, alertas tempranas de ausencia y WebAuthn | Panel de admin funcionando | 2-3 semanas | `PRD_04_05_App_Servicio.md` |
@@ -25,11 +25,11 @@ Convención de la columna Estado: 🔴 No iniciado · 🟡 En progreso · 🟢 C
 Lo que sigue abierto está en `docs/PENDIENTES.md`, y el porqué de cada decisión, en
 `docs/claude_history.md`.
 
-El reclutamiento (`PRD_03_Reclutamiento.md`) no es una etapa de código separada — sus
-pantallas y formularios se reparten entre Etapa 1 (formulario público de postulación) y
-Etapa 2 (panel de postulantes, verificación, capacitación). Empieza en paralelo a Etapa 1
-porque el plantel de 20 Asistentes debe estar listo antes del lanzamiento comercial, pero el
-código que lo soporta se construye dentro de esas dos etapas, no aparte.
+El reclutamiento (`PRD_03_Reclutamiento.md`) no es una etapa de código separada — vive entero
+en la Etapa 2: el panel de postulantes, la verificación y la capacitación. **El formulario
+público de postulación ya no es de la Etapa 1**: quien busca trabajo de cuidador se postula en
+la empresa que lo va a contratar, no en la página de Careonys, que le vende software a esas
+empresas (ver `PRD_01_Sitio_Web.md` §3).
 
 ## Regla de secuencia
 
@@ -37,6 +37,14 @@ No empezar una etapa de código sin que la anterior esté funcionando en producc
 "código escrito" — desplegado y probado). Esto es una regla de gestión de riesgo del
 proyecto, no una preferencia arbitraria: cada etapa valida supuestos de negocio (familias
 reales, Asistentes reales) que las etapas siguientes dan por sentado.
+
+**La Etapa 1 quedó fuera de esta regla, y no es un descuido.** Las etapas 2 a 6 están
+construidas y en producción mientras la Etapa 1 sigue sin empezar. Es correcto: cuando se
+escribió la regla, la Etapa 1 era el sitio de una empresa de cuidados y las siguientes
+dependían de verdad de ella. Reencuadrada como la página que le vende el software a esas
+empresas (2026-08-13, pendiente `#104`), pasó a ser una pieza comercial que no valida ningún
+supuesto del que dependa el código de las otras etapas. Puede construirse cuando convenga
+venderlo, sin bloquear ni ser bloqueada.
 
 ## Fuera del alcance de código (para contexto, no bloquean desarrollo)
 

@@ -2,14 +2,18 @@
 
 > Fuente: documento único original de especificación (histórico) Parte N. Etapa 2 del build order. Herramienta
 > interna — solo Admin_prestadora y Coordinador acceden (Superadmin también, con acceso
-> técnico adicional — ver `SECURITY.md`). SPA separada del sitio público, deployada
-> en el mismo Vercel. Acceso: `admin.[dominio de la prestadora]` (o `/admin`).
+> técnico adicional — ver `SECURITY.md`). Aplicación aparte de la página pública, con su
+> propia dirección: `gestion.careonys.com`, publicada en Cloudflare Pages (corregido
+> 2026-08-13; antes decía Vercel y `admin.[dominio de la prestadora]`, que quedó sin efecto
+> cuando los despliegues se mudaron a careonys.com).
 
 ## Stack
 
 React 18 + Vite. Auth: Supabase Auth (email + password, sin magic link — ver
-`SECURITY.md`). En esta etapa se migra de MySQL a Supabase: el sitio público sigue en
-Express/MySQL, el panel ya usa Supabase directamente.
+`SECURITY.md`). Base de datos: Supabase (PostgreSQL con RLS). **Nunca hubo MySQL** — lo que
+este documento decía antes sobre migrar de MySQL a Supabase, y sobre una página pública que
+seguía en Express con MySQL, era el plan viejo de un producto distinto; el paso intermedio por
+MySQL se descartó antes de escribir código (ver `docs/claude_history.md`).
 
 ## Roles y permisos
 

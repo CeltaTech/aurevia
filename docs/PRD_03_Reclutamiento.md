@@ -21,16 +21,20 @@ La prestadora necesita mínimo 20 Asistentes Integrales certificados antes del l
 comercial. El proceso de incorporación completo tarda 4-7 días hábiles por persona — el
 reclutamiento arranca en Etapa 0/1, antes que el resto del producto.
 
-## Nota de stack (discrepancia a resolver, no a ignorar)
+## Nota de stack (discrepancia ya resuelta)
 
-Este documento fuente (v1.0, Mayo 2026) especifica Supabase + Railway/Render + Twilio +
-Resend/SendGrid desde el arranque. `CONTEXT.md`/prompt maestro original (histórico) especifican
-Etapa 1 = Express + MySQL en Railway, migración a Supabase recién en Etapa 2. **Se sigue el
-build order de `CONTEXT.md`/`BUILD_ORDER.md` como fuente de verdad para la secuencia de
-stack** — este PRD de Reclutamiento aporta el detalle funcional (campos de formulario,
-etapas de verificación, panel), no la decisión de infraestructura. Twilio (SMS) no aparece
-en ningún otro PRD oficial — no implementar verificación por SMS hasta que haya una decisión
-de negocio explícita al respecto.
+La discrepancia que este documento anotaba —Supabase desde el arranque contra un primer paso
+por MySQL en Railway— quedó resuelta hace tiempo y a favor de lo primero: **nunca hubo
+MySQL**, todo se construyó sobre Supabase (ver `docs/claude_history.md`). Este documento
+aporta el detalle funcional del reclutamiento —qué campos se piden, qué etapas de
+verificación hay, qué pantallas de Panel—, no decisiones de infraestructura.
+
+**Dónde vive el formulario de postulación (corregido 2026-08-13):** en la empresa que va a
+contratar al Asistente, no en la página pública de Careonys, que le vende software a esas
+empresas y no toma postulaciones (`PRD_01_Sitio_Web.md` §3).
+
+Twilio (mensajes de texto) no aparece en ningún otro documento — no construir verificación
+por mensaje de texto hasta que haya una decisión de negocio explícita.
 
 ## Proceso de Incorporación de Asistentes — 6 etapas
 

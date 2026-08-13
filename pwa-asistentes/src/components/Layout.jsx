@@ -3,7 +3,7 @@ import { Outlet, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
 import { iniciarSincronizacionAutomatica } from '../lib/sincronizarCola';
-import { useMarca } from '../context/MarcaContext';
+import { useMarca } from '../context/PerfilContext';
 
 export default function Layout() {
   const { logout } = useAuth();

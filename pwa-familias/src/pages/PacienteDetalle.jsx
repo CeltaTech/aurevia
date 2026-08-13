@@ -4,6 +4,8 @@ import { api } from '../lib/api';
 import { supabase } from '../lib/supabaseClient';
 import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
+import { useSeVe } from '../context/PerfilContext';
+import { INTERRUPTOR_DE_LA_PANTALLA } from '../lib/interruptorDeCadaPantalla';
 
 function segundosDesde(fecha) {
   return Math.max(0, Math.floor((Date.now() - new Date(fecha).getTime()) / 1000));
@@ -12,6 +14,14 @@ function segundosDesde(fecha) {
 export default function PacienteDetalle() {
   const { id } = useParams();
   const { t } = useLocale();
+  const seVe = useSeVe();
+  // Se resuelve acá, como un sí o un no, porque además de decidir si se dibuja el mapa
+  // decide si conviene abrir la escucha en vivo de la guardia: sin mapa no hay nada que
+  // hacer con esas posiciones.
+  const veUbicacionEnVivo = seVe('familia_ubicacion_en_vivo');
+  // Las alertas se preguntan una sola vez porque mandan sobre dos cosas de esta pantalla: el
+  // resumen de arriba y el botón que lleva a la lista completa.
+  const veAlertas = seVe(INTERRUPTOR_DE_LA_PANTALLA.alertas);
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState('');
   const [ubicacion, setUbicacion] = useState(null);
@@ -32,7 +42,7 @@ export default function PacienteDetalle() {
   const guardiaActiva = datos?.guardiaActiva;
 
   useEffect(() => {
-    if (!guardiaActiva?.id) {
+    if (!veUbicacionEnVivo || !guardiaActiva?.id) {
       setUbicacion(null);
       return;
     }
@@ -59,7 +69,7 @@ export default function PacienteDetalle() {
     return () => {
       supabase.removeChannel(canal);
     };
-  }, [guardiaActiva?.id]);
+  }, [guardiaActiva?.id, veUbicacionEnVivo]);
 
   useEffect(() => {
     if (!ubicacion) return;
@@ -85,7 +95,7 @@ export default function PacienteDetalle() {
         {t.paciente.domicilio}: {paciente.domicilio || '—'}
       </p>
 
-      {alertasActivas.length > 0 && (
+      {veAlertas && alertasActivas.length > 0 && (
         <div style={{ marginTop: '1rem' }}>
           <h2>{t.paciente.alertas_activas_titulo}</h2>
           {alertasActivas.map((a) => (
@@ -111,7 +121,9 @@ export default function PacienteDetalle() {
         </div>
       )}
 
-      {guardiaActiva && (
+      {/* Apagado el mapa, la Familia sigue viendo que el Asistente llegó y que se fue: lo
+          que desaparece es el recorrido, el título incluido. */}
+      {guardiaActiva && veUbicacionEnVivo && (
         <>
           <h2 style={{ marginTop: '1.5rem' }}>{t.paciente.ubicacion_en_vivo}</h2>
           {ubicacion ? (
@@ -135,18 +147,24 @@ export default function PacienteDetalle() {
         <Link to={`/pacientes/${id}/reportes`} className="btn btn-secondary btn-full">
           {t.paciente.ver_reportes}
         </Link>
-        <Link to={`/pacientes/${id}/alertas`} className="btn btn-secondary btn-full">
-          {t.paciente.ver_alertas}
-        </Link>
+        {veAlertas && (
+          <Link to={`/pacientes/${id}/alertas`} className="btn btn-secondary btn-full">
+            {t.paciente.ver_alertas}
+          </Link>
+        )}
         <Link to={`/pacientes/${id}/asistente`} className="btn btn-secondary btn-full">
           {t.paciente.ver_asistente}
         </Link>
-        <Link to={`/pacientes/${id}/suscripcion`} className="btn btn-secondary btn-full">
-          {t.paciente.ver_suscripcion}
-        </Link>
-        <Link to={`/pacientes/${id}/medicacion`} className="btn btn-secondary btn-full">
-          {t.paciente.ver_medicacion}
-        </Link>
+        {seVe(INTERRUPTOR_DE_LA_PANTALLA.suscripcion) && (
+          <Link to={`/pacientes/${id}/suscripcion`} className="btn btn-secondary btn-full">
+            {t.paciente.ver_suscripcion}
+          </Link>
+        )}
+        {seVe(INTERRUPTOR_DE_LA_PANTALLA.medicacion) && (
+          <Link to={`/pacientes/${id}/medicacion`} className="btn btn-secondary btn-full">
+            {t.paciente.ver_medicacion}
+          </Link>
+        )}
       </div>
     </div>
   );

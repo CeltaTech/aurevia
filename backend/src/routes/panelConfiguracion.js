@@ -384,7 +384,7 @@ panelConfiguracionRouter.patch('/alertas-ia', async (req, res) => {
 
 // --- Qué muestran las dos aplicaciones de teléfono. La lista completa sale del catálogo del
 //     motor (utils/catalogoVisibilidad.js) y la pantalla la muestra entera, tenga o no fila
-//     guardada cada perilla; la tabla solo guarda lo que la Prestadora cambió. Mismo patrón
+//     guardada cada interruptor; la tabla solo guarda lo que la Prestadora cambió. Mismo patrón
 //     que /notificaciones. ---
 panelConfiguracionRouter.get('/visibilidad-app', async (req, res) => {
   const { data, error } = await supabase
@@ -396,9 +396,9 @@ panelConfiguracionRouter.get('/visibilidad-app', async (req, res) => {
 });
 
 // Inserción-o-actualización, no actualización a secas: la primera vez que la Prestadora toca
-// una perilla la fila todavía no existe, y un UPDATE guardaría en silencio sin guardar nada.
+// un interruptor la fila todavía no existe, y un UPDATE guardaría en silencio sin guardar nada.
 // La clave se valida contra el catálogo: lo que mande el navegador que no esté en la lista no
-// se guarda, para que no queden filas de perillas que no existen.
+// se guarda, para que no queden filas de interruptores que no existen.
 panelConfiguracionRouter.patch('/visibilidad-app/:clave', async (req, res) => {
   const cosa = cosaDelCatalogo(req.params.clave);
   if (!cosa) return res.status(400).json({ error: 'Esa opción no existe' });

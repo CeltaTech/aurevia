@@ -181,7 +181,7 @@ export function EstadoActual() {
     }
 
     // Dos conjuntos otra vez, por el mismo motivo que los papeles: trabado es rojo y por vencer
-    // es naranja. La ventana de aviso es la misma que la de los documentos — una sola perilla
+    // es naranja. La ventana de aviso es la misma que la de los documentos — un solo interruptor
     // para los dos vencimientos, no dos que se separen con el tiempo.
     const matriculaTrabada = new Set();
     const matriculaPorVencer = new Set();

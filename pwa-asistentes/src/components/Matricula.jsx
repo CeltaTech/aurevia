@@ -4,6 +4,7 @@ import { useLocale } from '../i18n/LocaleContext';
 import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
 import { URGENCIA, urgenciaDeVencimiento } from '../lib/reglaVencimientos';
+import { useSeVe } from '../context/PerfilContext';
 
 // ============================================================================
 // Mi Matrícula, en el teléfono del Asistente.
@@ -24,12 +25,21 @@ import { URGENCIA, urgenciaDeVencimiento } from '../lib/reglaVencimientos';
 // Los tipos de Asistente que no requieren Matrícula no ven nada de esto. Un
 // bloque que dice "no te aplica" es ruido en una pantalla que se mira desde un
 // teléfono.
+//
+// SI LA PRESTADORA CARGA ELLA
+// Hay Prestadoras que quieren ver el papel original antes de subirlo, y por eso
+// pueden apagar la carga desde el teléfono. Lo que se apaga es el botón y el
+// formulario, nunca el estado: si la base lo está frenando para trabajar tiene
+// derecho a saberlo igual. Lo que cambia entonces es el "qué hacer" del cartel,
+// que en vez de mandarlo al botón lo manda a la oficina.
 // ============================================================================
 
 
 export default function Matricula() {
   const { t, locale } = useLocale();
   const tm = t.matricula;
+  const seVe = useSeVe();
+  const puedeCargar = seVe('asistente_carga_su_matricula');
 
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState('');
@@ -114,12 +124,17 @@ export default function Matricula() {
   // cargó.
   let cartel = null;
   if (estado.motivo_bloqueo === 'sin_verificar') {
-    cartel = { clase: 'alert', texto: tm.esperando_verificacion };
+    // "La cargaste" solamente cuando pudo haberla cargado él. Si la carga es de la
+    // Prestadora, la frase se cuenta sin dueño: lo que importa es que está y falta que la
+    // comprueben.
+    cartel = { clase: 'alert', texto: puedeCargar ? tm.esperando_verificacion : tm.esperando_verificacion_prestadora };
   } else if (estado.motivo_bloqueo) {
     cartel = {
       clase: 'alert alert-error',
       titulo: tm.bloqueo_titulo,
-      texto: [tm[`bloqueo_${estado.motivo_bloqueo}`], tm[`que_hacer_${estado.motivo_bloqueo}`]]
+      // El "cargala acá abajo" solo vale si abajo hay dónde cargarla. Con la carga apagada
+      // se le dice lo que de verdad tiene que hacer: llevar el papel a la Prestadora.
+      texto: [tm[`bloqueo_${estado.motivo_bloqueo}`], puedeCargar ? tm[`que_hacer_${estado.motivo_bloqueo}`] : tm.carga_la_prestadora]
         .filter(Boolean)
         .join(' '),
     };
@@ -128,7 +143,10 @@ export default function Matricula() {
     if (dias === 0) frase = tm.vence_hoy;
     else if (dias === 1) frase = tm.vence_manana;
     else if (dias < 0) frase = con(tm.vencio_hace_dias, { dias: -dias });
-    cartel = { clase: 'alert alert-alerta', texto: `${frase} ${tm.renovar_a_tiempo}` };
+    cartel = {
+      clase: 'alert alert-alerta',
+      texto: `${frase} ${puedeCargar ? tm.renovar_a_tiempo : tm.renovar_con_la_prestadora}`,
+    };
   } else {
     cartel = { clase: 'alert alert-info', texto: tm.al_dia };
   }
@@ -148,13 +166,13 @@ export default function Matricula() {
 
       {aviso && <div className="alert alert-info">{aviso}</div>}
 
-      {!formAbierto && (
+      {puedeCargar && !formAbierto && (
         <button type="button" className="btn btn-primary" onClick={() => setFormAbierto(true)}>
           {tm.cargar}
         </button>
       )}
 
-      {formAbierto && (
+      {puedeCargar && formAbierto && (
         <form onSubmit={guardar} className="tarjeta-consentimiento">
           {errorForm && <div className="alert alert-error">{errorForm}</div>}
 
@@ -232,7 +250,7 @@ export default function Matricula() {
         </ul>
       )}
 
-      <p className="texto-ayuda">{tm.solo_carga}</p>
+      {puedeCargar && <p className="texto-ayuda">{tm.solo_carga}</p>}
     </div>
   );
 }

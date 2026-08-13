@@ -61,7 +61,7 @@ export function TiposAsistenteTab() {
     recargar();
   }, [recargar]);
 
-  /* La perilla vive acá y no en otra solapa porque la exigencia de matrícula la declara cada
+  /* El interruptor vive acá y no en otra solapa porque la exigencia de matrícula la declara cada
      tipo de Asistente, y esto es lo que decide qué tan estricta es esa exigencia. Separarlas
      obligaría a ir y volver entre dos pantallas para entender una sola regla. */
   async function cambiarModo(nuevo) {

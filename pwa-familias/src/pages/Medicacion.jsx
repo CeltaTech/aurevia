@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
+import { useSeVe } from '../context/PerfilContext';
 
 const ESTADO_CLASE = {
   pendiente: 'badge-amarilla',
@@ -13,6 +14,11 @@ const ESTADO_CLASE = {
 export default function Medicacion() {
   const { id } = useParams();
   const { t } = useLocale();
+  const seVe = useSeVe();
+  // Ver la medicación y pedir una son dos decisiones distintas de la Prestadora: hay quien
+  // muestra la lista pero no deja que la Familia cargue nada. Que se vea la lista ya lo
+  // decidió la ruta antes de llegar acá.
+  const puedePedirMedicacion = seVe('familia_pide_medicacion');
   const [rolCirculo, setRolCirculo] = useState(null);
   const [indicaciones, setIndicaciones] = useState(undefined);
   const [error, setError] = useState('');
@@ -116,39 +122,43 @@ export default function Medicacion() {
         </>
       )}
 
-      <h2 style={{ marginTop: '1.5rem' }}>{t.medicacion.nueva_titulo}</h2>
+      {puedePedirMedicacion && (
+        <>
+          <h2 style={{ marginTop: '1.5rem' }}>{t.medicacion.nueva_titulo}</h2>
 
-      {soloLectura && <div className="alert alert-error">{t.medicacion.solo_lectura}</div>}
+          {soloLectura && <div className="alert alert-error">{t.medicacion.solo_lectura}</div>}
 
-      {!soloLectura && (
-        <form onSubmit={handleSubmit}>
-          <label>{t.medicacion.campo_medicamento}</label>
-          <input type="text" value={medicamento} onChange={(e) => setMedicamento(e.target.value)} />
+          {!soloLectura && (
+            <form onSubmit={handleSubmit}>
+              <label>{t.medicacion.campo_medicamento}</label>
+              <input type="text" value={medicamento} onChange={(e) => setMedicamento(e.target.value)} />
 
-          <label>{t.medicacion.campo_dosis}</label>
-          <input type="text" value={dosis} onChange={(e) => setDosis(e.target.value)} />
+              <label>{t.medicacion.campo_dosis}</label>
+              <input type="text" value={dosis} onChange={(e) => setDosis(e.target.value)} />
 
-          <label>{t.medicacion.campo_frecuencia}</label>
-          <input type="text" value={frecuencia} onChange={(e) => setFrecuencia(e.target.value)} />
+              <label>{t.medicacion.campo_frecuencia}</label>
+              <input type="text" value={frecuencia} onChange={(e) => setFrecuencia(e.target.value)} />
 
-          <label>{t.medicacion.campo_via}</label>
-          <input type="text" placeholder={t.medicacion.campo_via_placeholder} value={via} onChange={(e) => setVia(e.target.value)} />
+              <label>{t.medicacion.campo_via}</label>
+              <input type="text" placeholder={t.medicacion.campo_via_placeholder} value={via} onChange={(e) => setVia(e.target.value)} />
 
-          <label>{t.medicacion.campo_fecha_desde}</label>
-          <input type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} />
+              <label>{t.medicacion.campo_fecha_desde}</label>
+              <input type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} />
 
-          <label>{t.medicacion.campo_fecha_hasta}</label>
-          <input type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} />
+              <label>{t.medicacion.campo_fecha_hasta}</label>
+              <input type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} />
 
-          <label>{t.medicacion.campo_prescripcion}</label>
-          <input type="file" accept="application/pdf,image/jpeg,image/png" onChange={(e) => setArchivo(e.target.files?.[0] || null)} />
+              <label>{t.medicacion.campo_prescripcion}</label>
+              <input type="file" accept="application/pdf,image/jpeg,image/png" onChange={(e) => setArchivo(e.target.files?.[0] || null)} />
 
-          {exito && <div className="alert alert-success">{t.medicacion.enviada_exito}</div>}
+              {exito && <div className="alert alert-success">{t.medicacion.enviada_exito}</div>}
 
-          <button type="submit" className="btn btn-primary btn-full" disabled={enviando} style={{ marginTop: '1rem' }}>
-            {enviando ? t.medicacion.enviando : t.medicacion.enviar}
-          </button>
-        </form>
+              <button type="submit" className="btn btn-primary btn-full" disabled={enviando} style={{ marginTop: '1rem' }}>
+                {enviando ? t.medicacion.enviando : t.medicacion.enviar}
+              </button>
+            </form>
+          )}
+        </>
       )}
     </div>
   );

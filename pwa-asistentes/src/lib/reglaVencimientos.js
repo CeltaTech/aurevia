@@ -33,7 +33,7 @@ export const DIAS_AVISO_POR_DEFECTO = 30;
  *
  * Es el último tercio de la ventana de aviso: con 30 días de ventana, aprieta en los últimos 10.
  * Se calcula a partir del número que la Prestadora ya configuró en vez de pedirle un segundo
- * número, porque dos perillas para la misma decisión terminan siempre desalineadas.
+ * número, porque dos interruptores para la misma decisión terminan siempre desalineadas.
  */
 export const PROPORCION_URGENTE = 1 / 3;
 

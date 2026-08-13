@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
+import { useHaySeguimientoDeUbicacion } from '../lib/seguimientoDeUbicacion';
 
 // ============================================================================
 // Pendiente #102 — aviso de que hay un consentimiento sin decidir.
@@ -14,13 +15,18 @@ import { useLocale } from '../i18n/LocaleContext';
 //
 // Si algo falla al consultarlo, no se muestra nada. Un aviso roto sería peor
 // que ningún aviso.
+//
+// Y si la Prestadora apagó el seguimiento de ubicación, tampoco: no hay nada
+// que decidir, así que no hay de qué avisar.
 // ============================================================================
 
 export default function AvisoConsentimientoPendiente() {
   const { t, locale } = useLocale();
+  const haySeguimiento = useHaySeguimientoDeUbicacion();
   const [hayPendiente, setHayPendiente] = useState(false);
 
   useEffect(() => {
+    if (!haySeguimiento) return undefined;
     let activo = true;
     api
       .consentimientos(locale)
@@ -31,9 +37,11 @@ export default function AvisoConsentimientoPendiente() {
     return () => {
       activo = false;
     };
-  }, [locale]);
+  }, [locale, haySeguimiento]);
 
-  if (!hayPendiente) return null;
+  // El aviso se retira aunque ya estuviera en pantalla: la respuesta de la Prestadora puede
+  // llegar después de la consulta, y el enlace llevaría a una pantalla que ya no está.
+  if (!haySeguimiento || !hayPendiente) return null;
 
   return (
     <div className="alert alert-info">

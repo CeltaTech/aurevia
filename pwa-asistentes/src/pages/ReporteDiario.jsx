@@ -5,6 +5,7 @@ import { useLocale } from '../i18n/LocaleContext';
 import { agregarACola, nuevoId } from '../lib/colaOffline';
 import { sincronizarCola } from '../lib/sincronizarCola';
 import { con } from '../lib/textos';
+import { useSeVe } from '../context/PerfilContext';
 
 function esErrorDeRed(error) {
   return error instanceof TypeError;
@@ -43,6 +44,7 @@ export default function ReporteDiario() {
   const { id, pacienteId } = useParams();
   const { t } = useLocale();
   const navigate = useNavigate();
+  const seVe = useSeVe();
 
   // De quién habla este reporte. El nombre se muestra arriba de todo, siempre, aunque el turno
   // cubra a una sola persona: escribir la comida y la medicación en la hoja equivocada es un
@@ -61,6 +63,16 @@ export default function ReporteDiario() {
   const [vitalesHabilitados, setVitalesHabilitados] = useState(false);
   const [rangosVitales, setRangosVitales] = useState({});
   const [enLinea, setEnLinea] = useState(navigator.onLine);
+
+  // Las tres interruptores que tocan esta hoja. Se preguntan una sola vez y el mismo valor decide
+  // las dos cosas: qué se dibuja y qué viaja al guardar. Un campo que no se pidió no puede
+  // terminar en la historia de un Paciente porque quedó un dato viejo en la memoria de la
+  // pantalla (CLAUDE.md §7 regla 12).
+  const veElRelatoConIa = seVe('asistente_relato_con_ia');
+  const veLaFoto = seVe('asistente_foto_en_el_reporte');
+  // Los signos vitales piden las dos cosas: que la Prestadora los tome, y que estén
+  // autorizados para esta persona en particular.
+  const veLosSignos = seVe('asistente_signos_vitales') && vitalesHabilitados;
 
   useEffect(() => {
     const alConectar = () => setEnLinea(true);
@@ -92,6 +104,13 @@ export default function ReporteDiario() {
       activo = false;
     };
   }, [id, pacienteId]);
+
+  // Sin la ayuda para redactar no hay ningún relato que contar primero, así que la hoja abre
+  // directamente con los campos en blanco. Es exactamente lo que hace hoy "Completar a mano"
+  // cuando no hay señal: el camino ya existía, lo único que cambia es que acá es el único.
+  useEffect(() => {
+    if (!veElRelatoConIa && !estructurado) completarAMano();
+  }, [veElRelatoConIa, estructurado]);
 
   async function alEstructurar() {
     setError('');
@@ -155,14 +174,14 @@ export default function ReporteDiario() {
       const clienteUuid = nuevoId();
       const datos = {
         pacienteId,
-        textoLibre,
+        textoLibre: veElRelatoConIa ? textoLibre : null,
         alimentacion: estructurado.alimentacion,
         medicacion: estructurado.medicacion,
-        signosVitales: vitalesHabilitados ? estructurado.signos_vitales : null,
+        signosVitales: veLosSignos ? estructurado.signos_vitales : null,
         estadoAnimo: estructurado.estado_animo,
         incidentes: estructurado.incidentes,
         observaciones: estructurado.observaciones,
-        fotoUrl,
+        fotoUrl: veLaFoto ? fotoUrl : null,
         clienteUuid,
       };
       try {
@@ -202,7 +221,7 @@ export default function ReporteDiario() {
       <h1>{paciente ? con(t.reporte.titulo_de, { nombre: paciente.nombre }) : t.reporte.titulo}</h1>
       {error && <div className="alert alert-error">{error}</div>}
 
-      {!estructurado && (
+      {veElRelatoConIa && !estructurado && (
         <>
           <div className="form-field">
             <label htmlFor="texto-libre">{t.reporte.texto_libre_label}</label>
@@ -230,7 +249,10 @@ export default function ReporteDiario() {
 
       {estructurado && (
         <>
-          <h2>{t.reporte.revisar_titulo}</h2>
+          {/* "Revisá y corregí" es el encabezado de lo que escribió la ayuda automática. Sin
+              esa ayuda no hay nada escrito que revisar: los campos van en blanco y el título
+              de la hoja, arriba, ya dice de qué se trata. */}
+          {veElRelatoConIa && <h2>{t.reporte.revisar_titulo}</h2>}
 
           <div className="reporte-preview-campo">
             <label>{t.reporte.campo_alimentacion}</label>
@@ -241,7 +263,7 @@ export default function ReporteDiario() {
             />
           </div>
 
-          {vitalesHabilitados && (
+          {veLosSignos && (
             <div className="reporte-preview-campo">
               <label>{t.reporte.campo_signos_vitales}</label>
               {SIGNOS.map((signo) => {
@@ -296,11 +318,13 @@ export default function ReporteDiario() {
             <textarea value={estructurado.observaciones || ''} onChange={(e) => actualizarCampo('observaciones', e.target.value)} rows={3} />
           </div>
 
-          <div className="form-field">
-            <label htmlFor="foto">{t.reporte.agregar_foto}</label>
-            <input id="foto" type="file" accept="image/jpeg,image/png" onChange={alSubirFoto} disabled={!enLinea} />
-            {!enLinea && <p className="guardia-card-detalle">{t.reporte.foto_requiere_conexion}</p>}
-          </div>
+          {veLaFoto && (
+            <div className="form-field">
+              <label htmlFor="foto">{t.reporte.agregar_foto}</label>
+              <input id="foto" type="file" accept="image/jpeg,image/png" onChange={alSubirFoto} disabled={!enLinea} />
+              {!enLinea && <p className="guardia-card-detalle">{t.reporte.foto_requiere_conexion}</p>}
+            </div>
+          )}
 
           <button className="btn btn-exito btn-full" onClick={alConfirmar} disabled={confirmando}>
             {confirmando ? t.reporte.confirmando : t.reporte.confirmar}

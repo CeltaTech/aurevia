@@ -6,6 +6,7 @@ import { agregarACola, nuevoId, pendientesDeGuardia } from '../lib/colaOffline';
 import { sincronizarCola, suscribirseASincronizacion } from '../lib/sincronizarCola';
 import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
+import { useSeVe } from '../context/PerfilContext';
 
 /**
  * Lo que se puede consultar de UN Paciente durante el turno: sus reportes anteriores y sus
@@ -14,12 +15,16 @@ import { mensajeDeError } from '../lib/errores';
  * Cada Paciente tiene su propio bloque, con su nombre arriba cuando el turno cubre a más de
  * uno. Es a propósito: una lista de medicación sin decir de quién es, en una casa donde viven
  * dos personas, es la clase de pantalla que termina en un medicamento dado a quien no era.
+ *
+ * Las dos consultas se apagan por separado desde el Panel. Si la Prestadora apagó las dos, el
+ * bloque entero desaparece: quedaría un nombre solo, sin nada abajo.
  */
 function DatosDelPaciente({ paciente, mostrarNombre, t }) {
   const [reportes, setReportes] = useState(null);
   const [mostrandoReportes, setMostrandoReportes] = useState(false);
   const [ordenesMedicacion, setOrdenesMedicacion] = useState(null);
   const [mostrandoMedicacion, setMostrandoMedicacion] = useState(false);
+  const seVe = useSeVe();
 
   async function verReportesAnteriores() {
     if (mostrandoReportes) {
@@ -53,15 +58,21 @@ function DatosDelPaciente({ paciente, mostrarNombre, t }) {
     }
   }
 
+  const veReportes = seVe('asistente_reportes_anteriores');
+  const veMedicacion = seVe('asistente_medicacion_del_paciente');
+  if (!veReportes && !veMedicacion) return null;
+
   return (
     <div style={{ marginTop: '1rem' }}>
       {mostrarNombre && <h2 className="guardia-card-paciente">{paciente.nombre}</h2>}
 
-      <button className="btn btn-secondary btn-full" onClick={verReportesAnteriores}>
-        {t.guardia_activa.ver_reportes_anteriores}
-      </button>
+      {veReportes && (
+        <button className="btn btn-secondary btn-full" onClick={verReportesAnteriores}>
+          {t.guardia_activa.ver_reportes_anteriores}
+        </button>
+      )}
 
-      {mostrandoReportes && (
+      {veReportes && mostrandoReportes && (
         <div style={{ marginTop: '1rem' }}>
           {reportes === null && <div className="estado-cargando">{t.comun.cargando}</div>}
           {reportes?.length === 0 && <div className="estado-vacio">{t.comun.vacio}</div>}
@@ -74,11 +85,13 @@ function DatosDelPaciente({ paciente, mostrarNombre, t }) {
         </div>
       )}
 
-      <button className="btn btn-secondary btn-full" onClick={verOrdenesMedicacion} style={{ marginTop: '1rem' }}>
-        {t.medicacion.ver_ordenes}
-      </button>
+      {veMedicacion && (
+        <button className="btn btn-secondary btn-full" onClick={verOrdenesMedicacion} style={{ marginTop: '1rem' }}>
+          {t.medicacion.ver_ordenes}
+        </button>
+      )}
 
-      {mostrandoMedicacion && (
+      {veMedicacion && mostrandoMedicacion && (
         <div style={{ marginTop: '1rem' }}>
           {ordenesMedicacion === null && <div className="estado-cargando">{t.comun.cargando}</div>}
           {ordenesMedicacion?.length === 0 && <div className="estado-vacio">{t.medicacion.sin_ordenes}</div>}
@@ -127,6 +140,7 @@ function tiempoTranscurrido(desde) {
 export default function GuardiaActiva() {
   const { id } = useParams();
   const { t } = useLocale();
+  const seVe = useSeVe();
   const [guardia, setGuardia] = useState(null);
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
@@ -259,6 +273,12 @@ export default function GuardiaActiva() {
   // un solo nombre — y por eso el check-in de más abajo es uno solo para todos.
   const pacientes = guardia.pacientes ?? [];
   const sonVarios = pacientes.length > 1;
+  // La dirección exacta y las patologías se apagan por separado: hay Prestadoras que dan la
+  // dirección recién por teléfono al confirmar, y hay otras que no mandan datos clínicos a
+  // ningún teléfono. Lo apagado ni siquiera viaja, así que acá solo se deja de dibujar el
+  // renglón que quedaría con el título y nada al lado.
+  const veDomicilio = seVe('asistente_domicilio_del_paciente');
+  const vePatologias = seVe('asistente_patologias_del_paciente');
   const faltanReporte = pacientes.filter((p) => !conReporte.includes(p.id));
   const reportesCompletos = pacientes.length > 0 && faltanReporte.length === 0;
 
@@ -272,19 +292,27 @@ export default function GuardiaActiva() {
 
       {pacientes.length === 0 && <div className="estado-vacio">{t.guardias.sin_paciente}</div>}
 
-      {pacientes.map((p) => (
-        <div key={p.id} className={sonVarios ? 'guardia-card' : undefined}>
-          {sonVarios && <div className="guardia-card-paciente">{p.nombre}</div>}
-          <p className="guardia-card-detalle">
-            {t.guardia_activa.domicilio}: {p.domicilio}
-          </p>
-          {p.patologias && (
-            <p className="guardia-card-detalle">
-              {t.guardia_activa.patologias}: {p.patologias}
-            </p>
-          )}
-        </div>
-      ))}
+      {pacientes.map((p) => {
+        // Con las dos cosas apagadas la tarjeta se saltea entera, salvo que el turno cubra a
+        // varias personas: ahí el nombre sigue haciendo falta para saber a quiénes se atiende.
+        const hayDatos = veDomicilio || (vePatologias && p.patologias);
+        if (!hayDatos && !sonVarios) return null;
+        return (
+          <div key={p.id} className={sonVarios ? 'guardia-card' : undefined}>
+            {sonVarios && <div className="guardia-card-paciente">{p.nombre}</div>}
+            {veDomicilio && (
+              <p className="guardia-card-detalle">
+                {t.guardia_activa.domicilio}: {p.domicilio}
+              </p>
+            )}
+            {vePatologias && p.patologias && (
+              <p className="guardia-card-detalle">
+                {t.guardia_activa.patologias}: {p.patologias}
+              </p>
+            )}
+          </div>
+        );
+      })}
 
       {sonVarios && (
         <div className="alert alert-info">{con(t.guardia_activa.varios_pacientes, { n: pacientes.length })}</div>

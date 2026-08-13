@@ -76,7 +76,7 @@ registrar el chequeo en un log de auditoría separado si se necesita trazabilida
 en la tabla `alertas`.
 
 **Cuánto se mira y a quién se le avisa: lo decide cada Prestadora, no el código.** Desde el
-2026-08-11 las cinco perillas viven en la tabla `configuracion_alertas_ia` y se tocan desde el
+2026-08-11 las cinco interruptores viven en la tabla `configuracion_alertas_ia` y se tocan desde el
 Panel, en Configuración › Avisos:
 
 - **N** — cuántos reportes se leen en cada revisión (de 1 a 30; de fábrica, 7).
@@ -86,7 +86,7 @@ Panel, en Configuración › Avisos:
 
 Lo único que **no** se configura: una alerta roja siempre le llega al Coordinador. Si la revisión
 encontró algo urgente, alguien de la Prestadora tiene que enterarse, y eso no se puede apagar. La
-pantalla lo dice con todas las letras en vez de mostrar una perilla trabada.
+pantalla lo dice con todas las letras en vez de mostrar un interruptor trabado.
 
 Ver tabla de notificaciones en `PRD_02_Panel_Admin.md`.
 

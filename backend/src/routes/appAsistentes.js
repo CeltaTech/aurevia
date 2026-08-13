@@ -18,7 +18,7 @@ import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
 export const appAsistentesRouter = Router();
 
 // Con qué datos del Paciente se dibuja la pantalla del Asistente en esta Prestadora. El
-// domicilio exacto y las patologías tienen cada uno su perilla: hay quien da la dirección
+// domicilio exacto y las patologías tienen cada uno su interruptor: hay quien da la dirección
 // recién al confirmar el turno, y hay quien no manda datos clínicos al teléfono de nadie.
 // Lo que está apagado no se pide, así que tampoco viaja (tarea 65).
 //
@@ -587,7 +587,7 @@ appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, exigeVi
   // hoy viajaban además el relato entero, la comida, la medicación, los signos vitales, el
   // ánimo, los incidentes y la foto: ocho datos de salud que llegaban al teléfono y que
   // ninguna pantalla dibujaba. Si alguna vez hace falta mostrar alguno, se agrega acá con su
-  // perilla, no se deja "por las dudas" (tarea 65).
+  // interruptor, no se deja "por las dudas" (tarea 65).
   const { data, error } = await supabase
     .from('reportes')
     .select('id, observaciones, created_at, guardias!inner(fecha)')

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
+import { useHaySeguimientoDeUbicacion } from '../lib/seguimientoDeUbicacion';
 
 // ============================================================================
 // Pendiente #102 — pantalla donde el Asistente lee y decide sobre el registro
@@ -15,10 +16,15 @@ import { useLocale } from '../i18n/LocaleContext';
 // 2. No bloquea nada. Quien rechaza sigue usando la aplicación entera.
 // 3. El texto completo está a la vista antes de decidir, no detrás de un
 //    enlace. "Informado" quiere decir que lo pudo leer, no que se lo ofrecieron.
+//
+// Y una cuarta: si la Prestadora apagó el seguimiento de ubicación, esta
+// pantalla no existe. No se le pide a nadie que decida sobre algo que no se va
+// a hacer.
 // ============================================================================
 
 export default function Consentimientos({ onCambio }) {
   const { t, locale } = useLocale();
+  const haySeguimiento = useHaySeguimientoDeUbicacion();
   const [items, setItems] = useState(null);
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState('');
@@ -34,8 +40,9 @@ export default function Consentimientos({ onCambio }) {
   }
 
   useEffect(() => {
+    if (!haySeguimiento) return;
     cargar();
-  }, [locale]);
+  }, [locale, haySeguimiento]);
 
   async function decidir(clave, decision) {
     setError('');
@@ -63,6 +70,9 @@ export default function Consentimientos({ onCambio }) {
     }
   }
 
+  // La respuesta de la Prestadora puede llegar después de la lista: si llega diciendo que no
+  // hay seguimiento, lo ya cargado se deja de mostrar igual.
+  if (!haySeguimiento) return null;
   if (error && !items) return <div className="alert alert-error">{error}</div>;
   if (!items) return <div className="estado-cargando">{t.comun.cargando}</div>;
   // Sin texto cargado para el país de la Prestadora no hay nada que preguntar.

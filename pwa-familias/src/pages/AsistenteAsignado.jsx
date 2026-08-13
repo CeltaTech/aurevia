@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { nombreTipo } from '../lib/tipoDeAsistente';
+import { useSeVe } from '../context/PerfilContext';
+import { INTERRUPTOR_DE_LA_PANTALLA } from '../lib/interruptorDeCadaPantalla';
 
 // Una de las dos listas. La de "qué no hace" pesa lo mismo que la otra a
 // propósito: es la que evita la discusión en la puerta.
@@ -26,6 +28,11 @@ function ListaDeTareas({ titulo, tareas, vacio }) {
 export default function AsistenteAsignado() {
   const { id } = useParams();
   const { t } = useLocale();
+  const seVe = useSeVe();
+  // Poner estrellas y leer las que otros pusieron son la misma decisión de la Prestadora:
+  // donde no se califica, mostrar las calificaciones viejas sería seguir puntuando a un
+  // trabajador por la ventana.
+  const califica = seVe('familia_califica_al_asistente');
   const [datos, setDatos] = useState(null);
   const [rolCirculo, setRolCirculo] = useState(null);
   const [error, setError] = useState('');
@@ -106,50 +113,56 @@ export default function AsistenteAsignado() {
         </>
       )}
 
-      <Link to={`/pacientes/${id}/escanear-asistente`} className="btn btn-primary btn-full" style={{ marginTop: '1rem' }}>
-        {t.asistente.escanear_boton}
-      </Link>
-
-      <h2 style={{ marginTop: '1.5rem' }}>{t.asistente.evaluaciones_titulo}</h2>
-      {evaluaciones.length === 0 ? (
-        <div className="estado-vacio">{t.asistente.sin_evaluaciones}</div>
-      ) : (
-        evaluaciones.map((e) => (
-          <div key={e.id} className="guardia-card">
-            <div className="guardia-card-paciente">{'★'.repeat(e.estrellas)}{'☆'.repeat(5 - e.estrellas)}</div>
-            {e.comentario && <div className="guardia-card-detalle">{e.comentario}</div>}
-          </div>
-        ))
+      {seVe(INTERRUPTOR_DE_LA_PANTALLA.escanearAsistente) && (
+        <Link to={`/pacientes/${id}/escanear-asistente`} className="btn btn-primary btn-full" style={{ marginTop: '1rem' }}>
+          {t.asistente.escanear_boton}
+        </Link>
       )}
 
-      {guardiaId && !enviado && rolCirculo === 'solo_lectura' && (
-        <div style={{ marginTop: '1.5rem' }} className="alert">
-          {t.asistente.calificar_solo_lectura}
-        </div>
-      )}
-      {guardiaId && !enviado && rolCirculo !== 'solo_lectura' && (
-        <div style={{ marginTop: '1.5rem' }}>
-          <h2>{t.asistente.calificar_titulo}</h2>
-          <div className="estrellas">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button key={n} type="button" className={n <= estrellas ? 'activa' : ''} onClick={() => setEstrellas(n)}>
-                ★
+      {califica && (
+        <>
+          <h2 style={{ marginTop: '1.5rem' }}>{t.asistente.evaluaciones_titulo}</h2>
+          {evaluaciones.length === 0 ? (
+            <div className="estado-vacio">{t.asistente.sin_evaluaciones}</div>
+          ) : (
+            evaluaciones.map((e) => (
+              <div key={e.id} className="guardia-card">
+                <div className="guardia-card-paciente">{'★'.repeat(e.estrellas)}{'☆'.repeat(5 - e.estrellas)}</div>
+                {e.comentario && <div className="guardia-card-detalle">{e.comentario}</div>}
+              </div>
+            ))
+          )}
+
+          {guardiaId && !enviado && rolCirculo === 'solo_lectura' && (
+            <div style={{ marginTop: '1.5rem' }} className="alert">
+              {t.asistente.calificar_solo_lectura}
+            </div>
+          )}
+          {guardiaId && !enviado && rolCirculo !== 'solo_lectura' && (
+            <div style={{ marginTop: '1.5rem' }}>
+              <h2>{t.asistente.calificar_titulo}</h2>
+              <div className="estrellas">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button key={n} type="button" className={n <= estrellas ? 'activa' : ''} onClick={() => setEstrellas(n)}>
+                    ★
+                  </button>
+                ))}
+              </div>
+              <div className="form-field">
+                <textarea
+                  value={comentario}
+                  onChange={(e) => setComentario(e.target.value)}
+                  placeholder={t.asistente.comentario_placeholder}
+                />
+              </div>
+              <button className="btn btn-primary btn-full" disabled={enviando || estrellas < 1} onClick={enviarCalificacion}>
+                {enviando ? t.asistente.enviando_calificacion : t.asistente.enviar_calificacion}
               </button>
-            ))}
-          </div>
-          <div className="form-field">
-            <textarea
-              value={comentario}
-              onChange={(e) => setComentario(e.target.value)}
-              placeholder={t.asistente.comentario_placeholder}
-            />
-          </div>
-          <button className="btn btn-primary btn-full" disabled={enviando || estrellas < 1} onClick={enviarCalificacion}>
-            {enviando ? t.asistente.enviando_calificacion : t.asistente.enviar_calificacion}
-          </button>
-        </div>
+            </div>
+          )}
+          {enviado && <div className="alert alert-info">{t.asistente.calificacion_enviada}</div>}
+        </>
       )}
-      {enviado && <div className="alert alert-info">{t.asistente.calificacion_enviada}</div>}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
+import { useSeVe } from '../context/PerfilContext';
 
 const CAMPOS_TEXTO = ['incidentes', 'observaciones'];
 
@@ -20,6 +21,7 @@ function colorSigno(valor, rango) {
 export default function ReporteDetalle() {
   const { id, reporteId } = useParams();
   const { t } = useLocale();
+  const seVe = useSeVe();
   const [reporte, setReporte] = useState(null);
   const [rangosVitales, setRangosVitales] = useState({});
   const [error, setError] = useState('');
@@ -74,29 +76,34 @@ export default function ReporteDetalle() {
         )}
       </div>
 
-      <div className="reporte-preview-campo">
-        <label>{t.reporte_detalle.campo_signos_vitales}</label>
-        {reporte.signos_vitales && CLAVES_SIGNOS_VITALES.some((clave) => reporte.signos_vitales[clave]) ? (
-          CLAVES_SIGNOS_VITALES.filter((clave) => reporte.signos_vitales[clave]).map((clave) => {
-            const color = colorSigno(reporte.signos_vitales[clave], rangosVitales[clave]);
-            return (
-              <div key={clave} className={color ? `signo-vital-${color}` : ''}>
+      {/* La Prestadora que no hace enfermería no toma estos valores. Sin esta condición el
+          motor deja de mandarlos pero el título queda igual, con un "sin datos" debajo que
+          hace creer que alguien los está controlando y ese día no los cargó. */}
+      {seVe('familia_signos_vitales') && (
+        <div className="reporte-preview-campo">
+          <label>{t.reporte_detalle.campo_signos_vitales}</label>
+          {reporte.signos_vitales && CLAVES_SIGNOS_VITALES.some((clave) => reporte.signos_vitales[clave]) ? (
+            CLAVES_SIGNOS_VITALES.filter((clave) => reporte.signos_vitales[clave]).map((clave) => {
+              const color = colorSigno(reporte.signos_vitales[clave], rangosVitales[clave]);
+              return (
+                <div key={clave} className={color ? `signo-vital-${color}` : ''}>
+                  {t.reporte_detalle[`signo_${clave}`]}: {reporte.signos_vitales[clave]}
+                  {rangosVitales[clave] ? ` ${rangosVitales[clave].unidad}` : ''}
+                  {color === 'alerta' && <span className="signo-vital-aviso"> — {t.reporte_detalle.signo_fuera_de_rango}</span>}
+                </div>
+              );
+            })
+          ) : reporte.signos_vitales && CLAVES_SIGNOS_VITALES_LEGADO.some((clave) => reporte.signos_vitales[clave]) ? (
+            CLAVES_SIGNOS_VITALES_LEGADO.filter((clave) => reporte.signos_vitales[clave]).map((clave) => (
+              <div key={clave}>
                 {t.reporte_detalle[`signo_${clave}`]}: {reporte.signos_vitales[clave]}
-                {rangosVitales[clave] ? ` ${rangosVitales[clave].unidad}` : ''}
-                {color === 'alerta' && <span className="signo-vital-aviso"> — {t.reporte_detalle.signo_fuera_de_rango}</span>}
               </div>
-            );
-          })
-        ) : reporte.signos_vitales && CLAVES_SIGNOS_VITALES_LEGADO.some((clave) => reporte.signos_vitales[clave]) ? (
-          CLAVES_SIGNOS_VITALES_LEGADO.filter((clave) => reporte.signos_vitales[clave]).map((clave) => (
-            <div key={clave}>
-              {t.reporte_detalle[`signo_${clave}`]}: {reporte.signos_vitales[clave]}
-            </div>
-          ))
-        ) : (
-          <div>{t.reporte_detalle.sin_datos}</div>
-        )}
-      </div>
+            ))
+          ) : (
+            <div>{t.reporte_detalle.sin_datos}</div>
+          )}
+        </div>
+      )}
 
       <div className="reporte-preview-campo">
         <label>{t.reporte_detalle.campo_estado_animo}</label>

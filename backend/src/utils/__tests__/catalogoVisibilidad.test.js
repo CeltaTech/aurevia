@@ -1,9 +1,9 @@
 /**
  * Pruebas del catálogo de qué muestra cada aplicación.
  *
- * Lo que se cuida acá es lo que rompe una perilla de configuración: que una clave se
+ * Lo que se cuida acá es lo que rompe un interruptor de configuración: que una clave se
  * duplique o se renombre (y con eso se pierda la decisión que la Prestadora ya había
- * tomado), que una perilla nueva arranque apagada sin querer, y que la lista de columnas de
+ * tomado), que un interruptor nuevo arranque apagada sin querer, y que la lista de columnas de
  * una consulta deje pasar un dato que estaba apagado.
  *
  *   npm test --prefix backend
@@ -22,12 +22,12 @@ import {
 } from '../catalogoVisibilidad.js';
 
 describe('catálogo de visibilidad', () => {
-  it('no hay dos perillas con la misma clave', () => {
+  it('no hay dos interruptores con la misma clave', () => {
     const claves = CATALOGO_VISIBILIDAD.map((cosa) => cosa.clave);
     assert.equal(new Set(claves).size, claves.length);
   });
 
-  it('cada perilla tiene sus cinco datos y pertenece a una de las dos aplicaciones', () => {
+  it('cada interruptor tiene sus cinco datos y pertenece a una de las dos aplicaciones', () => {
     for (const cosa of CATALOGO_VISIBILIDAD) {
       assert.equal(typeof cosa.clave, 'string');
       assert.ok(APLICACIONES.includes(cosa.app), `${cosa.clave} no pertenece a ninguna aplicación`);
@@ -47,15 +47,15 @@ describe('catálogo de visibilidad', () => {
   });
 
   it('todas arrancan encendidas: hoy las aplicaciones muestran todo', () => {
-    // CLAUDE.md §3: ninguna perilla arranca apagada por decisión del sistema. Y el valor de
+    // CLAUDE.md §3: ningún interruptor arranca apagado por decisión del sistema. Y el valor de
     // fábrica tiene que ser lo que el producto ya hacía, para que quien no entre a la
     // pantalla no vea cambiar nada.
     assert.ok(CATALOGO_VISIBILIDAD.every((cosa) => cosa.de_fabrica === true));
   });
 
-  it('busca una perilla por su clave y devuelve null si no existe', () => {
+  it('busca un interruptor por su clave y devuelve null si no existe', () => {
     assert.equal(cosaDelCatalogo('familia_signos_vitales').app, 'familias');
-    assert.equal(cosaDelCatalogo('una_perilla_que_no_existe'), null);
+    assert.equal(cosaDelCatalogo('una_interruptor_que_no_existe'), null);
   });
 });
 
@@ -72,7 +72,7 @@ describe('visibilidadEfectiva', () => {
     assert.equal(efectiva.familia_signos_vitales, true);
   });
 
-  it('una fila vieja de una perilla retirada se ignora', () => {
+  it('una fila vieja de un interruptor retirado se ignora', () => {
     const efectiva = visibilidadEfectiva([{ clave: 'familia_algo_que_ya_no_existe', visible: false }]);
     assert.deepEqual(efectiva, visibilidadDeFabrica());
   });
@@ -87,7 +87,7 @@ describe('visibilidadEfectiva', () => {
 });
 
 describe('mezclarVisibilidadConCatalogo', () => {
-  it('sin ninguna fila guardada, igual devuelve todas las perillas', () => {
+  it('sin ninguna fila guardada, igual devuelve todas los interruptores', () => {
     const mezcladas = mezclarVisibilidadConCatalogo([]);
     assert.equal(mezcladas.length, CATALOGO_VISIBILIDAD.length);
     assert.ok(mezcladas.every((cosa) => cosa.configurado === false));
@@ -108,7 +108,7 @@ describe('mezclarVisibilidadConCatalogo', () => {
     assert.equal(otra.visible, true);
   });
 
-  it('una fila vieja de una perilla retirada no reaparece en la pantalla', () => {
+  it('una fila vieja de un interruptor retirado no reaparece en la pantalla', () => {
     const mezcladas = mezclarVisibilidadConCatalogo([
       { clave: 'familia_algo_que_ya_no_existe', visible: true },
     ]);
@@ -119,7 +119,7 @@ describe('mezclarVisibilidadConCatalogo', () => {
 
 describe('columnasSegunVisibilidad', () => {
   // Acá está el sentido de toda la tarea: lo apagado no se pide, así que tampoco viaja.
-  it('deja afuera las columnas cuya perilla está apagada', () => {
+  it('deja afuera las columnas cuya interruptor está apagada', () => {
     const columnas = columnasSegunVisibilidad(
       ['id', 'nombre', ['domicilio', 'asistente_domicilio_del_paciente'], ['patologias', 'asistente_patologias_del_paciente']],
       { asistente_domicilio_del_paciente: false, asistente_patologias_del_paciente: true },
@@ -131,7 +131,7 @@ describe('columnasSegunVisibilidad', () => {
     assert.equal(columnasSegunVisibilidad(['id', 'nombre'], {}), 'id, nombre');
   });
 
-  it('una perilla que no está en la lista se toma como encendida', () => {
+  it('un interruptor que no está en la lista se toma como encendida', () => {
     // Pasa mientras una versión vieja del motor y una nueva del catálogo conviven un rato: es
     // preferible seguir mostrando lo que ya se mostraba a romper la pantalla.
     assert.equal(columnasSegunVisibilidad([['patologias', 'clave_desconocida']], {}), 'patologias');

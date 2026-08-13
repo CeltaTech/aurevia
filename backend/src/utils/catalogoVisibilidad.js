@@ -7,16 +7,16 @@
 // escribe CeltaTech y cambia con cada versión—, no una decisión de una Prestadora. Es la misma
 // forma que ya usa `catalogoAvisos.js`, y por el mismo motivo (CLAUDE.md §7 regla 12).
 //
-// Para agregar una perilla: se suma una entrada acá y nada más. No hace falta migración ni
+// Para agregar un interruptor: se suma una entrada acá y nada más. No hace falta migración ni
 // siembra — la fila se crea sola la primera vez que la Prestadora la toca desde el Panel. Al
-// revés también vale: una perilla que se retira se saca de esta lista y desaparece de la
+// revés también vale: un interruptor que se retira se saca de esta lista y desaparece de la
 // pantalla, aunque queden filas viejas en la base (se ignoran).
 //
 // LA UNIDAD ES EL BLOQUE, NO EL CAMPO SUELTO. Se apaga "los signos vitales", no "la presión"
 // aparte de "la temperatura". Cien casillas no las usa nadie: la pantalla se vuelve un
 // formulario imposible y la Prestadora termina sin tocar ninguna. La excepción son los pocos
 // datos que por sí solos son delicados —las patologías, el domicilio completo—, que llevan su
-// propia perilla porque la decisión sobre ellos es distinta de la del bloque donde aparecen.
+// propio interruptor porque la decisión sobre ellos es distinta de la del bloque donde aparecen.
 //
 // LA CLAVE NO SE RENOMBRA NUNCA (CLAUDE.md §7 regla 13). Nombra lo que la cosa hace, no cómo se
 // llama hoy la pantalla donde aparece: queda escrita adentro de filas que ya existen, y
@@ -158,7 +158,7 @@ export const CATALOGO_VISIBILIDAD = [
     clave: 'asistente_ubicacion_en_vivo',
     app: 'asistentes',
     descripcion: 'Compartir su ubicación durante la guardia',
-    ayuda: 'Es la otra cara de la perilla del mapa de la Familia: acá se decide si el teléfono la manda. Apagada, no se manda ninguna ubicación aunque la Familia tenga el mapa encendido. El check-in y el check-out no dependen de esto.',
+    ayuda: 'Es la otra cara del interruptor del mapa de la Familia: acá se decide si el teléfono la manda. Apagado, no se manda ninguna ubicación aunque la Familia tenga el mapa encendido. El check-in y el check-out no dependen de esto.',
     de_fabrica: true,
   },
   {
@@ -185,7 +185,7 @@ export function cosaDelCatalogo(clave) {
 // (utils/__tests__/catalogoVisibilidad.test.js).
 //
 // Una fila guardada de una clave que ya no está en el catálogo se ignora: la lista de arriba
-// manda, y una perilla retirada no debe reaparecer.
+// manda, y un interruptor retirado no debe reaparecer.
 export function visibilidadEfectiva(filasGuardadas) {
   const efectiva = visibilidadDeFabrica();
   for (const fila of filasGuardadas ?? []) {
@@ -203,7 +203,7 @@ export function visibilidadEfectiva(filasGuardadas) {
 // mirar el tráfico lo leería. Apagar una cosa tiene que sacarla de la consulta.
 //
 // `columnas` es una lista de textos; los que llevan condición se escriben como
-// `['patologias', 'familia_patologias_del_paciente']` y solo entran si esa perilla está
+// `['patologias', 'familia_patologias_del_paciente']` y solo entran si ese interruptor está
 // prendida. Una clave que no esté en la lista se toma como prendida: mientras conviven una
 // versión vieja del motor con una nueva del catálogo, es preferible seguir mostrando lo que
 // ya se mostraba antes que dejar la pantalla en blanco.

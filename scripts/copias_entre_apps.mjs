@@ -45,6 +45,11 @@ export const GRUPOS = [
     copias: ['pwa-asistentes/src/lib/reglaVencimientos.js', 'backend/src/utils/reglaVencimientos.js'],
   },
   {
+    que: 'la marca de la Prestadora y qué funciones tiene encendidas',
+    original: 'pwa-familias/src/context/PerfilContext.jsx',
+    copias: ['pwa-asistentes/src/context/PerfilContext.jsx'],
+  },
+  {
     que: 'cómo se muestra el tipo de un Asistente',
     original: 'panel/src/lib/tipoDeAsistente.js',
     copias: ['pwa-asistentes/src/lib/tipoDeAsistente.js', 'pwa-familias/src/lib/tipoDeAsistente.js'],

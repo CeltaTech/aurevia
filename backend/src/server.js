@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { readFileSync } from 'node:fs';
 import express from 'express';
 import cors from 'cors';
 // Parchea Express para reenviar al middleware de errores cualquier excepción/rechazo
@@ -49,8 +50,30 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+/* Qué versión del motor está corriendo ahora mismo.
+   ==========================================================================
+
+   La publicación la escribe `.github/workflows/deploy-backend.yml` en `version.txt` justo
+   antes de subir el motor, así que este número es el del código que efectivamente está en el
+   aire — no el del último push, que puede haber quedado a mitad de camino.
+
+   Existe porque Railway a veces corta el hilo de los registros de la construcción y el
+   automatismo se da por fallado sin que nadie sepa si el motor se actualizó o no. Con esto la
+   respuesta se pide, no se supone: la publicación misma espera a que esta dirección devuelva
+   la versión que acaba de subir, y recién ahí se da por buena (CLAUDE.md §8).
+
+   Corriendo en la máquina de quien programa no hay archivo y dice `desarrollo`. El número no
+   es dato sensible: es el identificador del commit de un repositorio privado, no dice nada de
+   ninguna Prestadora ni de ninguna persona. */
+let versionEnElAire = 'desarrollo';
+try {
+  versionEnElAire = readFileSync(new URL('../version.txt', import.meta.url), 'utf8').trim();
+} catch {
+  // Sin archivo: es una máquina de desarrollo, no una publicación.
+}
+
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.json({ status: 'ok', version: versionEnElAire });
 });
 
 app.use('/api/solicitud-servicio', solicitudServicioRouter);

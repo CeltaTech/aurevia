@@ -27,8 +27,40 @@ jobs:
       - name: Instalar Railway CLI
         run: npm install -g @railway/cli
 
-      - name: Deploy
+      # Deja escrito adentro de lo que se sube qué versión es. El motor lo devuelve en /health y
+      # el último paso lo usa para saber si la publicación llegó de verdad.
+      - name: Anotar qué versión se está subiendo
+        run: git rev-parse --short HEAD > backend/version.txt
+
+      # `|| true` a propósito: Railway corta cada tanto el hilo de los registros de la
+      # construcción ("Failed to stream build logs") y el comando devuelve error aunque la
+      # construcción siga su curso y termine publicando. Pasó dos veces seguidas el 2026-08-13.
+      # Ese corte no es un fallo del despliegue, así que no se cuenta como tal: quien dice si
+      # salió bien es el paso siguiente, que le pregunta al motor en vivo qué versión corre.
+      - name: Subir el motor a Railway
         working-directory: backend
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway up --service aurevia-backend --environment production --ci
+        run: railway up --service aurevia-backend --environment production --ci || true
+
+      # Acá se decide si la publicación salió bien, y es la comprobación que pide CLAUDE.md §8:
+      # no alcanza con que el push haya subido, tiene que estar respondiendo la versión nueva.
+      # Hasta 5 minutos, preguntando cada 10 segundos, porque Railway levanta el motor nuevo y
+      # recién después apaga el viejo.
+      - name: Comprobar que la versión nueva está respondiendo
+        run: |
+          esperada=$(cat backend/version.txt)
+          echo "Esperando la versión $esperada"
+          for intento in $(seq 1 30); do
+            viva=$(curl -s --max-time 10 "$MOTOR/health" | grep -o '"version":"[^"]*"' | cut -d'"' -f4)
+            if [ "$viva" = "$esperada" ]; then
+              echo "El motor está corriendo la versión $viva."
+              exit 0
+            fi
+            echo "  intento $intento: responde \"$viva\""
+            sleep 10
+          done
+          echo "El motor nunca llegó a responder la versión $esperada. La publicación no se completó."
+          exit 1
+        env:
+          MOTOR: https://aurevia-backend-production-e7ee.up.railway.app

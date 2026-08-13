@@ -2,6 +2,16 @@
 
 > Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§10) — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
 
+## Cada Prestadora elige qué muestran las dos aplicaciones (2026-08-13)
+
+- **Decía antes:** las dos aplicaciones del teléfono mostraban todo lo que el producto sabe hacer, igual para todas las Prestadoras. Una que no quisiera darle el mapa en vivo a las Familias, o que no quisiera que sus Asistentes tomaran la presión, no tenía forma de sacarlo.
+- **Dice ahora:** dieciocho cosas se encienden y se apagan desde Configuración › Las aplicaciones, y lo apagado deja de pedirse en la consulta.
+- **Motivo:** el principio de `CLAUDE.md` §2 — *configuración sobre programación*. Una diferencia entre Prestadoras es una característica del negocio, no una excusa para versiones especiales del código.
+- **Por qué no se esconde en la pantalla:** esconder algo en el maquetado lo deja viajando igual, y cualquiera que sepa mirar por debajo lo lee. El filtro va en la consulta: lo que no se puede ver, no se manda.
+- **Dos cosas distintas según qué se apaga:** lo que ya está guardado —domicilio, patologías, alertas, medicación— no se borra nunca: sigue en la base, el Panel lo sigue viendo, y al encender el interruptor vuelve a aparecer en el teléfono. En cambio los signos vitales, el relato libre y la foto los carga el Asistente desde el teléfono, así que apagarlos hace que no se pidan y no se guarden: no quedan en otro lado, no existen para esas guardias. Los reportes anteriores conservan lo suyo.
+- **Vocabulario:** a estas llaves de encendido las llamábamos "perillas". Ahora se llaman **interruptores**, por decisión del Desarrollador. Se descartó "switch" porque hay palabra clara en castellano (§4, pregunta 3). Las migraciones ya aplicadas conservan "perilla" a propósito: son el registro histórico y no se reescriben (§9 y §10).
+- **No reintroducir:** una pantalla que oculte con maquetado un dato que igual viajó; ni una lista de interruptores escrita en la pantalla en vez de en el catálogo del motor.
+
 ## Toda alerta se configura desde el Panel (2026-08-11)
 
 - **Decía antes:** ocho avisos distintos podían configurarse en teoría, pero la pantalla solo mostraba los que ya tenían una fila guardada en la base — o sea, ninguno hasta que alguien lo tocara por primera vez. Y cinco decisiones estaban escritas a mano en el código: cuántos reportes lee la revisión con inteligencia artificial (siete), a quién le llega cada color de alerta, con cuánta anticipación se le avisa a la Asistente de su próxima guardia (una hora), y cada cuánto se le vuelve a insistir al Coordinador cuando un problema no se resuelve. Ninguna Prestadora podía cambiar nada de eso.

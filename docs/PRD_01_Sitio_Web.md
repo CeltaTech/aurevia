@@ -225,19 +225,35 @@ El pendiente pedía decidir si el sitio que **sí** le habla a las familias —e
 de cuidados, con sus servicios y su teléfono— es una función de Careonys, algo que cada
 empresa se arregla por su cuenta, o nada.
 
-**Respuesta: no es una función de Careonys.** Por tres motivos:
+**Respuesta (decidida por el Desarrollador el 2026-08-13): no es una función de Careonys,
+pero tampoco queda librada al cliente.** La página con la que cada Prestadora se publicita
+—la que enlaza desde sus redes— se va a armar con **OctoBuilder**, el generador de páginas
+web de CeltaTech, que todavía está por construirse. Va a formar parte del paquete comercial
+que se le ofrece a la empresa cuando contrata.
 
-1. **Es otro oficio.** Careonys ordena una operación de cuidado. Armar y hospedar páginas web
-   es otra cosa, y la empresa ya tiene otros productos en ese terreno. Meterlo acá adentro
-   sería mezclar dos productos en uno.
-2. **Nos haría dueños de un problema que no termina nunca.** Cada cliente querría su diseño,
-   su dominio, su correo. Eso es soporte para siempre a cambio de nada.
-3. **Nadie lo pidió.** No hay ni una empresa cliente todavía. Construirlo ahora sería adivinar.
+Por qué va afuera y no acá adentro:
 
-**Qué se hace en su lugar:** nada. La empresa que quiera su página se la hace por su cuenta,
-como hace hoy, y desde ahí manda a sus familias y a sus asistentes a las direcciones que le
-damos. Si más adelante varios clientes lo piden, se trata como lo que sería —un producto
-aparte, con su propia decisión comercial—, y no como una función más de éste.
+1. **Es otro oficio.** Careonys ordena una operación de cuidado. Armar y publicar páginas web
+   es otra cosa.
+2. **Le sirve a cualquier cliente de CeltaTech, no solo a una empresa de cuidados.** Metido
+   adentro de Careonys, solo lo podría usar quien tenga Careonys, y habría que rehacerlo para
+   el producto siguiente. Es exactamente lo que la arquitectura de la empresa manda evitar:
+   OctoBuilder ya figura como producto propio en `celtatech/docs/ARQUITECTURA_NIVELES.md:76`,
+   junto con OctoCMS, OctoCRM y OctoTranslator, y esos productos se comparten entre sí por
+   una interfaz de verdad, no copiándose el código.
+3. **Se vende, no se regala.** Cada empresa va a querer su diseño, su dominio y su correo.
+   Como producto con su propio precio, ese acompañamiento es parte de lo que se cobra; como
+   función suelta metida acá, sería soporte para siempre a cambio de nada.
+
+**Qué cambia en este repositorio: nada.** OctoBuilder es de CeltaTech y todavía no existe.
+Mientras tanto, la empresa que ya tiene su página sigue con la suya, y desde ahí manda a sus
+familias y a sus asistentes a las direcciones que le damos.
+
+**Lo que sí conviene no olvidar cuando OctoBuilder se construya:** esa página va a querer
+mostrar cosas que Careonys ya sabe —los servicios que la Prestadora ofrece, sus zonas de
+cobertura, su teléfono— y la tentación va a ser que las lea directo de la base del producto.
+No se hace así: se piden por una interfaz, como cualquier otro producto de la empresa
+(`CLAUDE.md` §2 y `celtatech/docs/ARQUITECTURA_NIVELES.md`).
 
 ## 10. Lo que falta decidir, y es del Desarrollador
 

@@ -1,10 +1,20 @@
 # Decisión pendiente: escalar el envío de emails más allá de la cuenta Gmail compartida
 
-> Este documento es el destino de la alarma de `docs/PENDIENTES.md` #44. Se muestra un
-> aviso en el Panel (pestaña Resumen de Admin_plataforma) cuando la cantidad de
-> Prestadoras certificadas alcanza el umbral configurado (`configuracion_plataforma.umbral_alerta_prestadoras`,
-> default 5 — avisa antes de licenciar la 6ta). Este documento existe para que, en ese
-> momento, el Desarrollador tenga todo lo ya investigado a mano sin tener que redescubrirlo.
+> Este documento es el destino de la alarma de `docs/PENDIENTES.md` #44, y hay que decirlo de
+> entrada: **hoy esa alarma no existe.** Antes el Panel mostraba un aviso cuando la cantidad de
+> Prestadoras certificadas llegaba a un umbral configurado. Ese umbral se fue a CeltaTech con la
+> Etapa 2 de la separación CeltaTech/Careonys (2026-07-28), porque contar cuántas Prestadoras hay
+> contratadas es un dato del negocio de CeltaTech, no del producto: se borró la columna que lo
+> guardaba (`supabase/migrations/20260728210000_etapa2_aurevia_deja_de_ser_nivel_1.sql:353`) y se
+> fueron con ella las rutas que la leían y la escribían
+> (`backend/src/routes/panelConfiguracionPlataforma.js:43-49`). El rol que veía ese aviso,
+> `Admin_plataforma`, tampoco existe más en Careonys (`CLAUDE.md` §5).
+>
+> **Mientras tanto no hay nada que avise solo: hay que mirarlo a mano.** Dónde lo aloja CeltaTech
+> todavía no está decidido, y queda anotado como pendiente en `docs/PENDIENTES.md` #140. Hasta que
+> se decida, la única forma de enterarse es contar cada tanto las Prestadoras certificadas y volver
+> a leer este documento. Existe justamente para eso: que ese día el Desarrollador tenga todo lo ya
+> investigado a mano sin tener que redescubrirlo.
 
 ## El problema
 

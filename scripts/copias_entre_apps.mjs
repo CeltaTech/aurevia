@@ -45,6 +45,11 @@ export const GRUPOS = [
     copias: ['pwa-asistentes/src/lib/reglaVencimientos.js', 'backend/src/utils/reglaVencimientos.js'],
   },
   {
+    que: 'quién tiene que entrar con segundo factor',
+    original: 'panel/src/lib/reglaMfaObligatorio.js',
+    copias: ['backend/src/utils/reglaMfaObligatorio.js'],
+  },
+  {
     que: 'la marca de la Prestadora y qué funciones tiene encendidas',
     original: 'pwa-familias/src/context/PerfilContext.jsx',
     copias: ['pwa-asistentes/src/context/PerfilContext.jsx'],

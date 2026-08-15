@@ -1,4 +1,5 @@
 import { supabase } from '../db/connection.js';
+import { elRolUsaSegundoFactor, elSegundoFactorEsObligatorio } from '../utils/reglaMfaObligatorio.js';
 
 // Ítem D del pendiente #30: tope de 5 min de
 // inactividad dentro de la sesión de soporte técnico — se corta en silencio, sin aviso previo,
@@ -57,12 +58,15 @@ export async function requiereRolPanel(req, res, next) {
     return res.status(403).json({ error: 'Rol sin permiso' });
   }
 
-  if (perfil.rol === 'superadmin') {
-    const { data: configPlataforma } = await supabase
+  // La lectura se pasa entera —con su error— a la regla compartida: si la fila única de
+  // configuración no se puede leer, se exige el segundo factor igual y queda registrado
+  // (panel/src/lib/reglaMfaObligatorio.js, copiado acá; CLAUDE.md §7 regla 12).
+  if (elRolUsaSegundoFactor(perfil.rol)) {
+    const lecturaConfig = await supabase
       .from('configuracion_plataforma')
       .select('mfa_admin_obligatorio')
       .single();
-    if (configPlataforma?.mfa_admin_obligatorio && leerAalDelToken(token) !== 'aal2') {
+    if (elSegundoFactorEsObligatorio(lecturaConfig) && leerAalDelToken(token) !== 'aal2') {
       return res.status(403).json({ error: 'MFA requerido', codigo: 'mfa_requerido' });
     }
   }

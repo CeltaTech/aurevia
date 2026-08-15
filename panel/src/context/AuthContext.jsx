@@ -1,9 +1,8 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { elRolUsaSegundoFactor, elSegundoFactorEsObligatorio } from '../lib/reglaMfaObligatorio';
 
 const AuthContext = createContext(null);
-
-const ROLES_CON_MFA = ['superadmin'];
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined);
@@ -15,13 +14,16 @@ export function AuthProvider({ children }) {
   const [mfaEstado, setMfaEstado] = useState(null);
 
   async function evaluarMfa(usuarioActual) {
-    if (!usuarioActual || !ROLES_CON_MFA.includes(usuarioActual.rol)) {
+    if (!usuarioActual || !elRolUsaSegundoFactor(usuarioActual.rol)) {
       setMfaEstado('na');
       return;
     }
 
-    const { data: config } = await supabase.from('configuracion_plataforma').select('mfa_admin_obligatorio').single();
-    if (!config?.mfa_admin_obligatorio) {
+    // La lectura se pasa entera —con su error— a la regla compartida: si la fila única de
+    // configuración no se puede leer, se exige el segundo factor igual y queda registrado
+    // (lib/reglaMfaObligatorio.js; CLAUDE.md §7 regla 12).
+    const lecturaConfig = await supabase.from('configuracion_plataforma').select('mfa_admin_obligatorio').single();
+    if (!elSegundoFactorEsObligatorio(lecturaConfig)) {
       setMfaEstado('na');
       return;
     }

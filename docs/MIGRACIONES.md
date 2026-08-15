@@ -114,7 +114,7 @@ for table X`. Si aparece eso, no se toquen las políticas — falta el paso 1.
 ## 8. Cómo se aplican
 
 **En la máquina propia**, para desarrollar y probar. Desde
-`F:\proyectos\celtatech\productos\aurevia`:
+`F:\proyectos\celtatech\productos\careonys`:
 
 ```bash
 supabase start

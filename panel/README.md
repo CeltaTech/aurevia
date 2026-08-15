@@ -12,7 +12,7 @@ datos reales de personas reales. La base local es una copia vacía de la misma
 estructura, que se puede romper y rehacer cuantas veces haga falta.
 
 Son cuatro pasos y hay que hacerlos en este orden. Todos los comandos se corren
-**parado en `productos/aurevia/`**, salvo donde se aclara otra cosa.
+**parado en `productos/careonys/`**, salvo donde se aclara otra cosa.
 
 ### 1. Arrancar Docker Desktop
 
@@ -69,7 +69,7 @@ se borra entera en cada reset.
 
 Son dos ventanas de línea de comandos, cada una con lo suyo corriendo.
 
-**Ventana 1 — el backend**, parado en `productos/aurevia/backend/`:
+**Ventana 1 — el backend**, parado en `productos/careonys/backend/`:
 
 ```bash
 npm run dev
@@ -92,7 +92,7 @@ DOTENV_CONFIG_PATH=.env.local npm run dev
 Queda escuchando en `http://localhost:4000`. Para comprobarlo, `http://localhost:4000/health`
 tiene que contestar `{"status":"ok"}`.
 
-**Ventana 2 — el Panel**, parado en `productos/aurevia/panel/`:
+**Ventana 2 — el Panel**, parado en `productos/careonys/panel/`:
 
 ```bash
 npm run dev

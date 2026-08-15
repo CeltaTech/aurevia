@@ -235,7 +235,7 @@ No se salta directo al paso 3 aunque el cambio ya esté decidido de palabra — 
 
 **Documentación verificable:** toda afirmación sobre una decisión ya tomada cita **archivo y línea exacta** (`archivo.md:línea`), verificable en segundos sin tener que leer todo el archivo ni entender el contexto — nunca "según el proyecto..." o "ya estaba resuelto" sin decir exactamente dónde.
 
-**Cómo se escribe la ruta de un documento:** hay dos carpetas de documentos y las dos se llaman `docs/` — la del producto, en `productos/aurevia/docs/`, y la de la empresa, en `celtatech/docs/`. Un documento del producto se cita como siempre, desde la raíz del producto: `docs/CONTEXT.md`. Uno de la empresa se cita con la ruta entera desde `celtatech/`, para que se sepa dónde buscarlo: `celtatech/docs/ARQUITECTURA_NIVELES.md`, y no `ARQUITECTURA_NIVELES.md` a secas.
+**Cómo se escribe la ruta de un documento:** hay dos carpetas de documentos y las dos se llaman `docs/` — la del producto, en `productos/careonys/docs/`, y la de la empresa, en `celtatech/docs/`. Un documento del producto se cita como siempre, desde la raíz del producto: `docs/CONTEXT.md`. Uno de la empresa se cita con la ruta entera desde `celtatech/`, para que se sepa dónde buscarlo: `celtatech/docs/ARQUITECTURA_NIVELES.md`, y no `ARQUITECTURA_NIVELES.md` a secas.
 
 **Pendientes:** todo lo que quede abierto va a `docs/PENDIENTES.md` con nombre, fecha de creación y condición de cierre. Antes de cerrar cualquier tarea, se revisa esa lista completa — no de memoria — y se informa el estado de lo relacionado.
 

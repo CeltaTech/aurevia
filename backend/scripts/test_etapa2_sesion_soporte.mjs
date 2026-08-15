@@ -9,7 +9,7 @@
 // Supabase no es localhost. Es a propósito: los otros test_*.js de esta carpeta
 // leen el .env, que apunta a producción, y esa distracción no puede repetirse.
 //
-// Cómo correrlo, desde productos/aurevia/:
+// Cómo correrlo, desde productos/careonys/:
 //
 //   1. npx supabase start
 //   2. arrancar el backend apuntado a la base local, por ejemplo:

@@ -2,6 +2,14 @@
 
 > Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§10) — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
 
+## La carpeta del producto en el disco pasó a llamarse `careonys` (2026-08-15)
+
+- **Decía antes:** la carpeta del producto se llamaba `productos/aurevia`. La entrada del 2026-07-28 (más abajo) la anotaba como uno de los lugares que todavía llevaban el nombre viejo, a la espera de mudanza.
+- **Dice ahora:** se llama `productos/careonys`. Las siete carpetas hermanas de `productos/` se llaman por la marca de su producto; ésta también.
+- **Motivo:** era lo último del cambio de nombre que quedaba del lado del disco. Junto con la mudanza se corrigieron los seis lugares del repositorio que escribían la ruta a mano (`CLAUDE.md` §12, `docs/MIGRACIONES.md`, `panel/README.md`, dos líneas de `.claude/launch.json` y un comentario de `backend/scripts/test_etapa2_sesion_soporte.mjs`) y tres referencias en los documentos de la empresa (`celtatech/docs/ARQUITECTURA_NIVELES.md` y `celtatech/docs/PLAN_SEPARACION_CELTATECH.md`).
+- **Lo que no se tocó, a propósito:** `supabase/config.toml` sigue diciendo `project_id = "aurevia"`. Ése es el nombre con el que Docker bautiza los contenedores de la base local: es un identificador ya guardado, y la regla 13 de `CLAUDE.md` dice que esos no se renombran nunca. Por lo mismo siguen diciendo `aurevia` el repositorio de GitHub, el servicio de Railway y las direcciones prestadas de Vercel.
+- **No reintroducir:** arrancar Docker Desktop desde adentro de la carpeta del producto. Windows se negó a renombrarla —*"está siendo utilizada en otro proceso"*— porque Docker Desktop se había quedado parado ahí adentro: se lo había abierto desde esa carpeta y ésa quedó siendo su carpeta de trabajo. Se resolvió cerrando Docker Desktop y la máquina virtual de WSL, renombrando, y volviendo a abrirlo desde su propia carpeta de instalación.
+
 ## La página pública le vende software a las empresas de cuidado, no cuidado a las familias (2026-08-13)
 
 - **Decía antes:** `PRD_01_Sitio_Web.md` describía una página con dos públicos —familias que buscan un cuidador y personas que buscan trabajo de cuidador—, con un formulario para pedir el servicio, otro para postularse, ocho servicios de cuidado con sus precios y el lema *"Cuida tus afectos"* en la portada.

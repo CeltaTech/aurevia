@@ -126,7 +126,7 @@ export async function borrarCuenta(userId, { prestadoraId, esSuperadmin = false 
       .eq('id', userId)
       .single();
     if (errorObjetivo || !objetivo || objetivo.prestadora_id !== prestadoraId) {
-      throw new Error('No tenés permiso para dar de baja esa cuenta');
+      throw new Error('No hay permiso para dar de baja esa cuenta');
     }
   }
 

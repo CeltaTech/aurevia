@@ -124,7 +124,7 @@ export default function Matricula() {
   // cargó.
   let cartel = null;
   if (estado.motivo_bloqueo === 'sin_verificar') {
-    // "La cargaste" solamente cuando pudo haberla cargado él. Si la carga es de la
+    // "La matrícula que cargó" solamente cuando pudo haberla cargado él. Si la carga es de la
     // Prestadora, la frase se cuenta sin dueño: lo que importa es que está y falta que la
     // comprueben.
     cartel = { clase: 'alert', texto: puedeCargar ? tm.esperando_verificacion : tm.esperando_verificacion_prestadora };

@@ -276,7 +276,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, async (r
   const conFamilia = pacientes.filter((p) => p.familia_id);
   for (const p of conFamilia) {
     enviarPushFamilia(p.familia_id, {
-      titulo: 'Tu Asistente llegó',
+      titulo: 'Llegó el Asistente',
       cuerpo: `El Asistente llegó al domicilio de ${p.nombre}.`,
       url: `/pacientes/${p.id}`,
     }).catch((err) => console.error('Error enviando push de llegada a Familia:', err.message));
@@ -321,7 +321,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/estructurar', requiereRolAsisten
     const estructurado = await estructurarReporteIA(textoLibre, req.usuarioAsistente.prestadoraId);
     res.json({ estructurado });
   } catch (error) {
-    res.status(500).json({ error: 'No se pudo estructurar el reporte con IA — completá los campos a mano' });
+    res.status(500).json({ error: 'No se pudo estructurar el reporte con IA — hace falta completar los campos a mano' });
   }
 });
 
@@ -576,7 +576,7 @@ appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, exige
 // Reportes anteriores del mismo Paciente (botón "Ver reportes anteriores" en Guardia Activa).
 appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, exigeVisible('asistente_reportes_anteriores'), async (req, res) => {
   if (!(await asistenteAtiendeAlPaciente(req.params.id, req.usuarioAsistente))) {
-    return res.status(403).json({ error: 'No tenés guardias asignadas a este Paciente' });
+    return res.status(403).json({ error: 'No tiene guardias asignadas a este Paciente' });
   }
 
   // El reporte dice de quién habla, así que se piden directo. Antes había que buscar primero
@@ -684,7 +684,7 @@ appAsistentesRouter.patch('/calificaciones/:id/descargo', requiereRolAsistente, 
     return res.status(404).json({ error: 'Calificación no encontrada' });
   }
   if (calificacion.descargo_asistente) {
-    return res.status(409).json({ error: 'Ya cargaste un descargo para esta calificación, no puede editarse' });
+    return res.status(409).json({ error: 'Ya hay un descargo cargado para esta calificación, no puede editarse' });
   }
 
   const { error } = await supabase

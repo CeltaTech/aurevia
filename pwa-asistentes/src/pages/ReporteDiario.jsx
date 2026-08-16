@@ -249,7 +249,7 @@ export default function ReporteDiario() {
 
       {estructurado && (
         <>
-          {/* "Revisá y corregí" es el encabezado de lo que escribió la ayuda automática. Sin
+          {/* "Revisar y corregir" es el encabezado de lo que escribió la ayuda automática. Sin
               esa ayuda no hay nada escrito que revisar: los campos van en blanco y el título
               de la hoja, arriba, ya dice de qué se trata. */}
           {veElRelatoConIa && <h2>{t.reporte.revisar_titulo}</h2>}

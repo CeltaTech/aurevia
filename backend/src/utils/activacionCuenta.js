@@ -21,7 +21,7 @@ function urlAppPorRol(rol) {
 //
 // `marca` viene de `marcaPrestadora.js`. Si por lo que sea llegara vacía, se
 // usa el nombre del producto: es preferible un correo que dice Careonys a un
-// correo que dice "Activá tu cuenta en undefined".
+// correo que dice "Activación de la cuenta en undefined".
 function textosActivacionCuenta(nombre, link, marca) {
   const empresa = marca?.nombre || IDENTIDAD.nombre;
   const pie = {
@@ -32,16 +32,16 @@ function textosActivacionCuenta(nombre, link, marca) {
 
   return {
     'es-AR': {
-      asunto: `Activá tu cuenta en ${empresa}`,
-      texto: `Hola ${nombre},\n\nTe invitamos a activar tu cuenta en ${empresa} para poder acceder desde tu celular.\n\nActivá tu cuenta acá (el link vence en ${DIAS_VALIDEZ_TOKEN} días):\n${link}\n\nSi no esperabas este email, podés ignorarlo.${pie['es-AR']}`,
+      asunto: `Activación de la cuenta en ${empresa}`,
+      texto: `Hola ${nombre},\n\nYa está creada la cuenta en ${empresa}. Para poder entrar desde el celular hace falta activarla.\n\nSe activa acá (el link vence en ${DIAS_VALIDEZ_TOKEN} días):\n${link}\n\nSi no esperaba este correo, puede ignorarlo.${pie['es-AR']}`,
     },
     en: {
       asunto: `Activate your ${empresa} account`,
       texto: `Hi ${nombre},\n\nYou've been invited to activate your ${empresa} account so you can access it from your phone.\n\nActivate your account here (this link expires in ${DIAS_VALIDEZ_TOKEN} days):\n${link}\n\nIf you weren't expecting this email, you can ignore it.${pie.en}`,
     },
     'pt-BR': {
-      asunto: `Ative sua conta na ${empresa}`,
-      texto: `Olá ${nombre},\n\nVocê foi convidado a ativar sua conta na ${empresa} para acessar pelo celular.\n\nAtive sua conta aqui (o link expira em ${DIAS_VALIDEZ_TOKEN} dias):\n${link}\n\nSe você não esperava este email, pode ignorá-lo.${pie['pt-BR']}`,
+      asunto: `Ativação da conta na ${empresa}`,
+      texto: `Olá ${nombre},\n\nA conta na ${empresa} já está criada. Para acessar pelo celular é preciso ativá-la.\n\nA ativação é feita aqui (o link expira em ${DIAS_VALIDEZ_TOKEN} dias):\n${link}\n\nSe não esperava este email, pode ignorá-lo.${pie['pt-BR']}`,
     },
   };
 }

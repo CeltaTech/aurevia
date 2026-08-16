@@ -84,7 +84,7 @@ CREATE POLICY "panel_registra_advertencia_mostrada" ON auditoria_advertencias_le
 --    advertencia").
 -- ============================================================================
 INSERT INTO advertencias_legales (jurisdiccion, funcion_clave, texto_advertencia) VALUES
-('AR', 'penalizacion_inasistencias', 'Penalizar inasistencias o inconductas de un Asistente autónomo puede interpretarse como ejercicio de poder disciplinario, un indicio de subordinación bajo el art. 23 de la LCT. Evaluá si esta función es coherente con la modalidad de vínculo de tus Asistentes.'),
+('AR', 'penalizacion_inasistencias', 'Penalizar inasistencias o inconductas de un Asistente autónomo puede interpretarse como ejercicio de poder disciplinario, un indicio de subordinación bajo el art. 23 de la LCT. Conviene evaluar si esta función es coherente con la modalidad de vínculo de los Asistentes.'),
 ('AR', 'rankings', 'Publicar rankings que condicionan el acceso futuro a Guardias puede interpretarse como una forma de control jerárquico propia de una relación de dependencia (art. 23 LCT).'),
 ('AR', 'puntuacion_aceptacion_guardia', 'Puntuar la aceptación de Guardias y usarlo para asignar futuras oportunidades puede funcionar como una exigencia de disponibilidad, un indicio de subordinación (art. 23 LCT) más que de autonomía real del Asistente.'),
 ('AR', 'puntuacion_calificacion_familia', 'Condicionar oportunidades futuras a una calificación de terceros puede interpretarse como una forma de evaluación de desempeño propia de una relación laboral (art. 23 LCT).'),

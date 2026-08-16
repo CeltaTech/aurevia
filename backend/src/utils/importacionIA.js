@@ -106,7 +106,7 @@ export async function evaluarViabilidadIA({ tipo, nombreArchivo, buffer, prestad
   if (!anthropic) {
     return {
       viable: false,
-      motivo: 'ANTHROPIC_API_KEY no configurada — subí el archivo en Excel, CSV o un dump SQL estándar',
+      motivo: 'ANTHROPIC_API_KEY no configurada — hace falta subir el archivo en Excel, CSV o un dump SQL estándar',
       headers: [],
       filas: [],
     };
@@ -134,11 +134,11 @@ ${muestraTexto}`;
       return { viable: false, motivo: parseado.motivo || 'La IA determinó que no es viable importar este archivo con certeza', headers: [], filas: [] };
     }
     if (!Array.isArray(parseado.headers) || !Array.isArray(parseado.filas) || parseado.filas.length === 0) {
-      return { viable: false, motivo: 'La IA no devolvió filas interpretables — probá con un formato conocido (Excel, CSV, dump SQL)', headers: [], filas: [] };
+      return { viable: false, motivo: 'La IA no devolvió filas interpretables — conviene probar con un formato conocido (Excel, CSV, dump SQL)', headers: [], filas: [] };
     }
     return { viable: true, motivo: parseado.motivo || '', headers: parseado.headers, filas: parseado.filas };
   } catch {
-    return { viable: false, motivo: 'La IA no devolvió una respuesta válida — probá con un formato conocido (Excel, CSV, dump SQL)', headers: [], filas: [] };
+    return { viable: false, motivo: 'La IA no devolvió una respuesta válida — conviene probar con un formato conocido (Excel, CSV, dump SQL)', headers: [], filas: [] };
   }
 }
 
@@ -166,7 +166,7 @@ export async function proponerMapeoIA({ tipo, headers, filasMuestra, prestadoraI
   if (!anthropic) {
     return {
       mapeo: Object.fromEntries(headers.map((h) => [h, null])),
-      advertencias: ['ANTHROPIC_API_KEY no configurada — revisá y completá el mapeo a mano antes de confirmar'],
+      advertencias: ['ANTHROPIC_API_KEY no configurada — hace falta revisar y completar el mapeo a mano antes de confirmar'],
     };
   }
 
@@ -198,7 +198,7 @@ Primeras filas de muestra (JSON): ${JSON.stringify(filasMuestra.slice(0, 5))}`;
   } catch {
     return {
       mapeo: Object.fromEntries(headers.map((h) => [h, null])),
-      advertencias: ['La IA no devolvió un mapeo válido — revisá y completá el mapeo a mano antes de confirmar'],
+      advertencias: ['La IA no devolvió un mapeo válido — hace falta revisar y completar el mapeo a mano antes de confirmar'],
     };
   }
 }

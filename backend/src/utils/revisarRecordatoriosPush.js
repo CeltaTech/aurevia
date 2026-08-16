@@ -68,7 +68,7 @@ async function revisarGuardiasAsignadas() {
 
   for (const guardia of guardias ?? []) {
     const titulo = 'Nueva guardia asignada';
-    const cuerpo = `Tenés una guardia asignada el ${guardia.fecha} a las ${guardia.hora_inicio}.`;
+    const cuerpo = `Hay una guardia asignada el ${guardia.fecha} a las ${guardia.hora_inicio}.`;
 
     const enviadoPorPush = await enviarPushAsistente(guardia.asistente_id, {
       titulo,
@@ -146,7 +146,7 @@ async function revisarRecordatoriosGuardiaProxima() {
     if (inicio.getTime() > limite.getTime() || inicio.getTime() < ahora.getTime()) continue;
 
     const titulo = 'Recordatorio de guardia';
-    const cuerpo = `Tu guardia del ${guardia.fecha} empieza a las ${guardia.hora_inicio}.`;
+    const cuerpo = `La guardia del ${guardia.fecha} empieza a las ${guardia.hora_inicio}.`;
 
     const enviadoPorPush = await enviarPushAsistente(guardia.asistente_id, {
       titulo,

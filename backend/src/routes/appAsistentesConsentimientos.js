@@ -174,7 +174,7 @@ appAsistentesConsentimientosRouter.post('/', requiereRolAsistente, async (req, r
     idioma,
   });
   if (!texto) {
-    return res.status(409).json({ error: 'Todavía no hay texto de consentimiento para tu país' });
+    return res.status(409).json({ error: 'Todavía no hay texto de consentimiento para este país' });
   }
 
   const viva = await decisionViva(contexto.asistente.id, clave);

@@ -49,7 +49,7 @@ export async function revisarAvisosAutomaticosCese() {
 
 async function enviarAvisoCese({ pendiente, prestadoraId }) {
   const titulo = 'Aviso: finalización de servicio';
-  const cuerpo = 'Se cerró el servicio en el que participabas. Comunicate con tu coordinador para más información.';
+  const cuerpo = 'Se cerró el servicio en el que participaba. Para más información, puede comunicarse con el coordinador.';
 
   await enviarPushAsistente(pendiente.asistente_id, { titulo, cuerpo });
 

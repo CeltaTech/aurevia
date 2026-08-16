@@ -13,11 +13,11 @@ export const panelNotificacionesRouter = Router();
 function mensajesEstadoPostulacion(nombreEmpresa) {
   return {
     'es-AR': {
-      asunto: `${nombreEmpresa} — Actualización de tu postulación`,
+      asunto: `${nombreEmpresa} — Actualización de la postulación`,
       saludo: (nombre) => `Hola ${nombre || ''},`,
-      en_revision: 'Tu postulación como Asistente Integral está en revisión.',
-      aprobado: 'Tu postulación como Asistente Integral fue aprobada. Pronto nos pondremos en contacto para los próximos pasos.',
-      rechazado: `Gracias por tu interés en ${nombreEmpresa}. En esta oportunidad no vamos a avanzar con tu postulación.`,
+      en_revision: 'La postulación como Asistente Integral está en revisión.',
+      aprobado: 'La postulación como Asistente Integral fue aprobada. Pronto nos pondremos en contacto para los próximos pasos.',
+      rechazado: `Gracias por el interés en ${nombreEmpresa}. En esta oportunidad no vamos a avanzar con la postulación.`,
       firma: `Equipo ${nombreEmpresa}`,
     },
     en: {
@@ -29,11 +29,11 @@ function mensajesEstadoPostulacion(nombreEmpresa) {
       firma: `${nombreEmpresa} Team`,
     },
     'pt-BR': {
-      asunto: `${nombreEmpresa} — Atualização da sua candidatura`,
+      asunto: `${nombreEmpresa} — Atualização da candidatura`,
       saludo: (nombre) => `Olá ${nombre || ''},`,
-      en_revision: 'Sua candidatura como Asistente Integral está em análise.',
-      aprobado: 'Sua candidatura como Asistente Integral foi aprovada. Em breve entraremos em contato para os próximos passos.',
-      rechazado: `Obrigado pelo seu interesse na ${nombreEmpresa}. Desta vez não vamos avançar com sua candidatura.`,
+      en_revision: 'A candidatura como Asistente Integral está em análise.',
+      aprobado: 'A candidatura como Asistente Integral foi aprovada. Em breve entraremos em contato para os próximos passos.',
+      rechazado: `Obrigado pelo interesse na ${nombreEmpresa}. Desta vez não vamos avançar com a candidatura.`,
       firma: `Equipe ${nombreEmpresa}`,
     },
   };

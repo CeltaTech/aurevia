@@ -125,7 +125,7 @@ appAsistentesMatriculaRouter.post(
     // catálogo. Dejarlo elegir sería dejarlo cargar la Matrícula equivocada y
     // seguir trabado sin entender por qué.
     if (!estado || estado.requiere_matricula !== true || !estado.tipo_matricula) {
-      return res.status(400).json({ error: 'Tu tipo de Asistente no requiere matrícula' });
+      return res.status(400).json({ error: 'Este tipo de Asistente no requiere matrícula' });
     }
     if (!vigenteDesde) {
       return res.status(400).json({ error: 'Falta la fecha desde la que vale la matrícula' });

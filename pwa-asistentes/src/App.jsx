@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PerfilProvider } from './context/PerfilContext';
-import { LocaleProvider } from './i18n/LocaleContext';
+import { LocaleProvider, useLocale } from './i18n/LocaleContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import ActivarCuenta from './pages/ActivarCuenta';
@@ -12,19 +12,21 @@ import MiPerfil from './pages/MiPerfil';
 
 function RutaPrivada({ children }) {
   const { session, cargando } = useAuth();
-  if (cargando) return <div className="pantalla-cargando estado-cargando">Cargando…</div>;
+  const { t } = useLocale();
+  if (cargando) return <div className="pantalla-cargando estado-cargando">{t.comun.cargando}</div>;
   if (!session) return <Navigate to="/login" replace />;
   return children;
 }
 
 function Rutas() {
   const { session, cargando } = useAuth();
+  const { t } = useLocale();
 
   return (
     <Routes>
       <Route
         path="/login"
-        element={cargando ? <div className="estado-cargando">Cargando…</div> : session ? <Navigate to="/guardias" replace /> : <Login />}
+        element={cargando ? <div className="estado-cargando">{t.comun.cargando}</div> : session ? <Navigate to="/guardias" replace /> : <Login />}
       />
       <Route path="/activar-cuenta" element={<ActivarCuenta />} />
       <Route

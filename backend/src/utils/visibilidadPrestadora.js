@@ -46,7 +46,7 @@ export function exigeVisible(clave) {
   return async (req, res, next) => {
     const visibilidad = await visibilidadDelPedido(req);
     if (!visibilidad[clave]) {
-      return res.status(403).json({ error: 'Tu Prestadora no tiene esta función activada', motivo: 'no_disponible' });
+      return res.status(403).json({ error: 'La Prestadora no tiene esta función activada', motivo: 'no_disponible' });
     }
     next();
   };

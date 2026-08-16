@@ -69,7 +69,7 @@ appFamiliasMedicacionRouter.post(
     // Mismo criterio que calificar una guardia (appFamilias.js): un miembro invitado de solo
     // lectura no puede generar una solicitud que compromete la administración de medicación.
     if (req.usuarioFamilia.rolCirculo === 'solo_lectura') {
-      return res.status(403).json({ error: 'Tu acceso es de solo lectura' });
+      return res.status(403).json({ error: 'Este acceso es de solo lectura' });
     }
 
     const paciente = await pacienteDeLaFamilia(req.params.pacienteId, req.usuarioFamilia);

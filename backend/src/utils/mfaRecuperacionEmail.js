@@ -38,7 +38,7 @@ export async function solicitarCodigoRecuperacion(usuarioId) {
   await enviarEmail({
     to: userData.user.email,
     asunto: `Código de recuperación de acceso — ${IDENTIDAD.nombre}`,
-    texto: `Tu código de recuperación es ${codigo}. Vence en ${VIGENCIA_MINUTOS} minutos. Si no lo pediste vos, ignorá este email.`,
+    texto: `El código de recuperación es ${codigo}. Vence en ${VIGENCIA_MINUTOS} minutos. Si no lo pidió usted, puede ignorar este correo.`,
   });
 }
 

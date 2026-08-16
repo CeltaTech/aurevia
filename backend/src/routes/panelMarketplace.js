@@ -18,7 +18,7 @@ function requiereAdminOSuperior(req, res, next) {
     return res.status(403).json({ error: 'Rol sin permiso' });
   }
   if (!req.usuarioPanel.prestadoraId) {
-    return res.status(400).json({ error: 'Entrá a una prestadora antes de operar sobre marketplace' });
+    return res.status(400).json({ error: 'Hace falta entrar a una prestadora antes de operar sobre marketplace' });
   }
   next();
 }
@@ -198,7 +198,7 @@ panelMarketplaceRouter.post('/qr-cobro/canjear', async (req, res) => {
     return res.status(409).json({ error: 'Este QR ya fue usado' });
   }
   if (new Date(qr.expira_en) < new Date()) {
-    return res.status(410).json({ error: 'Este QR venció, pedile a la Familia que genere uno nuevo' });
+    return res.status(410).json({ error: 'Este QR venció, hace falta pedirle a la Familia que genere uno nuevo' });
   }
 
   const { data: suscripcion } = await supabase
@@ -208,7 +208,7 @@ panelMarketplaceRouter.post('/qr-cobro/canjear', async (req, res) => {
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
   if (!suscripcion) {
-    return res.status(404).json({ error: 'La suscripción de este QR no pertenece a tu Prestadora' });
+    return res.status(404).json({ error: 'La suscripción de este QR no pertenece a esta Prestadora' });
   }
 
   const { data: cobro, error: errorCobro } = await supabase

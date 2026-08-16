@@ -40,7 +40,7 @@ function requierePermiso(accion) {
       prestadoraId: req.usuarioPanel?.prestadoraId,
     });
     if (!permitido) {
-      return res.status(403).json({ error: 'Tu Prestadora no te habilitó para esta acción' });
+      return res.status(403).json({ error: 'La Prestadora no habilitó esta acción' });
     }
     next();
   };
@@ -93,7 +93,7 @@ panelImportacionRouter.post(
         filas,
         mapeoPropuesto: mapeo,
         advertencias: viaIA
-          ? ['La estructura de este archivo fue interpretada por IA — revisá el mapeo con especial atención antes de confirmar', ...advertencias]
+          ? ['La estructura de este archivo fue interpretada por IA — conviene revisar el mapeo con especial atención antes de confirmar', ...advertencias]
           : advertencias,
         camposDisponibles: CAMPOS_IMPORTACION[tipo],
         archivoNombre: req.file.originalname,

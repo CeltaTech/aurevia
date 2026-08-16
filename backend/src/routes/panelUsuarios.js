@@ -51,7 +51,7 @@ panelUsuariosRouter.post('/', requiereRolPanel, requiereAdminOSuperior, async (r
   const rolPermitidos = rolesGestionables(req.usuarioPanel.rol);
   const rolNuevo = req.usuarioPanel.rol === 'superadmin' ? (rol || 'coordinador') : 'coordinador';
   if (!rolPermitidos.includes(rolNuevo)) {
-    return res.status(403).json({ error: 'No tenés permiso para crear cuentas con ese rol' });
+    return res.status(403).json({ error: 'No hay permiso para crear cuentas con ese rol' });
   }
 
   // La cuenta nueva nace SIEMPRE en la Organización activa de quien la crea. Nadie elige el
@@ -74,7 +74,7 @@ panelUsuariosRouter.post('/', requiereRolPanel, requiereAdminOSuperior, async (r
     : req.usuarioPanel.prestadoraId;
 
   if (!prestadoraDestino && rolNuevo !== 'superadmin') {
-    return res.status(400).json({ error: 'Entrá a una prestadora antes de dar de alta la cuenta' });
+    return res.status(400).json({ error: 'Hace falta entrar a una prestadora antes de dar de alta la cuenta' });
   }
 
   try {
@@ -106,14 +106,14 @@ panelUsuariosRouter.patch('/:id', requiereRolPanel, requiereAdminOSuperior, asyn
 
 panelUsuariosRouter.delete('/:id', requiereRolPanel, requiereAdminOSuperior, async (req, res) => {
   if (req.params.id === req.usuarioPanel.id) {
-    return res.status(400).json({ error: 'No podés dar de baja tu propia cuenta desde acá' });
+    return res.status(400).json({ error: 'La cuenta propia no se da de baja desde acá' });
   }
 
   let queryUsuario = supabase.from('usuarios').select('rol, prestadora_id').eq('id', req.params.id);
   queryUsuario = acotarAUsuariosDelPanel(queryUsuario, req.usuarioPanel);
   const { data: usuario } = await queryUsuario.maybeSingle();
   if (!usuario || !rolesGestionables(req.usuarioPanel.rol).includes(usuario.rol)) {
-    return res.status(400).json({ error: 'No tenés permiso para dar de baja esa cuenta' });
+    return res.status(400).json({ error: 'No hay permiso para dar de baja esa cuenta' });
   }
 
   await borrarCuenta(req.params.id, {

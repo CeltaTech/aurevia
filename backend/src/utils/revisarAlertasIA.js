@@ -167,12 +167,12 @@ export async function analizarPaciente(pacienteId, prestadoraId) {
       // El aviso a la Familia se mide según el nivel: la amarilla no es una urgencia y
       // anunciarla con las palabras de la roja asusta sin motivo. Antes solo salía la roja,
       // así que este segundo texto no existía.
-      titulo: esRoja ? 'Alerta sobre tu Paciente' : 'Novedad sobre tu Paciente',
+      titulo: esRoja ? 'Alerta sobre el Paciente' : 'Novedad sobre el Paciente',
       cuerpo:
         resultado.descripcion
         || (esRoja
-          ? 'Hay una novedad importante — revisá la app.'
-          : 'Hay algo para mirar sin apuro — revisá la app.'),
+          ? 'Hay una novedad importante para revisar en la app.'
+          : 'Hay algo para mirar sin apuro en la app.'),
       url: `/pacientes/${pacienteId}/alertas`,
     }).catch((err) => console.error('Error enviando push de alerta roja a Familia:', err.message));
   }

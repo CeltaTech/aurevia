@@ -46,7 +46,7 @@ export function acotarAPrestadora(query, usuarioPanel) {
  */
 export function exigirOrganizacionActiva(req, res, next) {
   if (!req.usuarioPanel?.prestadoraId) {
-    return res.status(400).json({ error: 'Entrá a una prestadora antes de operar sobre sus datos' });
+    return res.status(400).json({ error: 'Hace falta entrar a una prestadora antes de operar sobre sus datos' });
   }
   next();
 }

@@ -110,7 +110,7 @@ panelSesionTenantRouter.post('/', requiereRolPanel, requiereSoporteTecnico, asyn
     .maybeSingle();
 
   if (sesionVigente) {
-    return res.status(409).json({ error: 'Ya hay una sesión de prestadora activa — salí primero para entrar a otra' });
+    return res.status(409).json({ error: 'Ya hay una sesión de prestadora activa — hace falta salir de ella antes de entrar a otra' });
   }
 
   const { data: prestadora } = await supabase.from('prestadoras').select('id').eq('id', prestadora_id).maybeSingle();

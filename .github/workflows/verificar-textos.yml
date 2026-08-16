@@ -1,14 +1,23 @@
 name: Verificar textos traducidos
 
-# El guardarraíl del pendiente #114: que no queden textos traducidos que ninguna pantalla usa.
+# Los guardarraíles del texto visible. Son dos programas y revisan cuatro cosas:
 #
-# Una traducción muerta no rompe nada —por eso nadie la ve— pero engaña: se lee como una
-# función que existe cuando en realidad no está construida, y cada idioma nuevo obliga a
-# traducirla otra vez. El 2026-08-03 había 54 así.
+#   buscar_textos_huerfanos.mjs (pendiente #114)
+#     · que no queden textos traducidos que ninguna pantalla usa. Una traducción muerta no
+#       rompe nada —por eso nadie la ve— pero engaña: se lee como una función que existe
+#       cuando en realidad no está construida. El 2026-08-03 había 54 así;
+#     · que ninguna clave quede a medio traducir (regla 2 del §7 de CLAUDE.md).
 #
-# Corre en cada push y en cada pull request. El script no tiene dependencias, así que no hay
-# npm install. Si falla, hay dos respuestas correctas: construir la pantalla que usa ese
-# texto, o borrarlo de los tres idiomas.
+#   verificar_texto_visible.mjs (pendiente #144)
+#     · que ninguna pantalla tenga una frase escrita a mano en vez de tomarla del archivo
+#       de traducciones (regla 1 del §7);
+#     · que ningún texto visible tutee a quien lo lee (misma regla).
+#
+# Los dos existen por el mismo motivo: eran reglas escritas que solo controlaba una persona
+# leyendo, y se rompieron igual. Una regla que corta la publicación no se rompe sola.
+#
+# Corre en cada push y en cada pull request. Ninguno de los dos tiene dependencias, así que
+# no hay npm install.
 
 on:
   push:
@@ -25,5 +34,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Buscar textos huérfanos
+      - name: Buscar textos huérfanos y a medio traducir
         run: node scripts/buscar_textos_huerfanos.mjs
+
+      # `if: always()` para que este corra aunque el anterior haya fallado: son dos problemas
+      # distintos y conviene verlos juntos, no uno por vez en dos publicaciones seguidas.
+      - name: Buscar texto escrito a mano y textos que tutean
+        if: always()
+        run: node scripts/verificar_texto_visible.mjs

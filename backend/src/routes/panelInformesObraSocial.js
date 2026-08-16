@@ -17,7 +17,7 @@ function requierePermiso(accion) {
       prestadoraId: req.usuarioPanel?.prestadoraId,
     });
     if (!permitido) {
-      return res.status(403).json({ error: 'Tu Prestadora no te habilitó para esta acción' });
+      return res.status(403).json({ error: 'La Prestadora no habilitó esta acción' });
     }
     next();
   };

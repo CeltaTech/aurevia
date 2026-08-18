@@ -1,6 +1,10 @@
-name: Publicar las aplicaciones de pantalla en Cloudflare Pages
+name: Publicar las pantallas y la página raíz en Cloudflare Pages
 
-# El Panel y las dos aplicaciones de celular viven en Cloudflare Pages como proyectos de
+# El Panel, las dos aplicaciones de celular y la página raíz de careonys.com viven en
+# Cloudflare Pages. Las tres primeras se arman con Vite y van en la matriz de abajo; la
+# página raíz no es una aplicación y va en un job aparte, al final.
+#
+# Los cuatro son proyectos de
 # "subida directa": no están enganchados a este repositorio, así que un `git push` NO las
 # publica. Hasta el 2026-08-02 el despliegue era un comando a mano, y eso deja abierta la
 # posibilidad de que el sitio en vivo se quede con una versión vieja sin que nada avise
@@ -25,6 +29,7 @@ on:
       - 'panel/**'
       - 'pwa-familias/**'
       - 'pwa-asistentes/**'
+      - 'sitio-web/**'
       - '.github/workflows/publicar-pantallas.yml'
   # También se puede disparar a mano desde la pestaña Actions, por si hace falta
   # volver a publicar sin cambiar código.
@@ -112,3 +117,63 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler@4 pages deploy dist --project-name=${{ matrix.proyecto }} --branch=main --commit-dirty=true
+
+  # ---------------------------------------------------------------------------
+  # La página raíz de careonys.com (el cartel de "en construcción").
+  #
+  # Va aparte de la matriz porque no es una aplicación: es un HTML suelto, sin Vite y
+  # sin dependencias, que `construir.mjs` arma resolviendo los marcadores del nombre
+  # del producto. Hasta el 2026-08-18 se publicaba a mano, y pasó lo que tenía que
+  # pasar: una corrección de texto quedó dos días en el repositorio sin llegar a la web.
+  # ---------------------------------------------------------------------------
+  publicar-sitio:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: ¿Cambió la página raíz?
+        id: cambios
+        env:
+          ANTES: ${{ github.event.before }}
+          AHORA: ${{ github.sha }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Disparado a mano: se publica igual."
+            echo "hay=si" >> "$GITHUB_OUTPUT"
+          elif ! git cat-file -e "$ANTES" 2>/dev/null; then
+            echo "No puedo ver la versión anterior: publico por las dudas."
+            echo "hay=si" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$ANTES" "$AHORA" | grep -q "^sitio-web/"; then
+            echo "Cambió sitio-web: se publica."
+            echo "hay=si" >> "$GITHUB_OUTPUT"
+          else
+            echo "No cambió sitio-web: no se toca lo que está publicado."
+            echo "hay=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.cambios.outputs.hay == 'si'
+        with:
+          node-version: '22'
+
+      - name: Armar la página
+        if: steps.cambios.outputs.hay == 'si'
+        run: node sitio-web/construir.mjs
+
+      - name: Comprobar que quedó armada
+        if: steps.cambios.outputs.hay == 'si'
+        run: |
+          # Si el armado saliera vacío, subirlo dejaría la dirección del producto en
+          # blanco. Mejor frenar acá.
+          test -f sitio-web/dist/index.html || { echo "No hay sitio-web/dist/index.html: no se sube nada."; exit 1; }
+          # Un marcador sin resolver significa que el nombre del producto no se aplicó.
+          ! grep -q "{{producto}}" sitio-web/dist/index.html || { echo "Quedó un marcador sin resolver: no se sube nada."; exit 1; }
+
+      - name: Subir a Cloudflare Pages
+        if: steps.cambios.outputs.hay == 'si'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler@4 pages deploy sitio-web/dist --project-name=careonys-sitio --branch=main --commit-dirty=true

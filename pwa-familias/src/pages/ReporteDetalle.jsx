@@ -26,18 +26,23 @@ export default function ReporteDetalle() {
   const [rangosVitales, setRangosVitales] = useState({});
   const [error, setError] = useState('');
 
+  // Se pide este reporte y nada más. Antes se pedía la lista entera —hasta 60 reportes con
+  // todo adentro— para quedarse con uno: el resto era información de salud de esa persona
+  // viajando al teléfono para descartarse en el acto.
   useEffect(() => {
     let activo = true;
     api
-      .reportesDelPaciente(id)
-      .then(({ reportes, rangosVitales: rangos }) => {
+      .reporteDelPaciente(id, reporteId)
+      .then(({ reporte: uno, rangosVitales: rangos }) => {
         if (!activo) return;
-        const encontrado = reportes.find((r) => r.id === reporteId);
-        setReporte(encontrado || false);
+        setReporte(uno || false);
         setRangosVitales(rangos || {});
       })
-      .catch(() => {
-        if (activo) setError(t.comun.error_generico);
+      .catch((e) => {
+        if (!activo) return;
+        // Un reporte que no está no es una falla: la pantalla lo muestra como vacío.
+        if (e?.status === 404) setReporte(false);
+        else setError(t.comun.error_generico);
       });
     return () => {
       activo = false;
@@ -63,18 +68,24 @@ export default function ReporteDetalle() {
         <div>{reporte.alimentacion?.descripcion || t.reporte_detalle.sin_datos}</div>
       </div>
 
-      <div className="reporte-preview-campo">
-        <label>{t.reporte_detalle.campo_medicacion}</label>
-        {Array.isArray(reporte.medicacion) && reporte.medicacion.length > 0 ? (
-          reporte.medicacion.map((m, i) => (
-            <div key={i}>
-              {[m.nombre, m.hora, m.via].filter(Boolean).join(' · ')}
-            </div>
-          ))
-        ) : (
-          <div>{t.reporte_detalle.sin_datos}</div>
-        )}
-      </div>
+      {/* Mismo motivo que los signos vitales: la Prestadora que no muestra la medicación
+          tampoco la muestra adentro del reporte del día. Sin esta condición el motor deja de
+          mandarla pero el título queda igual, con un "sin datos" debajo que hace creer que ese
+          día no se le dio nada. */}
+      {seVe('familia_medicacion_del_paciente') && (
+        <div className="reporte-preview-campo">
+          <label>{t.reporte_detalle.campo_medicacion}</label>
+          {Array.isArray(reporte.medicacion) && reporte.medicacion.length > 0 ? (
+            reporte.medicacion.map((m, i) => (
+              <div key={i}>
+                {[m.nombre, m.hora, m.via].filter(Boolean).join(' · ')}
+              </div>
+            ))
+          ) : (
+            <div>{t.reporte_detalle.sin_datos}</div>
+          )}
+        </div>
+      )}
 
       {/* La Prestadora que no hace enfermería no toma estos valores. Sin esta condición el
           motor deja de mandarlos pero el título queda igual, con un "sin datos" debajo que

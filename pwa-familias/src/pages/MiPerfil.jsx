@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { activarPush, desactivarPush, pushSoportado, suscripcionActual } from '../lib/push';
+import { useSeVe } from '../context/PerfilContext';
 
 export default function MiPerfil() {
   const { t } = useLocale();
+  const seVe = useSeVe();
   const [perfil, setPerfil] = useState(null);
   const [error, setError] = useState('');
   const [notifActivas, setNotifActivas] = useState(false);
@@ -69,8 +71,15 @@ export default function MiPerfil() {
         <div>{perfil.nombre}</div>
         <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.telefono}</div>
         <div>{perfil.telefono || '—'}</div>
-        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.plan}</div>
-        <div>{perfil.plan || '—'}</div>
+        {/* El plan contratado es una condición comercial, no un dato del cuidado: va con el
+            resto de lo que la Prestadora decide mostrar sobre el dinero. Hay Prestadoras que
+            cobran por fuera de la aplicación y no quieren que aparezca acá. */}
+        {seVe('familia_pagos_y_suscripcion') && (
+          <>
+            <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.plan}</div>
+            <div>{perfil.plan || '—'}</div>
+          </>
+        )}
         <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.rol_circulo}</div>
         <div>{perfil.rolCirculo === 'titular' ? t.perfil.rol_titular : t.perfil.rol_solo_lectura}</div>
       </div>

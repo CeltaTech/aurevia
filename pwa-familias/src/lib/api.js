@@ -33,6 +33,7 @@ export const api = {
   misPacientes: () => pedido('/pacientes'),
   paciente: (id) => pedido(`/pacientes/${id}`),
   reportesDelPaciente: (id) => pedido(`/pacientes/${id}/reportes`),
+  reporteDelPaciente: (id, reporteId) => pedido(`/pacientes/${id}/reportes/${reporteId}`),
   alertasDelPaciente: (id) => pedido(`/pacientes/${id}/alertas`),
   asistenteDelPaciente: (id) => pedido(`/pacientes/${id}/asistente`),
   verificarAsistente: (pacienteId, qrToken) => pedido(`/pacientes/${pacienteId}/verificar-asistente/${encodeURIComponent(qrToken)}`),

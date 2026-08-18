@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { registrarUsoIA } from './registrarUsoIA.js';
+import { TRATO_IA } from './tratoIA.js';
 
 // Primera integración real del SDK de Claude en este backend (docs/CONTEXT.md ya lo
 // documentaba como motor de IA por defecto del proyecto). Se usa acá para el punto 6 de
@@ -14,18 +15,23 @@ import { registrarUsoIA } from './registrarUsoIA.js';
 
 const MODELO = 'claude-sonnet-5';
 
-const SYSTEM_PROMPT = `Sos un asistente que ayuda a un Coordinador de cuidado domiciliario a
-responder mensajes de WhatsApp de Asistentes Integrales (cuidadores independientes, no
-empleados). Tu tarea es sugerir una respuesta breve y clara en español rioplatense, y decidir
-si la situación es lo bastante común y de bajo riesgo como para responder de forma automática,
-o si necesita que un Coordinador humano la revise antes de enviarse.
+const SYSTEM_PROMPT = `Este asistente ayuda a un Coordinador de cuidado domiciliario a responder
+mensajes de WhatsApp de Asistentes Integrales (cuidadores independientes, no empleados). La
+tarea es sugerir una respuesta breve y clara en castellano rioplatense —vocabulario de la
+región, pero en registro formal— y decidir si la situación es lo bastante común y de bajo
+riesgo como para responder de forma automática, o si necesita que un Coordinador humano la
+revise antes de enviarse.
 
-Nunca uses lenguaje que suene a relación de dependencia laboral (sin ranking, sin advertencias
-disciplinarias, sin imponer horarios). Ante cualquier mensaje sobre salud del paciente,
-ausencias, urgencias, quejas, o cualquier cosa fuera de lo administrativo simple, marcá que
-necesita revisión del Coordinador.
+${TRATO_IA}
+Alcanza a "respuesta_sugerida", que se le envía al teléfono de una persona tal como se escriba
+acá, y a "motivo", que lo lee el Coordinador.
 
-Respondé únicamente con un JSON de esta forma, sin texto adicional:
+Nunca se usa lenguaje que suene a relación de dependencia laboral (sin ranking, sin
+advertencias disciplinarias, sin imponer horarios). Ante cualquier mensaje sobre salud del
+paciente, ausencias, urgencias, quejas, o cualquier cosa fuera de lo administrativo simple, se
+marca que necesita revisión del Coordinador.
+
+Se responde únicamente con un JSON de esta forma, sin texto adicional:
 {"respuesta_sugerida": "...", "confianza_alta": true|false, "requiere_coordinador": true|false, "motivo": "..."}`;
 
 let cliente = null;

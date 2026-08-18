@@ -1,6 +1,7 @@
 import XLSX from 'xlsx';
 import Anthropic from '@anthropic-ai/sdk';
 import { registrarUsoIA } from './registrarUsoIA.js';
+import { TRATO_IA } from './tratoIA.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 
 // Fase 3 del plan "Terminar la Etapa 2 (Panel)" (importación masiva de datos con IA).
@@ -83,20 +84,23 @@ export function intentarParsearSQL(buffer) {
   return { headers: columnas, filas };
 }
 
-const SYSTEM_PROMPT_VIABILIDAD = `Sos un asistente que decide si un archivo, subido por una
+const SYSTEM_PROMPT_VIABILIDAD = `Este asistente decide si un archivo, subido por una
 Prestadora de cuidado domiciliario a ${IDENTIDAD.nombre} para importación masiva de Asistentes o
 Familias/Pacientes, se puede interpretar como una tabla de datos con certeza suficiente de
 no producir una importación incorrecta. El archivo no es un Excel/CSV/planilla estándar ni
 un dump SQL reconocible (esos casos ya se resolvieron antes de llegar acá) — puede ser JSON,
 XML, texto de ancho fijo, u otro formato exportado por un sistema de terceros.
 
-Si NO podés garantizar con confianza razonable qué valor de cada fila corresponde a qué
-columna, marcá viable=false y explicá el motivo en una frase — nunca inventes una
-estructura de columnas que no esté claramente presente en la muestra.
+Si no hay garantía razonable de qué valor de cada fila corresponde a qué columna, se marca
+viable=false y se explica el motivo en una frase — nunca se inventa una estructura de columnas
+que no esté claramente presente en la muestra.
 
-Respondé únicamente con un JSON de esta forma, sin texto adicional:
+${TRATO_IA}
+Alcanza a "motivo", que se muestra en pantalla a quien subió el archivo.
+
+Se responde únicamente con un JSON de esta forma, sin texto adicional:
 {"viable": true|false, "motivo": "texto breve", "headers": ["col1", "col2", ...], "filas": [{"col1": "valor", ...}, ...]}
-Si viable=false, dejá "headers" y "filas" como arrays vacíos.`;
+Si viable=false, "headers" y "filas" quedan como arrays vacíos.`;
 
 // Capa 2: juicio de viabilidad de IA para formatos que no calzaron con la Capa 1 (ni
 // `xlsx` ni el parser de dump SQL). Fallback seguro ante falta de API key o respuesta
@@ -142,15 +146,18 @@ ${muestraTexto}`;
   }
 }
 
-const SYSTEM_PROMPT = `Sos un asistente que ayuda a mapear columnas de una planilla (Excel/CSV)
+const SYSTEM_PROMPT = `Este asistente ayuda a mapear columnas de una planilla (Excel/CSV)
 subida por una Prestadora de cuidado domiciliario a los campos internos del sistema ${IDENTIDAD.nombre},
 para importar Asistentes (cuidadores) o Familias/Pacientes en forma masiva. Cada Prestadora
 nombra sus columnas distinto (puede venir en español, con abreviaturas, en otro orden, con
-columnas de más que no aplican). Tu tarea es proponer, para cada columna del archivo, a qué
+columnas de más que no aplican). La tarea es proponer, para cada columna del archivo, a qué
 campo interno corresponde (o null si no aplica a ninguno), y marcar advertencias sobre datos
 que parezcan faltantes, ambiguos o de formato dudoso mirando las filas de muestra.
 
-Respondé únicamente con un JSON de esta forma, sin texto adicional:
+${TRATO_IA}
+Alcanza a "advertencias", que se muestran en pantalla a quien subió la planilla.
+
+Se responde únicamente con un JSON de esta forma, sin texto adicional:
 {"mapeo": {"columna_del_archivo": "campo_interno_o_null", ...}, "advertencias": ["texto breve", ...]}`;
 
 let cliente = null;

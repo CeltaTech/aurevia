@@ -2,6 +2,14 @@
 
 > Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§10) — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
 
+## La regla del trato también rige lo que escribe la IA (2026-08-18)
+
+- **Decía antes:** la regla 1 del §7 nombraba las pantallas, los correos automáticos, los avisos al celular y los mensajes de error. Las instrucciones que se le dan a la IA no decían una palabra sobre el trato, y una de ellas —`backend/src/utils/iaWhatsapp.js`— le pedía escribir "en español rioplatense", que es pedirle voseo. El control automático las tenía en su lista de excepciones con una nota que reconocía el agujero.
+- **Dice ahora:** la regla alcanza igual al texto que redacta un modelo. Se le dice adentro de la instrucción, escrito una sola vez en `backend/src/utils/tratoIA.js`, que los cuatro prompts con salida para personas insertan. Los prompts tampoco se escriben tuteando al modelo, porque eso lo empuja a contestar en ese registro.
+- **Motivo, en palabras del Desarrollador:** *"que te dije yo de como tratar a las personas? es se aplica tambien a como la IA debe hacerlo"*. Una decisión suya no se limita al lugar donde la dijo: alcanza a todo caso que caiga adentro, aunque no estuviera a la vista cuando la tomó.
+- **No reintroducir:** pedirle a la IA un registro local informal ("rioplatense", "cercano", "amigable") creyendo que el trato solo corre para el texto escrito a mano. El vocabulario de la región se conserva; lo que no se usa es el voseo.
+- **Lo que este control no puede atrapar:** el texto de la IA no existe en ningún archivo hasta que el modelo responde, así que `scripts/verificar_texto_visible.mjs` nunca va a verlo. Se resuelve por instrucción, no por control — anotado también dentro del pendiente `#145` para que nadie lo intente por ahí.
+
 ## Los archivos viejos se borran; la base real y el código mandan (2026-08-18)
 
 - **Decía antes:** el repositorio guardaba dos historiales completos de archivos `.sql` que nunca se ejecutaban —75 en `backend/src/db/` y 76 en `supabase/historial_previo/`— más un documento de investigación sobre proveedores de correo. Se los conservaba "por consulta histórica".

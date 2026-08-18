@@ -58,16 +58,24 @@ const SOLO_PARA_DESARROLLO = [
 ];
 
 /* Archivos cuyos textos son instrucciones dirigidas a un modelo de inteligencia
-   artificial, no frases para que las lea una persona. A un modelo se le habla como
-   convenga para que entienda; la regla del trato rige sobre lo que ve un cliente.
-   Ojo con esto: lo que el modelo *responde* sí lo lee una persona, así que si algún
-   día una de estas instrucciones le pide al modelo que escriba en un tono, ese tono
-   tiene que ser el mismo de la regla. Eso no lo puede comprobar este programa. */
+   artificial, no frases para que las lea una persona.
+
+   Lo que el modelo *responde* sí lo lee una persona, y eso este programa no lo puede
+   revisar: esa frase no existe en ningún archivo hasta que el modelo contesta. Por eso
+   la regla del trato se le dice al modelo adentro de la instrucción, escrita una sola
+   vez en `backend/src/utils/tratoIA.js`, que los cuatro prompts insertan. Ese archivo
+   entra en esta lista justamente porque nombra las formas prohibidas para prohibirlas
+   —dice "nunca 'vos', 'podés'"—, y el colador, que no entiende lo que lee, las
+   marcaría como si las estuviera usando.
+
+   Si alguna vez se saca una instrucción de esta lista, el control la va a marcar por
+   las palabras del bloque de trato, no por un error. */
 const INSTRUCCIONES_PARA_LA_IA = [
   'backend/src/utils/alertasIA.js',
   'backend/src/utils/iaWhatsapp.js',
   'backend/src/utils/importacionIA.js',
   'backend/src/utils/reporteIA.js',
+  'backend/src/utils/tratoIA.js',
   'backend/src/utils/verificarPreciosIA.js',
 ];
 

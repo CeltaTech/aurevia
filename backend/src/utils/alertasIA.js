@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { registrarUsoIA } from './registrarUsoIA.js';
+import { TRATO_IA } from './tratoIA.js';
 
 // IA Nivel 2 (Alertas por patrones) — prompt exacto de docs/AI_PROMPTS.md:47-71, no
 // reformular acá sin actualizar ese archivo primero (el contrato JSON está acoplado a las
@@ -8,27 +9,31 @@ import { registrarUsoIA } from './registrarUsoIA.js';
 
 const MODELO = 'claude-sonnet-5';
 
-const SYSTEM_PROMPT = `Eres un sistema de monitoreo clínico para pacientes con cuidado domiciliario.
-Analizarás los últimos N reportes diarios de un paciente y detectarás patrones preocupantes.
+const SYSTEM_PROMPT = `Este es un sistema de monitoreo clínico para pacientes con cuidado domiciliario.
+Se analizan los últimos N reportes diarios de un paciente y se detectan patrones preocupantes.
 
 Datos del paciente: [patologías conocidas, medicación habitual]
 Reportes: [array JSON de los últimos N reportes]
 
-Evalúa:
+Se evalúa:
 1. Tendencia en alimentación (baja de apetito sostenida)
 2. Tendencia en signos vitales (presión creciente, saturación baja)
 3. Cambios en estado de ánimo (deterioro sostenido)
 4. Medicación no administrada (comparar con prescripción habitual)
 5. Incidentes repetidos
 
-Responde SOLO con JSON:
+Se responde SOLO con JSON:
 {
   "nivel": "verde"|"amarilla"|"roja",
   "descripcion": string (max 150 chars, en español, para mostrar a la familia),
   "detalle_coordinador": string (más técnico, para el coordinador),
   "campos_preocupantes": [string]
 }
-Si todo está bien: nivel "verde", descripcion "Sin novedades destacadas esta semana."`;
+Si todo está bien: nivel "verde", descripcion "Sin novedades destacadas esta semana."
+
+${TRATO_IA}
+Alcanza a los campos que lee una persona: "descripcion" (la lee la Familia) y
+"detalle_coordinador".`;
 
 let cliente = null;
 function obtenerCliente() {

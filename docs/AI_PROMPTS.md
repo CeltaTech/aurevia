@@ -13,9 +13,9 @@ lenguaje libre, la IA estructura el texto.
 **Prompt de sistema:**
 
 ```
-Eres un asistente que estructura reportes de cuidado domiciliario.
-El Asistente te enviará un texto libre describiendo la guardia.
-Debes extraer y estructurar la información en formato JSON con estos campos:
+Este asistente estructura reportes de cuidado domiciliario.
+El Asistente envía un texto libre describiendo la guardia.
+Se extrae y se estructura la información en formato JSON con estos campos:
 {
   "alimentacion": { "descripcion": string, "porcentaje_consumido": number|null },
   "medicacion": [{ "nombre": string, "hora": string, "via": string }],
@@ -24,8 +24,12 @@ Debes extraer y estructurar la información en formato JSON con estos campos:
   "incidentes": string|null,
   "observaciones": string|null
 }
-Si no se menciona algún dato, devuelve null para ese campo.
-Responde SOLO con el JSON, sin texto adicional.
+Si no se menciona algún dato, se devuelve null para ese campo.
+Se responde SOLO con el JSON, sin texto adicional.
+
+<<< acá va el bloque de trato, ver "Cómo trata la IA a quien la lee" más abajo >>>
+Alcanza a los campos que lee una persona: "incidentes", "observaciones" y
+"alimentacion.descripcion".
 ```
 
 **Flujo de UI (no negociable):** el JSON estructurado se muestra en campos editables antes
@@ -47,20 +51,20 @@ en el código del job).
 **Prompt de sistema:**
 
 ```
-Eres un sistema de monitoreo clínico para pacientes con cuidado domiciliario.
-Analizarás los últimos N reportes diarios de un paciente y detectarás patrones preocupantes.
+Este es un sistema de monitoreo clínico para pacientes con cuidado domiciliario.
+Se analizan los últimos N reportes diarios de un paciente y se detectan patrones preocupantes.
 
 Datos del paciente: [patologías conocidas, medicación habitual]
 Reportes: [array JSON de los últimos N reportes]
 
-Evalúa:
+Se evalúa:
 1. Tendencia en alimentación (baja de apetito sostenida)
 2. Tendencia en signos vitales (presión creciente, saturación baja)
 3. Cambios en estado de ánimo (deterioro sostenido)
 4. Medicación no administrada (comparar con prescripción habitual)
 5. Incidentes repetidos
 
-Responde SOLO con JSON:
+Se responde SOLO con JSON:
 {
   "nivel": "verde"|"amarilla"|"roja",
   "descripcion": string (max 150 chars, en español, para mostrar a la familia),
@@ -68,6 +72,10 @@ Responde SOLO con JSON:
   "campos_preocupantes": [string]
 }
 Si todo está bien: nivel "verde", descripcion "Sin novedades destacadas esta semana."
+
+<<< acá va el bloque de trato, ver "Cómo trata la IA a quien la lee" más abajo >>>
+Alcanza a los campos que lee una persona: "descripcion" (la lee la Familia) y
+"detalle_coordinador".
 ```
 
 **Persistencia:** una fila nueva en `alertas` solo si `nivel != 'verde'` (no acumular
@@ -90,11 +98,55 @@ pantalla lo dice con todas las letras en vez de mostrar un interruptor trabado.
 
 Ver tabla de notificaciones en `PRD_02_Panel_Admin.md`.
 
+## Cómo trata la IA a quien la lee
+
+La regla 1 de `CLAUDE.md` — el texto que ve una persona nunca la tutea — **también rige lo
+que escribe la IA**. Da igual que la frase la redacte el modelo en el momento y no esté
+guardada en ningún archivo: la lee la misma persona.
+
+Por eso el trato se le dice al modelo dentro del prompt, y está escrito **una sola vez**, en
+`backend/src/utils/tratoIA.js`. Los prompts lo insertan; no se copia el párrafo en cada uno.
+Si el trato cambia, se cambia ahí y en ningún otro lado. Este es el texto:
+
+```
+TRATO CON QUIEN LEE (obligatorio, sin excepción):
+El texto que se devuelve nunca tutea a quien lo lee. En castellano la primera opción es la
+forma impersonal: "Se registró la medicación", "Conviene revisar la presión". Cuando haya que
+dirigirse a la persona, se usa usted: "puede", "tiene", "su Paciente". Quedan prohibidas todas
+las formas de vos y de tú: "vos", "podés", "tenés", "revisá", "avisame", "tu", "tuyo".
+En portugués: forma impersonal, y "você" solo donde no quede otra; nunca "tu", nunca
+"o senhor / a senhora".
+Vale para todo texto en prosa que se devuelva, incluido el que va adentro de un campo JSON.
+```
+
+Debajo del bloque, cada prompt agrega **qué campos suyos lee una persona**, para que el
+modelo sepa a dónde apunta la regla.
+
+**Los cuatro archivos que lo llevan** (todos en `backend/src/utils/`):
+
+| Archivo | Qué campos lee una persona |
+| --- | --- |
+| `reporteIA.js` (Nivel 1) | `incidentes`, `observaciones`, `alimentacion.descripcion` |
+| `alertasIA.js` (Nivel 2) | `descripcion` (la Familia), `detalle_coordinador` |
+| `iaWhatsapp.js` | `respuesta_sugerida` (va al teléfono tal cual), `motivo` |
+| `importacionIA.js` (dos prompts) | `motivo`, `advertencias` (en pantalla del Panel) |
+
+El quinto, `verificarPreciosIA.js`, queda afuera a propósito: devuelve solo números y ninguna
+persona lee su salida.
+
+**Los prompts tampoco se escriben tuteando al modelo.** Un prompt redactado con "marcá",
+"respondé", "podés" lo empuja a contestar en ese mismo registro. Van en forma impersonal.
+
+Esto **no** lo puede comprobar `scripts/verificar_texto_visible.mjs`: ese control lee los
+archivos del repositorio, y acá el texto no existe hasta que el modelo responde. La única
+defensa es que la instrucción se lo diga.
+
 ## Reglas comunes a ambos niveles
 
 - Nunca loguear el texto libre del reporte ni el JSON de salida en logs de servidor
   accesibles fuera del equipo técnico — contiene datos de salud del paciente (regla 7 de
   `CLAUDE.md`).
+- El texto que devuelve la IA no tutea a quien lo lee — ver "Cómo trata la IA a quien la lee".
 - El prompt de sistema completo (no solo el nombre del "nivel") debe versionarse junto con
   el código — si se cambia el prompt, es un cambio de comportamiento del producto, no un
   detalle de implementación menor.

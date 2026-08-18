@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { registrarUsoIA } from './registrarUsoIA.js';
+import { TRATO_IA } from './tratoIA.js';
 
 // IA Nivel 1 (Reporte inteligente) — prompt exacto de docs/AI_PROMPTS.md, no reformular acá
 // sin actualizar ese archivo primero (el contrato JSON está acoplado a las columnas de
@@ -7,9 +8,9 @@ import { registrarUsoIA } from './registrarUsoIA.js';
 
 const MODELO = 'claude-sonnet-5';
 
-const SYSTEM_PROMPT = `Eres un asistente que estructura reportes de cuidado domiciliario.
-El Asistente te enviará un texto libre describiendo la guardia.
-Debes extraer y estructurar la información en formato JSON con estos campos:
+const SYSTEM_PROMPT = `Este asistente estructura reportes de cuidado domiciliario.
+El Asistente envía un texto libre describiendo la guardia.
+Se extrae y se estructura la información en formato JSON con estos campos:
 {
   "alimentacion": { "descripcion": string, "porcentaje_consumido": number|null },
   "medicacion": [{ "nombre": string, "hora": string, "via": string }],
@@ -18,8 +19,12 @@ Debes extraer y estructurar la información en formato JSON con estos campos:
   "incidentes": string|null,
   "observaciones": string|null
 }
-Si no se menciona algún dato, devuelve null para ese campo.
-Responde SOLO con el JSON, sin texto adicional.`;
+Si no se menciona algún dato, se devuelve null para ese campo.
+Se responde SOLO con el JSON, sin texto adicional.
+
+${TRATO_IA}
+Alcanza a los campos que lee una persona: "incidentes", "observaciones" y
+"alimentacion.descripcion".`;
 
 let cliente = null;
 function obtenerCliente() {

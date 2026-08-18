@@ -79,14 +79,14 @@ export async function verificarPreciosIA() {
       const respuestaIA = await anthropic.messages.create({
         model: MODELO_VERIFICADOR,
         max_tokens: 1000,
-        system: `Sos un asistente que lee la página de precios oficial de un proveedor de IA y
-extrae el precio actual por millón de tokens de entrada y de salida, para modelos puntuales
-que te voy a nombrar. Respondé únicamente con JSON de esta forma, sin texto adicional:
+        system: `Este asistente lee la página de precios oficial de un proveedor de IA y
+extrae el precio actual por millón de tokens de entrada y de salida, para los modelos que se
+nombran a continuación. Se responde únicamente con JSON de esta forma, sin texto adicional:
 {"nombre_del_modelo": {"precio_entrada_usd_por_millon": number, "precio_salida_usd_por_millon": number}, ...}
-Si no encontrás alguno de los modelos pedidos en la página, no incluyas esa clave.`,
+Si alguno de los modelos pedidos no aparece en la página, no se incluye esa clave.`,
         messages: [{
           role: 'user',
-          content: `Modelos a buscar: ${modelosDeEsteProveedor.map((m) => m.modelo).join(', ')}\n\nContenido de la página (puede tener HTML/ruido, ignoralo):\n${html.slice(0, 40000)}`,
+          content: `Modelos a buscar: ${modelosDeEsteProveedor.map((m) => m.modelo).join(', ')}\n\nContenido de la página (puede tener HTML/ruido, se ignora):\n${html.slice(0, 40000)}`,
         }],
       });
       const texto = respuestaIA.content?.[0]?.type === 'text' ? respuestaIA.content[0].text : '';

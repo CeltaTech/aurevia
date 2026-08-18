@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { supabase } from '../db/connection.js';
 import { invitarActivacionCuenta } from './activacionCuenta.js';
+import { ErrorConMotivo } from './errorConMotivo.js';
 
 const ETAPAS_INCORPORACION = [
   'postulacion',
@@ -69,6 +70,77 @@ export async function resolverTipoAsistentePorNombre(texto, prestadoraId) {
   return encontrados.length === 1 ? encontrados[0].id : null;
 }
 
+// ¿El servicio de acceso está diciendo que ese correo ya está tomado? El texto viene en
+// inglés y sin código propio, así que hay que reconocerlo por lo que dice. Se mira acá, en
+// un solo lugar, para no repartir la frase en inglés por todo el motor.
+function correoYaTomado(errorAuth) {
+  return /already (been )?registered|already exists|email.*taken/i.test(errorAuth?.message || '');
+}
+
+// Busca la cuenta de acceso de un correo, sin recorrer la lista entera.
+//
+// El filtro del servicio de acceso busca por parecido, no por igualdad: preguntando por
+// "beto@ejemplo.com" también devuelve "beto@ejemplo.com.ar". Por eso la igualdad se
+// comprueba acá. Recorrer todas las cuentas no es alternativa: con cientos de Prestadoras
+// son decenas de miles de filas (CLAUDE.md §2).
+async function buscarCuentaDeAcceso(email) {
+  const url = `${process.env.SUPABASE_URL}/auth/v1/admin/users?filter=${encodeURIComponent(email)}`;
+  const respuesta = await fetch(url, {
+    headers: {
+      apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+    },
+  });
+  if (!respuesta.ok) return null;
+
+  const cuerpo = await respuesta.json().catch(() => null);
+  const buscado = String(email).trim().toLowerCase();
+  return (cuerpo?.users || []).find((u) => String(u.email || '').toLowerCase() === buscado) || null;
+}
+
+// Lo que evita que un alta cortada por la mitad deje trabada la segunda vuelta.
+//
+// Un alta hace dos cosas en orden: primero crea la cuenta de acceso, después la persona
+// (Asistente, Familia, miembro del círculo). Si el segundo paso falla, el primero se
+// deshace — pero ese deshacer puede no llegar a correr nunca: si el servidor se cae en el
+// medio, si se corta la red, si el deshacer mismo falla. Y entonces queda una cuenta de
+// acceso sola, sin nadie detrás.
+//
+// Esa cuenta sola es basura reconocible: existe en el acceso pero no tiene fila en
+// `usuarios`, y sin esa fila ninguna pantalla del producto la reconoce — no se puede entrar
+// a ningún lado con ella. Tampoco puede tener un link de activación vivo: el link se emite
+// después de la fila de `usuarios` y se borra junto con ella. O sea que borrarla no le quita
+// nada a nadie.
+//
+// Entonces: si es basura, se borra y el alta sigue. Si detrás hay una persona de verdad, no
+// se toca nada y se explica qué pasa, con un motivo que la pantalla sabe traducir.
+async function limpiarCuentaSobrante(email, prestadoraId) {
+  const cuenta = await buscarCuentaDeAcceso(email);
+  if (!cuenta) return; // no se pudo mirar; el alta va a fallar igual, con el error de siempre
+
+  const { data: perfil } = await supabase
+    .from('usuarios')
+    .select('prestadora_id')
+    .eq('id', cuenta.id)
+    .maybeSingle();
+
+  if (!perfil) {
+    await supabase.auth.admin.deleteUser(cuenta.id);
+    // Queda constancia porque significa que un alta anterior se cortó por la mitad. Nunca el
+    // correo: es un dato personal y esto va al registro del servidor (CLAUDE.md §6).
+    console.warn('cuentasPanel: se borró una cuenta de acceso sobrante de un alta anterior', cuenta.id);
+    return;
+  }
+
+  // Hay alguien detrás. Qué se cuenta depende de si esa persona es de esta Prestadora: de
+  // otra no se dice nada, ni siquiera que existe (CLAUDE.md §2 y §6, aislamiento entre
+  // Prestadoras). Las dos frases viven en las traducciones, en los tres idiomas.
+  throw new ErrorConMotivo(
+    perfil.prestadora_id === prestadoraId ? 'correo_de_esta_prestadora' : 'correo_de_otra_cuenta',
+    `El correo ya tiene una cuenta de acceso (${cuenta.id})`,
+  );
+}
+
 // Mecanismo compartido: crea una cuenta real de Supabase Auth + su fila en `usuarios`.
 // Para Coordinador/Admin/Superadmin (panelUsuarios.js) el Panel SÍ existe hoy y quien la crea
 // está también en el Panel, así que `passwordTemporal` se devuelve al caller para que la
@@ -79,11 +151,22 @@ export async function resolverTipoAsistentePorNombre(texto, prestadoraId) {
 export async function crearCuentaConPerfil({ email, nombre, telefono, rol, zonas, prestadoraId, enviarActivacion = false }) {
   const passwordTemporal = crypto.randomBytes(24).toString('base64url');
 
-  const { data: authData, error: errorAuth } = await supabase.auth.admin.createUser({
+  let { data: authData, error: errorAuth } = await supabase.auth.admin.createUser({
     email,
     password: passwordTemporal,
     email_confirm: true,
   });
+
+  // El correo ya estaba tomado. Antes de rendirse hay que mirar qué hay detrás: puede ser
+  // basura de un alta anterior que se cortó, y en ese caso el alta tiene que seguir.
+  if (errorAuth && correoYaTomado(errorAuth)) {
+    await limpiarCuentaSobrante(email, prestadoraId);
+    ({ data: authData, error: errorAuth } = await supabase.auth.admin.createUser({
+      email,
+      password: passwordTemporal,
+      email_confirm: true,
+    }));
+  }
 
   if (errorAuth) {
     throw new Error(errorAuth.message);
@@ -137,6 +220,66 @@ export async function borrarCuenta(userId, { prestadoraId, esSuperadmin = false 
   if (errorAuth) throw new Error(errorAuth.message);
 }
 
+// Deshace un alta que se cortó por la mitad. **Nunca falla**: pase lo que pase, termina.
+//
+// Por qué importa que no falle. Un alta que se corta tiene siempre dos partes: el problema
+// real (falta una configuración, la base no contestó) y la limpieza de lo que alcanzó a
+// crearse. Cuando la limpieza se escribe suelta, un tropiezo suyo pisa el problema real: la
+// persona ve el error de la limpieza, o directamente no ve nada porque la respuesta al Panel
+// nunca llega a mandarse y la pantalla se queda esperando para siempre. Acá la limpieza se
+// traga sus propios tropiezos, los deja anotados en el registro del servidor, y devuelve si
+// pudo o no — para que el problema de verdad sea el que llegue a la pantalla.
+//
+// `filas` son las tablas a limpiar, en orden de hija a madre. `columna` es por dónde se
+// busca (por omisión `id`), `valor` con qué se compara (por omisión el id de la cuenta).
+export async function deshacerAlta(userId, { prestadoraId, filas = [] } = {}) {
+  let limpioTodo = true;
+
+  for (const fila of filas) {
+    const valor = fila.valor ?? userId;
+    if (!valor) continue;
+    try {
+      const { error } = await supabase.from(fila.tabla).delete().eq(fila.columna || 'id', valor);
+      if (error) throw new Error(error.message);
+    } catch (error) {
+      limpioTodo = false;
+      console.error(`deshacerAlta: quedó sin limpiar ${fila.tabla}`, error.message);
+    }
+  }
+
+  if (userId) {
+    try {
+      await borrarCuenta(userId, { prestadoraId });
+    } catch (error) {
+      limpioTodo = false;
+      // Se anota el id, nunca el correo (CLAUDE.md §6). Si esto aparece en el registro, quedó
+      // una cuenta de acceso sin nadie detrás — y el próximo intento con ese mismo correo la
+      // va a reconocer como sobrante y la va a borrar sola (ver `limpiarCuentaSobrante`).
+      console.error('deshacerAlta: quedó una cuenta de acceso sin borrar', userId, error.message);
+    }
+  }
+
+  return limpioTodo;
+}
+
+// Qué deja atrás cada tipo de alta, de la fila hija a la madre. Escrito una sola vez porque
+// lo usan tanto el deshacer de un alta cortada como la reversión de un lote importado que la
+// Prestadora rechazó — es la misma lista, y tenerla dos veces es cómo se olvida una tabla en
+// una de las dos (regla 12 de CLAUDE.md §7).
+export const FILAS_DE_UN_ASISTENTE = [
+  { tabla: 'verificaciones_asistente', columna: 'asistente_id' },
+  { tabla: 'asistentes' },
+];
+
+export const FILAS_DE_UNA_FAMILIA = [
+  { tabla: 'pacientes', columna: 'familia_id' },
+  { tabla: 'familias' },
+];
+
+const FILAS_DE_UN_MIEMBRO_CIRCULO = [
+  { tabla: 'miembros_familia', columna: 'usuario_id' },
+];
+
 // Lógica de alta manual de un Asistente, extraída de panelCuentas.js (ruta /asistente-directo)
 // en la Fase 3 (importación masiva) del plan "Terminar la Etapa 2 (Panel)" para que la
 // importación fila-por-fila reutilice exactamente el mismo camino de creación que el alta
@@ -148,7 +291,7 @@ export async function crearAsistenteDirecto({
   prestadoraId, usuarioPanelId, importacionId,
 }) {
   if (!nombre || !email) {
-    throw new Error('Faltan datos obligatorios (nombre, email)');
+    throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombre, email)');
   }
 
   const zonasArray = Array.isArray(zonas) ? zonas : [];
@@ -198,10 +341,7 @@ export async function crearAsistenteDirecto({
 
     return { asistenteId };
   } catch (error) {
-    if (asistenteId) {
-      await supabase.from('asistentes').delete().eq('id', asistenteId);
-      await borrarCuenta(asistenteId, { prestadoraId });
-    }
+    await deshacerAlta(asistenteId, { prestadoraId, filas: FILAS_DE_UN_ASISTENTE });
     throw error;
   }
 }
@@ -234,16 +374,14 @@ export async function activarVerificacionAltaAsistente(asistenteId, prestadoraId
 // Revierte un lote importado y rechazado por la Prestadora (panelImportacion.js /rechazar):
 // mismo desarmado que el catch de crearAsistenteDirecto/crearFamiliaDirecta, aplicado a
 // todas las filas que compartan `importacionId` en vez de a una sola fila recién creada.
-export async function revertirAsistenteImportado(asistenteId, prestadoraId) {
-  await supabase.from('verificaciones_asistente').delete().eq('asistente_id', asistenteId);
-  await supabase.from('asistentes').delete().eq('id', asistenteId);
-  await borrarCuenta(asistenteId, { prestadoraId });
+// Devuelven `false` si algo quedó sin limpiar, para que la pantalla pueda contar bien
+// cuántas filas se revirtieron de verdad.
+export function revertirAsistenteImportado(asistenteId, prestadoraId) {
+  return deshacerAlta(asistenteId, { prestadoraId, filas: FILAS_DE_UN_ASISTENTE });
 }
 
-export async function revertirFamiliaImportada(familiaId, prestadoraId) {
-  await supabase.from('pacientes').delete().eq('familia_id', familiaId);
-  await supabase.from('familias').delete().eq('id', familiaId);
-  await borrarCuenta(familiaId, { prestadoraId });
+export function revertirFamiliaImportada(familiaId, prestadoraId) {
+  return deshacerAlta(familiaId, { prestadoraId, filas: FILAS_DE_UNA_FAMILIA });
 }
 
 // Invita a una persona al círculo de cuidado de una Familia ya existente (Fase 5): crea su
@@ -253,7 +391,7 @@ export async function revertirFamiliaImportada(familiaId, prestadoraId) {
 // schema_circulo_cuidado.sql).
 export async function invitarMiembroCirculo({ email, nombre, telefono, familiaId, prestadoraId, invitadoPor }) {
   if (!nombre || !email || !familiaId) {
-    throw new Error('Faltan datos obligatorios (nombre, email, familiaId)');
+    throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombre, email, familiaId)');
   }
 
   let miembroId;
@@ -269,10 +407,7 @@ export async function invitarMiembroCirculo({ email, nombre, telefono, familiaId
 
     return { miembroId };
   } catch (error) {
-    if (miembroId) {
-      await supabase.from('miembros_familia').delete().eq('usuario_id', miembroId);
-      await borrarCuenta(miembroId, { prestadoraId });
-    }
+    await deshacerAlta(miembroId, { prestadoraId, filas: FILAS_DE_UN_MIEMBRO_CIRCULO });
     throw error;
   }
 }
@@ -303,7 +438,7 @@ export async function crearFamiliaDirecta({
   prestadoraId, importacionId,
 }) {
   if (!nombreContacto || !email || !nombrePaciente) {
-    throw new Error('Faltan datos obligatorios (nombreContacto, email, nombrePaciente)');
+    throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombreContacto, email, nombrePaciente)');
   }
 
   let familiaId;
@@ -370,14 +505,12 @@ export async function crearFamiliaDirecta({
 
     return { familiaId, pacienteId: paciente.id };
   } catch (error) {
-    if (familiaId) {
-      await supabase.from('pacientes').delete().eq('familia_id', familiaId);
-      await supabase.from('familias').delete().eq('id', familiaId);
-      await borrarCuenta(familiaId, { prestadoraId });
-    }
-    if (solicitudId) {
-      await supabase.from('solicitudes').delete().eq('id', solicitudId);
-    }
+    await deshacerAlta(familiaId, {
+      prestadoraId,
+      // La solicitud se creó antes que la cuenta y no cuelga de ella, así que se limpia por
+      // su propio identificador. Va última porque las familias la apuntan.
+      filas: [...FILAS_DE_UNA_FAMILIA, { tabla: 'solicitudes', valor: solicitudId }],
+    });
     throw error;
   }
 }

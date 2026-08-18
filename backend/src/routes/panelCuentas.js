@@ -4,13 +4,16 @@ import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcan
 import { supabase } from '../db/connection.js';
 import {
   crearCuentaConPerfil,
-  borrarCuenta,
   crearAsistenteDirecto,
   crearFamiliaDirecta,
   invitarMiembroCirculo,
   revocarMiembroCirculo,
   validarTipoAsistente,
+  deshacerAlta,
+  FILAS_DE_UN_ASISTENTE,
+  FILAS_DE_UNA_FAMILIA,
 } from '../utils/cuentasPanel.js';
+import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { reenviarActivacionCuenta } from '../utils/activacionCuenta.js';
 import { tienePermiso, ACCIONES_PERMISOS } from '../utils/permisos.js';
 
@@ -137,12 +140,8 @@ panelCuentasRouter.post('/familia', requiereRolPanel, exigirOrganizacionActiva, 
 
     res.json({ ok: true, familiaId, pacienteId: paciente.id });
   } catch (error) {
-    if (familiaId) {
-      await supabase.from('pacientes').delete().eq('familia_id', familiaId);
-      await supabase.from('familias').delete().eq('id', familiaId);
-      await borrarCuenta(familiaId, { prestadoraId });
-    }
-    res.status(500).json({ error: error.message });
+    await deshacerAlta(familiaId, { prestadoraId, filas: FILAS_DE_UNA_FAMILIA });
+    responderError(res, error);
   }
 });
 
@@ -160,7 +159,7 @@ panelCuentasRouter.post('/familia-directa', requiereRolPanel, exigirOrganizacion
     });
     res.json({ ok: true, familiaId, pacienteId });
   } catch (error) {
-    res.status(error.message.startsWith('Faltan datos') ? 400 : 500).json({ error: error.message });
+    responderError(res, error);
   }
 });
 
@@ -231,7 +230,7 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
       .order('orden');
     if (errorEtapas) throw new Error(errorEtapas.message);
     if (!etapas || etapas.length === 0) {
-      throw new Error('Esta Prestadora no tiene etapas de incorporación configuradas (Configuración > Servicios).');
+      throw new ErrorConMotivo('sin_etapas_incorporacion', 'La Prestadora no tiene etapas de incorporación activas');
     }
 
     const filasVerificacion = etapas.map(({ clave }, indice) => ({
@@ -255,12 +254,11 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
 
     res.json({ ok: true, asistenteId });
   } catch (error) {
-    if (asistenteId) {
-      await supabase.from('verificaciones_asistente').delete().eq('asistente_id', asistenteId);
-      await supabase.from('asistentes').delete().eq('id', asistenteId);
-      await borrarCuenta(asistenteId, { prestadoraId });
-    }
-    res.status(500).json({ error: error.message });
+    // `deshacerAlta` nunca falla: si tropieza lo anota en el registro del servidor y sigue.
+    // Así el error que llega a la pantalla es siempre el problema de verdad, y la respuesta
+    // se manda siempre — antes, un tropiezo del deshacer dejaba a la pantalla esperando.
+    await deshacerAlta(asistenteId, { prestadoraId, filas: FILAS_DE_UN_ASISTENTE });
+    responderError(res, error);
   }
 });
 
@@ -280,7 +278,7 @@ panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizaci
     });
     res.json({ ok: true, asistenteId });
   } catch (error) {
-    res.status(error.message.startsWith('Faltan datos') ? 400 : 500).json({ error: error.message });
+    responderError(res, error);
   }
 });
 
@@ -332,7 +330,7 @@ panelCuentasRouter.post('/familia/:familiaId/circulo', requiereRolPanel, exigirO
     });
     res.json({ ok: true, usuarioId: miembroId });
   } catch (error) {
-    res.status(error.message.startsWith('Faltan datos') ? 400 : 500).json({ error: error.message });
+    responderError(res, error);
   }
 });
 

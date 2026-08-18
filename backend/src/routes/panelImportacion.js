@@ -318,18 +318,15 @@ panelImportacionRouter.post(
       return res.status(500).json({ error: 'No se pudieron leer las filas del lote' });
     }
 
+    // Las dos funciones nunca fallan: si algo queda sin limpiar lo anotan en el registro del
+    // servidor y devuelven `false`. Por eso el número que se cuenta acá es el de filas que se
+    // revirtieron **enteras**, no el de intentos que no explotaron.
     let revertidas = 0;
     for (const fila of filas) {
-      try {
-        if (lote.tipo === 'asistente') {
-          await revertirAsistenteImportado(fila.id, prestadoraId);
-        } else {
-          await revertirFamiliaImportada(fila.id, prestadoraId);
-        }
-        revertidas += 1;
-      } catch (error) {
-        console.error('Error revirtiendo fila importada:', error.message);
-      }
+      const limpia = lote.tipo === 'asistente'
+        ? await revertirAsistenteImportado(fila.id, prestadoraId)
+        : await revertirFamiliaImportada(fila.id, prestadoraId);
+      if (limpia) revertidas += 1;
     }
 
     await supabase

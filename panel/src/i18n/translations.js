@@ -27,6 +27,14 @@ export const T = {
       en_uso: 'No se puede borrar: hay otros registros que dependen de esto.',
       dato_invalido: 'Hay un dato mal cargado. Conviene revisar lo que se escribió.',
       falla_del_sistema: 'Algo falló de nuestro lado. Conviene volver a intentar en un rato.',
+      // Los motivos: cuando el motor sabe exactamente qué pasó, lo dice con un código y la
+      // frase se busca acá. Ganan siempre por sobre las ocho de arriba, que son lo genérico.
+      motivos: {
+        correo_de_esta_prestadora: 'Ese correo ya tiene una cuenta en esta Prestadora. Conviene buscarla en la lista antes de crear una nueva.',
+        correo_de_otra_cuenta: 'Ese correo ya está en uso. Hace falta indicar otro.',
+        sin_etapas_incorporacion: 'Esta Prestadora todavía no tiene etapas de incorporación configuradas. Se definen en Configuración > El cuidado.',
+        faltan_datos: 'Faltan datos obligatorios. Conviene revisar los campos vacíos y volver a intentar.',
+      },
     },
     comun: {
       cargando: 'Cargando…',
@@ -1671,6 +1679,12 @@ export const T = {
       en_uso: 'This cannot be deleted: other records depend on it.',
       dato_invalido: 'Something was entered incorrectly. Please check what you typed.',
       falla_del_sistema: 'Something failed on our side. Please try again shortly.',
+      motivos: {
+        correo_de_esta_prestadora: 'That email address already has an account at this Provider. It is worth looking for it in the list before creating a new one.',
+        correo_de_otra_cuenta: 'That email address is already in use. A different one is required.',
+        sin_etapas_incorporacion: 'This Provider does not have onboarding stages set up yet. They are defined under Settings > Care.',
+        faltan_datos: 'Required information is missing. Please review the empty fields and try again.',
+      },
     },
     comun: {
       cargando: 'Loading…',
@@ -3305,6 +3319,12 @@ export const T = {
       en_uso: 'Não é possível apagar: outros registros dependem disto.',
       dato_invalido: 'Há um dado carregado errado. É preciso revisar o que foi escrito.',
       falla_del_sistema: 'Algo falhou do nosso lado. É preciso tentar de novo daqui a pouco.',
+      motivos: {
+        correo_de_esta_prestadora: 'Esse e-mail já possui uma conta nesta Prestadora. Convém procurá-la na lista antes de criar uma nova.',
+        correo_de_otra_cuenta: 'Esse e-mail já está em uso. É preciso informar outro.',
+        sin_etapas_incorporacion: 'Esta Prestadora ainda não possui etapas de incorporação configuradas. Elas se definem em Configuração > O cuidado.',
+        faltan_datos: 'Faltam dados obrigatórios. Convém revisar os campos vazios e tentar de novo.',
+      },
     },
     comun: {
       cargando: 'Carregando…',

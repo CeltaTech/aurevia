@@ -7,7 +7,7 @@
 //
 // Vive en lib/ porque lo usan decenas de pantallas y la regla 12 de CLAUDE.md pide un solo
 // punto de verdad. El archivo es idéntico en panel/, pwa-familias/ y pwa-asistentes/: el
-// original es el del Panel y las copias las mantiene scripts/sincronizar_errores.mjs.
+// original es el del Panel y las copias las mantiene scripts/sincronizar_copias.mjs.
 
 // Las ocho situaciones. No son categorías técnicas: son las ocho cosas distintas que le
 // pueden pasar a quien está mirando la pantalla, y para cada una hay algo distinto que hacer.
@@ -111,6 +111,24 @@ export function situacionDelError(error) {
 }
 
 /**
+ * Convierte una respuesta fallida del motor en un Error que la pantalla pueda explicar.
+ *
+ * Existe porque el `fetch` del navegador no falla cuando el servidor contesta que no: hay que
+ * mirar `respuesta.ok` a mano y armar el error uno mismo. Cuando cada pantalla lo arma a su
+ * manera —`throw new Error(resultado.error)`— se pierden en el camino las dos cosas que
+ * después hacen falta para explicar: el código de respuesta y el motivo.
+ *
+ * @param respuesta el objeto que devolvió `fetch`.
+ * @param datos     el cuerpo ya leído como JSON (puede venir vacío o mal formado).
+ */
+export function errorDeLaRespuesta(respuesta, datos) {
+  const error = new Error(datos?.error || `HTTP ${respuesta?.status ?? 0}`);
+  error.status = respuesta?.status ?? 0;
+  if (datos?.motivo) error.motivo = datos.motivo;
+  return error;
+}
+
+/**
  * El texto que va a la pantalla.
  *
  * @param error   lo que se agarró en el catch: un objeto de Supabase, un Error o un texto.
@@ -119,11 +137,28 @@ export function situacionDelError(error) {
  *
  * El texto crudo del error no se pierde: se escribe en la consola del navegador, que es
  * donde hay que buscarlo cuando algo falla. A la pantalla va solo la frase traducida.
+ *
+ * Hay dos niveles de explicación, y siempre gana el más específico:
+ *
+ * 1. **El motivo**, si el motor mandó uno. Un motivo es un código —`correo_de_otra_cuenta`,
+ *    `sin_etapas_incorporacion`— con el que el motor dice exactamente qué pasó y qué hay que
+ *    hacer. Es lo mejor que se le puede mostrar a una persona: en vez de "Ya existe un
+ *    registro con esos datos", lee que ese correo ya tiene cuenta en esta Prestadora.
+ * 2. **La situación**, si no hay motivo: una de las ocho de arriba, deducida del código o del
+ *    texto del error. Es lo genérico, y por eso va segundo.
+ *
+ * El motivo nunca viaja como frase hecha desde el motor —el motor no sabe en qué idioma está
+ * mirando la persona—, así que la frase se busca acá, en las traducciones, en los tres
+ * idiomas. Si llegara un motivo sin traducción, se cae a la situación y nadie ve un código.
  */
 export function mensajeDeError(error, t, donde = '') {
+  const motivo = error && typeof error === 'object' ? String(error.motivo ?? '') : '';
+  const explicacion = motivo ? t?.errores?.motivos?.[motivo] : '';
   const situacion = situacionDelError(error);
-  if (import.meta.env?.DEV || situacion === 'falla_del_sistema') {
-    console.error(`[error${donde ? ': ' + donde : ''}] ${situacion}`, error);
+
+  if (import.meta.env?.DEV || (!explicacion && situacion === 'falla_del_sistema')) {
+    console.error(`[error${donde ? ': ' + donde : ''}] ${motivo || situacion}`, error);
   }
-  return t?.errores?.[situacion] ?? t?.comun?.error_generico ?? '';
+
+  return explicacion || t?.errores?.[situacion] || t?.comun?.error_generico || '';
 }

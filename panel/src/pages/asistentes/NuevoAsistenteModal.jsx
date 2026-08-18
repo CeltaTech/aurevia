@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
-import { mensajeDeError } from '../../lib/errores';
+import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { nombreTipo } from '../../lib/tiposAsistente';
 import { useTiposAsistente } from '../../hooks/useTiposAsistente';
 
@@ -45,7 +45,7 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
       });
       const resultado = await respuesta.json();
       if (!respuesta.ok) {
-        throw new Error(resultado.error || t.comun.error_generico);
+        throw errorDeLaRespuesta(respuesta, resultado);
       }
       onCreado();
     } catch (err) {

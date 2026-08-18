@@ -72,8 +72,11 @@ try {
   // Sin archivo: es una máquina de desarrollo, no una publicación.
 }
 
+// `ia` dice solamente si la clave de Anthropic está puesta en el servidor (sí o no), nunca su
+// valor. Sin ella las cuatro funciones de IA devuelven su respuesta de emergencia en silencio,
+// así que desde afuera no hay forma de darse cuenta; esto lo hace visible de un vistazo.
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: versionEnElAire });
+  res.json({ status: 'ok', version: versionEnElAire, ia: Boolean(process.env.ANTHROPIC_API_KEY) });
 });
 
 app.use('/api/solicitud-servicio', solicitudServicioRouter);

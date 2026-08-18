@@ -118,33 +118,34 @@ Etapa 2 — Panel de administración
   de Servicio) y Módulo 4 (Plantel de Asistentes) + `PRD_02B_Gestion_Personal.md` completo
   (vínculo dual monotributo/dependencia, motor `calcularCese` con las 13 causales, Simulador
   de Vínculo, Score de Riesgo de reclasificación, Ausencias y Cobertura) construidos en
-  código y con `backend/src/db/schema_etapa2b.sql` ya aplicado y verificado (RLS activa y
-  probada) contra la base Supabase real.
+  código y con su esquema ya aplicado y verificado (RLS activa y probada) contra la base
+  Supabase real. El esquema vigente vive en `supabase/migrations/`.
 
   Módulo 5 (Familias y Pacientes) completo: se resolvió un gap arquitectónico compartido
   con Asistentes (ninguna de las dos tablas puede poblarse sin una cuenta real de Supabase
   Auth previa) construyendo un mecanismo de creación de cuentas reutilizable
   (`backend/src/utils/cuentasPanel.js`, `POST /api/panel/cuentas/familia`), sin envío de
-  invitación por email todavía (las PWA de Etapa 3/4 no existen). `schema_etapa2c.sql`
-  (tablas `familias`/`pacientes`) ya aplicado y verificado contra Supabase real. La pantalla
-  propia (`panel/src/pages/Familias.jsx` + `familias/FamiliaDetalle.jsx`) muestra contacto y
+  invitación por email todavía (las PWA de Etapa 3/4 no existen). El esquema de las tablas
+  `familias`/`pacientes` ya está aplicado y verificado contra Supabase real (ver
+  `supabase/migrations/`). La pantalla propia (`panel/src/pages/Familias.jsx` +
+  `familias/FamiliaDetalle.jsx`) muestra contacto y
   Pacientes; guardias activas/historial de reportes/alertas activas quedan marcadas como "no
   disponible todavía" porque dependen de datos que solo genera la PWA de Asistentes (Etapa
   3, no construida). El lado Asistente del mecanismo de cuentas (depende de una UI del Proceso
   de Incorporación de Asistentes que no existe) sigue afuera.
 
   Módulo 6 (Guardias), estado 2026-07-10: solo el schema de datos está construido y
-  verificado contra Supabase real (`backend/src/db/schema_modulo6_guardias.sql`, 8 tablas
-  con RLS multi-tenant vía FKs compuestas — series_guardias, guardias,
-  domicilios_temporales_paciente, personal_emergencia, incidentes_relevo,
-  configuracion_escalada_relevo, excepciones_familiar_relevo, guardias_tracking_gps).
+  verificado contra Supabase real (8 tablas con RLS multi-tenant vía FKs compuestas —
+  series_guardias, guardias, domicilios_temporales_paciente, personal_emergencia,
+  incidentes_relevo, configuracion_escalada_relevo, excepciones_familiar_relevo,
+  guardias_tracking_gps; el esquema vigente vive en `supabase/migrations/`).
   Todavía **no existen** rutas backend (CRUD) ni pantallas de Panel para este módulo.
   Módulo 7 queda para sesiones siguientes.
 
-  Módulo 8 (Precios/Prestaciones), primer corte: `schema_etapa2d.sql` (tablas
-  `lista_precios`, `prestaciones`, `paquetes_prestaciones`, `paquete_prestacion_items`) ya
-  aplicado y verificado contra Supabase real. Regla de negocio central (confirmada con el
-  usuario): ningún medio público habla de precios — la lista de precios es solo referencia
+  Módulo 8 (Precios/Prestaciones), primer corte: las tablas `lista_precios`, `prestaciones`,
+  `paquetes_prestaciones` y `paquete_prestacion_items` ya están aplicadas y verificadas
+  contra Supabase real (ver `supabase/migrations/`). Regla de negocio central (confirmada
+  con el usuario): ningún medio público habla de precios — la lista de precios es solo referencia
   interna, y cada Paciente tiene su propia Prestación con precio final ajustado a su caso.
   La Prestación guarda una foto del precio de lista al momento de armarse (no una
   referencia viva); si el precio de lista cambia después, un trigger marca las Prestaciones

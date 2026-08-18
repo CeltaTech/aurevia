@@ -131,7 +131,7 @@ panelConfiguracionRouter.delete('/escalada-relevo/:id', async (req, res) => {
 
 // --- Servicios: etapas del Proceso de Incorporación de Asistentes, configurables por
 //     prestadora (pendiente #18 candidato 7, docs/PENDIENTES.md — ver
-//     backend/src/db/schema_etapas_incorporacion_01.sql). Alta/edición/reordenamiento
+//     supabase/migrations/). Alta/edición/reordenamiento
 //     desde el Panel; sin DELETE — se discontinúa con el toggle "activa" para no romper
 //     verificaciones_asistente ya existentes que referencian esa etapa. ---
 panelConfiguracionRouter.get('/etapas-incorporacion', async (req, res) => {
@@ -248,7 +248,7 @@ panelConfiguracionRouter.delete('/personal-emergencia/:id', async (req, res) => 
 
 // --- Configuración de notificaciones ---
 // configuracion_notificaciones pasó a ser por prestadora el 2026-07-13
-// (backend/src/db/schema_whatsapp_ia_01.sql sección 0) — antes era una fila global por
+// (supabase/migrations/) — antes era una fila global por
 // evento, compartida sin darse cuenta por todas las prestadoras licenciatarias.
 //
 // La pantalla muestra SIEMPRE los ocho avisos del catálogo (utils/catalogoAvisos.js), tenga
@@ -422,7 +422,7 @@ panelConfiguracionRouter.patch('/visibilidad-app/:clave', async (req, res) => {
 });
 
 // --- WhatsApp: credenciales de Meta Cloud API (Supabase Vault, ver
-//     backend/src/db/schema_whatsapp_ia_01.sql secciones 1-2 — el token nunca vuelve a
+//     supabase/migrations/ — el token nunca vuelve a
 //     mostrarse en el Panel una vez guardado) ---
 panelConfiguracionRouter.get('/whatsapp', async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
@@ -561,7 +561,7 @@ panelConfiguracionRouter.delete('/whatsapp/plantillas/:id', async (req, res) => 
 
 // --- Catálogo de tipos de documento de Asistente (vencimientos a trackear) + plazo de aviso
 //     configurable por prestadora (pendiente #18 punto 1, docs/PENDIENTES.md — ver
-//     backend/src/db/schema_documentos_asistente.sql). El plazo vive en la tabla "prestadoras",
+//     supabase/migrations/). El plazo vive en la tabla "prestadoras",
 //     de gestión exclusiva de superadmin por RLS (schema_multitenant_01.sql) — se expone acá
 //     porque el backend usa la service role key y aplica el mismo scoping por prestadora que
 //     el resto de este archivo. ---
@@ -605,7 +605,7 @@ panelConfiguracionRouter.patch('/documentos-tipo/plazo-aviso', async (req, res) 
 //     que por RLS solo superadmin puede modificar. El navegador no la puede escribir ni aunque
 //     lo intente; el backend sí, porque usa la service role key y acota siempre a la prestadora
 //     de quien pide. Los dos valores posibles los fija una restricción de la base
-//     (supabase/migrations/20260801180000_regla_matricula_vigente.sql) — acá se repiten como
+//     supabase/migrations/20260801180000_regla_matricula_vigente.sql) — acá se repiten como
 //     validación de entrada, no como fuente de verdad. ---
 const MODOS_DE_CONTROL_MATRICULA = ['flexible', 'estricto'];
 
@@ -634,7 +634,7 @@ panelConfiguracionRouter.patch('/modo-control-matricula', async (req, res) => {
 
 // --- Catálogo de motivos de aviso previo de guardia, configurable por prestadora
 //     (pendiente #18 candidato 3, docs/PENDIENTES.md — ver
-//     backend/src/db/schema_motivos_aviso_previo_01.sql). Mismo patrón que
+//     supabase/migrations/). Mismo patrón que
 //     /documentos-tipo. ---
 panelConfiguracionRouter.get('/motivos-aviso-previo', async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
@@ -750,7 +750,7 @@ panelConfiguracionRouter.patch('/documentos-tipo/:id', async (req, res) => {
 // --- Motor de permisos configurable por Prestadora (Fase 2 del plan de carga de datos +
 //     permisos + importación masiva) — quién, además de un Admin, puede dar de alta a mano
 //     o editar datos de Asistentes/Familias/Pacientes. Ver backend/src/utils/permisos.js y
-//     backend/src/db/schema_permisos_prestadora_01.sql. ---
+//     supabase/migrations/. ---
 const ACCIONES_DEFAULT_SOLO_ADMIN = new Set(['alta_manual_asistente', 'alta_manual_familia', 'importar_datos_masivos']);
 
 panelConfiguracionRouter.get('/permisos', async (req, res) => {

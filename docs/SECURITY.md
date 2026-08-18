@@ -265,8 +265,8 @@ Coordinador contra la zona de la `familia`/`asistente` — no dar acceso total a
 `coordinador` salvo en las tablas donde el PRD lo indica explícitamente.
 
 **Estado real (actualizado 2026-07-09):** implementado y aplicado contra Supabase real
-(`backend/src/db/schema_etapa2i.sql`) para las tablas donde existe una columna `zonas` real
-o un join directo a `asistentes.zonas`: `asistentes` (lectura y edición),
+(esquema vigente en `supabase/migrations/`) para las tablas donde existe una columna `zonas`
+real o un join directo a `asistentes.zonas`: `asistentes` (lectura y edición),
 `verificaciones_asistente`, `ausencias`, `guardias_cobertura`, `certificados` — vía
 `usuarios.zonas && tabla.zonas` (operador de overlap de arrays) en policies separadas de
 `admin_*` (sin filtro) y `coordinador_*_de_su_zona` (filtradas), que Postgres combina con OR
@@ -277,9 +277,9 @@ tablas, igual que Admin, hasta que exista una decisión de producto sobre cómo 
 zona de una Familia/Solicitud (agregar un `select` de zona al formulario público, inferir
 por `localidad`, u otra opción). No adivinar esa semántica sin confirmarla primero.
 
-**Módulo 6 (Guardias), estado 2026-07-10:** las 8 tablas de
-`backend/src/db/schema_modulo6_guardias.sql` tienen RLS multi-tenant aplicada y verificada
-contra Supabase real (15 policies, incluyendo el patrón OR-de-dos-EXISTS de
+**Módulo 6 (Guardias), estado 2026-07-10:** las 8 tablas del Módulo 6, definidas en
+`supabase/migrations/`, tienen RLS multi-tenant aplicada y verificada contra Supabase
+real (15 policies, incluyendo el patrón OR-de-dos-EXISTS de
 `incidentes_relevo` documentado arriba, verificado con datos reales para el caso
 `guardia_saliente_id IS NULL`). Sigue sin existir ninguna ruta backend ni pantalla de Panel
 que consuma estas tablas.

@@ -48,8 +48,8 @@ Prestadora contrató apagar la línea del producto al pie. Contrato completo en 
 Cada prestadora licenciataria del software es un tenant aislado. La única fila real hoy es
 datos de prueba/desarrollo con id `874f54d7-4383-4d54-8b9f-f51d02f0dd11` (nombre `Prestadora
 Demo`, caso de uso de desarrollo, sin contrato firmado — no tiene estatus de "primera
-prestadora" ni ningún otro privilegio de diseño). Ver
-`backend/src/db/schema_multitenant_01.sql`/`schema_multitenant_02.sql` para el DDL real aplicado.
+prestadora" ni ningún otro privilegio de diseño). Ver `supabase/migrations/` para el DDL real
+aplicado.
 
 **Convención de FK tenant-segura (introducida con Módulo 6, aplicar a toda tabla nueva
 referenciada desde otra tabla con `prestadora_id`):** en vez de una FK simple al `id` de la
@@ -81,7 +81,8 @@ completaba el filtrado real de tenant. 7 de esas 15 (`usuarios`, `asistentes`, `
 directo contra Supabase (sin migración versionada en el repo — deuda de trazabilidad, no de
 funcionalidad). Las 8 restantes (`ausencias`, `guardias_cobertura`, `ceses`,
 `lista_precios`, `prestaciones`, `paquetes_prestaciones`, `paquete_prestacion_items`,
-`certificados`) se cerraron el 2026-07-11 con `backend/src/db/schema_multitenant_03.sql`,
+`certificados`) se cerraron el 2026-07-11 con un archivo de esquema de aquella etapa
+—eliminado del repositorio el 2026-08-18 junto con todos los demás—,
 aplicado contra Supabase real vía MCP y verificado con un insert real sin `prestadora_id`
 contra `certificados` que falló como se esperaba (`ERROR 23502: null value in column
 "prestadora_id" ... violates not-null constraint`). Las 15 tablas ya no tienen `DEFAULT`:
@@ -252,8 +253,8 @@ ALTER TABLE asistentes ADD CONSTRAINT asistentes_canales_valido
   CHECK (canales <@ ARRAY['directo','marketplace']::TEXT[] AND array_length(canales, 1) > 0);
 ```
 
-Ver `backend/src/db/schema_asistentes_canales.sql` (schema completo, pendiente de aplicar
-contra Supabase real — agregado a `docs/PENDIENTES.md`).
+Ver `supabase/migrations/` para el DDL de estas columnas. Si hace falta saber si están
+efectivamente aplicadas, se consulta la base real, no este documento.
 
 ## Tablas: tipos_documento_asistente / documentos_asistente (pendiente #18 punto 1, aplicado
 ## y verificado contra Supabase real 2026-07-14)
@@ -295,10 +296,10 @@ ALTER TABLE prestadoras ADD COLUMN dias_aviso_vencimiento_documentos SMALLINT NO
 
 `tipos_documento_asistente` es el catálogo por prestadora (nombre + si tiene vencimiento o es
 meramente informativo). `documentos_asistente` es una fila por cada documento cargado de cada
-Asistente. La migración incluida en `backend/src/db/schema_documentos_asistente.sql` siembra
-por cada prestadora existente 4 tipos sugeridos (Monotributo, ART, Seguro, Certificado de
-Antecedentes Penales) y traslada los valores que hubiera en las 3 columnas viejas a filas de
-`documentos_asistente`, antes de borrarlas.
+Asistente. Al aplicarse este cambio se sembraron por cada prestadora existente 4 tipos
+sugeridos (Monotributo, ART, Seguro, Certificado de Antecedentes Penales) y se trasladaron los
+valores que hubiera en las 3 columnas viejas a filas de `documentos_asistente`, antes de
+borrarlas.
 
 RLS: `admin_prestadora` gestiona (`FOR ALL`) ambas tablas dentro de su `prestadora_id`;
 `coordinador` solo lee (`tipos_documento_asistente` completo, `documentos_asistente` filtrado
@@ -306,11 +307,12 @@ por su zona vía join con `asistentes.zonas`) — mismo patrón que `verificacio
 `certificados` (Regla 8 de `CLAUDE.md`, dato laboral interno, nunca visible para
 Asistente/Familia).
 
-**Estado 2026-07-14:** `backend/src/db/schema_documentos_asistente.sql` aplicado contra
-Supabase real y verificado (catálogo de 4 tipos sembrado por prestadora, columnas viejas
+**Estado 2026-07-14:** el cambio se aplicó contra Supabase real y se verificó ese mismo día
+(catálogo de 4 tipos sembrado por prestadora, columnas viejas
 eliminadas de `asistentes`, `configuracion_notificaciones` migrado al evento genérico
 `vencimiento_documento_asistente`, `dias_aviso_vencimiento_documentos` con default 30 — ver
-`docs/PENDIENTES.md` #18). Código de Panel/backend (`backend/src/routes/panelConfiguracion.js`,
+`docs/PENDIENTES.md` #18); el archivo de esquema que llevó ese cambio se eliminó del
+repositorio el 2026-08-18. Código de Panel/backend (`backend/src/routes/panelConfiguracion.js`,
 `panel/src/pages/Configuracion.jsx`, `panel/src/pages/asistentes/PerfilTab.jsx`,
 `backend/src/utils/vencimientos.js`) también entregado en el mismo cierre.
 
@@ -416,8 +418,8 @@ dato histórico ya cargado en esta columna no se borró, solo dejó de ser la fu
 
 ## Módulo: Indicaciones de medicación y habilitaciones (pendiente #62, cerrado 2026-07-25)
 
-DDL completo, RLS y seed de advertencia legal en
-`backend/src/db/schema_indicaciones_medicacion_01.sql`. Resumen de las 3 tablas nuevas:
+DDL completo, RLS y seed de advertencia legal en `supabase/migrations/`. Resumen de las 3
+tablas nuevas:
 
 - **`indicaciones_medicacion`** — una fila por indicación de medicación solicitada por la
   Familia (medicamento/dosis/frecuencia/vía de administración/prescripción opcional/vigencia
@@ -444,9 +446,9 @@ consumido por `appFamiliasMedicacion.js`, `panelMedicacion.js` y `appAsistentesM
 ## Tabla: guardias y Módulo 6 (Guardias) — reemplazado por el schema real, 2026-07-10
 
 **Esta sección quedó obsoleta como diseño-solo.** El DDL real, aplicado y verificado contra
-Supabase (`backend/src/db/schema_modulo6_guardias.sql`), reemplaza la tabla `guardias` de
-abajo por un diseño de 8 tablas — ver ese archivo para el DDL completo (columnas, tipos,
-constraints, los 15 policies de RLS). Resumen de las tablas:
+Supabase, reemplaza la tabla `guardias` de abajo por un diseño de 8 tablas — ver
+`supabase/migrations/` para el DDL completo (columnas, tipos, constraints, los 15 policies de
+RLS). Resumen de las tablas:
 
 - **`series_guardias`** — patrón recurrente de una guardia (ej. "todos los martes 8-14hs"),
   del cual `guardias` genera instancias concretas.
@@ -468,7 +470,7 @@ constraints, los 15 policies de RLS). Resumen de las tablas:
 - **`guardias_tracking_gps`** — histórico de posiciones GPS durante una guardia activa (no solo
   el punto de checkin/checkout), ver nota Ley 25.326 en `SECURITY.md`.
 
-**Ampliación 2026-07-12 (`backend/src/db/schema_modulo6_guardias_03.sql`)** — detección
+**Ampliación 2026-07-12 (DDL en `supabase/migrations/`)** — detección
 automática de ausencia + alertas tempranas, diseñado con el Desarrollador el 2026-07-12 tras
 probar Módulo 6 Parte 2 en navegador (ver `docs/PENDIENTES.md` #20). Dos tablas nuevas:
 
@@ -666,8 +668,8 @@ CREATE TABLE calificaciones_asistente (
 );
 ```
 
-Ver `backend/src/db/schema_calificaciones_asistente.sql` (RLS completa + `NOTIFY pgrst,
-'reload schema'`, pendiente de aplicar contra Supabase real). No confundir con
+Ver `supabase/migrations/` para el DDL de esta tabla, con su RLS completa. Si hace falta saber
+si está efectivamente aplicada, se consulta la base real, no este documento. No confundir con
 `vínculo`/`cese` (arriba) — son conceptos independientes: vínculo/cese es "¿sigue siendo
 parte del plantel certificado de la prestadora?", esta tabla es "¿qué opinaron las Familias
 de su trabajo?", y una calificación mala nunca afecta al primero de forma automática.

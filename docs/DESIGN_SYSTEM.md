@@ -334,8 +334,8 @@ variables de la paleta funcional, no colores nuevos:
 .guardia-ausente    { border-left: 4px solid var(--naranja-alerta); }
 ```
 
-`ausente` se agregó como quinto valor de `guardias.estado` al diseñar el schema real
-(`backend/src/db/schema_modulo6_guardias.sql`) — distinto de `cancelada`, esta sección había
+`ausente` se agregó como quinto valor de `guardias.estado` al diseñar el esquema real
+(ver `supabase/migrations/`) — distinto de `cancelada`, esta sección había
 quedado con solo 4 reglas. Corregido al implementar Módulo 6 Parte 1 (2026-07-10).
 
 **Falta cubrir dos estados nuevos.** La migración `20260731170000_guardia_sin_cubrir_y_ofrecida.sql`

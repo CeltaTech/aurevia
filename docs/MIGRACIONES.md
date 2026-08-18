@@ -12,9 +12,10 @@ Vigente desde el **2026-07-28**. Es el paso 2 de la Etapa 0 de
 Hasta el 2026-07-28 la base de Careonys **no se podía reconstruir desde el repositorio**. Había
 dos historiales distintos, y ninguno de los dos servía:
 
-- **`backend/src/db/*.sql` — 75 archivos sueltos.** Son *intención*: lo que en algún momento se
-  quiso aplicar. Nadie podía decir cuáles se aplicaron, cuáles quedaron a medias y cuáles fueron
-  pisados por otro posterior. No están ordenados por fecha ni numerados.
+- **Setenta y cinco archivos `.sql` sueltos guardados en el repositorio** (eliminados el
+  2026-08-18). Eran *intención*: lo que en algún momento se quiso aplicar. Nadie podía decir
+  cuáles se aplicaron, cuáles quedaron a medias y cuáles fueron pisados por otro posterior. No
+  estaban ordenados por fecha ni numerados.
 - **La tabla interna de Supabase — otras 75 anotaciones.** Eso sí era *lo que efectivamente
   corrió* entre el 2026-07-11 y el 2026-07-27, con el texto completo de cada cambio. Pero vivía
   **en un solo lugar del mundo**: adentro de la base de producción. No estaba en el repositorio
@@ -43,21 +44,16 @@ de seguridad, funciones (firma y cuerpo), disparadores, restricciones, índices,
 tabla** y valores de los enumerados. Las nueve dieron idénticas. Los permisos de tabla se
 verificaron a propósito: es la clase de defecto que rompió el panel de CeltaTech el 2026-07-27.
 
-## 3. Las tres carpetas, y cuál manda
+## 3. Dónde vive el esquema
 
-| Carpeta | Qué es | ¿Se ejecuta? |
-|---|---|---|
-| `supabase/migrations/` | **La verdad.** Lo que construye la base | **Sí**, en orden de nombre |
-| `supabase/historial_previo/` | Los 75 cambios aplicados entre el 11 y el 27 de julio, rescatados de la propia base el 2026-07-28 | **Nunca.** Es registro histórico |
-| `backend/src/db/` | Archivo histórico congelado. Los 75 `.sql` sueltos de la etapa anterior | **Nunca.** No se agregan archivos nuevos ahí |
+**La única fuente del esquema son `supabase/migrations/` y la base real.** Fuera de esa carpeta
+no se guarda ningún archivo `.sql` de esquema: todo cambio, sin excepción, va ahí, y se ejecuta
+en orden de nombre. (La única excepción es `supabase/seed.sql`, que no crea ni modifica
+estructura: solo carga filas de prueba en la base local.)
 
-**`backend/src/db/` queda cerrado.** No se toca, no se agrega, no se corrige. Sirve para
-consultar cómo se pensó algo en su momento, nada más. Todo cambio de esquema nuevo, sin
-excepción, va a `supabase/migrations/`.
-
-Ver `supabase/historial_previo/LEEME.md` para el detalle de por qué esas 75 anotaciones se
-sacaron de la base (resumen: había que dejar el historial de producción alineado con el
-repositorio, y sacarlas **no tocó ni una tabla** — es una libreta de apuntes, no la base).
+Aquellas 75 anotaciones se sacaron de la tabla interna de Supabase el 2026-07-28, para dejar el
+historial de producción alineado con el repositorio. Sacarlas **no tocó ni una tabla**: esa
+tabla es una libreta de apuntes, no la base.
 
 ## 4. Las tres reglas que no se negocian
 

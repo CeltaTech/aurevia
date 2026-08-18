@@ -211,7 +211,7 @@ export function PerfilTab({ asistente, onActualizado }) {
 
 // Catálogo configurable por prestadora (Configuración > Documentos de Asistentes) — reemplaza
 // las 3 columnas fijas vencimiento_monotributo/art/seguro (ver docs/PENDIENTES.md #18 punto 1,
-// backend/src/db/schema_documentos_asistente.sql).
+// supabase/migrations/).
 function DocumentosVencimiento({ asistenteId }) {
   const { t } = useLocale();
   const { usuario } = useAuth();

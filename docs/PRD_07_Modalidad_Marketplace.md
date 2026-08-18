@@ -9,15 +9,14 @@
 ## 1. Qué ya existe en el código (punto de partida)
 
 - `asistentes.canales TEXT[]` (default `['directo','marketplace']`) — un Asistente puede
-  estar en uno, otro o ambos canales a la vez (`docs/DATA_MODEL.md:222-230`,
-  `backend/src/db/schema_asistentes_canales.sql`). Pendiente de aplicar contra Supabase
-  real (ver `docs/PENDIENTES.md` #13).
+  estar en uno, otro o ambos canales a la vez (`docs/DATA_MODEL.md:222-230`, y el esquema
+  vigente en `supabase/migrations/`). Pendiente de aplicar contra Supabase real (ver
+  `docs/PENDIENTES.md` #13).
 - `calificaciones_asistente` — estrellas de la Familia, puramente informativas; la
   Prestadora solo decide `visible_publica`, nunca edita el contenido ni dispara acción
-  automática sobre el Asistente (`docs/DATA_MODEL.md:589-612`,
-  `backend/src/db/schema_calificaciones_asistente.sql`). Este diseño ya anticipaba
-  correctamente el principio del §4 de este documento, antes de que se discutiera en
-  detalle.
+  automática sobre el Asistente (`docs/DATA_MODEL.md:589-612`, y el esquema vigente en
+  `supabase/migrations/`). Este diseño ya anticipaba correctamente el principio del §4 de
+  este documento, antes de que se discutiera en detalle.
 
 Las 3 modalidades de trabajo de una Prestadora (directa / marketplace / subcontratación) son
 **combinables entre sí**, no mutuamente excluyentes — una Prestadora puede operar varias a
@@ -204,8 +203,8 @@ resueltas y no van a hacer cambiar la respuesta.
 
 ## 9. Pendiente antes de escribir código
 
-- Aplicar `schema_asistentes_canales.sql` contra Supabase real (`docs/PENDIENTES.md` #13,
-  sigue pendiente).
+- Aplicar contra Supabase real el agregado de `asistentes.canales` (`docs/PENDIENTES.md`
+  #13, sigue pendiente).
 - Diseñar el modelo de datos de suscripción de Familia (tabla de suscripciones, estado,
   próxima fecha de cobro, historial de cobros) — no existe todavía.
 - Redactar la sección de advertencias de marketplace en `docs/legal/argentina.md` con

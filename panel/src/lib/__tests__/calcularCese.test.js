@@ -14,7 +14,7 @@ const ESCALAS_FIXTURE = [
   { jurisdiccion: 'AR', tipo: 'fraccion_computable_antiguedad', categoria: 'general', valor: 90, vigencia_desde: '2026-01-01', vigencia_hasta: null },
 ];
 
-// Misma estructura y valores que backend/src/db/schema_formulas_cese_01.sql (seed AR) —
+// Misma estructura y valores que supabase/migrations/ (seed AR) —
 // la fórmula misma es dato, ver pendiente #72 en docs/PENDIENTES.md.
 const FORMULAS_FIXTURE = [
   {

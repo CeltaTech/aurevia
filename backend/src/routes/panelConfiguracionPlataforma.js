@@ -40,10 +40,12 @@ panelConfiguracionPlataformaRouter.patch('/mfa', requiereSuperadmin, async (req,
   res.json({ ok: true });
 });
 
-// Acá vivían GET y PATCH /umbral-prestadoras (pendiente #44): el umbral de Prestadoras
-// certificadas a partir del cual se avisaba el riesgo de mandar todos los emails desde una
-// única cuenta Gmail compartida (docs/DECISION_EMAIL_ESCALA.md). Se fueron en la Etapa 2 de la
+// Acá vivían GET y PATCH /umbral-prestadoras: contaban cuántas Prestadoras había contratadas,
+// que es un dato del negocio de CeltaTech y no del producto. Se fueron en la Etapa 2 de la
 // separación CeltaTech / Careonys (2026-07-28) junto con la columna
-// configuracion_plataforma.umbral_alerta_prestadoras: contar cuántas Prestadoras hay
-// contratadas es un dato del negocio de CeltaTech, no del producto. Ninguna pantalla del Panel
-// los consumía (verificado en docs/ETAPA_2_INVENTARIO.md §4).
+// configuracion_plataforma.umbral_alerta_prestadoras. Ninguna pantalla del Panel los consumía.
+//
+// El envío de correo ya está decidido y no se vuelve a discutir: API de Gmail por OAuth2,
+// reutilizando la casilla notificaciones.aurevia@gmail.com. Decisión del Desarrollador del
+// 2026-07-26, en pausa hasta después del MVP. El único punto de integración es
+// backend/src/utils/email.js.

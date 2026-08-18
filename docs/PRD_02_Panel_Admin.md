@@ -62,10 +62,10 @@ de reportes, alertas activas.
 ### Módulo 6 — Guardias
 
 **Estado 2026-07-10: Parte 1 ("Guardias core") construida en el Panel**, sobre el schema
-existente (`backend/src/db/schema_modulo6_guardias.sql`, 8 tablas, RLS multi-tenant
-verificada contra Supabase real — ver `DATA_MODEL.md` y `SECURITY.md`). Sin rutas backend
+existente (8 tablas, RLS multi-tenant verificada contra Supabase real — ver
+`supabase/migrations/`, `docs/DATA_MODEL.md` y `docs/SECURITY.md`). Sin rutas backend
 nuevas: la UI consulta/escribe directo contra Supabase (anon key), confiando en las policies
-RLS ya definidas en el schema para el aislamiento por prestadora/zona — mismo patrón que
+RLS ya definidas en el esquema para el aislamiento por prestadora/zona — mismo patrón que
 `Familias.jsx`/`Asistentes.jsx`.
 
 Piezas de la Parte 1, ya construidas (`panel/src/pages/Guardias.jsx`,

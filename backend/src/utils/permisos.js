@@ -2,7 +2,7 @@ import { supabase } from '../db/connection.js';
 
 // Acciones cuyo default (sin fila configurada en permisos_prestadora) es "solo admin" —
 // espejo en JS de la lógica de la función SQL `tiene_permiso()`
-// (backend/src/db/schema_permisos_prestadora_01.sql). Se duplica acá porque el alta manual
+// (supabase/migrations/). Se duplica acá porque el alta manual
 // corre en Express con la service role key, sin auth.uid(), así que la función SQL
 // (pensada para RLS) no aplica en este contexto.
 const ACCIONES_DEFAULT_SOLO_ADMIN = new Set([

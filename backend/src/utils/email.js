@@ -71,7 +71,7 @@ async function crearTransporterPara(prestadoraId) {
 
 // Destinatarios configurables desde el Panel (Módulo 8 > Notificaciones) en vez de
 // hardcodeados. configuracion_notificaciones es por prestadora desde 2026-07-13
-// (backend/src/db/schema_whatsapp_ia_01.sql sección 0) — antes era una fila global por
+// (supabase/migrations/) — antes era una fila global por
 // evento, compartida sin darse cuenta por todas las prestadoras licenciatarias.
 async function configuracionEvento(evento, prestadoraId) {
   const { data } = await supabase

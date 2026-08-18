@@ -6,7 +6,7 @@ const EVENTO_VENCIMIENTO_DOCUMENTO = 'vencimiento_documento_asistente';
 
 // Revisa vencimientos de los documentos que cada prestadora eligió trackear (catálogo en
 // tipos_documento_asistente, configurable por prestadora — ver docs/PENDIENTES.md #18 punto 1,
-// backend/src/db/schema_documentos_asistente.sql) y avisa por email al Coordinador según
+// supabase/migrations/) y avisa por email al Coordinador según
 // docs/PRD_02B_Gestion_Personal.md función 9. Se ejecuta una vez por día (ver server.js).
 // Recorre TODAS las prestadoras licenciatarias, no una fija (mismo patrón que
 // revisarAusenciasAutomaticas/revisarNotificacionesCoordinador).

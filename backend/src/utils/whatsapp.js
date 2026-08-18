@@ -6,7 +6,7 @@ const META_GRAPH_VERSION = 'v20.0';
 // Credenciales por prestadora — nunca en variables de entorno globales, cada prestadora
 // licenciataria tiene su propia cuenta de Meta Cloud API (docs/PRD_06_WhatsApp_IA.md punto C).
 // El token nunca vive en esta tabla en texto plano: se lee desde Supabase Vault a través de
-// la función leer_token_whatsapp (backend/src/db/schema_whatsapp_ia_01.sql sección 2),
+// la función leer_token_whatsapp (supabase/migrations/),
 // ejecutable solo con el service role que ya usa este backend.
 async function credencialesWhatsapp(prestadoraId) {
   const { data: config } = await supabase

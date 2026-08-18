@@ -180,8 +180,8 @@ Se construye exclusivamente en el Panel de Administración (no en esta PWA, la F
 participa del proceso ni accede al informe). Reemplaza el diseño original de "Planillas
 IOMA" en PDF por un informe virtual dentro del Panel, con impresión vía `window.print()` +
 `@media print` — sin librería de PDF y sin asumir una única obra social: cada Paciente
-registra su propia `obra_social` (texto libre) y `numero_afiliado`
-(`backend/src/db/schema_informes_obra_social.sql`).
+registra su propia `obra_social` (texto libre) y `numero_afiliado` (esquema vigente en
+`supabase/migrations/`).
 
 **Planilla de asistencia**: nombre del Paciente, obra social y número de afiliado, mes de
 prestación, nombre del Asistente por guardia, campo de firma del Asistente, campo de firma

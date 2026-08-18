@@ -29,7 +29,7 @@
 // que CeltaTech identifica al producto y con la que se arman las claves de
 // entitlements (`aurevia.pacientes.activos_max`) — por eso siguen diciendo
 // `aurevia` aunque la marca ya sea Careonys. Renombrar la marca no toca un
-// solo dato guardado. Ver PLAN_SEPARACION_CELTATECH.md, Etapa 0.5.
+// solo dato guardado. Ver celtatech/docs/PLAN_SEPARACION_CELTATECH.md, Etapa 0.5.
 //
 // A partir de la Etapa 3 la fuente de verdad de estos valores pasa a ser CeltaTech y
 // se replican por el mismo canal que los entitlements. Hasta entonces esta config

@@ -143,7 +143,7 @@ Hasta el 2026-07-28 esta maquinaria era del rol comercial `admin_plataforma`. Es
 entero a CeltaTech (Nivel 1) y **ya no existe en Careonys**: las dos tablas se renombraron
 (`sesiones_tenant_admin_plataforma` → `sesiones_soporte_tecnico`,
 `auditoria_admin_plataforma` → `auditoria_soporte_tecnico`) y el permiso pasó a `superadmin`.
-La maquinaria en sí no cambió. Ver `docs/PLAN_SEPARACION_CELTATECH.md`, Etapa 2, paso 7.
+La maquinaria en sí no cambió. Ver `celtatech/docs/PLAN_SEPARACION_CELTATECH.md`, Etapa 2, paso 7.
 
 ```sql
 CREATE TABLE sesiones_soporte_tecnico (

@@ -105,7 +105,7 @@ soporte técnico** (tablas `sesiones_soporte_tecnico` y `auditoria_soporte_tecni
 párrafo anterior sobre banner, auditoría y límites de tiempo sigue vigente palabra por
 palabra; lo único que cambió es quién tiene la llave. Probado de punta a punta contra la base
 local con `backend/scripts/test_etapa2_sesion_soporte.mjs` (13 chequeos). Ver
-`docs/PLAN_SEPARACION_CELTATECH.md`, Etapa 2, paso 7.
+`celtatech/docs/PLAN_SEPARACION_CELTATECH.md`, Etapa 2, paso 7.
 
 `superadmin` es el único rol, además de `admin_prestadora`, con acceso de escritura a
 configuración de sistema (planes/módulos activables, si se construye esa idea de

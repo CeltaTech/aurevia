@@ -5,7 +5,7 @@
 > orden.
 
 Vigente desde el **2026-07-28**. Es el paso 2 de la Etapa 0 de
-`../../../docs/PLAN_SEPARACION_CELTATECH.md`.
+`celtatech/docs/PLAN_SEPARACION_CELTATECH.md`.
 
 ## 1. Qué pasaba antes, y por qué había que arreglarlo
 

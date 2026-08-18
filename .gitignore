@@ -20,7 +20,6 @@ Thumbs.db
 No hacer commit/
 
 # Carpetas restringidas (agujero negro, ver CLAUDE.md §9) — nunca versionar
-docs/Documentos Obsoletos/
 
 # Estado local de la CLI de Cloudflare (wrangler). No es codigo del producto.
 .wrangler/

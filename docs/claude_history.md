@@ -10,6 +10,14 @@
 - **Lo que se salvó antes de borrar:** el archivo de siembra de las siete advertencias legales de Argentina vivía únicamente en una de esas carpetas muertas, así que una base armada desde cero quedaba sin una sola advertencia. Pasó a la cadena de migraciones (`20260818140000`) antes de la eliminación.
 - **Lo que no se tocó:** `backend/src/db/connection.js`, que es código vivo, y los comentarios de las migraciones ya aplicadas, que son registro histórico y no se editan (`docs/MIGRACIONES.md` §4.1). En `docs/claude_history.md` los nombres de archivo borrados quedan nombrados en pasado, con la aclaración de que se eliminaron.
 
+## No hay depósito de documentos viejos ni de tareas cerradas (2026-08-18)
+
+- **Decía antes:** `CLAUDE.md` §9 describía una carpeta `docs/Documentos Obsoletos/` donde iba a parar todo documento superado, y `docs/PENDIENTES.md` mandaba dejar la fila de un pendiente cerrado marcada en verde en vez de borrarla.
+- **Dice ahora:** la carpeta no existe y no se vuelve a crear; un documento que deja de estar vigente se borra en el momento, junto con las referencias que lo nombran. Un pendiente que se cierra se borra: la fila entera desaparece. Lo único que sobrevive es la línea de este archivo que explica por qué cambió una regla, y el historial de cambios del repositorio.
+- **Motivo, en palabras del Desarrollador:** *"de nada sirve conservar un historial de cosas que ya cambiaron para siempre, solo para relentizar y confundir"*.
+- **Qué se borró ese día:** las diez piezas de `docs/Documentos Obsoletos/` (cuatro planes ya ejecutados, dos versiones anteriores de `CLAUDE.md`, la revisión de pantallas, el diario de obra, la lista de pendientes cerrados y un respaldo comprimido del repositorio anterior al filtrado del 2026-07-16) y las cuatro filas verdes que quedaban en `docs/PENDIENTES.md`. De la revisión de pantallas no se perdió nada: sus seis observaciones de aspecto ya estaban copiadas dentro del pendiente `#112`.
+- **De paso, mismo día:** `CLAUDE.md` quedó sin notas de fecha ni menciones de "esto antes decía", que era exactamente lo que §10 prohíbe y el propio archivo no cumplía.
+
 ## La carpeta del producto en el disco pasó a llamarse `careonys` (2026-08-15)
 
 - **Decía antes:** la carpeta del producto se llamaba `productos/aurevia`. La entrada del 2026-07-28 (más abajo) la anotaba como uno de los lugares que todavía llevaban el nombre viejo, a la espera de mudanza.

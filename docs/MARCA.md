@@ -1,6 +1,6 @@
 # Marca del producto — qué archivos tienen que existir
 
-> Etapa 0.5 de `PLAN_SEPARACION_CELTATECH.md`. Este documento es el **contrato**: la lista de
+> Etapa 0.5 de `celtatech/docs/PLAN_SEPARACION_CELTATECH.md`. Este documento es el **contrato**: la lista de
 > archivos que hay que entregar cuando la marca exista. Hoy **no existe ninguno** — no hay
 > isotipo ni logotipo diseñados, y no hay dominio registrado (confirmado por el Desarrollador
 > el 2026-07-27). Nada de lo que sigue está hecho.

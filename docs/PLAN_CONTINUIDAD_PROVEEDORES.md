@@ -1,7 +1,7 @@
 # PLAN_CONTINUIDAD_PROVEEDORES.md — Resguardos ante caída o salida de un proveedor
 
 > Origen: pendiente #15 de `docs/PENDIENTES.md` (inventario de dependencia de un solo
-> proveedor — Supabase/Railway/Vercel/Gmail/GitHub). Este documento cubre los puntos 1 a 4
+> proveedor — Supabase/Railway/Cloudflare Pages/Gmail/GitHub). Este documento cubre los puntos 1 a 4
 > del roadmap acordado con el Desarrollador el 2026-07-13 (de lo simple/prioritario a lo
 > complejo/no prioritario). El punto 5 (mirror en caliente de Supabase Auth) queda fuera de
 > este documento — se discute aparte, por separado, y no está recomendado (ver cierre).
@@ -99,25 +99,47 @@ que reemplazarlo — para no tener que decidir el procedimiento en el momento de
 3. Pasos para migrar: crear el proyecto nuevo en el proveedor elegido, cargar las mismas
    variables de entorno (`backend/.env.example` como checklist), apuntar el mismo repo de
    GitHub (o hacer deploy manual del código), y actualizar la URL del backend en:
-   - `panel/.env` (o el equivalente de configuración de build de Vercel) — variable que
-     apunta a la URL del backend.
+   - `panel/.env` para el desarrollo local, y el secreto `VITE_API_URL` del repositorio de
+     GitHub para lo que se publica (`.github/workflows/publicar-pantallas.yml`) — es la
+     variable que apunta a la dirección del backend.
    - Cualquier webhook configurado externamente (ej. el webhook de WhatsApp/Meta Cloud
      API, `docs/PRD_06_WhatsApp_IA.md`) — hay que reconfigurar la URL en el panel de Meta.
 4. El `RAILWAY_TOKEN` usado en GitHub Actions (`docs/PENDIENTES.md` #1) solo sirve para el
    auto-deploy — no bloquea la migración, se reemplaza por el token/mecanismo equivalente
    del proveedor nuevo.
 
-### Vercel (hosting del Panel Admin y el sitio público)
+### Cloudflare Pages (hosting de las tres pantallas: Panel, Familias y Asistentes)
 
-1. Ambos (`panel/` y `sitio-web/`) son proyectos frontend estándar (Vite/React) sin
-   dependencias propietarias de Vercel más allá del propio hosting/build.
-2. Alternativas equivalentes: Netlify, Cloudflare Pages, GitHub Pages (si no hace falta
-   SSR, que hoy no hace falta).
-3. Pasos para migrar: conectar el mismo repo de GitHub al proveedor nuevo, configurar el
-   mismo comando de build (`npm run build`) y variables de entorno (`VITE_*`), y apuntar
-   el dominio propio (si lo hay) al proveedor nuevo vía DNS.
-4. Recordar Regla 13.1 en el proveedor nuevo también: confirmar si tiene auto-deploy real
-   desde `git push` o si hace falta un paso manual equivalente a `vercel --prod`.
+1. Las tres (`panel/`, `pwa-familias/`, `pwa-asistentes/`) son proyectos frontend estándar
+   (Vite/React) y se publican **ya compiladas**: no hay nada propietario de Cloudflare
+   adentro del código. Lo único específico del proveedor es el archivo `_redirects` de cada
+   aplicación — una regla de una línea para que al recargar una pantalla interna no salga
+   404.
+2. Alternativas equivalentes: Netlify, Vercel, GitHub Pages (mientras el HTML no haya que
+   armarlo del lado del servidor, que hoy no hace falta).
+3. **Los proyectos de Cloudflare Pages son de subida directa: no están enganchados a
+   GitHub.** Quien compila y publica es `.github/workflows/publicar-pantallas.yml`, que
+   corre `npm run build` con las variables `VITE_*` guardadas como secretos del repositorio
+   y después sube la carpeta ya compilada con `wrangler pages deploy`. Eso es justamente lo
+   que hace fácil la mudanza: el proveedor recibe archivos terminados, así que cambiarlo es
+   cambiar el último paso de ese archivo, no rehacer la compilación.
+4. Pasos para migrar: crear los tres proyectos en el proveedor nuevo, reemplazar en ese
+   archivo el paso de `wrangler` por el comando equivalente del proveedor nuevo, cargar allá
+   el token que ese comando necesite (hoy son `CLOUDFLARE_API_TOKEN` y
+   `CLOUDFLARE_ACCOUNT_ID`), y repuntar por DNS `gestion.careonys.com`,
+   `familias.careonys.com` y `asistentes.careonys.com` al lugar nuevo.
+5. Dos cosas que no se pueden olvidar en el proveedor nuevo, porque no fallan en la
+   compilación sino en vivo: la regla de reescritura equivalente al `_redirects` (sin ella,
+   toda dirección interna da 404 al recargar), y que el manifiesto y el `sw.js` de las dos
+   aplicaciones se sirvan con el tipo de contenido correcto, o dejan de instalarse en el
+   teléfono.
+6. Las direcciones que el backend mete adentro de los correos de activación
+   (`PWA_FAMILIAS_URL` y `PWA_ASISTENTES_URL`, configuradas en Railway) apuntan a los
+   dominios propios, no a los del proveedor: mientras el DNS se repunte, esos correos no
+   hay que tocarlos.
+7. Recordar la Regla 13.1 en el proveedor nuevo también: confirmar si publica solo desde el
+   `git push` o si hace falta un paso explícito, y dejarlo escrito en el automatismo, no en
+   la memoria de nadie.
 
 ### Gmail SMTP (envío de emails transaccionales)
 

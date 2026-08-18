@@ -1,16 +1,18 @@
 // ---------------------------------------------------------------------------
 // identidadProducto.js — Identidad de marca del producto (Etapa 0.5)
 //
-// ARCHIVO ESPEJADO. Existe una copia byte a byte idéntica en:
-//   backend/src/config/identidadProducto.js
+// ARCHIVO ESPEJADO. El original es backend/src/config/identidadProducto.js y
+// existe una copia byte a byte idéntica en:
 //   panel/src/config/identidadProducto.js
 //   pwa-asistentes/src/config/identidadProducto.js
 //   pwa-familias/src/config/identidadProducto.js
+//   sitio-web/src/config/identidadProducto.js
 //
 // No se comparte por import desde un único archivo en la raíz porque cada unidad
 // se despliega por separado y sin acceso al resto del repo: `railway up` sube solo
-// backend/ (.github/workflows/deploy-backend.yml:31) y cada frontend tiene su
-// propio vercel.json con su root directory. Un import a ../../identidad.js
+// backend/ (.github/workflows/deploy-backend.yml:31) y cada pantalla se compila y
+// se sube sola, tomando su propia carpeta como raíz
+// (.github/workflows/publicar-pantallas.yml). Un import a ../../identidad.js
 // compilaría en local y rompería en producción.
 //
 // La sincronía de las 4 copias la garantiza scripts/verificar_identidad.mjs, que

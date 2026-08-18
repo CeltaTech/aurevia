@@ -4,9 +4,9 @@
 > registró el diseño acordado el 2026-07-11 con varios puntos centrales abiertos; el
 > 2026-07-13 el Desarrollador cerró los cinco puntos pendientes (A-E, ver sección de abajo) y
 > dio el kickoff de implementación el mismo día. El código (backend + Panel) se construyó,
-> se aplicó y verificó contra Supabase real, se desplegó (Railway + `vercel --prod`) y se
-> probó en navegador real contra el Panel desplegado (proyecto Vercel renombrado desde
-> entonces a `aurevia-panel`). Ver pendiente #9 de
+> se aplicó y verificó contra Supabase real, se desplegó y se probó en navegador real contra
+> el Panel desplegado. (El Panel se servía entonces desde Vercel; desde el 2026-07-31 vive en
+> Cloudflare Pages, en `gestion.careonys.com`.) Ver pendiente #9 de
 > `docs/PENDIENTES.md` (🟢 Resuelto 2026-07-13), que tiene el detalle completo de la
 > implementación y de lo explícitamente diferido (envío real a Asistentes y endurecimiento
 > del webhook para producción, a probar con una prestadora real con cuenta Meta activa).

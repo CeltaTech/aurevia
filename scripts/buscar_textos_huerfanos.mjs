@@ -33,8 +33,11 @@
 //      Se juntan todos los comienzos que aparecen en el código (`estado_`,
 //      `nivel_`…) y se da por viva toda clave que empiece con alguno.
 //   3. El grupo entero se pasa como un paquete,
-//      `Object.entries(t.postulaciones.disponibilidad_labels)`. Ahí las hojas
-//      están vivas aunque ninguna aparezca escrita.
+//      `Object.entries(t.postulaciones.disponibilidad_labels)`, o se lo busca
+//      al vuelo con una variable adentro, `t.errores.motivos[motivo]`. En los
+//      dos casos las hojas están vivas aunque ninguna aparezca escrita. El
+//      camino se reconoce escrito con puntos comunes o con el punto seguro
+//      `?.` —`t?.errores?.motivos?.[motivo]`—, que es la misma cosa.
 // Los tres coladores son anchos a propósito: dejar pasar una clave muerta es
 // mucho menos grave que hacer borrar una viva.
 // ---------------------------------------------------------------------------
@@ -123,10 +126,19 @@ for (const app of APPS) {
   /* Forma 3: los grupos que se usan enteros. Se reconoce por el camino completo desde `t.`,
      no por el nombre suelto del grupo: hay mucho `evento.detalle` y `fila.detalle` dando
      vueltas que no tienen nada que ver con los textos. Y se descarta `traducirValor(t.grupo, …)`,
-     que no usa el grupo entero sino una hoja armada al vuelo — ese caso ya lo cubre la forma 2. */
+     que no usa el grupo entero sino una hoja armada al vuelo — ese caso ya lo cubre la forma 2.
+
+     Cada punto del camino puede estar escrito común (`.`) o seguro (`?.`): son la misma cosa
+     y el código usa las dos. Después del grupo se acepta o bien nada más —el grupo viaja
+     entero como paquete— o bien un corchete, que es buscar adentro con una variable. Las dos
+     dejan vivas a todas las hojas. */
   const grupoEnteroUsado = (grupo) => {
     if (grupo === '(raíz)') return false;
-    const re = new RegExp(`(.{0,16})\\bt\\.${escapar(grupo)}\\s*(?![A-Za-z0-9_.[(])`, 'g');
+    const camino = grupo.split('.').map(escapar).join('\\??\\.');
+    const re = new RegExp(
+      `(.{0,16})\\bt\\??\\.${camino}\\s*(?:\\??\\.?\\[|(?![A-Za-z0-9_?.[(]))`,
+      'g',
+    );
     for (const m of fuentes.matchAll(re)) if (!m[1].includes('traducirValor(')) return true;
     return false;
   };

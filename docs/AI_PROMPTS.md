@@ -141,12 +141,34 @@ Esto **no** lo puede comprobar `scripts/verificar_texto_visible.mjs`: ese contro
 archivos del repositorio, y acá el texto no existe hasta que el modelo responde. La única
 defensa es que la instrucción se lo diga.
 
+## Cómo se lee lo que devuelve el modelo
+
+Los cinco prompts piden un JSON "sin texto adicional". **El modelo igual no siempre lo manda
+pelado**, y eso se comprobó contra la API real el 2026-08-18 (no es una precaución teórica).
+Aparecieron tres formas de falla, y las tres hacían que la función cayera en su respuesta de
+emergencia sin ningún error visible: el reporte se guardaba sin estructurar, la alerta no se
+generaba, el mensaje de WhatsApp se escalaba al Coordinador y la planilla pedía mapeo a mano.
+
+1. **El JSON viene envuelto en un bloque de código** (` ```json … ``` `). Le pasó a tres de los
+   cinco prompts en la primera prueba.
+2. **La respuesta trae primero un bloque de razonamiento** y el texto después. Mirar solo el
+   primer bloque devolvía vacío.
+3. **La respuesta se corta por llegar al tope de tokens** y el JSON queda por la mitad. Le
+   pasaba siempre a Nivel 2, que tenía un tope de 600 — hoy está en 1500.
+
+Por eso ningún archivo hace `JSON.parse` del texto crudo. Todos leen la respuesta con
+`jsonDeRespuestaIA()` de `backend/src/utils/respuestaIA.js`, que junta los bloques de texto,
+saca la envoltura si la hay y devuelve `null` si de verdad no se pudo interpretar. Un prompt
+nuevo se lee con esa función, no a mano.
+
 ## Reglas comunes a ambos niveles
 
 - Nunca loguear el texto libre del reporte ni el JSON de salida en logs de servidor
   accesibles fuera del equipo técnico — contiene datos de salud del paciente (regla 7 de
   `CLAUDE.md`).
 - El texto que devuelve la IA no tutea a quien lo lee — ver "Cómo trata la IA a quien la lee".
+- La respuesta se lee con `jsonDeRespuestaIA()`, nunca con `JSON.parse` directo — ver "Cómo se
+  lee lo que devuelve el modelo".
 - El prompt de sistema completo (no solo el nombre del "nivel") debe versionarse junto con
   el código — si se cambia el prompt, es un cambio de comportamiento del producto, no un
   detalle de implementación menor.

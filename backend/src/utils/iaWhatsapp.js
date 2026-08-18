@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { registrarUsoIA } from './registrarUsoIA.js';
 import { TRATO_IA } from './tratoIA.js';
+import { jsonDeRespuestaIA } from './respuestaIA.js';
 
 // Primera integración real del SDK de Claude en este backend (docs/CONTEXT.md ya lo
 // documentaba como motor de IA por defecto del proyecto). Se usa acá para el punto 6 de
@@ -70,17 +71,8 @@ export async function generarRespuestaIA({ mensajeEntrante, historial = [], pres
 
   registrarUsoIA({ prestadoraId, modulo: 'whatsapp', modelo: MODELO, respuestaAnthropic: respuesta });
 
-  const texto = respuesta.content?.[0]?.type === 'text' ? respuesta.content[0].text : '';
-
-  try {
-    const parseado = JSON.parse(texto);
-    return {
-      respuestaSugerida: parseado.respuesta_sugerida ?? null,
-      confianzaAlta: Boolean(parseado.confianza_alta),
-      requiereCoordinador: parseado.requiere_coordinador !== false,
-      motivo: parseado.motivo ?? null,
-    };
-  } catch {
+  const parseado = jsonDeRespuestaIA(respuesta);
+  if (!parseado) {
     return {
       respuestaSugerida: null,
       confianzaAlta: false,
@@ -88,4 +80,11 @@ export async function generarRespuestaIA({ mensajeEntrante, historial = [], pres
       motivo: 'La IA no devolvió un JSON válido — se escala al Coordinador por seguridad',
     };
   }
+
+  return {
+    respuestaSugerida: parseado.respuesta_sugerida ?? null,
+    confianzaAlta: Boolean(parseado.confianza_alta),
+    requiereCoordinador: parseado.requiere_coordinador !== false,
+    motivo: parseado.motivo ?? null,
+  };
 }

@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { registrarUsoIA } from './registrarUsoIA.js';
 import { TRATO_IA } from './tratoIA.js';
+import { jsonDeRespuestaIA } from './respuestaIA.js';
 
 // IA Nivel 2 (Alertas por patrones) — prompt exacto de docs/AI_PROMPTS.md:47-71, no
 // reformular acá sin actualizar ese archivo primero (el contrato JSON está acoplado a las
@@ -57,25 +58,24 @@ export async function analizarAlertaIA({ patologias, medicacionHabitual }, repor
 
   const respuesta = await anthropic.messages.create({
     model: MODELO,
-    max_tokens: 600,
+    // 1500 y no 600: con 600 la respuesta se cortaba por la mitad y no se podía interpretar,
+    // así que nunca se generaba la alerta (comprobado contra la API real el 2026-08-18).
+    // "detalle_coordinador" es el campo largo — describe la tendencia de varios reportes.
+    max_tokens: 1500,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: mensaje }],
   });
 
   registrarUsoIA({ prestadoraId, modulo: 'alertas', modelo: MODELO, respuestaAnthropic: respuesta });
 
-  const texto = respuesta.content?.[0]?.type === 'text' ? respuesta.content[0].text : '';
+  const parseado = jsonDeRespuestaIA(respuesta);
+  if (!parseado) return null;
+  if (!['verde', 'amarilla', 'roja'].includes(parseado.nivel)) return null;
 
-  try {
-    const parseado = JSON.parse(texto);
-    if (!['verde', 'amarilla', 'roja'].includes(parseado.nivel)) return null;
-    return {
-      nivel: parseado.nivel,
-      descripcion: parseado.descripcion || null,
-      detalle_coordinador: parseado.detalle_coordinador || null,
-      campos_preocupantes: Array.isArray(parseado.campos_preocupantes) ? parseado.campos_preocupantes : [],
-    };
-  } catch {
-    return null;
-  }
+  return {
+    nivel: parseado.nivel,
+    descripcion: parseado.descripcion || null,
+    detalle_coordinador: parseado.detalle_coordinador || null,
+    campos_preocupantes: Array.isArray(parseado.campos_preocupantes) ? parseado.campos_preocupantes : [],
+  };
 }

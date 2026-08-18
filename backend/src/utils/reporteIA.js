@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { registrarUsoIA } from './registrarUsoIA.js';
 import { TRATO_IA } from './tratoIA.js';
+import { jsonDeRespuestaIA } from './respuestaIA.js';
 
 // IA Nivel 1 (Reporte inteligente) — prompt exacto de docs/AI_PROMPTS.md, no reformular acá
 // sin actualizar ese archivo primero (el contrato JSON está acoplado a las columnas de
@@ -59,21 +60,19 @@ export async function estructurarReporteIA(textoLibre, prestadoraId) {
 
   registrarUsoIA({ prestadoraId, modulo: 'reporte', modelo: MODELO, respuestaAnthropic: respuesta });
 
-  const texto = respuesta.content?.[0]?.type === 'text' ? respuesta.content[0].text : '';
-
-  try {
-    const parseado = JSON.parse(texto);
-    return {
-      alimentacion: parseado.alimentacion ?? null,
-      medicacion: Array.isArray(parseado.medicacion) ? parseado.medicacion : [],
-      signos_vitales: parseado.signos_vitales ?? null,
-      estado_animo: parseado.estado_animo ?? null,
-      incidentes: parseado.incidentes ?? null,
-      observaciones: parseado.observaciones ?? null,
-    };
-  } catch {
+  const parseado = jsonDeRespuestaIA(respuesta);
+  if (!parseado) {
     return { ...ESTRUCTURA_VACIA, observaciones: textoLibre || null, _sinIA: true };
   }
+
+  return {
+    alimentacion: parseado.alimentacion ?? null,
+    medicacion: Array.isArray(parseado.medicacion) ? parseado.medicacion : [],
+    signos_vitales: parseado.signos_vitales ?? null,
+    estado_animo: parseado.estado_animo ?? null,
+    incidentes: parseado.incidentes ?? null,
+    observaciones: parseado.observaciones ?? null,
+  };
 }
 
 // Distancia entre dos puntos GPS (fórmula de Haversine), usada para el aviso de check-in

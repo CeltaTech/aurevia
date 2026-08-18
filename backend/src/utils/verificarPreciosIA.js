@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { supabase } from '../db/connection.js';
+import { jsonDeRespuestaIA } from './respuestaIA.js';
 
 // Rutina mensual del pendiente #84 (docs/PENDIENTES.md): el día 1 de cada mes, revisa si
 // el precio oficial publicado por cada proveedor de IA sigue coincidiendo con lo cargado
@@ -89,8 +90,8 @@ Si alguno de los modelos pedidos no aparece en la página, no se incluye esa cla
           content: `Modelos a buscar: ${modelosDeEsteProveedor.map((m) => m.modelo).join(', ')}\n\nContenido de la página (puede tener HTML/ruido, se ignora):\n${html.slice(0, 40000)}`,
         }],
       });
-      const texto = respuestaIA.content?.[0]?.type === 'text' ? respuestaIA.content[0].text : '';
-      extraido = JSON.parse(texto);
+      extraido = jsonDeRespuestaIA(respuestaIA);
+      if (!extraido) throw new Error('la IA no devolvió un JSON interpretable');
     } catch (err) {
       console.error(`verificarPreciosIA: no se pudo interpretar la página de ${proveedor}:`, err.message);
       continue;

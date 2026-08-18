@@ -2,6 +2,7 @@ import XLSX from 'xlsx';
 import Anthropic from '@anthropic-ai/sdk';
 import { registrarUsoIA } from './registrarUsoIA.js';
 import { TRATO_IA } from './tratoIA.js';
+import { jsonDeRespuestaIA } from './respuestaIA.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 
 // Fase 3 del plan "Terminar la Etapa 2 (Panel)" (importación masiva de datos con IA).
@@ -131,19 +132,17 @@ ${muestraTexto}`;
 
   registrarUsoIA({ prestadoraId, modulo: 'importacion_viabilidad', modelo: MODELO, respuestaAnthropic: respuesta });
 
-  const texto = respuesta.content?.[0]?.type === 'text' ? respuesta.content[0].text : '';
-  try {
-    const parseado = JSON.parse(texto);
-    if (!parseado.viable) {
-      return { viable: false, motivo: parseado.motivo || 'La IA determinó que no es viable importar este archivo con certeza', headers: [], filas: [] };
-    }
-    if (!Array.isArray(parseado.headers) || !Array.isArray(parseado.filas) || parseado.filas.length === 0) {
-      return { viable: false, motivo: 'La IA no devolvió filas interpretables — conviene probar con un formato conocido (Excel, CSV, dump SQL)', headers: [], filas: [] };
-    }
-    return { viable: true, motivo: parseado.motivo || '', headers: parseado.headers, filas: parseado.filas };
-  } catch {
+  const parseado = jsonDeRespuestaIA(respuesta);
+  if (!parseado) {
     return { viable: false, motivo: 'La IA no devolvió una respuesta válida — conviene probar con un formato conocido (Excel, CSV, dump SQL)', headers: [], filas: [] };
   }
+  if (!parseado.viable) {
+    return { viable: false, motivo: parseado.motivo || 'La IA determinó que no es viable importar este archivo con certeza', headers: [], filas: [] };
+  }
+  if (!Array.isArray(parseado.headers) || !Array.isArray(parseado.filas) || parseado.filas.length === 0) {
+    return { viable: false, motivo: 'La IA no devolvió filas interpretables — conviene probar con un formato conocido (Excel, CSV, dump SQL)', headers: [], filas: [] };
+  }
+  return { viable: true, motivo: parseado.motivo || '', headers: parseado.headers, filas: parseado.filas };
 }
 
 const SYSTEM_PROMPT = `Este asistente ayuda a mapear columnas de una planilla (Excel/CSV)
@@ -191,21 +190,19 @@ Primeras filas de muestra (JSON): ${JSON.stringify(filasMuestra.slice(0, 5))}`;
 
   registrarUsoIA({ prestadoraId, modulo: 'importacion', modelo: MODELO, respuestaAnthropic: respuesta });
 
-  const texto = respuesta.content?.[0]?.type === 'text' ? respuesta.content[0].text : '';
-
-  try {
-    const parseado = JSON.parse(texto);
-    const mapeo = Object.fromEntries(
-      headers.map((h) => {
-        const campo = parseado.mapeo?.[h];
-        return [h, camposDisponibles.includes(campo) ? campo : null];
-      })
-    );
-    return { mapeo, advertencias: Array.isArray(parseado.advertencias) ? parseado.advertencias : [] };
-  } catch {
+  const parseado = jsonDeRespuestaIA(respuesta);
+  if (!parseado) {
     return {
       mapeo: Object.fromEntries(headers.map((h) => [h, null])),
       advertencias: ['La IA no devolvió un mapeo válido — hace falta revisar y completar el mapeo a mano antes de confirmar'],
     };
   }
+
+  const mapeo = Object.fromEntries(
+    headers.map((h) => {
+      const campo = parseado.mapeo?.[h];
+      return [h, camposDisponibles.includes(campo) ? campo : null];
+    })
+  );
+  return { mapeo, advertencias: Array.isArray(parseado.advertencias) ? parseado.advertencias : [] };
 }

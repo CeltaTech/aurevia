@@ -50,7 +50,7 @@ export const T = {
       activar_enviando: 'Activando…',
       activar_exito: 'La cuenta quedó activada. Ya se puede ingresar con la contraseña nueva.',
       activar_error: 'No se pudo activar la cuenta. Conviene volver a intentar.',
-      activar_token_invalido: 'Este link de activación no es válido o ya venció. Hace falta pedir que reenvíen la invitación.',
+      activar_token_invalido: 'Este enlace de activación no es válido o ya venció. Hace falta pedir que reenvíen la invitación.',
     },
     guardias: {
       titulo: 'Mis Guardias',

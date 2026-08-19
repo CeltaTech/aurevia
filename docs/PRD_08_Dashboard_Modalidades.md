@@ -30,9 +30,10 @@
   trabajen" (`docs/PENDIENTES.md` pendiente #13, texto literal).
 - El campo técnico que ya soporta esto es `asistentes.canales TEXT[]` (default
   `['directo','marketplace']`, `docs/DATA_MODEL.md:219-227`) — un Asistente puede estar en
-  uno, otro o ambos canales, y `motivo_exclusion_directo`/`motivo_exclusion_marketplace`
-  registran por qué no está en uno de ellos. Pendiente de aplicar contra Supabase real
-  (`docs/PENDIENTES.md` pendiente #13).
+  uno, otro o ambos canales. Por qué no está en uno de ellos se registra en
+  `datos_reservados_asistente.motivo_exclusion_directo` /
+  `.motivo_exclusion_marketplace` — esa tabla es aparte porque su lectura exige el permiso
+  `ver_datos_reservados_asistente` (ver `docs/SECURITY.md`).
 - `calificaciones_asistente` (`docs/DATA_MODEL.md:589-612`) es la calificación de la
   Familia sobre el Asistente, puramente informativa — la Prestadora solo decide
   `visible_publica`, nunca edita el contenido ni dispara acción automática.

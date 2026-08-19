@@ -161,7 +161,6 @@ async function main() {
       horas_semanales: perfil.horas_semanales,
       fecha_alta: perfil.fecha_alta,
       fecha_baja: perfil.fecha_baja,
-      causal_baja: perfil.causal_baja,
     }).throwOnError();
     // Lo que cobra va en su propia tabla, donde la base exige el permiso
     // `ver_pagos_asistente` antes de mostrarlo.
@@ -172,6 +171,15 @@ async function main() {
       valor_hora: perfil.valor_hora,
       sueldo_basico: perfil.sueldo_basico,
     }).throwOnError();
+    // Por qué se lo dio de baja también va aparte, con su propio permiso
+    // (`ver_datos_reservados_asistente`). Solo se carga a quien tiene una baja.
+    if (perfil.causal_baja) {
+      await supabase.from('datos_reservados_asistente').insert({
+        asistente_id: asistenteId,
+        prestadora_id: PRESTADORA_ID,
+        causal_baja: perfil.causal_baja,
+      }).throwOnError();
+    }
     resumen.asistentes.push(asistenteId);
     console.log(`asistente OK (${i + 1}/${NOMBRES_ASISTENTES.length}): ${nombre}`);
   }

@@ -3,7 +3,11 @@ import { supabase } from '../lib/supabaseClient';
 import { mensajeDeError } from '../lib/errores';
 import { useLocale } from '../i18n/LocaleContext';
 
-export function useSupabaseTable(tabla, { orderBy = 'creado_en', ascending = false } = {}) {
+/**
+ * `select` sirve para traer también una tabla adjunta —por ejemplo los datos que viven aparte
+ * de la ficha del Asistente—. Por defecto trae las columnas de la tabla y nada más.
+ */
+export function useSupabaseTable(tabla, { orderBy = 'creado_en', ascending = false, select = '*' } = {}) {
   const { t } = useLocale();
   const [filas, setFilas] = useState([]);
   const [estado, setEstado] = useState('cargando'); // cargando | error | listo
@@ -14,7 +18,7 @@ export function useSupabaseTable(tabla, { orderBy = 'creado_en', ascending = fal
     setError(null);
     const { data, error: errorConsulta } = await supabase
       .from(tabla)
-      .select('*')
+      .select(select)
       .order(orderBy, { ascending });
 
     if (errorConsulta) {
@@ -25,7 +29,7 @@ export function useSupabaseTable(tabla, { orderBy = 'creado_en', ascending = fal
 
     setFilas(data ?? []);
     setEstado('listo');
-  }, [tabla, orderBy, ascending, t]);
+  }, [tabla, orderBy, ascending, select, t]);
 
   useEffect(() => {
     recargar();

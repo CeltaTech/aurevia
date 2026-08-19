@@ -258,8 +258,8 @@ CREATE POLICY "coordinador_ve_incidentes_de_su_zona" ON incidentes_relevo
 ```
 
 Tablas que **nunca** deben tener policy de lectura para `asistente` ni `familia`:
-`escalas_legales`, `ceses`, `ausencias`, `guardias_cobertura`, `remuneraciones_asistente`
-(regla 8 de `CLAUDE.md`).
+`escalas_legales`, `ceses`, `ausencias`, `guardias_cobertura`, `remuneraciones_asistente`,
+`datos_reservados_asistente` (regla 8 de `CLAUDE.md`).
 
 **Lo que se le paga al Asistente vive en una tabla aparte (2026-08-19).** `valor_hora`,
 `sueldo_basico` y `categoria_cct` dejaron de ser columnas de `asistentes` y pasaron a
@@ -287,6 +287,35 @@ de una condición que hasta entonces estaba escrita a mano en cada policy.
 En la misma migración se eliminó `familia_ve_asistente_asignado`, que le daba a la Familia la
 ficha completa del Asistente asignado. La aplicación de Familias nunca consulta `asistentes`
 —pide todo por el motor—, así que era una puerta abierta sin uso.
+
+**Lo reservado de la ficha también vive aparte (2026-08-19).** El mismo agujero seguía abierto
+en otras cinco columnas de `asistentes`: `causal_baja`, `score_riesgo_reclasificacion`,
+`indicadores_riesgo`, `motivo_exclusion_directo` y `motivo_exclusion_marketplace` — por qué se
+lo dio de baja, su puntaje de riesgo con los motivos que lo forman, y por qué quedó excluido de
+recibir trabajo. La vista `asistentes_coordinador` las omite, pero una vista solo describe lo
+que consulta la pantalla: la tabla seguía contestando esas columnas a cualquiera que preguntara
+con su propia sesión. Pasaron a `datos_reservados_asistente`, con su propia policy de lectura:
+
+```sql
+CREATE POLICY lee_datos_reservados_quien_tiene_el_permiso ON datos_reservados_asistente
+  FOR SELECT USING (
+    prestadora_id = current_tenant()
+    AND tiene_permiso('ver_datos_reservados_asistente')
+    AND EXISTS (SELECT 1 FROM asistentes a WHERE a.id = datos_reservados_asistente.asistente_id)
+  );
+```
+
+El permiso `ver_datos_reservados_asistente` es nuevo en `catalogo_acciones_permisos`
+(`default_solo_admin = TRUE`, orden 9): arranca cerrado y cada Prestadora decide si se lo abre
+a su Coordinadora. Escribir es exclusivo de `es_superadmin() OR es_admin_prestadora()` — el
+permiso habilita a mirar, nunca a cambiar la causa de una baja ni un puntaje de riesgo.
+
+**Qué quedó afuera a propósito.** Los otros siete datos que `asistentes_coordinador` omite
+—`tipo_vinculo`, `fecha_baja`, `canales`, `horas_semanales`, `importacion_id`,
+`pendiente_conformidad`, `prestadora_id`— siguen siendo columnas de `asistentes` y los lee
+cualquiera que pueda ver la ficha. Es una decisión, no un olvido: la Coordinadora los necesita
+para trabajar, y la lista de omisiones de esa vista nunca fue un criterio pensado. La frontera
+de lo sensible se escribió de nuevo acá, no se heredó de la vista.
 
 Para `coordinador`, la policy de "su zona" debe filtrar por el campo `zonas` del
 Coordinador contra la zona de la `familia`/`asistente` — no dar acceso total a

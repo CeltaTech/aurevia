@@ -105,8 +105,20 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
 
     if (!errorCese) {
       await supabase.from('asistentes').update({
-        estado: 'cesado', fecha_baja: fechaCese, causal_baja: causal,
+        estado: 'cesado', fecha_baja: fechaCese,
       }).eq('id', asistente.id);
+      // Por qué se lo dio de baja se guarda aparte, en `datos_reservados_asistente`, donde la
+      // base exige el permiso `ver_datos_reservados_asistente` para leerlo. Puede no existir
+      // todavía la fila, así que se usa `upsert`.
+      await supabase.from('datos_reservados_asistente').upsert(
+        {
+          asistente_id: asistente.id,
+          prestadora_id: usuario.prestadora_id,
+          causal_baja: causal,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'asistente_id' },
+      );
     }
 
     setGuardando(false);

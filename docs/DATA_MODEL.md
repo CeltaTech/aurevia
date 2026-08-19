@@ -235,17 +235,13 @@ ALTER TABLE asistentes ADD COLUMN tipo_vinculo TEXT
   CHECK (tipo_vinculo IN ('monotributo', 'dependencia')) DEFAULT 'monotributo';
 ALTER TABLE asistentes ADD COLUMN fecha_alta DATE NOT NULL;
 ALTER TABLE asistentes ADD COLUMN fecha_baja DATE;         -- null mientras esté activo
-ALTER TABLE asistentes ADD COLUMN causal_baja TEXT;        -- ver enum causal_cese, null mientras activo
 ALTER TABLE asistentes ADD COLUMN horas_semanales NUMERIC(5,2);
-ALTER TABLE asistentes ADD COLUMN score_riesgo_reclasificacion INTEGER DEFAULT 0; -- 0-100
 
 -- Pendiente #13 (docs/PENDIENTES.md), resuelto 2026-07-13 — canal(es) por el que el
 -- Asistente está disponible: 'directo' (la prestadora lo asigna) y/o 'marketplace' (la
--- Familia lo elige). Ambos por default; si un canal no está habilitado, se completa el
--- motivo correspondiente (NULL mientras el canal esté activo en `canales`).
+-- Familia lo elige). Ambos por default; si un canal no está habilitado, el motivo de la
+-- exclusión vive en `datos_reservados_asistente`, no acá.
 ALTER TABLE asistentes ADD COLUMN canales TEXT[] NOT NULL DEFAULT ARRAY['directo','marketplace'];
-ALTER TABLE asistentes ADD COLUMN motivo_exclusion_directo TEXT;
-ALTER TABLE asistentes ADD COLUMN motivo_exclusion_marketplace TEXT;
 ALTER TABLE asistentes ADD CONSTRAINT asistentes_canales_valido
   CHECK (canales <@ ARRAY['directo','marketplace']::TEXT[] AND array_length(canales, 1) > 0);
 ```
@@ -268,6 +264,31 @@ CREATE TABLE remuneraciones_asistente (
   categoria_cct TEXT,            -- categoría CCT 743/16, solo si dependencia
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+### datos_reservados_asistente — lo reservado de la ficha
+
+Por qué se lo dio de baja, su puntaje de riesgo con los motivos que lo forman, y por qué quedó
+excluido de recibir trabajo. Vive separado de `asistentes` por la misma razón que los importes:
+las reglas de acceso de la base filtran filas, no columnas, así que mientras estaban dentro de
+la ficha cualquiera que podía ver al Asistente podía leerlos, aunque su pantalla no se los
+mostrara. En su propia tabla la base exige `tiene_permiso('ver_datos_reservados_asistente')`
+antes de contestar, y escribir queda reservado a la administración de la Prestadora. Contra
+`asistentes` es uno a uno, y la fila existe solo si hay algo cargado.
+
+```sql
+CREATE TABLE datos_reservados_asistente (
+  asistente_id                  UUID PRIMARY KEY REFERENCES asistentes(id) ON DELETE CASCADE,
+  prestadora_id                 UUID NOT NULL REFERENCES prestadoras(id),
+  causal_baja                   TEXT,      -- ver enum causal_cese
+  score_riesgo_reclasificacion  INTEGER NOT NULL DEFAULT 0
+    CHECK (score_riesgo_reclasificacion >= 0 AND score_riesgo_reclasificacion <= 100),
+  indicadores_riesgo            JSONB NOT NULL DEFAULT '{}'::jsonb,
+  motivo_exclusion_directo      TEXT,      -- NULL mientras el canal esté activo en `canales`
+  motivo_exclusion_marketplace  TEXT,      -- ídem
+  created_at                    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at                    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
 

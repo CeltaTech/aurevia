@@ -180,39 +180,41 @@ FROM personas p;
 --    viejos al catálogo. Delia tampoco tiene tipo y no tiene texto viejo: es el
 --    otro caso que esa pantalla tiene que saber mostrar.
 --
---    Lo que cobra cada uno no está en esta tabla: está en
---    `remuneraciones_asistente`, la de más abajo. Vive aparte porque las reglas
---    de acceso de la base filtran filas y no columnas, así que mientras los
---    importes estaban acá cualquiera que podía ver la ficha podía leerlos.
+--    Dos partes de la ficha no están en esta tabla: lo que cobra cada uno, en
+--    `remuneraciones_asistente`, y lo reservado —por qué se lo dio de baja, su
+--    puntaje de riesgo, por qué quedó excluido de recibir trabajo—, en
+--    `datos_reservados_asistente`. Las dos, más abajo. Viven aparte porque las
+--    reglas de acceso de la base filtran filas y no columnas, así que mientras
+--    esos datos estaban acá cualquiera que podía ver la ficha podía leerlos.
 -- ----------------------------------------------------------------------------
 
 INSERT INTO public.asistentes (
   id, prestadora_id, nombre, telefono, email, especialidades, zonas,
-  estado, tipo_vinculo, fecha_alta, fecha_baja, causal_baja,
+  estado, tipo_vinculo, fecha_alta, fecha_baja,
   horas_semanales, dni, canales
 ) VALUES
   ('30000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
    'Ana Álvarez', '+54 11 4001-0001', 'ana.asistente@sandbox.local',
    NULL, ARRAY['caba'],
-   'activo', 'monotributo', CURRENT_DATE - 300, NULL, NULL,
+   'activo', 'monotributo', CURRENT_DATE - 300, NULL,
    40, '20000001', ARRAY['directo']),
 
   ('30000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111',
    'Bruno Bianchi', '+54 11 4001-0002', 'bruno.asistente@sandbox.local',
    ARRAY['Acompañamiento terapéutico'], ARRAY['caba', 'zona_norte'],
-   'activo', 'dependencia', CURRENT_DATE - 220, NULL, NULL,
+   'activo', 'dependencia', CURRENT_DATE - 220, NULL,
    40, '20000002', ARRAY['directo', 'marketplace']),
 
   ('30000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111',
    'Clara Cabrera', '+54 11 4001-0003', 'clara.asistente@sandbox.local',
    NULL, ARRAY['zona_sur'],
-   'activo', 'monotributo', CURRENT_DATE - 90, NULL, NULL,
+   'activo', 'monotributo', CURRENT_DATE - 90, NULL,
    24, '20000003', ARRAY['marketplace']),
 
   ('30000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111',
    'Delia Duarte', '+54 11 4001-0004', 'delia.asistente@sandbox.local',
    NULL, ARRAY['zona_norte'],
-   'cesado', 'monotributo', CURRENT_DATE - 500, CURRENT_DATE - 40, 'renuncia',
+   'cesado', 'monotributo', CURRENT_DATE - 500, CURRENT_DATE - 40,
    40, '20000004', ARRAY['directo']);
 
 -- Los datos de plata van en dos columnas distintas y no en una sola, porque quien
@@ -228,6 +230,19 @@ INSERT INTO public.remuneraciones_asistente (
   ('30000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', NULL, 980000.00),
   ('30000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 5200.00, NULL),
   ('30000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 4200.00, NULL);
+
+-- Lo reservado de la ficha. Solo se carga donde hay algo que decir: la causa de
+-- la baja de Delia, que es la única dada de baja, y un puntaje de riesgo en Ana,
+-- que está por monotributo y trabaja 40 horas para una sola Prestadora — el caso
+-- que la pantalla de Score de Riesgo existe para mostrar. Los otros dos no tienen
+-- fila, que es el estado normal de un Asistente al que nunca se le cargó nada.
+INSERT INTO public.datos_reservados_asistente (
+  asistente_id, prestadora_id, causal_baja, score_riesgo_reclasificacion, indicadores_riesgo
+) VALUES
+  ('30000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+   NULL, 45, '{"exclusividad_facturacion": 1, "horas_semanales_promedio": 1, "horario_fijo_impuesto": 1}'::jsonb),
+  ('30000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111',
+   'renuncia', 0, '{}'::jsonb);
 
 
 -- ----------------------------------------------------------------------------

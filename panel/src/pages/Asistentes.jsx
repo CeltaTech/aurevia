@@ -6,6 +6,7 @@ import { usePermisos } from '../context/PermisosContext';
 import { esAdminOSuperior } from '../lib/roles';
 import { claseBadge } from '../lib/tonos';
 import { nombreTipo } from '../lib/tiposAsistente';
+import { CAMPOS_RESERVADOS, conDatosAparte } from '../lib/fichaAsistente';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
 import { useFiltros } from '../hooks/useFiltros';
 import { useTiposAsistente } from '../hooks/useTiposAsistente';
@@ -24,15 +25,21 @@ export function Asistentes() {
   const esAdmin = esAdminOSuperior(usuario?.rol);
   const { puede } = usePermisos();
   const puedeAltaManual = esAdmin || puede('alta_manual_asistente');
-  // Coordinador consulta la vista sin vínculo laboral/score de riesgo — ver schema_etapa2i.sql.
-  const { filas, estado, error, recargar } = useSupabaseTable(esAdmin ? 'asistentes' : 'asistentes_coordinador', { orderBy: 'created_at' });
+  // Coordinador consulta la vista sin vínculo laboral — ver schema_etapa2i.sql. El puntaje de
+  // riesgo vive aparte, en `datos_reservados_asistente`, donde la base exige el permiso
+  // `ver_datos_reservados_asistente` para contestar; por eso se pide solo en la consulta de
+  // administración y llega adjunto a cada ficha.
+  const { filas, estado, error, recargar } = useSupabaseTable(
+    esAdmin ? 'asistentes' : 'asistentes_coordinador',
+    { orderBy: 'created_at', select: esAdmin ? `*, ${CAMPOS_RESERVADOS}` : '*' },
+  );
   const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '', estado: '', tipo: '' });
   const { paraElegir: tiposAsistente, porId: tiposPorId } = useTiposAsistente();
   const [mostrarNuevo, setMostrarNuevo] = useState(false);
   const [mostrarPasarAlCatalogo, setMostrarPasarAlCatalogo] = useState(false);
 
   const filasFiltradas = useMemo(() => {
-    return filas.filter((a) => {
+    return filas.map(conDatosAparte).filter((a) => {
       const coincideBusqueda =
         !f.busqueda ||
         a.nombre?.toLowerCase().includes(f.busqueda.toLowerCase()) ||
@@ -143,7 +150,7 @@ export function Asistentes() {
               <div className="lista-tarjeta-meta">
                 <span><strong>{t.asistentes.col_zonas}:</strong> {(a.zonas || []).join(', ') || '—'}</span>
                 {esAdmin && <span><strong>{t.asistentes.col_vinculo}:</strong> {t.asistentes[`vinculo_${a.tipo_vinculo}`]}</span>}
-                {esAdmin && <span><strong>{t.asistentes.col_score_riesgo}:</strong> {a.score_riesgo_reclasificacion}</span>}
+                {esAdmin && <span><strong>{t.asistentes.col_score_riesgo}:</strong> {a.score_riesgo_reclasificacion ?? 0}</span>}
               </div>
               <div className="lista-tarjeta-acciones">
                 <Button variant="secondary" onClick={() => navigate(`/asistentes/${a.id}`)}>{t.comun.ver_detalle}</Button>

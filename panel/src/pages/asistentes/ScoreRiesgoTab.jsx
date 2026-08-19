@@ -11,7 +11,7 @@ import { Alert } from '../../components/ui/Alert';
 export function ScoreRiesgoTab({ asistente, onActualizado }) {
   const { t } = useLocale();
   const { filas: escalasCrudas, estado } = useEscalasLegales();
-  const [indicadores, setIndicadores] = useState(asistente.indicadores_riesgo || {});
+  const [indicadores, setIndicadores] = useState(asistente.indicadores_riesgo ?? {});
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
 
@@ -21,9 +21,23 @@ export function ScoreRiesgoTab({ asistente, onActualizado }) {
   async function guardar() {
     setGuardando(true);
     setError(null);
-    const { error: errorUpdate } = await supabase.from('asistentes').update({
-      indicadores_riesgo: indicadores, score_riesgo_reclasificacion: score,
-    }).eq('id', asistente.id);
+    // El puntaje y los motivos que lo forman se guardan aparte, en
+    // `datos_reservados_asistente`, donde la base exige el permiso
+    // `ver_datos_reservados_asistente` para leerlos y ser administración para cambiarlos.
+    // Puede no existir todavía la fila —un Asistente al que nunca se le calculó el puntaje—,
+    // así que se usa `upsert`: la crea la primera vez y la actualiza las siguientes.
+    const { error: errorUpdate } = await supabase
+      .from('datos_reservados_asistente')
+      .upsert(
+        {
+          asistente_id: asistente.id,
+          prestadora_id: asistente.prestadora_id,
+          indicadores_riesgo: indicadores,
+          score_riesgo_reclasificacion: score,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'asistente_id' },
+      );
     setGuardando(false);
     if (errorUpdate) {
       setError(t.comun.error_generico);

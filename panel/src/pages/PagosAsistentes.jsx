@@ -8,7 +8,7 @@ import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Alert } from '../components/ui/Alert';
 import { mensajeDeError } from '../lib/errores';
-import { CAMPOS_REMUNERACION, conRemuneracion } from '../lib/remuneracion';
+import { CAMPOS_PAGO, conDatosAparte } from '../lib/fichaAsistente';
 
 /* Lo que la Prestadora le paga al Asistente. Es la otra mitad del dinero: hasta ahora el
    Panel solo mostraba lo que se le cobra a la Familia (facturación, lista de precios,
@@ -130,7 +130,7 @@ export function PagosAsistentes() {
         .not('asistente_id', 'is', null),
       supabase
         .from('asistentes')
-        .select(`id, nombre, estado, tipo_vinculo, horas_semanales, fecha_alta, fecha_baja, ${CAMPOS_REMUNERACION}`)
+        .select(`id, nombre, estado, tipo_vinculo, horas_semanales, fecha_alta, fecha_baja, ${CAMPOS_PAGO}`)
         .is('deleted_at', null)
         .order('nombre'),
     ]);
@@ -142,7 +142,7 @@ export function PagosAsistentes() {
     }
 
     setGuardias(gu ?? []);
-    setAsistentes((asis ?? []).map(conRemuneracion));
+    setAsistentes((asis ?? []).map(conDatosAparte));
     setEstado('listo');
   }, [mes, t]);
 

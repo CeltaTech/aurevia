@@ -43,15 +43,22 @@ números hardcodeados — ver regla 10 de `CLAUDE.md`.
 ## Modelo de datos
 
 Ver `DATA_MODEL.md` sección "Gestión de Personal" — tablas `asistentes` (columnas
-extendidas: `tipo_vinculo`, `fecha_alta`, `fecha_baja`, `causal_baja`, `horas_semanales`,
-`score_riesgo_reclasificacion`), `remuneraciones_asistente`, `escalas_legales`, `ausencias`,
+extendidas: `tipo_vinculo`, `fecha_alta`, `fecha_baja`, `horas_semanales`),
+`remuneraciones_asistente`, `datos_reservados_asistente`, `escalas_legales`, `ausencias`,
 `guardias_cobertura`, `ceses`. Esas tablas ya están escritas ahí con el SQL exacto — no
 reproducir aquí para evitar que las dos fuentes diverjan.
 
-Lo que cobra el Asistente —`valor_hora`, `sueldo_basico`, `categoria_cct`— no está en su ficha:
-está en `remuneraciones_asistente`, que es una tabla aparte con su propia regla de acceso. Es
-el único dato de este módulo que exige un permiso configurable, `ver_pagos_asistente`, para
-poder leerse.
+Dos partes de la ficha no están en `asistentes`, y cada una exige un permiso configurable para
+poder leerse:
+
+- Lo que cobra —`valor_hora`, `sueldo_basico`, `categoria_cct`— está en
+  `remuneraciones_asistente`, detrás de `ver_pagos_asistente`.
+- Lo reservado —`causal_baja`, `score_riesgo_reclasificacion`, `indicadores_riesgo`,
+  `motivo_exclusion_directo`, `motivo_exclusion_marketplace`— está en
+  `datos_reservados_asistente`, detrás de `ver_datos_reservados_asistente`.
+
+Están separadas porque las reglas de acceso de la base filtran filas y no columnas: dentro de
+la ficha no hay forma de exigir un permiso para un dato y no para el resto.
 
 Los vencimientos de documentación del Asistente (Monotributo, ART, Seguro, Certificado de
 Antecedentes Penales u otros que agregue cada prestadora) ya no viven como columnas de
@@ -127,8 +134,9 @@ indicador) — **no hardcodear los pesos en el código**, así se pueden ajustar
 Indicadores típicos: exclusividad de facturación a la prestadora, antigüedad del vínculo, horas
 semanales promedio, uso de herramientas/uniforme provisto por la prestadora, existencia de horario
 fijo impuesto, exclusividad de zona asignada, nivel de supervisión directa. El score se
-guarda en `asistentes.score_riesgo_reclasificacion` y se recalcula, no se acumula histórico
-en esta tabla (si se necesita histórico, agregar tabla aparte cuando haya ese requerimiento).
+guarda en `datos_reservados_asistente.score_riesgo_reclasificacion` y se recalcula, no se
+acumula histórico (si se necesita histórico, agregar tabla aparte cuando haya ese
+requerimiento).
 
 ## Ausencias y cobertura
 

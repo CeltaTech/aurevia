@@ -4,7 +4,7 @@
 // Uso, desde la raíz del repo:
 //   node scripts/verificar_texto_visible.mjs
 //
-// Revisa dos cosas y devuelve código de salida 1 si alguna falla:
+// Revisa tres cosas y devuelve código de salida 1 si alguna falla:
 //
 //   1. TEXTO ESCRITO A MANO. Que ninguna pantalla tenga una frase escrita
 //      directamente en el código en lugar de salir del archivo de traducciones.
@@ -17,6 +17,14 @@
 //      "tu", "teu", "tua", ni "o senhor / a senhora". Quien lee es una
 //      institución que evalúa o paga un software, o una Familia que confió a
 //      alguien suyo a esa institución — no un conocido.
+//
+//   3. TRATO EN LOS TEXTOS GUARDADOS EN LA BASE. Lo mismo que la revisión 2, pero
+//      para el texto visible que no está en ningún archivo del repositorio: la
+//      advertencia legal, el consentimiento que se firma, el catálogo de módulos.
+//      Se consulta la base real —no los archivos de migración, que dicen lo que se
+//      cargó aquel día y no lo que la gente lee hoy— y únicamente el texto que
+//      escribió la plataforma, nunca lo que escribió una Prestadora ni un dato de
+//      una persona (el porqué está escrito arriba de la lista, más abajo).
 //
 // POR QUÉ EXISTE. Las dos reglas estaban escritas en CLAUDE.md desde siempre y
 // las dos se violaron igual, porque solo las controlaba una persona leyendo. La
@@ -37,6 +45,7 @@
 // Que pase esto no reemplaza leer lo que se escribió.
 // ---------------------------------------------------------------------------
 
+import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, dirname, extname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -237,6 +246,33 @@ function pareceFraseParaLeer(texto) {
   return /\p{L}{3,}/u.test(texto);
 }
 
+const RE_DIRECTAS = new RegExp(`${BORDE_IZQ}(${FORMAS_DIRECTAS.join('|')})${BORDE_DER}`, 'giu');
+
+/* El colador de una frase suelta. Vive aparte porque lo usan las dos revisiones que
+   miran el trato: la que lee los archivos del repositorio y la que lee los textos
+   guardados en la base. Es la misma regla, así que es una sola función y no dos
+   iguales (regla 12 del §7 de CLAUDE.md). Devuelve las palabras que encontró, o una
+   lista vacía si el texto está bien. */
+function tuteosEnElTexto(texto) {
+  if (!pareceFraseParaLeer(texto)) return [];
+  const encontradas = new Set();
+
+  RE_DIRECTAS.lastIndex = 0;
+  for (const m of texto.matchAll(RE_DIRECTAS)) encontradas.add(m[1].toLowerCase());
+
+  RE_TERMINACION.lastIndex = 0;
+  for (const m of texto.matchAll(RE_TERMINACION)) {
+    const palabra = m[1].toLowerCase();
+    if (TERMINACION_PERMITIDA.has(palabra)) continue;
+    if (TERMINACION_PERMITIDA.has(sinAcentos(palabra))) continue;
+    encontradas.add(palabra);
+  }
+
+  return [...encontradas];
+}
+
+const recortar = (texto) => (texto.length > 90 ? `${texto.slice(0, 90)}…` : texto);
+
 function revisarTrato() {
   const hallazgos = [];
 
@@ -246,8 +282,6 @@ function revisarTrato() {
     ...APPS.map((app) => join(RAIZ, app, 'index.html')).filter(existsSync),
     join(RAIZ, 'sitio-web', 'index.html'),
   ].filter(existsSync);
-
-  const reDirectas = new RegExp(`${BORDE_IZQ}(${FORMAS_DIRECTAS.join('|')})${BORDE_DER}`, 'giu');
 
   for (const ruta of archivos) {
     const corta = rutaCorta(ruta);
@@ -271,31 +305,121 @@ function revisarTrato() {
     }
 
     for (const { texto, indice } of trozos) {
-      if (!pareceFraseParaLeer(texto)) continue;
-      const encontradas = new Set();
-
-      reDirectas.lastIndex = 0;
-      for (const m of texto.matchAll(reDirectas)) encontradas.add(m[1].toLowerCase());
-
-      RE_TERMINACION.lastIndex = 0;
-      for (const m of texto.matchAll(RE_TERMINACION)) {
-        const palabra = m[1].toLowerCase();
-        if (TERMINACION_PERMITIDA.has(palabra)) continue;
-        if (TERMINACION_PERMITIDA.has(sinAcentos(palabra))) continue;
-        encontradas.add(palabra);
-      }
-
-      if (encontradas.size === 0) continue;
+      const encontradas = tuteosEnElTexto(texto);
+      if (encontradas.length === 0) continue;
       hallazgos.push({
         archivo: corta,
         linea: lineaDe(indice),
-        palabras: [...encontradas].join(', '),
-        frase: texto.length > 90 ? `${texto.slice(0, 90)}…` : texto,
+        palabras: encontradas.join(', '),
+        frase: recortar(texto),
       });
     }
   }
 
   return hallazgos;
+}
+
+// ---------------------------------------------------------------------------
+// Revisión 3 — el trato en los textos guardados en la base
+// ---------------------------------------------------------------------------
+
+/* Hay texto visible que no está en ningún archivo del repositorio: vive en la base,
+   porque la regla 1 del §7 de CLAUDE.md prohíbe escribirlo en el código. La
+   advertencia legal que se muestra al activar una función riesgosa, el consentimiento
+   que firma el Asistente, los nombres del catálogo de módulos: todos salen de una
+   tabla. Las dos revisiones de arriba no los ven, y por eso se escaparon dos: la
+   advertencia legal (corregida el 2026-08-16) y el consentimiento de seguimiento de
+   ubicación (corregido el 2026-08-18). A los dos los encontró una persona mirando la
+   pantalla, que es exactamente lo que este programa existe para no depender.
+
+   SE CONSULTA LA BASE, NO LOS ARCHIVOS DE MIGRACIÓN. Un archivo de migración dice lo
+   que se cargó aquel día; la base dice lo que la gente lee hoy. Es lo mismo que manda
+   el §12 de CLAUDE.md para cualquier afirmación sobre el estado real.
+
+   QUÉ SE MIRA Y QUÉ NO. Únicamente el texto que escribió la plataforma: el catálogo
+   general que viene con el producto. Nunca una fila que escribió una Prestadora, y
+   nunca un dato de una persona. El motivo no es de estilo: este programa imprime en
+   pantalla lo que encuentra, y esa pantalla queda guardada en el registro público de
+   la publicación. Un reporte diario, una observación, el nombre de un Paciente son
+   datos de salud y datos personales — volcarlos ahí sería la violación del §6 de
+   CLAUDE.md más grande de todo el proyecto. Por eso la lista de abajo se escribe a
+   mano, tabla por tabla, y no se arma sola recorriendo el esquema.
+
+   El corte entre las dos cosas es la columna `prestadora_id`: donde no existe, la
+   tabla entera es de la plataforma; donde existe, son nuestras solamente las filas
+   que la tienen vacía, que son las del catálogo general. */
+const TEXTOS_DE_LA_PLATAFORMA = [
+  // La advertencia que se muestra al activar una función con riesgo legal (§3).
+  { tabla: 'advertencias_legales', señal: "jurisdiccion || ' / ' || funcion_clave", columnas: ['texto_advertencia'] },
+  // Lo que lee y acepta un Asistente o una Familia antes de que se active algo.
+  { tabla: 'textos_consentimiento', señal: "jurisdiccion || ' / ' || clave || ' / ' || idioma", columnas: ['titulo', 'cuerpo'] },
+  // Los módulos del producto, tal como se ven en el Panel.
+  { tabla: 'catalogo_modulos', señal: 'key', columnas: ['nombre', 'descripcion'] },
+  // De acá para abajo, solo el catálogo general: `prestadora_id` vacío.
+  { tabla: 'tipos_asistente', señal: 'clave', columnas: ['nombre', 'descripcion'], soloGeneral: true },
+  { tabla: 'tareas_tipo_asistente', señal: 'clave', columnas: ['texto'], soloGeneral: true },
+  { tabla: 'etapas_incorporacion_asistente', señal: 'clave', columnas: ['nombre'], soloGeneral: true },
+  { tabla: 'configuracion_notificaciones', señal: 'evento', columnas: ['descripcion'], soloGeneral: true },
+  { tabla: 'tipos_documento_asistente', señal: 'nombre', columnas: ['nombre'], soloGeneral: true },
+];
+
+/* Cómo se llega a la base. Con las variables puestas —así corre en la publicación,
+   con las mismas claves que ya usa el respaldo diario— se entra derecho. Sin ellas
+   —así corre en la máquina de quien programa— se entra por el contenedor local, que
+   tiene usuario y contraseña fijos y conocidos, no son un secreto. */
+function consultarBase(consulta) {
+  const opciones = { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 };
+  if (process.env.DB_HOST) {
+    const { DB_HOST, DB_PORT = '5432', DB_NAME = 'postgres', DB_USER = 'postgres', DB_PASSWORD } = process.env;
+    return execFileSync(
+      'psql',
+      [`postgresql://${DB_USER}@${DB_HOST}:${DB_PORT}/${DB_NAME}`, '-At', '-v', 'ON_ERROR_STOP=1', '-c', consulta],
+      { ...opciones, env: { ...process.env, PGPASSWORD: DB_PASSWORD, PGCONNECT_TIMEOUT: '15' } },
+    );
+  }
+  /* El contenedor local se llama `supabase_db_<proyecto>`, y ese `<proyecto>` sale de
+     `supabase/config.toml`, que es quien se lo puso. Se lee de ahí y no se escribe a mano:
+     es un solo lugar donde está la verdad (regla 12 del §7 de CLAUDE.md) y, además, ese
+     nombre quedó fijado cuando se creó la base local y no se renombra aunque cambie la
+     marca (regla 13). */
+  const config = readFileSync(new URL('../supabase/config.toml', import.meta.url), 'utf8');
+  const proyecto = config.match(/^\s*project_id\s*=\s*"([^"]+)"/m)?.[1];
+  if (!proyecto) throw new Error('No encontré project_id en supabase/config.toml');
+
+  return execFileSync(
+    'docker',
+    ['exec', '-i', `supabase_db_${proyecto}`, 'psql', '-U', 'postgres', '-d', 'postgres', '-At', '-v', 'ON_ERROR_STOP=1', '-c', consulta],
+    opciones,
+  );
+}
+
+function revisarTextosDeLaBase() {
+  /* Una sola consulta con todas las tablas pegadas una abajo de la otra, y el
+     resultado en un solo bloque de JSON. Así el texto puede tener comillas, barras o
+     renglones adentro sin romper la lectura. */
+  const trozos = TEXTOS_DE_LA_PLATAFORMA.flatMap(({ tabla, señal, columnas, soloGeneral }) =>
+    columnas.map(
+      (columna) =>
+        `select '${tabla}.${columna}' as origen, (${señal})::text as fila, ${columna} as texto ` +
+        `from ${tabla} where ${columna} is not null${soloGeneral ? ' and prestadora_id is null' : ''}`,
+    ),
+  );
+  const consulta = `select coalesce(json_agg(f), '[]')::text from (${trozos.join(' union all ')}) f;`;
+
+  let filas;
+  try {
+    filas = JSON.parse(consultarBase(consulta).trim());
+  } catch (e) {
+    return { revisada: false, motivo: (e.stderr || e.message || String(e)).trim().split('\n').slice(-3).join('\n'), hallazgos: [] };
+  }
+
+  const hallazgos = [];
+  for (const { origen, fila, texto } of filas) {
+    const encontradas = tuteosEnElTexto(texto);
+    if (encontradas.length === 0) continue;
+    hallazgos.push({ archivo: origen, linea: fila, palabras: encontradas.join(', '), frase: recortar(texto) });
+  }
+  return { revisada: true, cuantos: filas.length, hallazgos };
 }
 
 // ---------------------------------------------------------------------------
@@ -315,6 +439,7 @@ function informar(titulo, hallazgos, formatear, explicacion) {
 
 const aMano = revisarTextoAMano();
 const trato = revisarTrato();
+const base = revisarTextosDeLaBase();
 
 const falla1 = informar(
   'Texto escrito a mano en una pantalla',
@@ -330,4 +455,28 @@ const falla2 = informar(
   'En castellano el texto visible va en forma impersonal, y usted cuando haya que\ndirigirse a una persona. En portugués, forma impersonal y "você" solo donde no\nquede otra (regla 1 del §7 de CLAUDE.md).',
 );
 
-process.exit(falla1 || falla2 ? 1 : 0);
+/* Que no se llegue a la base es una falla cuando esto corre en la publicación: si se
+   dejara pasar, el control se apagaría solo el día que cambie una clave y nadie se
+   enteraría. En la máquina de quien programa solamente avisa, porque ahí el
+   contenedor local puede estar apagado por cualquier motivo. */
+let falla3 = false;
+if (!base.revisada) {
+  const enLaPublicacion = !!process.env.CI;
+  console.log(`\n### Textos guardados en la base: no se pudo consultar\n${base.motivo}`);
+  console.log(
+    enLaPublicacion
+      ? '\nSin base no hay control. Hace falta revisar las claves de conexión del automatismo.'
+      : '\nAviso: los textos guardados en la base quedaron sin revisar. Para revisarlos hace\nfalta la base local encendida (`npx supabase start`). El automatismo de la\npublicación sí los revisa siempre.',
+  );
+  falla3 = enLaPublicacion;
+} else {
+  falla3 = informar(
+    'Textos guardados en la base que tutean a quien los lee',
+    base.hallazgos,
+    (h) => `${h.palabras}  →  "${h.frase}"`,
+    'Ese texto no está en ningún archivo: vive en la base y se corrige con una migración.\nEl mismo criterio que arriba — forma impersonal, y usted cuando haya que dirigirse a\nuna persona (regla 1 del §7 de CLAUDE.md).',
+  );
+  if (base.hallazgos.length === 0) console.log(`  (${base.cuantos} textos de la plataforma revisados)`);
+}
+
+process.exit(falla1 || falla2 || falla3 ? 1 : 0);

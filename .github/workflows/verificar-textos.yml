@@ -1,6 +1,6 @@
 name: Verificar textos traducidos
 
-# Los guardarraíles del texto visible. Son dos programas y revisan cuatro cosas:
+# Los guardarraíles del texto visible. Son dos programas y revisan cinco cosas:
 #
 #   buscar_textos_huerfanos.mjs (pendiente #114)
 #     · que no queden textos traducidos que ninguna pantalla usa. Una traducción muerta no
@@ -8,16 +8,19 @@ name: Verificar textos traducidos
 #       cuando en realidad no está construida. El 2026-08-03 había 54 así;
 #     · que ninguna clave quede a medio traducir (regla 2 del §7 de CLAUDE.md).
 #
-#   verificar_texto_visible.mjs (pendiente #144)
+#   verificar_texto_visible.mjs (pendientes #144 y #145)
 #     · que ninguna pantalla tenga una frase escrita a mano en vez de tomarla del archivo
 #       de traducciones (regla 1 del §7);
-#     · que ningún texto visible tutee a quien lo lee (misma regla).
+#     · que ningún texto visible tutee a quien lo lee (misma regla);
+#     · que tampoco tutee ninguno de los textos que no viven en un archivo sino guardados
+#       en la base: la advertencia legal, los consentimientos, el catálogo de módulos.
+#       Esos se le escapaban al control y se corrigieron dos veces a ojo (#145).
 #
 # Los dos existen por el mismo motivo: eran reglas escritas que solo controlaba una persona
 # leyendo, y se rompieron igual. Una regla que corta la publicación no se rompe sola.
 #
-# Corre en cada push y en cada pull request. Ninguno de los dos tiene dependencias, así que
-# no hay npm install.
+# Corre en cada push y en cada pull request. Ninguno de los dos tiene dependencias que haya
+# que descargar con npm, así que no hay npm install.
 
 on:
   push:
@@ -37,8 +40,29 @@ jobs:
       - name: Buscar textos huérfanos y a medio traducir
         run: node scripts/buscar_textos_huerfanos.mjs
 
+      # Para leer los textos guardados en la base hace falta `psql`, el programa que consulta
+      # una base Postgres desde la línea de comandos. Las máquinas de GitHub ya lo traen
+      # instalado; la línea de abajo solo lo instala si algún día dejaran de traerlo, así que
+      # normalmente no hace nada y tarda un instante.
+      - name: Asegurar que esté psql
+        if: always()
+        run: command -v psql || (sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client)
+
       # `if: always()` para que este corra aunque el anterior haya fallado: son dos problemas
       # distintos y conviene verlos juntos, no uno por vez en dos publicaciones seguidas.
+      #
+      # Las cinco claves de abajo son las mismas que usa la copia de seguridad diaria y
+      # apuntan a la base de verdad. Acá se usan solo para leer, y solo las tablas del
+      # catálogo que escribió la plataforma: la lista está escrita a mano dentro del programa
+      # y nunca incluye nada que haya escrito una Prestadora ni una persona. El motivo está
+      # explicado adentro del propio programa: lo que este control encuentra lo imprime en
+      # pantalla, y esa pantalla queda guardada en el registro de la publicación.
       - name: Buscar texto escrito a mano y textos que tutean
         if: always()
+        env:
+          DB_HOST: ${{ secrets.BACKUP_DB_HOST }}
+          DB_PORT: ${{ secrets.BACKUP_DB_PORT }}
+          DB_NAME: ${{ secrets.BACKUP_DB_NAME }}
+          DB_USER: ${{ secrets.BACKUP_DB_USER }}
+          DB_PASSWORD: ${{ secrets.BACKUP_DB_PASSWORD }}
         run: node scripts/verificar_texto_visible.mjs

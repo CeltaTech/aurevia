@@ -35,6 +35,10 @@ const ESTADO_POR_MOTIVO = {
   correo_de_otra_cuenta: 409,
   sin_etapas_incorporacion: 409,
   faltan_datos: 400,
+  password_debil: 400,
+  token_invalido: 400,
+  token_ya_usado: 400,
+  token_vencido: 400,
 };
 
 // Lo que una ruta contesta cuando algo falló. Se escribe una sola vez para que ninguna ruta

@@ -15,7 +15,7 @@ export const T = {
       // Los motivos: cuando el motor sabe exactamente qué pasó, lo dice con un código y la
       // frase se busca acá. Ganan siempre por sobre las ocho de arriba, que son lo genérico.
       // Están solo los que puede recibir esta aplicación —los que manda el motor en las
-      // direcciones de /app-asistentes—, no los del Panel.
+      // direcciones de /app-asistentes y en la de activar la cuenta—, no los del Panel.
       //
       // `falta_reporte` no está a propósito: esa frase lleva adentro los nombres de los
       // Pacientes cuyo reporte falta, y eso una búsqueda por motivo no lo hace. Vive en
@@ -27,6 +27,15 @@ export const T = {
         // antes o después del intento. Por eso hay un solo texto y no dos iguales.
         continuidad: 'Todavía no se puede cerrar esta guardia: no está permitido retirarse sin que llegue el relevo. Si hay una urgencia, hace falta avisarle al Coordinador para que lo autorice.',
         no_disponible: 'Esta función no está activada en esta Prestadora.',
+        // Los de la activación de la cuenta. Son cinco frases distintas porque son cinco
+        // problemas distintos y cada uno se sale de una manera: el enlace equivocado se abre
+        // de nuevo desde el correo, el ya usado se saltea entrando derecho, y el vencido
+        // obliga a pedir una invitación nueva.
+        faltan_datos: 'Faltan datos para activar la cuenta. Hace falta volver a abrir el enlace del correo y escribir la contraseña de nuevo.',
+        password_debil: 'La contraseña tiene que tener al menos 8 caracteres.',
+        token_invalido: 'Este enlace de activación no es válido. Conviene abrirlo de nuevo desde el correo, o pedir que reenvíen la invitación.',
+        token_ya_usado: 'Esta cuenta ya fue activada con este enlace. Se entra desde la pantalla de ingreso, con la contraseña que se eligió.',
+        token_vencido: 'Este enlace de activación venció. Hace falta pedir que reenvíen la invitación.',
       },
     },
     comun: {
@@ -65,7 +74,6 @@ export const T = {
       activar_confirmar: 'Activar cuenta',
       activar_enviando: 'Activando…',
       activar_exito: 'La cuenta quedó activada. Ya se puede ingresar con la contraseña nueva.',
-      activar_error: 'No se pudo activar la cuenta. Conviene volver a intentar.',
       activar_token_invalido: 'Este enlace de activación no es válido o ya venció. Hace falta pedir que reenvíen la invitación.',
     },
     guardias: {
@@ -246,6 +254,11 @@ export const T = {
         falta_paciente: 'We still need to know which Patient this Daily Report is about. Go back to the shift and open the report from the right Patient.',
         continuidad: 'You cannot close this shift yet: leaving before your relief arrives is not allowed. If this is an emergency, tell the Coordinator so they can authorise it.',
         no_disponible: 'This feature is not switched on at this provider.',
+        faltan_datos: 'Some information is missing. Please open the link from the email again and enter the password once more.',
+        password_debil: 'The password must be at least 8 characters long.',
+        token_invalido: 'This activation link is not valid. Try opening it again from the email, or ask for a new invitation.',
+        token_ya_usado: 'This account has already been activated with this link. You can sign in with the password you chose.',
+        token_vencido: 'This activation link has expired. Please ask for a new invitation.',
       },
     },
     comun: {
@@ -284,7 +297,6 @@ export const T = {
       activar_confirmar: 'Activate account',
       activar_enviando: 'Activating…',
       activar_exito: 'Your account is now active. You can sign in with your new password.',
-      activar_error: 'Could not activate the account. Please try again.',
       activar_token_invalido: 'This activation link is invalid or has expired. Ask for a new invitation.',
     },
     guardias: {
@@ -460,6 +472,11 @@ export const T = {
         falta_paciente: 'Falta saber de qual Paciente fala este Relatório Diário. Convém voltar ao plantão e entrar pelo Paciente que corresponde.',
         continuidad: 'Ainda não é possível encerrar este plantão: não é permitido sair sem que a substituição chegue. Se for uma urgência, é preciso avisar o Coordenador para que ele autorize.',
         no_disponible: 'Esta função não está ativada nesta Prestadora.',
+        faltan_datos: 'Faltam dados para ativar a conta. É preciso abrir novamente o link do email e digitar a senha de novo.',
+        password_debil: 'A senha precisa ter pelo menos 8 caracteres.',
+        token_invalido: 'Este link de ativação não é válido. Convém abri-lo novamente a partir do email ou pedir que reenviem o convite.',
+        token_ya_usado: 'Esta conta já foi ativada com este link. O acesso é feito na tela de entrada, com a senha escolhida.',
+        token_vencido: 'Este link de ativação venceu. É preciso pedir que reenviem o convite.',
       },
     },
     comun: {
@@ -498,7 +515,6 @@ export const T = {
       activar_confirmar: 'Ativar conta',
       activar_enviando: 'Ativando…',
       activar_exito: 'A conta foi ativada. Já é possível entrar com a nova senha.',
-      activar_error: 'Não foi possível ativar a conta. É preciso tentar novamente.',
       activar_token_invalido: 'Este link de ativação não é válido ou já venceu. É preciso pedir que reenviem o convite.',
     },
     guardias: {

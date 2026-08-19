@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
+import { errorDeLaRespuesta, mensajeDeError } from '../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -35,16 +36,12 @@ export default function ActivarCuenta() {
         body: JSON.stringify({ token, password }),
       });
       const resultado = await respuesta.json();
-      if (!respuesta.ok) {
-        throw new Error(resultado.error);
-      }
+      // La explicación viene del motor, que es el único que sabe qué pasó: manda un motivo y
+      // acá se busca la frase en las traducciones. Esta pantalla no compara códigos.
+      if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
       setActivada(true);
     } catch (err) {
-      setError(
-        err.message === 'token_vencido' || err.message === 'token_ya_usado' || err.message === 'token_invalido'
-          ? t.auth.activar_token_invalido
-          : t.auth.activar_error,
-      );
+      setError(mensajeDeError(err, t, 'activar la cuenta'));
     } finally {
       setEnviando(false);
     }

@@ -14,10 +14,19 @@ export const T = {
       falla_del_sistema: 'Algo falló de nuestro lado. Se puede volver a probar en un rato.',
       // Los motivos: cuando el motor sabe exactamente qué pasó, lo dice con un código y la
       // frase se busca acá. Ganan siempre por sobre las ocho de arriba, que son lo genérico.
-      // Está solo el que puede recibir esta aplicación: el motor contesta así cuando se pide
-      // una función que la Prestadora tiene apagada.
+      // Están solo los que puede recibir esta aplicación: cuando se pide una función que la
+      // Prestadora tiene apagada, y los cinco de la activación de la cuenta.
       motivos: {
         no_disponible: 'Esta función no está activada en esta Prestadora.',
+        // Los de la activación de la cuenta. Son cinco frases distintas porque son cinco
+        // problemas distintos y cada uno se sale de una manera: el enlace equivocado se abre
+        // de nuevo desde el correo, el ya usado se saltea entrando derecho, y el vencido
+        // obliga a pedir una invitación nueva.
+        faltan_datos: 'Faltan datos para activar la cuenta. Hace falta volver a abrir el enlace del correo y escribir la contraseña de nuevo.',
+        password_debil: 'La contraseña tiene que tener al menos 8 caracteres.',
+        token_invalido: 'Este enlace de activación no es válido. Conviene abrirlo de nuevo desde el correo, o pedir que reenvíen la invitación.',
+        token_ya_usado: 'Esta cuenta ya fue activada con este enlace. Se entra desde la pantalla de ingreso, con la contraseña que se eligió.',
+        token_vencido: 'Este enlace de activación venció. Hace falta pedir que reenvíen la invitación.',
       },
     },
     comun: {
@@ -51,7 +60,6 @@ export const T = {
       activar_confirmar: 'Activar cuenta',
       activar_enviando: 'Activando…',
       activar_exito: 'La cuenta quedó activada. Ya se puede ingresar con la contraseña nueva.',
-      activar_error: 'No se pudo activar la cuenta. Conviene volver a intentar.',
       activar_token_invalido: 'Este enlace de activación no es válido o ya venció. Hace falta pedir que reenvíen la invitación.',
     },
     pacientes: {
@@ -234,6 +242,11 @@ export const T = {
       falla_del_sistema: 'Something failed on our side. Please try again shortly.',
       motivos: {
         no_disponible: 'This feature is not switched on at this Provider.',
+        faltan_datos: 'Some information is missing. Please open the link from the email again and enter the password once more.',
+        password_debil: 'The password must be at least 8 characters long.',
+        token_invalido: 'This activation link is not valid. Try opening it again from the email, or ask for a new invitation.',
+        token_ya_usado: 'This account has already been activated with this link. You can sign in with the password you chose.',
+        token_vencido: 'This activation link has expired. Please ask for a new invitation.',
       },
     },
     comun: {
@@ -267,7 +280,6 @@ export const T = {
       activar_confirmar: 'Activate account',
       activar_enviando: 'Activating…',
       activar_exito: 'Your account is now active. You can sign in with your new password.',
-      activar_error: 'Could not activate the account. Please try again.',
       activar_token_invalido: 'This activation link is invalid or has expired. Ask for a new invitation.',
     },
     pacientes: {
@@ -447,6 +459,11 @@ export const T = {
       falla_del_sistema: 'Algo falhou do nosso lado. É possível tentar de novo daqui a pouco.',
       motivos: {
         no_disponible: 'Esta função não está ativada nesta Prestadora.',
+        faltan_datos: 'Faltam dados para ativar a conta. É preciso abrir novamente o link do email e digitar a senha de novo.',
+        password_debil: 'A senha precisa ter pelo menos 8 caracteres.',
+        token_invalido: 'Este link de ativação não é válido. Convém abri-lo novamente a partir do email ou pedir que reenviem o convite.',
+        token_ya_usado: 'Esta conta já foi ativada com este link. O acesso é feito na tela de entrada, com a senha escolhida.',
+        token_vencido: 'Este link de ativação venceu. É preciso pedir que reenviem o convite.',
       },
     },
     comun: {
@@ -480,7 +497,6 @@ export const T = {
       activar_confirmar: 'Ativar conta',
       activar_enviando: 'Ativando…',
       activar_exito: 'A conta foi ativada. Já é possível entrar com a nova senha.',
-      activar_error: 'Não foi possível ativar a conta. Convém tentar novamente.',
       activar_token_invalido: 'Este link de ativação não é válido ou já venceu. É preciso pedir que reenviem o convite.',
     },
     pacientes: {

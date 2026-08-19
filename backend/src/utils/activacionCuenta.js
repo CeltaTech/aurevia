@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { supabase } from '../db/connection.js';
+import { ErrorConMotivo } from './errorConMotivo.js';
 import { enviarEmail } from './email.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 import { marcaDeLaPrestadora } from './marcaPrestadora.js';
@@ -103,9 +104,15 @@ export async function activarCuentaConToken(token, passwordNueva) {
     .eq('token', token)
     .maybeSingle();
 
-  if (errorFila || !fila) throw new Error('token_invalido');
-  if (fila.usado_en) throw new Error('token_ya_usado');
-  if (new Date(fila.expira_en) < new Date()) throw new Error('token_vencido');
+  // Los tres avisos viajan como motivo hasta la pantalla, que los explica en el idioma de
+  // quien mira: son tres problemas distintos y se resuelven distinto —el enlace equivocado se
+  // vuelve a abrir desde el correo, el ya usado se saltea entrando por la pantalla de ingreso,
+  // y el vencido obliga a pedir una invitación nueva—. Van sin detalle a propósito: el código
+  // ya dice todo lo que hay para decir, y un detalle acá solo reemplazaría el código en la
+  // respuesta sin quedar registrado en ningún lado.
+  if (errorFila || !fila) throw new ErrorConMotivo('token_invalido');
+  if (fila.usado_en) throw new ErrorConMotivo('token_ya_usado');
+  if (new Date(fila.expira_en) < new Date()) throw new ErrorConMotivo('token_vencido');
 
   const { error: errorPassword } = await supabase.auth.admin.updateUserById(fila.usuario_id, { password: passwordNueva });
   if (errorPassword) throw new Error(errorPassword.message);

@@ -29,20 +29,46 @@ existían. Los primeros cuatro días no quedaron registrados en ningún lado.
 ## 2. Cómo se arregló: una foto, no una reconstrucción
 
 En vez de intentar rearmar la historia (imposible, faltaba el principio), se le sacó una **foto
-fiel al esquema real de producción** y esa foto pasó a ser la migración inicial:
+fiel al esquema real de producción** y esa foto pasó a ser la migración inicial. Hoy la foto
+vigente es:
 
 ```
-supabase/migrations/20260728163000_base_existente.sql
+supabase/migrations/20260819160000_foto_de_la_base.sql
 ```
 
-87 tablas, 182 políticas de seguridad, 19 funciones, 41 disparadores, 851 columnas. No es lo que
-alguien quiso hacer: es lo que hay.
+95 tablas, 946 columnas, 207 políticas de seguridad, 40 funciones, 51 disparadores, 207 índices,
+más las filas del catálogo que el producto trae de fábrica. No es lo que alguien quiso hacer: es
+lo que hay.
 
 **Se comprobó de verdad, no se supuso.** Se levantó un Supabase vacío en la máquina, se corrió
-solo esa foto y se comparó contra producción en nueve dimensiones: tablas, columnas, políticas
-de seguridad, funciones (firma y cuerpo), disparadores, restricciones, índices, **permisos de
-tabla** y valores de los enumerados. Las nueve dieron idénticas. Los permisos de tabla se
-verificaron a propósito: es la clase de defecto que rompió el panel de CeltaTech el 2026-07-27.
+solo esa foto y se comparó contra el esquema anterior en nueve dimensiones: tablas, columnas,
+políticas de seguridad, funciones (firma y cuerpo), disparadores, restricciones, índices,
+**permisos de tabla** y valores de los enumerados. Las nueve dieron idénticas, y las filas del
+catálogo también. Los permisos de tabla se verifican a propósito: es la clase de defecto que
+rompió el panel de CeltaTech el 2026-07-27.
+
+### Cuándo se saca una foto nueva
+
+Cuando la carpeta se llenó de archivos ya aplicados en producción y estorba más de lo que
+documenta. **No se borran de a uno**: la carpeta entera es la receta para armar la base desde
+cero y, si falta una hoja, la receta no se puede seguir. Se saca una foto del resultado
+(`supabase migration squash`), esa foto queda como único archivo y los viejos se borran juntos.
+Se hizo así el 2026-07-28 y otra vez el 2026-08-19.
+
+Tres cosas que hay que saber antes de hacerlo:
+
+- **La foto trae el esquema, no las filas.** `supabase migration squash` vuelca la estructura y
+  nada más: toda alta de datos que hubiera en las migraciones viejas se pierde en silencio. Las
+  filas del catálogo de la plataforma —módulos, acciones de permisos, advertencias legales,
+  textos de consentimiento, tipos de Asistente, el depósito de logos— hay que volver a escribirlas
+  a mano al final del archivo, leyéndolas de la base real, y comprobar después que volvieron.
+- **El archivo conserva el número de la última migración de la tanda.** Supabase reconoce una
+  migración por los 14 dígitos y nada más, así que el texto del nombre se puede cambiar sin
+  romper nada, pero el número no.
+- **La libreta de apuntes de producción queda desfasada y hay que corregirla**, con
+  `supabase migration repair --status reverted` para cada número que desaparece y
+  `--status applied` para el que queda. Después, `supabase migration list --linked` tiene que
+  mostrar una sola línea con las dos columnas iguales.
 
 ## 3. Dónde vive el esquema
 
@@ -66,7 +92,8 @@ tabla es una libreta de apuntes, no la base.
    falta, va en su propio archivo y se documenta ahí mismo).
 3. **El orden de los archivos es el orden de aplicación.** Se ordenan por nombre. No se
    renombra, no se reordena, no se intercala un archivo con fecha anterior entre dos ya
-   aplicados.
+   aplicados. *Única excepción:* al sacar una foto (§2) se puede cambiar el texto del nombre
+   —no los 14 dígitos— para que diga que es una foto y no lo último que se aplicó.
 
 ## 5. Cómo se llama un archivo
 

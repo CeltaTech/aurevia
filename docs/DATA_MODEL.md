@@ -233,12 +233,9 @@ CREATE TABLE asistentes (
 -- Extensión de PRD_02B_Gestion_Personal.md — columnas del vínculo laboral dual-track
 ALTER TABLE asistentes ADD COLUMN tipo_vinculo TEXT
   CHECK (tipo_vinculo IN ('monotributo', 'dependencia')) DEFAULT 'monotributo';
-ALTER TABLE asistentes ADD COLUMN categoria_cct TEXT;      -- categoría CCT 743/16, solo si dependencia
 ALTER TABLE asistentes ADD COLUMN fecha_alta DATE NOT NULL;
 ALTER TABLE asistentes ADD COLUMN fecha_baja DATE;         -- null mientras esté activo
 ALTER TABLE asistentes ADD COLUMN causal_baja TEXT;        -- ver enum causal_cese, null mientras activo
-ALTER TABLE asistentes ADD COLUMN valor_hora NUMERIC(12,2);      -- si monotributo
-ALTER TABLE asistentes ADD COLUMN sueldo_basico NUMERIC(12,2);   -- si dependencia
 ALTER TABLE asistentes ADD COLUMN horas_semanales NUMERIC(5,2);
 ALTER TABLE asistentes ADD COLUMN score_riesgo_reclasificacion INTEGER DEFAULT 0; -- 0-100
 
@@ -251,6 +248,27 @@ ALTER TABLE asistentes ADD COLUMN motivo_exclusion_directo TEXT;
 ALTER TABLE asistentes ADD COLUMN motivo_exclusion_marketplace TEXT;
 ALTER TABLE asistentes ADD CONSTRAINT asistentes_canales_valido
   CHECK (canales <@ ARRAY['directo','marketplace']::TEXT[] AND array_length(canales, 1) > 0);
+```
+
+### remuneraciones_asistente — lo que cobra el Asistente
+
+Vive separado de `asistentes` a propósito. Las reglas de acceso de la base filtran filas, no
+columnas: mientras los importes estaban dentro de la ficha, cualquiera que podía ver al
+Asistente podía leerlos —una Coordinadora con el permiso cerrado, y también la Familia—. En su
+propia tabla la base exige `tiene_permiso('ver_pagos_asistente')` antes de contestar, y escribir
+queda reservado a la administración de la Prestadora. Contra `asistentes` es uno a uno: la
+clave primaria es el propio `asistente_id`, y la fila existe solo si hay algún importe cargado.
+
+```sql
+CREATE TABLE remuneraciones_asistente (
+  asistente_id  UUID PRIMARY KEY REFERENCES asistentes(id) ON DELETE CASCADE,
+  prestadora_id UUID NOT NULL REFERENCES prestadoras(id),
+  valor_hora    NUMERIC(12,2),   -- si monotributo
+  sueldo_basico NUMERIC(12,2),   -- si dependencia
+  categoria_cct TEXT,            -- categoría CCT 743/16, solo si dependencia
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 ```
 
 Ver `supabase/migrations/` para el DDL de estas columnas. Si hace falta saber si están

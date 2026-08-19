@@ -180,42 +180,54 @@ FROM personas p;
 --    viejos al catálogo. Delia tampoco tiene tipo y no tiene texto viejo: es el
 --    otro caso que esa pantalla tiene que saber mostrar.
 --
---    Los datos de plata van en dos columnas distintas y no en una sola, porque
---    quien está por monotributo cobra por hora (`valor_hora`) y quien está en
---    relación de dependencia cobra un sueldo que no se mueve con las horas
---    (`sueldo_basico`). Cada uno lleva el que le corresponde y el otro va en
---    blanco: si se llenaran los dos, la pantalla de Pagos a Asistentes podría
---    mostrar bien un número que en realidad está mal cargado.
+--    Lo que cobra cada uno no está en esta tabla: está en
+--    `remuneraciones_asistente`, la de más abajo. Vive aparte porque las reglas
+--    de acceso de la base filtran filas y no columnas, así que mientras los
+--    importes estaban acá cualquiera que podía ver la ficha podía leerlos.
 -- ----------------------------------------------------------------------------
 
 INSERT INTO public.asistentes (
   id, prestadora_id, nombre, telefono, email, especialidades, zonas,
   estado, tipo_vinculo, fecha_alta, fecha_baja, causal_baja,
-  valor_hora, sueldo_basico, horas_semanales, dni, canales
+  horas_semanales, dni, canales
 ) VALUES
   ('30000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
    'Ana Álvarez', '+54 11 4001-0001', 'ana.asistente@sandbox.local',
    NULL, ARRAY['caba'],
    'activo', 'monotributo', CURRENT_DATE - 300, NULL, NULL,
-   4500.00, NULL, 40, '20000001', ARRAY['directo']),
+   40, '20000001', ARRAY['directo']),
 
   ('30000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111',
    'Bruno Bianchi', '+54 11 4001-0002', 'bruno.asistente@sandbox.local',
    ARRAY['Acompañamiento terapéutico'], ARRAY['caba', 'zona_norte'],
    'activo', 'dependencia', CURRENT_DATE - 220, NULL, NULL,
-   NULL, 980000.00, 40, '20000002', ARRAY['directo', 'marketplace']),
+   40, '20000002', ARRAY['directo', 'marketplace']),
 
   ('30000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111',
    'Clara Cabrera', '+54 11 4001-0003', 'clara.asistente@sandbox.local',
    NULL, ARRAY['zona_sur'],
    'activo', 'monotributo', CURRENT_DATE - 90, NULL, NULL,
-   5200.00, NULL, 24, '20000003', ARRAY['marketplace']),
+   24, '20000003', ARRAY['marketplace']),
 
   ('30000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111',
    'Delia Duarte', '+54 11 4001-0004', 'delia.asistente@sandbox.local',
    NULL, ARRAY['zona_norte'],
    'cesado', 'monotributo', CURRENT_DATE - 500, CURRENT_DATE - 40, 'renuncia',
-   4200.00, NULL, 40, '20000004', ARRAY['directo']);
+   40, '20000004', ARRAY['directo']);
+
+-- Los datos de plata van en dos columnas distintas y no en una sola, porque quien
+-- está por monotributo cobra por hora (`valor_hora`) y quien está en relación de
+-- dependencia cobra un sueldo que no se mueve con las horas (`sueldo_basico`).
+-- Cada uno lleva el que le corresponde y el otro va en blanco: si se llenaran los
+-- dos, la pantalla de Pagos a Asistentes podría mostrar bien un número que en
+-- realidad está mal cargado.
+INSERT INTO public.remuneraciones_asistente (
+  asistente_id, prestadora_id, valor_hora, sueldo_basico
+) VALUES
+  ('30000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 4500.00, NULL),
+  ('30000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', NULL, 980000.00),
+  ('30000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 5200.00, NULL),
+  ('30000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 4200.00, NULL);
 
 
 -- ----------------------------------------------------------------------------

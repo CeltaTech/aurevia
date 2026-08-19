@@ -14,6 +14,7 @@ import { ScoreRiesgoTab } from './ScoreRiesgoTab';
 import { AusenciasCoberturaTab } from './AusenciasCoberturaTab';
 import { ComunicacionTab } from './ComunicacionTab';
 import { mensajeDeError } from '../../lib/errores';
+import { CAMPOS_REMUNERACION, conRemuneracion } from '../../lib/remuneracion';
 
 const TABS = ['perfil', 'verificacion', 'certificado', 'matriculas', 'vinculo_cese', 'simulador', 'score_riesgo', 'ausencias', 'comunicacion'];
 // Ausencias y Cobertura es operativo (tipo/fechas/sustituto), no datos laborales sensibles —
@@ -37,17 +38,20 @@ export function AsistenteDetalle() {
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
-    // Coordinador consulta la vista restringida (sin sueldo/causal de cese/vínculo laboral) —
-    // ver schema_etapa2i.sql. RLS es row-level, no column-level, así que la restricción de
-    // columnas se resuelve acá, no solo ocultando tabs/campos en el frontend.
+    // Coordinador consulta la vista restringida (sin causal de cese ni vínculo laboral) —
+    // ver schema_etapa2i.sql. Las reglas de acceso de la base filtran filas, no columnas, así
+    // que esa restricción se resuelve eligiendo la vista, no solo ocultando tabs y campos en
+    // la pantalla. Los importes son el caso aparte: viven en su propia tabla y los pide
+    // `CAMPOS_REMUNERACION`, donde la base exige el permiso `ver_pagos_asistente` para contestar.
     const tabla = esAdmin ? 'asistentes' : 'asistentes_coordinador';
-    const { data, error: errorConsulta } = await supabase.from(tabla).select('*').eq('id', id).single();
+    const columnas = esAdmin ? `*, ${CAMPOS_REMUNERACION}` : '*';
+    const { data, error: errorConsulta } = await supabase.from(tabla).select(columnas).eq('id', id).single();
     if (errorConsulta) {
       setError(errorConsulta.code === 'PGRST116' ? null : mensajeDeError(errorConsulta, t));
       setEstado(errorConsulta.code === 'PGRST116' ? 'no_encontrado' : 'error');
       return;
     }
-    setAsistente(data);
+    setAsistente(conRemuneracion(data));
     setEstado('listo');
   }, [id, esAdmin, t]);
 

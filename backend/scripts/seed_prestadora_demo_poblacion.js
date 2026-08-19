@@ -158,13 +158,19 @@ async function main() {
       canales: perfil.canales,
       estado: perfil.estado,
       tipo_vinculo: perfil.tipo_vinculo,
-      categoria_cct: perfil.categoria_cct,
-      valor_hora: perfil.valor_hora,
-      sueldo_basico: perfil.sueldo_basico,
       horas_semanales: perfil.horas_semanales,
       fecha_alta: perfil.fecha_alta,
       fecha_baja: perfil.fecha_baja,
       causal_baja: perfil.causal_baja,
+    }).throwOnError();
+    // Lo que cobra va en su propia tabla, donde la base exige el permiso
+    // `ver_pagos_asistente` antes de mostrarlo.
+    await supabase.from('remuneraciones_asistente').insert({
+      asistente_id: asistenteId,
+      prestadora_id: PRESTADORA_ID,
+      categoria_cct: perfil.categoria_cct,
+      valor_hora: perfil.valor_hora,
+      sueldo_basico: perfil.sueldo_basico,
     }).throwOnError();
     resumen.asistentes.push(asistenteId);
     console.log(`asistente OK (${i + 1}/${NOMBRES_ASISTENTES.length}): ${nombre}`);

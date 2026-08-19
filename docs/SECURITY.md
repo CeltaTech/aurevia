@@ -258,7 +258,35 @@ CREATE POLICY "coordinador_ve_incidentes_de_su_zona" ON incidentes_relevo
 ```
 
 Tablas que **nunca** deben tener policy de lectura para `asistente` ni `familia`:
-`escalas_legales`, `ceses`, `ausencias`, `guardias_cobertura` (regla 8 de `CLAUDE.md`).
+`escalas_legales`, `ceses`, `ausencias`, `guardias_cobertura`, `remuneraciones_asistente`
+(regla 8 de `CLAUDE.md`).
+
+**Lo que se le paga al Asistente vive en una tabla aparte (2026-08-19).** `valor_hora`,
+`sueldo_basico` y `categoria_cct` dejaron de ser columnas de `asistentes` y pasaron a
+`remuneraciones_asistente`, con su propia policy de lectura:
+
+```sql
+CREATE POLICY lee_remuneraciones_quien_tiene_el_permiso ON remuneraciones_asistente
+  FOR SELECT USING (
+    prestadora_id = current_tenant()
+    AND tiene_permiso('ver_pagos_asistente')
+    AND EXISTS (SELECT 1 FROM asistentes a WHERE a.id = remuneraciones_asistente.asistente_id)
+  );
+```
+
+El motivo es que RLS filtra **filas, no columnas**: mientras esos tres datos fueron columnas
+de `asistentes`, cualquier sesión que pudiera ver la fila del Asistente los leía, tuviera o no
+el permiso — medido contra la base local con la sesión de una Coordinadora con
+`ver_pagos_asistente` cerrado, y con la de una Familia. Escribir sigue siendo exclusivo de
+`es_superadmin() OR es_admin_prestadora()`. El `EXISTS` es deliberado: reutiliza las policies
+de `asistentes` en lugar de repetir los filtros de tenant y de zona (regla 12 de `CLAUDE.md`),
+así una Coordinadora con el permiso abierto ve los pagos de los Asistentes de su zona y de
+ningún otro. `es_admin_prestadora()` se creó en esa misma migración como punto único de verdad
+de una condición que hasta entonces estaba escrita a mano en cada policy.
+
+En la misma migración se eliminó `familia_ve_asistente_asignado`, que le daba a la Familia la
+ficha completa del Asistente asignado. La aplicación de Familias nunca consulta `asistentes`
+—pide todo por el motor—, así que era una puerta abierta sin uso.
 
 Para `coordinador`, la policy de "su zona" debe filtrar por el campo `zonas` del
 Coordinador contra la zona de la `familia`/`asistente` — no dar acceso total a

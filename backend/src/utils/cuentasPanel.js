@@ -319,15 +319,26 @@ export async function crearAsistenteDirecto({
       zonas: zonasArray,
       estado: estado || 'activo',
       tipo_vinculo: tipo_vinculo || 'monotributo',
-      categoria_cct: categoria_cct || null,
-      valor_hora: valor_hora || null,
-      sueldo_basico: sueldo_basico || null,
       horas_semanales: horas_semanales || null,
       prestadora_id: prestadoraId,
       importacion_id: importacionId || null,
       pendiente_conformidad: Boolean(importacionId),
     });
     if (errorAsistente) throw new Error(errorAsistente.message);
+
+    // Lo que cobra el Asistente va a su propia tabla, no a la ficha: ahí la base exige el
+    // permiso `ver_pagos_asistente` antes de mostrarlo. Si el alta no trae ningún importe no
+    // se crea la fila — una fila vacía no dice nada distinto de que no haya fila.
+    if (categoria_cct || valor_hora || sueldo_basico) {
+      const { error: errorRemuneracion } = await supabase.from('remuneraciones_asistente').insert({
+        asistente_id: asistenteId,
+        prestadora_id: prestadoraId,
+        categoria_cct: categoria_cct || null,
+        valor_hora: valor_hora || null,
+        sueldo_basico: sueldo_basico || null,
+      });
+      if (errorRemuneracion) throw new Error(errorRemuneracion.message);
+    }
 
     // Filas importadas quedan ocultas por RLS (pendiente_conformidad=true) hasta que la
     // Prestadora las conforme — no tiene sentido correr acá la política de verificación de

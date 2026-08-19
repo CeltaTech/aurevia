@@ -43,10 +43,15 @@ números hardcodeados — ver regla 10 de `CLAUDE.md`.
 ## Modelo de datos
 
 Ver `DATA_MODEL.md` sección "Gestión de Personal" — tablas `asistentes` (columnas
-extendidas: `tipo_vinculo`, `categoria_cct`, `fecha_alta`, `fecha_baja`, `causal_baja`,
-`valor_hora`, `sueldo_basico`, `horas_semanales`, `score_riesgo_reclasificacion`),
-`escalas_legales`, `ausencias`, `guardias_cobertura`, `ceses`. Esas tablas ya están escritas
-ahí con el SQL exacto — no reproducir aquí para evitar que las dos fuentes diverjan.
+extendidas: `tipo_vinculo`, `fecha_alta`, `fecha_baja`, `causal_baja`, `horas_semanales`,
+`score_riesgo_reclasificacion`), `remuneraciones_asistente`, `escalas_legales`, `ausencias`,
+`guardias_cobertura`, `ceses`. Esas tablas ya están escritas ahí con el SQL exacto — no
+reproducir aquí para evitar que las dos fuentes diverjan.
+
+Lo que cobra el Asistente —`valor_hora`, `sueldo_basico`, `categoria_cct`— no está en su ficha:
+está en `remuneraciones_asistente`, que es una tabla aparte con su propia regla de acceso. Es
+el único dato de este módulo que exige un permiso configurable, `ver_pagos_asistente`, para
+poder leerse.
 
 Los vencimientos de documentación del Asistente (Monotributo, ART, Seguro, Certificado de
 Antecedentes Penales u otros que agregue cada prestadora) ya no viven como columnas de
@@ -66,7 +71,7 @@ un array de fixtures de `escalas_legales` congelado:
 
 ```
 calcularCese({
-  asistente,          // fila de asistentes: fecha_alta, tipo_vinculo, sueldo_basico, valor_hora, horas_semanales
+  asistente,          // fecha_alta, tipo_vinculo y horas_semanales de su ficha, más sueldo_basico y valor_hora de remuneraciones_asistente
   fechaCese,          // fecha del hecho — clave para toda lectura de escalas_legales
   causal,             // uno de los 13 valores de causal_cese
   escalasLegales       // valores ya resueltos para fechaCese (no se consulta la DB dentro de la función)

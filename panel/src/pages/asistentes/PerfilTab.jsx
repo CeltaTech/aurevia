@@ -61,18 +61,41 @@ export function PerfilTab({ asistente, onActualizado }) {
       estado: form.estado,
       ...(esAdmin && {
         tipo_vinculo: form.tipo_vinculo,
-        categoria_cct: form.categoria_cct || null,
-        valor_hora: form.valor_hora || null,
-        sueldo_basico: form.sueldo_basico || null,
         horas_semanales: form.horas_semanales || null,
       }),
     };
     const { error: errorUpdate } = await supabase.from('asistentes').update(payload).eq('id', asistente.id);
-    setGuardando(false);
     if (errorUpdate) {
+      setGuardando(false);
       setError(t.comun.error_generico);
       return;
     }
+
+    // Lo que cobra el Asistente se guarda aparte, en `remuneraciones_asistente`, donde la base
+    // exige el permiso `ver_pagos_asistente` para leerlo y ser administración para cambiarlo.
+    // Puede no existir todavía la fila —un Asistente dado de alta sin importes—, así que se
+    // usa `upsert`: la crea la primera vez y la actualiza las siguientes.
+    if (esAdmin) {
+      const { error: errorRemuneracion } = await supabase
+        .from('remuneraciones_asistente')
+        .upsert(
+          {
+            asistente_id: asistente.id,
+            prestadora_id: asistente.prestadora_id,
+            categoria_cct: form.categoria_cct || null,
+            valor_hora: form.valor_hora || null,
+            sueldo_basico: form.sueldo_basico || null,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'asistente_id' },
+        );
+      if (errorRemuneracion) {
+        setGuardando(false);
+        setError(t.comun.error_generico);
+        return;
+      }
+    }
+    setGuardando(false);
     setGuardado(true);
     onActualizado();
   }

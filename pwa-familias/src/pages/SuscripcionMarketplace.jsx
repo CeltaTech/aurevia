@@ -4,6 +4,7 @@ import QRCode from 'qrcode';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
+import { mensajeDeError } from '../lib/errores';
 
 function minutosRestantes(fecha) {
   return Math.max(0, Math.ceil((new Date(fecha).getTime() - Date.now()) / 60000));
@@ -24,7 +25,7 @@ export default function SuscripcionMarketplace() {
     api
       .suscripcionMarketplace(id)
       .then((data) => setSuscripcion(data.suscripcion))
-      .catch(() => setError(t.comun.error_generico));
+      .catch((e) => setError(mensajeDeError(e, t, 'suscripción del marketplace')));
   }, [id]);
 
   useEffect(() => {
@@ -60,8 +61,8 @@ export default function SuscripcionMarketplace() {
           // el próximo ciclo de sondeo reintenta
         }
       }, 4000);
-    } catch {
-      setError(t.comun.error_generico);
+    } catch (e) {
+      setError(mensajeDeError(e, t, 'generar el QR de cobro'));
     } finally {
       setGenerando(false);
     }

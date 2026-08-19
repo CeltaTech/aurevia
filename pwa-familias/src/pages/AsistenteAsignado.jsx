@@ -5,6 +5,7 @@ import { useLocale } from '../i18n/LocaleContext';
 import { nombreTipo } from '../lib/tipoDeAsistente';
 import { useSeVe } from '../context/PerfilContext';
 import { INTERRUPTOR_DE_LA_PANTALLA } from '../lib/interruptorDeCadaPantalla';
+import { mensajeDeError } from '../lib/errores';
 
 // Una de las dos listas. La de "qué no hace" pesa lo mismo que la otra a
 // propósito: es la que evita la discusión en la puerta.
@@ -48,8 +49,8 @@ export default function AsistenteAsignado() {
       .then((data) => {
         if (activo) setDatos(data);
       })
-      .catch(() => {
-        if (activo) setError(t.comun.error_generico);
+      .catch((e) => {
+        if (activo) setError(mensajeDeError(e, t, 'Asistente asignado'));
       });
     api
       .perfil()
@@ -69,8 +70,8 @@ export default function AsistenteAsignado() {
     try {
       await api.calificar(datos.guardiaId, { estrellas, comentario: comentario || null });
       setEnviado(true);
-    } catch {
-      setError(t.comun.error_generico);
+    } catch (e) {
+      setError(mensajeDeError(e, t, 'calificar al Asistente'));
     } finally {
       setEnviando(false);
     }

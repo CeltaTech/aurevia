@@ -5,6 +5,7 @@ import { useLocale } from '../i18n/LocaleContext';
 import { agregarACola, nuevoId } from '../lib/colaOffline';
 import { sincronizarCola } from '../lib/sincronizarCola';
 import { con } from '../lib/textos';
+import { mensajeDeError } from '../lib/errores';
 import { useSeVe } from '../context/PerfilContext';
 
 function esErrorDeRed(error) {
@@ -119,7 +120,7 @@ export default function ReporteDiario() {
       const { estructurado: data } = await api.estructurarReporte(id, textoLibre);
       setEstructurado({ ...data, signos_vitales: signosIniciales(data.signos_vitales) });
     } catch (e) {
-      setError(t.comun.error_generico);
+      setError(mensajeDeError(e, t, 'estructurar reporte'));
     } finally {
       setEstructurando(false);
     }
@@ -158,8 +159,8 @@ export default function ReporteDiario() {
     try {
       const { fotoUrl: ruta } = await api.subirFotoReporte(id, archivo);
       setFotoUrl(ruta);
-    } catch {
-      setError(t.comun.error_generico);
+    } catch (e) {
+      setError(mensajeDeError(e, t, 'subir foto del reporte'));
     }
   }
 
@@ -197,8 +198,8 @@ export default function ReporteDiario() {
       // Vuelve a la guardia, no a la lista: ahí está el botón de cerrarla, que es el paso
       // que sigue y el que antes ocurría solo, sin que el Asistente lo viera.
       setTimeout(() => navigate(`/guardias/${id}`), 1500);
-    } catch {
-      setError(t.comun.error_generico);
+    } catch (e) {
+      setError(mensajeDeError(e, t, 'confirmar reporte'));
     } finally {
       setConfirmando(false);
     }

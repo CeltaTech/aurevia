@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { errorDeLaRespuesta } from './errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -19,15 +20,12 @@ async function pedido(ruta, opciones = {}) {
   });
   const datos = await respuesta.json().catch(() => ({}));
   if (!respuesta.ok) {
-    const error = new Error(datos.error || 'Error de red');
-    // El número de la respuesta viaja con el error: es lo que le permite a lib/errores.js
-    // distinguir una sesión vencida (401) de un permiso que falta (403) sin leer el texto.
-    error.status = respuesta.status;
+    // El error lo arma lib/errores.js y no esta función: ahí viajan juntos el número de la
+    // respuesta —que distingue una sesión vencida (401) de un permiso que falta (403)— y el
+    // motivo, que es lo que después le permite a la pantalla explicar por qué no se pudo.
+    const error = errorDeLaRespuesta(respuesta, datos);
     if (datos.yaRegistrado) error.yaRegistrado = true;
-    // El motivo permite que la pantalla explique por qué no se pudo (falta el reporte,
-    // continuidad de guardia) en vez de mostrar siempre el mismo error genérico.
-    if (datos.motivo) error.motivo = datos.motivo;
-    // Cuando falta un reporte, el backend dice de quiénes falta. Con un turno que cubre a
+    // Cuando falta un reporte, el motor dice de quiénes falta. Con un turno que cubre a
     // tres personas, "falta un reporte" no le dice al Asistente cuál le quedó pendiente.
     if (datos.pacientesSinReporte) error.pacientesSinReporte = datos.pacientesSinReporte;
     throw error;

@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { useSeVe } from '../context/PerfilContext';
+import { mensajeDeError } from '../lib/errores';
 
 const ESTADO_CLASE = {
   pendiente: 'badge-amarilla',
@@ -38,7 +39,7 @@ export default function Medicacion() {
     api
       .indicacionesMedicacion(id)
       .then((data) => setIndicaciones(data.indicaciones))
-      .catch(() => setError(t.comun.error_generico));
+      .catch((e) => setError(mensajeDeError(e, t, 'indicaciones de medicación')));
   }, [id]);
 
   useEffect(() => {
@@ -81,8 +82,8 @@ export default function Medicacion() {
       setArchivo(null);
       setExito(true);
       cargar();
-    } catch {
-      setError(t.comun.error_generico);
+    } catch (fallo) {
+      setError(mensajeDeError(fallo, t, 'pedir medicación'));
     } finally {
       setEnviando(false);
     }

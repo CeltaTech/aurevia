@@ -4,6 +4,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { nombreTipo } from '../lib/tipoDeAsistente';
+import { mensajeDeError } from '../lib/errores';
 
 const LECTOR_ID = 'lector-qr-asistente';
 
@@ -65,9 +66,12 @@ export default function EscanearAsistente() {
       const datos = await api.verificarAsistente(id, qrToken);
       setResultado(datos);
       setEstado('resultado');
-    } catch {
+    } catch (e) {
       setEstado('error');
-      setError(t.escaneo.error_qr_invalido);
+      // El único caso propio de esta pantalla es el código que no corresponde a nadie: eso
+      // el motor lo contesta como "no encontrado". Todo lo demás —sin señal, sesión vencida,
+      // función apagada en la Prestadora— lo explica lib/errores.js con las traducciones.
+      setError(e?.status === 404 ? t.escaneo.error_qr_invalido : mensajeDeError(e, t, 'verificar el QR del Asistente'));
     }
   }
 
@@ -106,8 +110,13 @@ export default function EscanearAsistente() {
 
       {estado === 'resultado' && resultado && (
         <div>
+          {/* Estos motivos no son errores: llegan en una respuesta correcta y cada uno pinta
+              el aviso de otro color, así que no pasan por lib/errores.js. */}
           {resultado.motivo === 'sin_guardia_hoy' && (
             <div className="alert alert-info">{t.escaneo.resultado_sin_guardia}</div>
+          )}
+          {resultado.motivo === 'guardia_sin_cubrir' && (
+            <div className="alert alert-alerta">{t.escaneo.resultado_sin_cubrir}</div>
           )}
           {resultado.motivo === 'asignado' && (
             <div className="alert alert-success">{t.escaneo.resultado_coincide}</div>

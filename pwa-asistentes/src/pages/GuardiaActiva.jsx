@@ -162,7 +162,7 @@ export default function GuardiaActiva() {
         setGuardia(data);
         setConReporte(pacientesConReporte ?? []);
       })
-      .catch(() => setError(t.comun.error_generico));
+      .catch((e) => setError(mensajeDeError(e, t, 'cargar la guardia')));
   }
 
   async function revisarPendientes() {
@@ -248,9 +248,11 @@ export default function GuardiaActiva() {
       }
     } catch (e) {
       if (e.message === 'sin_geo') setError(t.guardia_activa.geo_no_disponible);
+      // `falta_reporte` es el único motivo que se sigue mirando acá, y es a propósito: su
+      // frase lleva adentro los nombres de los Pacientes cuyo reporte falta, y eso una
+      // búsqueda por motivo no lo hace. Si el turno cubrió a dos personas y se escribió una
+      // sola hoja, hay que decir cuál falta, no que "falta el reporte".
       else if (e.motivo === 'falta_reporte')
-        // Con los nombres cuando el backend los manda: si el turno cubrió a dos personas y
-        // se escribió una sola hoja, hay que decir cuál falta, no que "falta el reporte".
         setError(
           e.pacientesSinReporte?.length
             ? con(t.guardia_activa.cerrar_faltan_reportes, {
@@ -258,8 +260,9 @@ export default function GuardiaActiva() {
               })
             : t.guardia_activa.cerrar_falta_reporte,
         );
-      else if (e.motivo === 'continuidad') setError(t.guardia_activa.cerrar_bloqueado);
-      else setError(t.comun.error_generico);
+      // El resto de los motivos los explica lib/errores.js con las traducciones: el motivo
+      // que se agregue mañana en el motor va a salir explicado acá sin tocar esta pantalla.
+      else setError(mensajeDeError(e, t, 'cerrar guardia'));
     } finally {
       setCerrando(false);
     }
@@ -368,8 +371,10 @@ export default function GuardiaActiva() {
             </div>
           )}
 
+          {/* El aviso de antes del intento y el rechazo de después son la misma regla, así que
+              son un solo texto: el del motivo `continuidad` que manda el motor. */}
           {reportesCompletos && !cerradoPendiente && guardia.checkout_bloqueado && (
-            <div className="alert alert-alerta" style={{ marginTop: '1rem' }}>{t.guardia_activa.cerrar_bloqueado}</div>
+            <div className="alert alert-alerta" style={{ marginTop: '1rem' }}>{t.errores.motivos.continuidad}</div>
           )}
 
           {reportesCompletos && !cerradoPendiente && !guardia.checkout_bloqueado && !confirmandoCierre && (

@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { errorDeLaRespuesta } from './errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -19,11 +20,10 @@ async function pedido(ruta, opciones = {}) {
   });
   const datos = await respuesta.json().catch(() => ({}));
   if (!respuesta.ok) {
-    const error = new Error(datos.error || 'Error de red');
-    // El número de la respuesta viaja con el error: es lo que le permite a lib/errores.js
-    // distinguir una sesión vencida (401) de un permiso que falta (403) sin leer el texto.
-    error.status = respuesta.status;
-    throw error;
+    // El error lo arma lib/errores.js y no esta función: ahí viajan juntos el número de la
+    // respuesta —que distingue una sesión vencida (401) de un permiso que falta (403)— y el
+    // motivo, que es lo que después le permite a la pantalla explicar por qué no se pudo.
+    throw errorDeLaRespuesta(respuesta, datos);
   }
   return datos;
 }

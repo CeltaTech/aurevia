@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
+import { mensajeDeError } from '../lib/errores';
 
 export default function Alertas() {
   const { id } = useParams();
@@ -17,8 +18,8 @@ export default function Alertas() {
       .then(({ alertas: data }) => {
         if (activo) setAlertas(data);
       })
-      .catch(() => {
-        if (activo) setError(t.comun.error_generico);
+      .catch((e) => {
+        if (activo) setError(mensajeDeError(e, t, 'alertas del Paciente'));
       });
     return () => {
       activo = false;

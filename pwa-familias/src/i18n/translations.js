@@ -12,6 +12,13 @@ export const T = {
       en_uso: 'No se puede borrar: hay otros registros que dependen de esto.',
       dato_invalido: 'Hay un dato mal cargado. Conviene revisar lo que se escribió.',
       falla_del_sistema: 'Algo falló de nuestro lado. Se puede volver a probar en un rato.',
+      // Los motivos: cuando el motor sabe exactamente qué pasó, lo dice con un código y la
+      // frase se busca acá. Ganan siempre por sobre las ocho de arriba, que son lo genérico.
+      // Está solo el que puede recibir esta aplicación: el motor contesta así cuando se pide
+      // una función que la Prestadora tiene apagada.
+      motivos: {
+        no_disponible: 'Esta función no está activada en esta Prestadora.',
+      },
     },
     comun: {
       cargando: 'Cargando…',
@@ -144,6 +151,7 @@ export const T = {
       resultado_coincide: 'Coincide: este es el Asistente asignado a la guardia de hoy.',
       resultado_no_coincide: 'Atención: este Asistente no es el asignado a la guardia de hoy.',
       resultado_sin_guardia: 'No hay una guardia programada para hoy con este Paciente.',
+      resultado_sin_cubrir: 'Hay una guardia programada para hoy, pero todavía no tiene un Asistente asignado.',
       certificado_vigente: 'Certificado de Aptitud vigente',
       certificado_vencido: 'Certificado de Aptitud vencido o sin registrar',
       volver_a_escanear: 'Escanear de nuevo',
@@ -224,6 +232,9 @@ export const T = {
       en_uso: 'This cannot be deleted: other records depend on it.',
       dato_invalido: 'Something was entered incorrectly. Please check what you typed.',
       falla_del_sistema: 'Something failed on our side. Please try again shortly.',
+      motivos: {
+        no_disponible: 'This feature is not switched on at this Provider.',
+      },
     },
     comun: {
       cargando: 'Loading…',
@@ -353,6 +364,7 @@ export const T = {
       resultado_coincide: 'Match: this is the Caregiver assigned to today\'s shift.',
       resultado_no_coincide: 'Warning: this Caregiver is not the one assigned to today\'s shift.',
       resultado_sin_guardia: 'There is no shift scheduled today for this Patient.',
+      resultado_sin_cubrir: 'There is a shift scheduled today, but no Caregiver has been assigned to it yet.',
       certificado_vigente: 'Fitness Certificate valid',
       certificado_vencido: 'Fitness Certificate expired or not on file',
       volver_a_escanear: 'Scan again',
@@ -433,6 +445,9 @@ export const T = {
       en_uso: 'Não é possível apagar: outros registros dependem disto.',
       dato_invalido: 'Há um dado carregado errado. Convém revisar o que foi escrito.',
       falla_del_sistema: 'Algo falhou do nosso lado. É possível tentar de novo daqui a pouco.',
+      motivos: {
+        no_disponible: 'Esta função não está ativada nesta Prestadora.',
+      },
     },
     comun: {
       cargando: 'Carregando…',
@@ -562,6 +577,7 @@ export const T = {
       resultado_coincide: 'Confere: este é o Cuidador designado para o plantão de hoje.',
       resultado_no_coincide: 'Atenção: este Cuidador não é o designado para o plantão de hoje.',
       resultado_sin_guardia: 'Não há plantão programado para hoje com este Paciente.',
+      resultado_sin_cubrir: 'Há um plantão programado para hoje, mas ainda não tem um Cuidador designado.',
       certificado_vigente: 'Certificado de Aptidão válido',
       certificado_vencido: 'Certificado de Aptidão vencido ou não registrado',
       volver_a_escanear: 'Escanear novamente',

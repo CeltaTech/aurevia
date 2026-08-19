@@ -12,6 +12,22 @@ export const T = {
       en_uso: 'No se puede borrar: hay otros registros que dependen de esto.',
       dato_invalido: 'Hay un dato mal cargado. Hace falta revisar lo que se escribió.',
       falla_del_sistema: 'Algo falló de nuestro lado. Conviene volver a intentar en un rato.',
+      // Los motivos: cuando el motor sabe exactamente qué pasó, lo dice con un código y la
+      // frase se busca acá. Ganan siempre por sobre las ocho de arriba, que son lo genérico.
+      // Están solo los que puede recibir esta aplicación —los que manda el motor en las
+      // direcciones de /app-asistentes—, no los del Panel.
+      //
+      // `falta_reporte` no está a propósito: esa frase lleva adentro los nombres de los
+      // Pacientes cuyo reporte falta, y eso una búsqueda por motivo no lo hace. Vive en
+      // guardia_activa.cerrar_faltan_reportes y la arma GuardiaActiva.jsx.
+      motivos: {
+        falta_checkin: 'Esta guardia todavía no tiene el check-in marcado, así que no se puede cerrar.',
+        falta_paciente: 'Falta saber de qué Paciente habla este Reporte Diario. Conviene volver a la guardia y entrar por el Paciente que corresponde.',
+        // La misma frase que ve quien todavía no intentó cerrar: es la misma regla, contada
+        // antes o después del intento. Por eso hay un solo texto y no dos iguales.
+        continuidad: 'Todavía no se puede cerrar esta guardia: no está permitido retirarse sin que llegue el relevo. Si hay una urgencia, hace falta avisarle al Coordinador para que lo autorice.',
+        no_disponible: 'Esta función no está activada en esta Prestadora.',
+      },
     },
     comun: {
       cargando: 'Cargando…',
@@ -75,7 +91,6 @@ export const T = {
       cerrar_ok: 'Guardia cerrada.',
       cerrar_falta_reporte: 'Antes de cerrar la guardia hace falta cargar el Reporte Diario.',
       cerrar_faltan_reportes: 'Antes de cerrar la guardia falta el Reporte Diario de: {nombres}.',
-      cerrar_bloqueado: 'Todavía no se puede cerrar esta guardia: no está permitido retirarse sin que llegue el relevo. Si hay una urgencia, hace falta avisarle al Coordinador para que lo autorice.',
       fuera_de_rango: 'El check-in se hizo lejos del domicilio del Paciente — se registró igual, con un aviso automático para el Coordinador.',
       geo_no_disponible: 'No se pudo obtener la ubicación. Hace falta activar el GPS y volver a intentar.',
       cargar_reporte: 'Cargar Reporte Diario',
@@ -226,6 +241,12 @@ export const T = {
       en_uso: 'This cannot be deleted: other records depend on it.',
       dato_invalido: 'Something was entered incorrectly. Please check what you typed.',
       falla_del_sistema: 'Something failed on our side. Please try again shortly.',
+      motivos: {
+        falta_checkin: 'This shift has no check-in yet, so it cannot be closed.',
+        falta_paciente: 'We still need to know which Patient this Daily Report is about. Go back to the shift and open the report from the right Patient.',
+        continuidad: 'You cannot close this shift yet: leaving before your relief arrives is not allowed. If this is an emergency, tell the Coordinator so they can authorise it.',
+        no_disponible: 'This feature is not switched on at this provider.',
+      },
     },
     comun: {
       cargando: 'Loading…',
@@ -289,7 +310,6 @@ export const T = {
       cerrar_ok: 'Shift closed.',
       cerrar_falta_reporte: 'You need to file the Daily Report before closing the shift.',
       cerrar_faltan_reportes: 'Before closing the shift, the Daily Report is still missing for: {nombres}.',
-      cerrar_bloqueado: 'You cannot close this shift yet: leaving before your relief arrives is not allowed. If this is an emergency, tell the Coordinator so they can authorise it.',
       fuera_de_rango: 'You are far from the Patient\'s address — check-in was recorded anyway, with an automatic note for the Coordinator.',
       geo_no_disponible: 'Could not get your location. Turn on GPS and try again.',
       cargar_reporte: 'Fill Daily Report',
@@ -435,6 +455,12 @@ export const T = {
       en_uso: 'Não é possível apagar: outros registros dependem disto.',
       dato_invalido: 'Há um dado carregado errado. É preciso revisar o que foi escrito.',
       falla_del_sistema: 'Algo falhou do nosso lado. É preciso tentar de novo daqui a pouco.',
+      motivos: {
+        falta_checkin: 'Este plantão ainda não tem o check-in marcado, então não é possível encerrá-lo.',
+        falta_paciente: 'Falta saber de qual Paciente fala este Relatório Diário. Convém voltar ao plantão e entrar pelo Paciente que corresponde.',
+        continuidad: 'Ainda não é possível encerrar este plantão: não é permitido sair sem que a substituição chegue. Se for uma urgência, é preciso avisar o Coordenador para que ele autorize.',
+        no_disponible: 'Esta função não está ativada nesta Prestadora.',
+      },
     },
     comun: {
       cargando: 'Carregando…',
@@ -498,7 +524,6 @@ export const T = {
       cerrar_ok: 'Plantão encerrado.',
       cerrar_falta_reporte: 'Antes de encerrar o plantão é preciso preencher o Relatório Diário.',
       cerrar_faltan_reportes: 'Antes de encerrar o plantão ainda falta o Relatório Diário de: {nombres}.',
-      cerrar_bloqueado: 'Ainda não é possível encerrar este plantão: não é permitido sair sem que a substituição chegue. Se for uma urgência, é preciso avisar o Coordenador para que ele autorize.',
       fuera_de_rango: 'O check-in foi feito longe do endereço do Paciente — foi registrado mesmo assim, com um aviso automático para o Coordenador.',
       geo_no_disponible: 'Não foi possível obter a localização. É preciso ativar o GPS e tentar novamente.',
       cargar_reporte: 'Preencher Relatório Diário',

@@ -79,7 +79,17 @@ INSERT INTO public.configuracion_prestadora (
   -- consulta pública sin sesión iniciada.
   'localhost',
   'Ciudad de Buenos Aires y Gran Buenos Aires'
-);
+)
+-- Al dar de alta la Prestadora, la base ya le creó sus filas de configuración con los
+-- valores de arranque (disparador `trg_sembrar_configuracion_prestadora`). Acá se le
+-- pisan por los datos de la Sandbox, que es lo que hace falta para probar.
+ON CONFLICT (prestadora_id) DO UPDATE SET
+  nombre               = EXCLUDED.nombre,
+  telefono             = EXCLUDED.telefono,
+  whatsapp_numero      = EXCLUDED.whatsapp_numero,
+  email                = EXCLUDED.email,
+  dominio              = EXCLUDED.dominio,
+  zona_cobertura_texto = EXCLUDED.zona_cobertura_texto;
 
 -- Las dos formas de trabajar que la Prestadora tiene encendidas. Queda apagada
 -- a propósito la tercera (`subcontratacion`), que está en pleno rediseño — ver
@@ -504,7 +514,11 @@ INSERT INTO public.configuracion_aviso_guardia_sin_cubrir (
   prestadora_id, activo, horas_antes, horas_entre_avisos
 ) VALUES (
   '11111111-1111-4111-8111-111111111111', true, 48, 12
-);
+)
+ON CONFLICT (prestadora_id) DO UPDATE SET
+  activo             = EXCLUDED.activo,
+  horas_antes        = EXCLUDED.horas_antes,
+  horas_entre_avisos = EXCLUDED.horas_entre_avisos;
 
 -- ----------------------------------------------------------------------------
 --    6.b A quién le llega. La lista de correos va vacía a propósito: así el
@@ -544,7 +558,13 @@ INSERT INTO public.configuracion_email_prestadora (
   'avisos@sandbox.local',
   '127.0.0.1',
   54425
-);
+)
+ON CONFLICT (prestadora_id) DO UPDATE SET
+  activo              = EXCLUDED.activo,
+  direccion_remitente = EXCLUDED.direccion_remitente,
+  usuario_smtp        = EXCLUDED.usuario_smtp,
+  host                = EXCLUDED.host,
+  puerto              = EXCLUDED.puerto;
 
 -- El buzón de pruebas no pide contraseña, pero el backend solo usa el remitente
 -- propio de la Prestadora si encuentra una guardada. Se carga una de relleno.
@@ -577,7 +597,13 @@ INSERT INTO public.configuracion_alertas_ia (
   true,
   true,
   true
-);
+)
+ON CONFLICT (prestadora_id) DO UPDATE SET
+  palabras_clave             = EXCLUDED.palabras_clave,
+  reportes_a_analizar        = EXCLUDED.reportes_a_analizar,
+  roja_avisa_familia         = EXCLUDED.roja_avisa_familia,
+  amarilla_avisa_familia     = EXCLUDED.amarilla_avisa_familia,
+  amarilla_avisa_coordinador = EXCLUDED.amarilla_avisa_coordinador;
 
 
 -- ----------------------------------------------------------------------------

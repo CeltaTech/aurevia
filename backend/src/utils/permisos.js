@@ -1,45 +1,50 @@
 import { supabase } from '../db/connection.js';
 
-// Acciones cuyo default (sin fila configurada en permisos_prestadora) es "solo admin" —
-// espejo en JS de la lógica de la función SQL `tiene_permiso()`
-// (supabase/migrations/). Se duplica acá porque el alta manual
-// corre en Express con la service role key, sin auth.uid(), así que la función SQL
-// (pensada para RLS) no aplica en este contexto.
-const ACCIONES_DEFAULT_SOLO_ADMIN = new Set([
-  'alta_manual_asistente',
-  'alta_manual_familia',
-  'importar_datos_masivos',
-  'validar_informe_obra_social',
-  // Lo que se le paga a cada Asistente es dato sensible (CLAUDE.md §6, "remuneraciones"),
-  // así que si la Prestadora no dijo nada, no lo ve el Coordinador. Para el resto de las
-  // acciones el default es al revés: si no se configuró, el Coordinador puede.
-  'ver_pagos_asistente',
-]);
+// Quién, además de un administrador, puede hacer cada una de las acciones que la Prestadora
+// puede reservar.
+//
+// ACÁ NO SE DECIDE NADA. La decisión está programada una sola vez y está en la base, en la
+// función `tiene_permiso_de`; este archivo solamente la consulta. Antes no era así: el motor
+// tenía su propia copia de la lista de acciones reservadas, la pantalla de configuración
+// tenía otra, y la base una tercera — las tres decían cosas distintas, y la pantalla llegaba
+// a mostrarle a la Prestadora un estado que el motor no aplicaba (pendiente #127).
+//
+// Por qué la lista vive en la base y no en un archivo de este proyecto, como sí pasa con
+// `catalogoVisibilidad.js` y `catalogoAvisos.js`: porque esta decisión no la consulta
+// solamente el motor. La consultan también las reglas de acceso de la propia base, que están
+// escritas en SQL y no pueden leer un archivo de JavaScript. Cuando los dos lados que
+// comparten una decisión no pueden compartir código, el punto único de verdad es una función
+// de la base — es lo que manda la regla 12 del §7 de CLAUDE.md para este caso exacto.
 
-export const ACCIONES_PERMISOS = [
-  'alta_manual_asistente',
-  'alta_manual_familia',
-  'editar_identidad_asistente',
-  'editar_datos_familia',
-  'editar_datos_paciente',
-  'importar_datos_masivos',
-  'validar_informe_obra_social',
-  'ver_pagos_asistente',
-];
+// El catálogo cambia con una migración, o sea junto con una versión nueva del motor, así que
+// alcanza con leerlo una vez por arranque.
+let catalogoEnMemoria = null;
 
-export async function tienePermiso({ accion, rol, usuarioId, prestadoraId }) {
-  if (['admin_prestadora', 'superadmin'].includes(rol)) return true;
-  if (rol !== 'coordinador') return false;
+export async function accionesDePermisos() {
+  if (catalogoEnMemoria) return catalogoEnMemoria;
+  const { data, error } = await supabase
+    .from('catalogo_acciones_permisos')
+    .select('accion, default_solo_admin')
+    .order('orden');
+  if (error) throw error;
+  catalogoEnMemoria = data || [];
+  return catalogoEnMemoria;
+}
 
-  const { data: cfg } = await supabase
-    .from('permisos_prestadora')
-    .select('alcance, excepciones_permitir, excepciones_denegar')
-    .eq('prestadora_id', prestadoraId)
-    .eq('accion', accion)
-    .maybeSingle();
+export async function tienePermiso({ accion, usuarioId }) {
+  const { data, error } = await supabase.rpc('tiene_permiso_de', {
+    p_usuario: usuarioId ?? null,
+    p_accion: accion,
+  });
+  // Ante la duda, no. Un permiso que no se pudo comprobar no es un permiso otorgado.
+  if (error) return false;
+  return data === true;
+}
 
-  if (!cfg) return !ACCIONES_DEFAULT_SOLO_ADMIN.has(accion);
-  if ((cfg.excepciones_denegar || []).includes(usuarioId)) return false;
-  if ((cfg.excepciones_permitir || []).includes(usuarioId)) return true;
-  return cfg.alcance === 'admin_y_coordinador';
+// Las respuestas de todas las acciones de una sola vez, para cuando el Panel necesita saber
+// qué botones mostrar. Una consulta en vez de una por acción.
+export async function permisosEfectivos(usuarioId) {
+  const { data, error } = await supabase.rpc('permisos_efectivos_de', { p_usuario: usuarioId ?? null });
+  if (error) throw error;
+  return data || {};
 }

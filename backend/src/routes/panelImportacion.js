@@ -33,12 +33,7 @@ function manejarErrorMulter(err, req, res, next) {
 
 function requierePermiso(accion) {
   return async (req, res, next) => {
-    const permitido = await tienePermiso({
-      accion,
-      rol: req.usuarioPanel?.rol,
-      usuarioId: req.usuarioPanel?.id,
-      prestadoraId: req.usuarioPanel?.prestadoraId,
-    });
+    const permitido = await tienePermiso({ accion, usuarioId: req.usuarioPanel?.id });
     if (!permitido) {
       return res.status(403).json({ error: 'La Prestadora no habilitó esta acción' });
     }

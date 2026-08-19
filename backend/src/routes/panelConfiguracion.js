@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { supabase } from '../db/connection.js';
-import { ACCIONES_PERMISOS } from '../utils/permisos.js';
+import { accionesDePermisos } from '../utils/permisos.js';
 import { avisoDelCatalogo, mezclarAvisosConCatalogo, VALORES_POR_DEFECTO_AVISO } from '../utils/catalogoAvisos.js';
 import { cosaDelCatalogo, mezclarVisibilidadConCatalogo } from '../utils/catalogoVisibilidad.js';
 import { LIMITES_ALERTAS_IA, VALORES_POR_DEFECTO_ALERTAS_IA } from '../utils/revisarAlertasIA.js';
@@ -747,35 +747,49 @@ panelConfiguracionRouter.patch('/documentos-tipo/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- Motor de permisos configurable por Prestadora (Fase 2 del plan de carga de datos +
-//     permisos + importación masiva) — quién, además de un Admin, puede dar de alta a mano
-//     o editar datos de Asistentes/Familias/Pacientes. Ver backend/src/utils/permisos.js y
-//     supabase/migrations/. ---
-const ACCIONES_DEFAULT_SOLO_ADMIN = new Set(['alta_manual_asistente', 'alta_manual_familia', 'importar_datos_masivos']);
+// --- Motor de permisos configurable por Prestadora — quién, además de un Admin, puede dar de
+//     alta a mano, editar datos de Asistentes/Familias/Pacientes, importar en masa, validar un
+//     informe de Obra Social o ver lo que se le paga a un Asistente.
+//
+//     Qué acciones existen y qué pasa con cada una cuando la Prestadora no configuró nada NO se
+//     decide acá: sale del catálogo de la base, que es el único lugar donde está escrito. Hasta
+//     el 2026-08-19 esta pantalla tenía su propia lista de tres acciones y mostraba un estado
+//     que el motor no aplicaba (pendiente #127). Ver backend/src/utils/permisos.js. ---
 
 panelConfiguracionRouter.get('/permisos', async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
-  const [{ data: filas, error: errorFilas }, { data: coordinadores, error: errorCoordinadores }] = await Promise.all([
-    supabase.from('permisos_prestadora').select('*').eq('prestadora_id', prestadoraId),
-    supabase.from('usuarios').select('id, nombre').eq('prestadora_id', prestadoraId).eq('rol', 'coordinador').order('nombre'),
-  ]);
-  if (errorFilas) return res.status(500).json({ error: errorFilas.message });
-  if (errorCoordinadores) return res.status(500).json({ error: errorCoordinadores.message });
+  try {
+    const [acciones, { data: filas, error: errorFilas }, { data: coordinadores, error: errorCoordinadores }] = await Promise.all([
+      accionesDePermisos(),
+      supabase.from('permisos_prestadora').select('*').eq('prestadora_id', prestadoraId),
+      supabase.from('usuarios').select('id, nombre').eq('prestadora_id', prestadoraId).eq('rol', 'coordinador').order('nombre'),
+    ]);
+    if (errorFilas) return res.status(500).json({ error: errorFilas.message });
+    if (errorCoordinadores) return res.status(500).json({ error: errorCoordinadores.message });
 
-  const porAccion = Object.fromEntries((filas || []).map((f) => [f.accion, f]));
-  const permisos = ACCIONES_PERMISOS.map((accion) => porAccion[accion] || {
-    accion,
-    alcance: ACCIONES_DEFAULT_SOLO_ADMIN.has(accion) ? 'solo_admin' : 'admin_y_coordinador',
-    excepciones_permitir: [],
-    excepciones_denegar: [],
-  });
+    const porAccion = Object.fromEntries((filas || []).map((f) => [f.accion, f]));
+    const permisos = acciones.map(({ accion, default_solo_admin }) => porAccion[accion] || {
+      accion,
+      alcance: default_solo_admin ? 'solo_admin' : 'admin_y_coordinador',
+      excepciones_permitir: [],
+      excepciones_denegar: [],
+    });
 
-  res.json({ permisos, coordinadores });
+    res.json({ permisos, coordinadores });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 panelConfiguracionRouter.patch('/permisos/:accion', async (req, res) => {
   const { accion } = req.params;
-  if (!ACCIONES_PERMISOS.includes(accion)) {
+  let acciones;
+  try {
+    acciones = await accionesDePermisos();
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+  if (!acciones.some((a) => a.accion === accion)) {
     return res.status(400).json({ error: 'Acción desconocida' });
   }
   const { alcance, excepciones_permitir, excepciones_denegar } = req.body;

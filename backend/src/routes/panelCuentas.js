@@ -15,7 +15,7 @@ import {
 } from '../utils/cuentasPanel.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { reenviarActivacionCuenta } from '../utils/activacionCuenta.js';
-import { tienePermiso, ACCIONES_PERMISOS } from '../utils/permisos.js';
+import { tienePermiso, permisosEfectivos } from '../utils/permisos.js';
 
 export const panelCuentasRouter = Router();
 
@@ -34,12 +34,7 @@ function requiereAdmin(req, res, next) {
 // que el plan pidió hacer configurable para Coordinador.
 function requierePermiso(accion) {
   return async (req, res, next) => {
-    const permitido = await tienePermiso({
-      accion,
-      rol: req.usuarioPanel?.rol,
-      usuarioId: req.usuarioPanel?.id,
-      prestadoraId: req.usuarioPanel?.prestadoraId,
-    });
+    const permitido = await tienePermiso({ accion, usuarioId: req.usuarioPanel?.id });
     if (!permitido) {
       return res.status(403).json({ error: 'La Prestadora no habilitó esta acción' });
     }
@@ -51,17 +46,11 @@ function requierePermiso(accion) {
 // Fase 1) para saber qué mostrar sin duplicar la lógica de permisos en el cliente — la
 // única fuente de verdad sigue siendo este chequeo del lado del servidor.
 panelCuentasRouter.get('/permisos-efectivos', requiereRolPanel, async (req, res) => {
-  const resultados = await Promise.all(
-    ACCIONES_PERMISOS.map((accion) =>
-      tienePermiso({
-        accion,
-        rol: req.usuarioPanel.rol,
-        usuarioId: req.usuarioPanel.id,
-        prestadoraId: req.usuarioPanel.prestadoraId,
-      })
-    )
-  );
-  res.json({ permisos: Object.fromEntries(ACCIONES_PERMISOS.map((accion, i) => [accion, resultados[i]])) });
+  try {
+    res.json({ permisos: await permisosEfectivos(req.usuarioPanel.id) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // PRD_08 (docs/PRD_08_Dashboard_Modalidades.md, aprobado 2026-07-24): qué modalidades de

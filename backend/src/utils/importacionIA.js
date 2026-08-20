@@ -147,7 +147,7 @@ ${muestraTexto}`;
 
 const SYSTEM_PROMPT = `Este asistente ayuda a mapear columnas de una planilla (Excel/CSV)
 subida por una Prestadora de cuidado domiciliario a los campos internos del sistema ${IDENTIDAD.nombre},
-para importar Asistentes (cuidadores) o Familias/Pacientes en forma masiva. Cada Prestadora
+para importar Asistentes o Familias/Pacientes en forma masiva. Cada Prestadora
 nombra sus columnas distinto (puede venir en español, con abreviaturas, en otro orden, con
 columnas de más que no aplican). La tarea es proponer, para cada columna del archivo, a qué
 campo interno corresponde (o null si no aplica a ninguno), y marcar advertencias sobre datos

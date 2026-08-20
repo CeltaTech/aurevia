@@ -17,11 +17,10 @@ import { jsonDeRespuestaIA } from './respuestaIA.js';
 const MODELO = 'claude-sonnet-5';
 
 const SYSTEM_PROMPT = `Este asistente ayuda a un Coordinador de cuidado domiciliario a responder
-mensajes de WhatsApp de Asistentes Integrales (cuidadores independientes, no empleados). La
-tarea es sugerir una respuesta breve y clara en castellano rioplatense —vocabulario de la
-región, pero en registro formal— y decidir si la situación es lo bastante común y de bajo
-riesgo como para responder de forma automática, o si necesita que un Coordinador humano la
-revise antes de enviarse.
+mensajes de WhatsApp de Asistentes. La tarea es sugerir una respuesta breve y clara en
+castellano rioplatense —vocabulario de la región, pero en registro formal— y decidir si la
+situación es lo bastante común y de bajo riesgo como para responder de forma automática, o
+si necesita que un Coordinador humano la revise antes de enviarse.
 
 ${TRATO_IA}
 Alcanza a "respuesta_sugerida", que se le envía al teléfono de una persona tal como se escriba

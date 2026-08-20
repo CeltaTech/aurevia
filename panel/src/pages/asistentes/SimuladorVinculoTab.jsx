@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
+import { useAuth } from '../../context/AuthContext';
 import { useEscalasLegales } from '../../hooks/useEscalasLegales';
 import { useFormulasCese } from '../../hooks/useFormulasCese';
 import { resolverEscalasVigentes, resolverFormulasVigentes } from '../../lib/escalasLegales';
+import { formatearImporte } from '../../lib/dinero';
 import { calcularCese } from '../../lib/calcularCese';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { Alert } from '../../components/ui/Alert';
@@ -46,7 +48,10 @@ function proyectarCosto(asistenteBase, tipoVinculo, escalasResueltas, formulasRe
 }
 
 export function SimuladorVinculoTab({ asistente }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const { usuario } = useAuth();
+  // Son proyecciones: no están guardadas y no traen moneda propia (regla 14, §7).
+  const moneda = usuario?.moneda ?? null;
   const { filas: escalasCrudas, estado: estadoEscalas, error: errorEscalas, recargar: recargarEscalas, jurisdiccion } = useEscalasLegales(asistente.prestadora_id);
   const { filas: formulasCrudas, estado: estadoFormulas, error: errorFormulas, recargar: recargarFormulas } = useFormulasCese(asistente.prestadora_id);
   const hoy = new Date().toISOString().slice(0, 10);
@@ -86,8 +91,8 @@ export function SimuladorVinculoTab({ asistente }) {
               {ANTIGUEDADES_MESES.map((meses, i) => (
                 <tr key={meses}>
                   <td>{t.asistentes.simulador.meses.replace('{n}', meses)}</td>
-                  <td>{proyecciones.monotributo[i].faltaDato ? t.asistentes.simulador.falta_dato_base : (proyecciones.monotributo[i].montoDespidoSinCausa !== null ? `$${proyecciones.monotributo[i].montoDespidoSinCausa.toLocaleString('es-AR')}` : '—')}</td>
-                  <td>{proyecciones.dependencia[i].faltaDato ? t.asistentes.simulador.falta_dato_base : (proyecciones.dependencia[i].montoDespidoSinCausa !== null ? `$${proyecciones.dependencia[i].montoDespidoSinCausa.toLocaleString('es-AR')}` : '—')}</td>
+                  <td>{proyecciones.monotributo[i].faltaDato ? t.asistentes.simulador.falta_dato_base : formatearImporte(proyecciones.monotributo[i].montoDespidoSinCausa, moneda, locale)}</td>
+                  <td>{proyecciones.dependencia[i].faltaDato ? t.asistentes.simulador.falta_dato_base : formatearImporte(proyecciones.dependencia[i].montoDespidoSinCausa, moneda, locale)}</td>
                 </tr>
               ))}
             </tbody>

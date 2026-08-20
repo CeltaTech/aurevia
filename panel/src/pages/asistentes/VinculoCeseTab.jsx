@@ -6,6 +6,7 @@ import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
 import { useEscalasLegales } from '../../hooks/useEscalasLegales';
 import { useFormulasCese } from '../../hooks/useFormulasCese';
 import { resolverEscalasVigentes, resolverFormulasVigentes } from '../../lib/escalasLegales';
+import { formatearImporte } from '../../lib/dinero';
 import { calcularCese } from '../../lib/calcularCese';
 import { supabase } from '../../lib/supabaseClient';
 import { TONO, claseBadgeTono } from '../../lib/tonos';
@@ -39,7 +40,7 @@ const CAUSALES = [
 ];
 
 export function VinculoCeseTab({ asistente, onActualizado }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { usuario } = useAuth();
   const { empresa } = useEmpresa();
   const confirmarDestructivo = useConfirmarDestructivo();
@@ -164,7 +165,7 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
               <tr key={c.id}>
                 <td>{new Date(c.fecha_cese).toLocaleDateString()}</td>
                 <td>{t.asistentes.causales[c.causal]}</td>
-                <td>{c.monto_total !== null ? `$${Number(c.monto_total).toLocaleString('es-AR')}` : '—'}</td>
+                <td>{formatearImporte(c.monto_total, c.moneda, locale)}</td>
                 <td>
                   {c.revisado_por_abogado ? (
                     <span className={claseBadgeTono(TONO.EXITO)}>{t.comun.si}</span>
@@ -206,7 +207,7 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
 
           {resultado && (
             <div className="panel-resultado-calculo">
-              <p><strong>{t.asistentes.cese.monto}:</strong> {resultado.montoTotal !== null ? `$${resultado.montoTotal.toLocaleString('es-AR')}` : t.asistentes.cese.requiere_calculo_manual}</p>
+              <p><strong>{t.asistentes.cese.monto}:</strong> {resultado.montoTotal !== null ? formatearImporte(resultado.montoTotal, usuario?.moneda ?? null, locale) : t.asistentes.cese.requiere_calculo_manual}</p>
 
               <details>
                 <summary>{t.asistentes.cese.ver_detalle_calculo}</summary>

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useLocale } from '../../i18n/LocaleContext';
 import { traducirValor } from '../../i18n/valores';
 import { supabase } from '../../lib/supabaseClient';
+import { formatearImporte } from '../../lib/dinero';
 import { claseBadge } from '../../lib/tonos';
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
@@ -13,13 +14,8 @@ import { mensajeDeError } from '../../lib/errores';
 // qué se trata el Servicio. Quien quiera verlas todas va a Guardias.
 const GUARDIAS_A_MOSTRAR = 20;
 
-function formatearPrecio(valor) {
-  if (valor === null || valor === undefined) return '—';
-  return Number(valor).toLocaleString(undefined, { style: 'currency', currency: 'ARS' });
-}
-
 export function ServicioDetalle() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { id } = useParams();
   const navigate = useNavigate();
   const [servicio, setServicio] = useState(null);
@@ -54,7 +50,7 @@ export function ServicioDetalle() {
     const [{ data: pr, error: fallaPrestaciones }, { data: gu, error: fallaGuardias }] = await Promise.all([
       supabase
         .from('prestaciones')
-        .select('id, tipo_servicio, precio_final, estado, nota, paciente_id, created_at')
+        .select('id, tipo_servicio, precio_final, moneda, estado, nota, paciente_id, created_at')
         .eq('servicio_id', id)
         .order('created_at', { ascending: false }),
       supabase
@@ -203,7 +199,7 @@ export function ServicioDetalle() {
                 <tr key={p.id}>
                   <td>{p.tipo_servicio}</td>
                   <td>{nombresPaciente[p.paciente_id] || '—'}</td>
-                  <td>{formatearPrecio(p.precio_final)}</td>
+                  <td>{formatearImporte(p.precio_final, p.moneda, locale)}</td>
                   <td>
                     <span className={claseBadge(p.estado)}>
                       {traducirValor(t.servicios, `estado_${p.estado}`)}

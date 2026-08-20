@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
+import { useAuth } from '../context/AuthContext';
 import { traducirValor } from '../i18n/valores';
 import { supabase } from '../lib/supabaseClient';
 import { finDeGuardia, horasDeGuardia } from '../lib/horarios';
@@ -8,6 +9,7 @@ import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Alert } from '../components/ui/Alert';
 import { mensajeDeError } from '../lib/errores';
+import { formatearImporte } from '../lib/dinero';
 import { CAMPOS_PAGO, conDatosAparte } from '../lib/fichaAsistente';
 
 /* Lo que la Prestadora le paga al Asistente. Es la otra mitad del dinero: hasta ahora el
@@ -57,11 +59,6 @@ function ultimoDia(mes) {
   return new Date(Date.UTC(anio, m, 0)).toISOString().slice(0, 10);
 }
 
-function formatearDinero(valor) {
-  if (valor === null || valor === undefined) return '—';
-  return Number(valor).toLocaleString(undefined, { style: 'currency', currency: 'ARS' });
-}
-
 function formatearHoras(valor) {
   return `${Math.round(valor * 10) / 10} h`;
 }
@@ -86,12 +83,12 @@ function vinculoVigenteEnElMes(asistente, mes) {
  * Cuando el dato no está cargado va una raya sola: "— por hora" se lee como si dijera algo
  * y no dice nada.
  */
-function textoBase(asistente, t) {
+function textoBase(asistente, t, moneda, locale) {
   const esSueldo = asistente.tipo_vinculo === 'dependencia';
   const valor = esSueldo ? asistente.sueldo_basico : asistente.valor_hora;
   if (valor === null || valor === undefined) return '—';
   const aclaracion = esSueldo ? t.pagos_asistentes.base_sueldo : t.pagos_asistentes.base_hora;
-  return `${formatearDinero(valor)} ${aclaracion}`;
+  return `${formatearImporte(valor, moneda, locale)} ${aclaracion}`;
 }
 
 /**
@@ -109,7 +106,11 @@ function calcularDelMes(asistente, horas) {
 }
 
 export function PagosAsistentes() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const { usuario } = useAuth();
+  // Esta pantalla calcula en el momento y no guarda nada, así que el importe no trae
+  // moneda propia: va la de la Prestadora (regla 14, §7).
+  const moneda = usuario?.moneda ?? null;
   const [mes, setMes] = useState(mesActual());
   const [asistentes, setAsistentes] = useState([]);
   const [guardias, setGuardias] = useState([]);
@@ -270,12 +271,12 @@ export function PagosAsistentes() {
                     dependencia cobra un sueldo que no se mueve con las horas. Si el dato
                     falta va una raya sola, sin la aclaración: "— por hora" no es media
                     respuesta, es una respuesta rara. */}
-                <td>{textoBase(a, t)}</td>
+                <td>{textoBase(a, t, moneda, locale)}</td>
                 <td>
                   {a.delMes === null ? (
                     <span className={claseBadgeTono(TONO.ATENCION)}>{t.pagos_asistentes.falta_dato_base}</span>
                   ) : (
-                    formatearDinero(a.delMes)
+                    formatearImporte(a.delMes, moneda, locale)
                   )}
                 </td>
                 <td>{a.sinCerrar > 0 ? a.sinCerrar : '—'}</td>
@@ -288,7 +289,7 @@ export function PagosAsistentes() {
               <td><strong>{resumen.guardias}</strong></td>
               <td><strong>{formatearHoras(resumen.horas)}</strong></td>
               <td></td>
-              <td><strong>{formatearDinero(resumen.total)}</strong></td>
+              <td><strong>{formatearImporte(resumen.total, moneda, locale)}</strong></td>
               <td><strong>{resumen.sinCerrar > 0 ? resumen.sinCerrar : '—'}</strong></td>
             </tr>
           </tfoot>

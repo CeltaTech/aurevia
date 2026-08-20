@@ -57,11 +57,14 @@ export function AuthProvider({ children }) {
     async function cargarUsuario(userId) {
       const { data } = await supabase
         .from('usuarios')
-        .select('id, rol, nombre, zonas, prestadora_id')
+        .select('id, rol, nombre, zonas, prestadora_id, prestadoras(moneda)')
         .eq('id', userId)
         .single();
       if (!activo) return;
-      setUsuario(data ?? null);
+      // La moneda de la Prestadora viaja junto con el usuario porque hay importes
+      // que se muestran antes de guardarse —una proyección, una cuenta en pantalla—
+      // y no tienen todavía una moneda propia de la que leerla (regla 14, §7).
+      setUsuario(data ? { ...data, moneda: data.prestadoras?.moneda ?? null } : null);
       await evaluarMfa(data ?? null);
       if (!activo) return;
       setCargando(false);

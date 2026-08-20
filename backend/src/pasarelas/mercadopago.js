@@ -7,7 +7,12 @@ import { IDENTIDAD } from '../config/identidadProducto.js';
 
 const API_BASE = process.env.MERCADOPAGO_API_BASE || 'https://api.mercadopago.com';
 
-export async function crearSuscripcion({ credencial, suscripcionId, monto, familiaId }) {
+export async function crearSuscripcion({ credencial, suscripcionId, monto, moneda, familiaId }) {
+  // La moneda llega de la suscripción, que la heredó de la Prestadora. No hay valor por
+  // descarte: cobrarle a una Familia en una moneda que nadie eligió es peor que fallar
+  // (regla 14, §7).
+  if (!moneda) throw new Error('Falta la moneda de la suscripción');
+
   const respuesta = await fetch(`${API_BASE}/preapproval`, {
     method: 'POST',
     headers: {
@@ -22,7 +27,7 @@ export async function crearSuscripcion({ credencial, suscripcionId, monto, famil
         frequency: 1,
         frequency_type: 'months',
         transaction_amount: monto,
-        currency_id: 'ARS',
+        currency_id: moneda,
       },
       back_url: process.env.MERCADOPAGO_BACK_URL,
       status: 'pending',

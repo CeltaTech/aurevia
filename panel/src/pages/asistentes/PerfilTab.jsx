@@ -126,7 +126,7 @@ export function PerfilTab({ asistente, onActualizado }) {
   }
 
   function descargarCertificadoRemuneraciones() {
-    descargarPDF(generarCertificadoRemuneracionesServicios({ asistente, nombreEmpresa: empresa?.nombre ?? '' }), `certificado-remuneraciones-${asistente.nombre}.pdf`);
+    descargarPDF(generarCertificadoRemuneracionesServicios({ asistente, nombreEmpresa: empresa?.nombre ?? '', moneda: usuario?.moneda ?? null }), `certificado-remuneraciones-${asistente.nombre}.pdf`);
   }
 
   return (

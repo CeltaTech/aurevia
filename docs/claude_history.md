@@ -380,3 +380,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 
 - **Qué se decidió:** que el listón visual del producto se fija mirando a los competidores del rubro y quedando claramente por encima, no solo igualando sus prestaciones. De ese estudio salieron recomendaciones concretas que quedaron en `docs/DESIGN_SYSTEM.md`: fondos de color completo, fotografía propia con dirección de arte, micro-interacciones e iconografía propia. Se sumó además la identidad visual para redes sociales, que ningún PRD contemplaba.
 - **Motivo:** pedido explícito del Desarrollador — superar ampliamente a los competidores desde lo estético, no solo desde lo que el producto hace.
+
+### Todo importe se guarda con su moneda, y el financiador tiene su lugar reservado (2026-08-20)
+
+- **Qué se decidió:** sumar dos reglas a `CLAUDE.md` §7, que pasa de trece a quince. La 14 obliga a guardar la moneda al lado de cada importe. La 15 reserva el lugar del financiador —quien paga el Servicio sin recibirlo— como lector externo de cumplimiento agregado, sin detalle clínico y sin ser un cuarto rol del Panel.
+- **Motivo:** la revisión del 2026-08-19 encontró doce tablas con campos de dinero y una sola que guardaba la moneda, más el peso argentino escrito a mano en la pantalla de saldos; el producto se vende en más de un país desde el día uno. La 15 evita rehacer los permisos más adelante.
+- **Qué se descartó y por qué:** la primera versión de la regla 14 pedía además el tipo de cambio de referencia en cada comprobante. El Desarrollador marcó que se estaba yendo de alcance: Careonys no tiene módulo de facturación fiscal ni está previsto que lo tenga. Se verificó contra la base —no hay tipo de comprobante, punto de venta, numeración autorizada ni impuestos discriminados en ninguna tabla— y la regla quedó reescrita pidiendo la moneda y nada más, con el límite de alcance escrito adentro para que no vuelva a estirarse.

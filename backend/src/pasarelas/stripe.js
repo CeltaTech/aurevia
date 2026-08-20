@@ -10,14 +10,17 @@ function form(objeto) {
   return new URLSearchParams(objeto).toString();
 }
 
-export async function crearSuscripcion({ credencial, suscripcionId, monto, familiaId }) {
+export async function crearSuscripcion({ credencial, suscripcionId, monto, moneda, familiaId }) {
+  // Ver la nota de mercadopago.js: la moneda viene de la suscripción, sin valor por descarte.
+  if (!moneda) throw new Error('Falta la moneda de la suscripción');
+
   const cliente = await llamar('/customers', credencial, {
     'metadata[suscripcion_id]': suscripcionId,
     'metadata[familia_id]': familiaId,
   });
 
   const precio = await llamar('/prices', credencial, {
-    'currency': 'ars',
+    'currency': moneda.toLowerCase(),
     'unit_amount': Math.round(monto * 100),
     'recurring[interval]': 'month',
     'product_data[name]': `Suscripción ${IDENTIDAD.nombre} Marketplace`,

@@ -5,6 +5,7 @@ import { useConfirmarDestructivo } from '../context/TenantSessionContext';
 import { supabase } from '../lib/supabaseClient';
 import { claseBadge } from '../lib/tonos';
 import { diasParaVencer } from '../lib/reglaVencimientos';
+import { formatearImporte } from '../lib/dinero';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
@@ -19,7 +20,7 @@ function mesActualISO() {
 }
 
 export function Facturacion() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { usuario } = useAuth();
   const confirmarDestructivo = useConfirmarDestructivo();
 
@@ -38,7 +39,7 @@ export function Facturacion() {
 
     const { data, error: errorConsulta } = await supabase
       .from('facturas_familia')
-      .select('id, periodo, monto_total, estado, fecha_emision, fecha_vencimiento, familias(solicitudes!familias_solicitud_id_fkey(nombre))')
+      .select('id, periodo, monto_total, moneda, estado, fecha_emision, fecha_vencimiento, familias(solicitudes!familias_solicitud_id_fkey(nombre))')
       .order('periodo', { ascending: false })
       .order('fecha_emision', { ascending: false });
 
@@ -224,7 +225,7 @@ export function Facturacion() {
               return (
               <tr key={f.id}>
                 <td>{f.familias?.solicitudes?.nombre || '—'}</td>
-                <td>{Number(f.monto_total).toLocaleString(undefined, { style: 'currency', currency: 'ARS' })}</td>
+                <td>{formatearImporte(f.monto_total, f.moneda, locale)}</td>
                 <td><span className={claseBadge(estadoVisible)}>{t.facturacion[`estado_${estadoVisible}`]}</span></td>
                 <td>{f.fecha_emision}</td>
                 <td>{f.fecha_vencimiento || '—'}</td>

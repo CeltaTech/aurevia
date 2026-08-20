@@ -64,10 +64,15 @@ function formatoFecha(fecha) {
   return new Date(fecha).toLocaleDateString('es-AR');
 }
 
-function formatoMonto(monto) {
-  return monto === null || monto === undefined
-    ? 'A definir (cálculo manual)'
-    : `$${Number(monto).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+// El signo del peso argentino estaba escrito acá adentro, de modo que un documento de una
+// Prestadora brasileña salía en pesos. La moneda la trae ahora la fila (regla 14, §7); si
+// no viniera, se escribe el número solo antes que un símbolo puesto por descarte.
+function formatoMonto(monto, moneda) {
+  if (monto === null || monto === undefined) return 'A definir (cálculo manual)';
+  return Number(monto).toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    ...(moneda ? { style: 'currency', currency: moneda } : {}),
+  });
 }
 
 // --- Liquidación final -------------------------------------------------------
@@ -91,7 +96,7 @@ export function generarLiquidacionFinal({ asistente, cese, causalLabel, nombreEm
   });
 
   y += 6;
-  y = parrafo(doc, `Monto total: ${formatoMonto(cese.monto_total)}`, y, { negrita: true, tamano: 12, espacioExtra: 10 });
+  y = parrafo(doc, `Monto total: ${formatoMonto(cese.monto_total, cese.moneda)}`, y, { negrita: true, tamano: 12, espacioExtra: 10 });
 
   if (!cese.revisado_por_abogado) {
     doc.setTextColor(180, 40, 40);
@@ -158,7 +163,7 @@ export function generarCertificadoTrabajo({ asistente, nombreEmpresa }) {
 
 // --- Certificado de remuneraciones y servicios --------------------------------
 
-export function generarCertificadoRemuneracionesServicios({ asistente, nombreEmpresa }) {
+export function generarCertificadoRemuneracionesServicios({ asistente, nombreEmpresa, moneda }) {
   const doc = nuevoDocumento();
   let y = encabezado(doc, 'Certificado de remuneraciones y servicios', nombreEmpresa);
 
@@ -166,9 +171,9 @@ export function generarCertificadoRemuneracionesServicios({ asistente, nombreEmp
   y = parrafo(doc, `Modalidad de vínculo: ${asistente.tipo_vinculo === 'dependencia' ? 'Relación de dependencia' : 'Monotributo'}`, y);
   if (asistente.tipo_vinculo === 'dependencia') {
     y = parrafo(doc, `Categoría CCT: ${asistente.categoria_cct ?? '—'}`, y);
-    y = parrafo(doc, `Sueldo básico: ${formatoMonto(asistente.sueldo_basico)}`, y);
+    y = parrafo(doc, `Sueldo básico: ${formatoMonto(asistente.sueldo_basico, moneda)}`, y);
   } else {
-    y = parrafo(doc, `Valor hora: ${formatoMonto(asistente.valor_hora)}`, y);
+    y = parrafo(doc, `Valor hora: ${formatoMonto(asistente.valor_hora, moneda)}`, y);
     y = parrafo(doc, `Horas semanales: ${asistente.horas_semanales ?? '—'}`, y);
   }
   y = parrafo(doc, `Período: ${formatoFecha(asistente.fecha_alta)} — ${asistente.fecha_baja ? formatoFecha(asistente.fecha_baja) : 'actualidad'}`, y, { espacioExtra: 10 });

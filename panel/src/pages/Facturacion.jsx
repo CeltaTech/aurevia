@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useConfirmarDestructivo } from '../context/TenantSessionContext';
 import { supabase } from '../lib/supabaseClient';
 import { claseBadge } from '../lib/tonos';
+import { diasParaVencer } from '../lib/reglaVencimientos';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
@@ -23,6 +24,7 @@ export function Facturacion() {
   const confirmarDestructivo = useConfirmarDestructivo();
 
   const [periodo, setPeriodo] = useState(mesActualISO());
+  const [vencimiento, setVencimiento] = useState('');
   const [facturas, setFacturas] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -56,7 +58,15 @@ export function Facturacion() {
 
   const facturasDelPeriodo = useMemo(() => facturas.filter((f) => f.periodo === periodo), [facturas, periodo]);
 
+  // Un saldo sin fecha de vencimiento no se puede reclamar ni mostrar como vencido, así que
+  // la fecha se pide antes de generar en vez de ponerle una por defecto: hasta cuándo tiene
+  // para pagar cada Familia lo acordó la Prestadora, no lo decide el sistema (regla 1, §7).
   async function handleGenerar() {
+    if (!vencimiento) {
+      setError(t.facturacion.falta_vencimiento);
+      return;
+    }
+
     const confirmado = await confirmarDestructivo(t.facturacion.confirmar_generar);
     if (!confirmado) return;
 
@@ -127,6 +137,7 @@ export function Facturacion() {
           familia_id: familia.id,
           periodo,
           monto_total: montoTotal,
+          fecha_vencimiento: vencimiento,
         })
         .select('id')
         .single();
@@ -171,6 +182,10 @@ export function Facturacion() {
       <h1>{t.facturacion.titulo}</h1>
       <p className="panel-explicacion">{t.facturacion.explicacion}</p>
 
+      <Alert variant="info">
+        <strong>{t.facturacion.aviso_titulo}.</strong> {t.facturacion.aviso_texto}
+      </Alert>
+
       {error && <Alert variant="error">{error}</Alert>}
       {avisoGeneracion && <Alert variant="info">{avisoGeneracion}</Alert>}
 
@@ -178,6 +193,10 @@ export function Facturacion() {
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           {t.facturacion.col_periodo}
           <input type="month" value={periodo.slice(0, 7)} onChange={(e) => setPeriodo(primerDiaDelMes(`${e.target.value}-01`))} />
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          {t.facturacion.col_vencimiento}
+          <input type="date" value={vencimiento} onChange={(e) => setVencimiento(e.target.value)} />
         </label>
         <Button onClick={handleGenerar} disabled={generando}>
           {generando ? t.facturacion.generando : t.facturacion.generar}
@@ -197,11 +216,16 @@ export function Facturacion() {
             </tr>
           </thead>
           <tbody>
-            {facturasDelPeriodo.map((f) => (
+            {facturasDelPeriodo.map((f) => {
+              // El estado guardado solo distingue cobrado de pendiente. Que un saldo esté
+              // vencido se deduce de la fecha en el momento de mirarlo, con la misma cuenta de
+              // días que usa el resto del Panel (regla 12, §7): nadie lo marca ni lo actualiza.
+              const estadoVisible = f.estado === 'pendiente' && diasParaVencer(f.fecha_vencimiento) < 0 ? 'vencida' : f.estado;
+              return (
               <tr key={f.id}>
                 <td>{f.familias?.solicitudes?.nombre || '—'}</td>
                 <td>{Number(f.monto_total).toLocaleString(undefined, { style: 'currency', currency: 'ARS' })}</td>
-                <td><span className={claseBadge(f.estado)}>{t.facturacion[`estado_${f.estado}`]}</span></td>
+                <td><span className={claseBadge(estadoVisible)}>{t.facturacion[`estado_${estadoVisible}`]}</span></td>
                 <td>{f.fecha_emision}</td>
                 <td>{f.fecha_vencimiento || '—'}</td>
                 <td>
@@ -212,7 +236,8 @@ export function Facturacion() {
                   )}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </EstadoLista>

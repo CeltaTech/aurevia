@@ -8,6 +8,7 @@ import { con } from '../../lib/textos';
 import { candidatosParaGuardia } from '../../lib/candidatos';
 import { avisosDeAsignacion } from '../../lib/avisosAsignacion';
 import { COLUMNAS_ESTADO_MATRICULA, mensajeDeBloqueo } from '../../lib/matricula';
+import { mensajeDeCanal } from '../../lib/canales';
 import { cargarPacientesDeGuardias, pacientesDeGuardia } from '../../lib/pacientesDeGuardia';
 import { mensajeDeError } from '../../lib/errores';
 
@@ -46,6 +47,7 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
   const tp = t.guardias.cobertura_panel;
   const ta = t.guardias.avisos;
   const tm = t.matricula;
+  const tc = t.canales;
 
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -61,13 +63,14 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
     [asistentes]
   );
 
-  /* La base tiene la última palabra sobre la Matrícula: aunque esta pantalla ya deje afuera a
-     quien no puede, hay caminos por los que el bloqueo aparece igual —dos personas trabajando
-     a la vez, o una Matrícula que se venció con el panel abierto—. Cuando eso pasa, el mensaje
-     crudo de la base no se muestra nunca: se traduce al motivo y a qué hacer al respecto. */
+  /* La base tiene la última palabra sobre la Matrícula y sobre el canal: aunque esta pantalla
+     ya deje afuera a quien no puede, hay caminos por los que el bloqueo aparece igual —dos
+     personas trabajando a la vez, una Matrícula que se venció con el panel abierto, una
+     modalidad que se apagó recién—. Cuando eso pasa, el mensaje crudo de la base no se muestra
+     nunca: se traduce al motivo y a qué hacer al respecto. */
   const mostrarFalla = useCallback(
-    (falla) => setError(mensajeDeBloqueo(falla, tm) ?? mensajeDeError(falla, t)),
-    [tm, t]
+    (falla) => setError(mensajeDeBloqueo(falla, tm) ?? mensajeDeCanal(falla, tc) ?? mensajeDeError(falla, t)),
+    [tm, tc, t]
   );
 
   const cargar = useCallback(async () => {

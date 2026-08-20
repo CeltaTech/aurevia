@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
 import { usePermisos } from '../../context/PermisosContext';
 import { useEmpresa } from '../../context/EmpresaContext';
+import { useModalidades } from '../../context/ModalidadesContext';
 import { esAdminOSuperior } from '../../lib/roles';
+import { CANALES, canalesHabilitados, mensajeDeCanal } from '../../lib/canales';
 import { nombreTipo } from '../../lib/tiposAsistente';
 import { useTiposAsistente } from '../../hooks/useTiposAsistente';
 import { supabase } from '../../lib/supabaseClient';
@@ -23,6 +25,19 @@ export function PerfilTab({ asistente, onActualizado }) {
   const { puede } = usePermisos();
   const puedeEditarIdentidad = esAdmin || puede('editar_identidad_asistente');
   const { paraElegir: tiposAsistente, porId: tiposPorId } = useTiposAsistente();
+  const { modalidades } = useModalidades();
+
+  /* Las formas de recibir trabajo que se pueden marcar en esta ficha. El techo lo pone la
+     Prestadora con las modalidades que tenga activas. Se suma a la lista la que el Asistente
+     ya tenga puesta aunque la Prestadora la haya apagado después: si no se mostrara, quedaría
+     escrita en la ficha sin que nadie la vea, y el primer cambio de canal lo rechazaría la
+     base sin explicación. Mismo criterio que el tipo de Asistente, más abajo. */
+  const canalesPosibles = useMemo(() => {
+    const habilitados = canalesHabilitados(modalidades);
+    const puestos = asistente.canales || [];
+    return CANALES.filter((canal) => habilitados.includes(canal) || puestos.includes(canal));
+  }, [modalidades, asistente.canales]);
+
   const [form, setForm] = useState({
     nombre: asistente.nombre || '',
     dni: asistente.dni || '',
@@ -36,6 +51,7 @@ export function PerfilTab({ asistente, onActualizado }) {
     valor_hora: asistente.valor_hora || '',
     sueldo_basico: asistente.sueldo_basico || '',
     horas_semanales: asistente.horas_semanales || '',
+    canales: asistente.canales || [],
   });
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
@@ -48,7 +64,24 @@ export function PerfilTab({ asistente, onActualizado }) {
     setGuardado(false);
   }
 
+  function alternarCanal(canal) {
+    setForm((f) => ({
+      ...f,
+      canales: f.canales.includes(canal)
+        ? f.canales.filter((c) => c !== canal)
+        : [...f.canales, canal],
+    }));
+    setGuardado(false);
+  }
+
   async function guardar() {
+    /* Sin ninguna forma de recibir trabajo, este Asistente no puede recibir una sola guardia.
+       La base lo dejaría guardar así, y el problema recién aparecería el día que se le quiera
+       asignar algo, lejos de la pantalla donde se produjo. */
+    if (esAdmin && form.canales.length === 0) {
+      setError(t.canales.falta_elegir);
+      return;
+    }
     setGuardando(true);
     setError(null);
     const payload = {
@@ -62,12 +95,16 @@ export function PerfilTab({ asistente, onActualizado }) {
       ...(esAdmin && {
         tipo_vinculo: form.tipo_vinculo,
         horas_semanales: form.horas_semanales || null,
+        canales: form.canales,
       }),
     };
     const { error: errorUpdate } = await supabase.from('asistentes').update(payload).eq('id', asistente.id);
     if (errorUpdate) {
       setGuardando(false);
-      setError(t.comun.error_generico);
+      // La base tiene la última palabra sobre el canal: puede rechazar uno que la Prestadora
+      // apagó mientras esta pantalla estaba abierta. Ese rechazo se traduce a una frase que
+      // dice qué pasó y dónde se arregla, nunca el texto crudo del error.
+      setError(mensajeDeCanal(errorUpdate, t.canales) ?? t.comun.error_generico);
       return;
     }
 
@@ -205,6 +242,19 @@ export function PerfilTab({ asistente, onActualizado }) {
             <FormField label={t.asistentes.valor_hora} name="valor_hora" type="number" value={form.valor_hora} onChange={(e) => set('valor_hora', e.target.value)} />
           )}
           <FormField label={t.asistentes.horas_semanales} name="horas_semanales" type="number" value={form.horas_semanales} onChange={(e) => set('horas_semanales', e.target.value)} />
+
+          <h2>{t.canales.etiqueta}</h2>
+          <p className="panel-explicacion">{t.canales.ayuda}</p>
+          {canalesPosibles.map((canal) => (
+            <FormField
+              key={canal}
+              label={t.canales[canal]}
+              name={`canal_${canal}`}
+              type="checkbox"
+              checked={form.canales.includes(canal)}
+              onChange={() => alternarCanal(canal)}
+            />
+          ))}
         </>
       )}
 

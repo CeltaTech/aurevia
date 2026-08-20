@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { supabase } from '../../lib/supabaseClient';
+import { useModalidades } from '../../context/ModalidadesContext';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
+import { canalesHabilitados, mensajeDeCanal } from '../../lib/canales';
 import { nombreTipo } from '../../lib/tiposAsistente';
 import { useTiposAsistente } from '../../hooks/useTiposAsistente';
 
@@ -19,11 +21,32 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
   const [tipoAsistenteId, setTipoAsistenteId] = useState('');
   const [zonas, setZonas] = useState('');
   const { paraElegir: tiposAsistente } = useTiposAsistente();
+  const { modalidades } = useModalidades();
+
+  /* Las formas de recibir trabajo que la Prestadora tiene activas. Arrancan todas marcadas:
+     es lo mismo que haría la base si el alta no dijera nada, y así queda a la vista antes de
+     crear a la persona, en vez de descubrirlo después en la ficha. */
+  const canalesPosibles = useMemo(() => canalesHabilitados(modalidades), [modalidades]);
+  const [canales, setCanales] = useState(null);
+  const canalesMarcados = canales ?? canalesPosibles;
+
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
 
+  function alternarCanal(canal) {
+    setCanales(
+      canalesMarcados.includes(canal)
+        ? canalesMarcados.filter((c) => c !== canal)
+        : [...canalesMarcados, canal],
+    );
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
+    if (canalesMarcados.length === 0) {
+      setError(t.canales.falta_elegir);
+      return;
+    }
     setError(null);
     setGuardando(true);
     try {
@@ -41,6 +64,7 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
           email,
           tipo_asistente_id: tipoAsistenteId || null,
           zonas: zonas.split(',').map((s) => s.trim()).filter(Boolean),
+          canales: canalesMarcados,
         }),
       });
       const resultado = await respuesta.json();
@@ -49,7 +73,7 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
       }
       onCreado();
     } catch (err) {
-      setError(mensajeDeError(err, t));
+      setError(mensajeDeCanal(err, t.canales) ?? mensajeDeError(err, t));
     } finally {
       setGuardando(false);
     }
@@ -74,6 +98,20 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
             ))}
           </FormField>
           <FormField label={t.asistentes.col_zonas} name="zonas" value={zonas} onChange={(e) => setZonas(e.target.value)} />
+
+          <h3>{t.canales.etiqueta}</h3>
+          <p className="panel-explicacion">{t.canales.ayuda}</p>
+          {canalesPosibles.map((canal) => (
+            <FormField
+              key={canal}
+              label={t.canales[canal]}
+              name={`canal_${canal}`}
+              type="checkbox"
+              checked={canalesMarcados.includes(canal)}
+              onChange={() => alternarCanal(canal)}
+            />
+          ))}
+
           <p className="panel-explicacion">{t.asistentes.nuevo.ayuda_estado}</p>
 
           <div className="panel-modal-acciones">

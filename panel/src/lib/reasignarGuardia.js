@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { mensajeDeBloqueo } from './matricula';
+import { mensajeDeCanal } from './canales';
 import { mensajeDeError } from './errores';
 
 /* Cambiarle el Asistente a una guardia: un solo lugar para las tres cosas que hay que hacer.
@@ -45,7 +46,14 @@ export async function reasignarGuardia(guardia, asistenteId, fecha, t = null) {
 
   const { error: errorUpdate } = await supabase.from('guardias').update(cambios).eq('id', guardia.id);
   if (errorUpdate) {
-    return { error: mensajeDeBloqueo(errorUpdate, t?.matricula) ?? mensajeDeError(errorUpdate, t) };
+    // Dos rechazos de la base pueden caer acá y ninguno se muestra crudo: la Matrícula vencida
+    // y el canal que este Asistente no trabaja. Cada uno tiene su frase y su "dónde se arregla".
+    return {
+      error:
+        mensajeDeBloqueo(errorUpdate, t?.matricula) ??
+        mensajeDeCanal(errorUpdate, t?.canales) ??
+        mensajeDeError(errorUpdate, t),
+    };
   }
 
   if (estabaSinCobertura) {

@@ -59,6 +59,11 @@ export const GRUPOS = [
     original: 'panel/src/lib/tipoDeAsistente.js',
     copias: ['pwa-asistentes/src/lib/tipoDeAsistente.js', 'pwa-familias/src/lib/tipoDeAsistente.js'],
   },
+  {
+    que: 'las cuentas de fecha y hora de una guardia',
+    original: 'panel/src/lib/horarios.js',
+    copias: ['pwa-familias/src/lib/horarios.js'],
+  },
 ];
 
 // Todas las rutas de todos los grupos, original incluido. La usan los chequeos

@@ -32,6 +32,8 @@ export const api = {
   perfil: () => pedido('/perfil'),
   misPacientes: () => pedido('/pacientes'),
   paciente: (id) => pedido(`/pacientes/${id}`),
+  // El día que se manda es el de este teléfono: el motor devuelve la semana que lo contiene.
+  guardiasDelPaciente: (id, dia) => pedido(`/pacientes/${id}/guardias?dia=${encodeURIComponent(dia)}`),
   reportesDelPaciente: (id) => pedido(`/pacientes/${id}/reportes`),
   reporteDelPaciente: (id, reporteId) => pedido(`/pacientes/${id}/reportes/${reporteId}`),
   alertasDelPaciente: (id) => pedido(`/pacientes/${id}/alertas`),

@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import ActivarCuenta from './pages/ActivarCuenta';
 import MisPacientes from './pages/MisPacientes';
 import PacienteDetalle from './pages/PacienteDetalle';
+import Guardias from './pages/Guardias';
 import Reportes from './pages/Reportes';
 import ReporteDetalle from './pages/ReporteDetalle';
 import Alertas from './pages/Alertas';
@@ -57,6 +58,10 @@ function Rutas() {
         <Route index element={<Navigate to="/pacientes" replace />} />
         <Route path="pacientes" element={<MisPacientes />} />
         <Route path="pacientes/:id" element={<PacienteDetalle />} />
+        {/* La semana de guardias no va detrás de un interruptor: saber quién viene y cuándo es
+            para qué existe la aplicación de la Familia, no una función que una Prestadora
+            elija ofrecer o no. */}
+        <Route path="pacientes/:id/guardias" element={<Guardias />} />
         <Route path="pacientes/:id/reportes" element={<Reportes />} />
         <Route path="pacientes/:id/reportes/:reporteId" element={<ReporteDetalle />} />
         <Route

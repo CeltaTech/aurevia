@@ -7,6 +7,7 @@ import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
 import { visibilidadDelPedido, exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
 import { tipoDelAsistente, tipoConSusTareas } from '../utils/tareasDelTipo.js';
+import { esFechaISO, semanaQueContiene } from '../utils/fechas.js';
 
 export const appFamiliasRouter = Router();
 
@@ -184,6 +185,103 @@ appFamiliasRouter.get('/pacientes/:id', requiereRolFamilia, async (req, res) => 
     guardiaActiva: guardiaActiva || null,
     guardiaProxima,
     alertasActivas,
+  });
+});
+
+// ============================================================================
+// Las guardias de la semana — la pregunta "¿quién viene el jueves?"
+//
+// Hasta acá la Familia solo podía ver la guardia de ahora o la que sigue. Todo lo demás
+// —el resto de la semana, y lo que pasó con las que ya fueron— había que preguntarlo por
+// teléfono, y esa llamada la atiende la Coordinadora. Esta dirección devuelve la semana
+// entera: los siete días, con quién viene en cada uno y cómo terminó cada guardia.
+//
+// EL DÍA LO PONE EL TELÉFONO, NO EL SERVIDOR. El motor puede estar corriendo en otro huso
+// horario que la Familia; a las diez de la noche en Buenos Aires, el reloj del servidor ya
+// puede estar en el día siguiente. Si el servidor eligiera la semana, habría noches en que
+// la Familia abriría la aplicación y vería la semana que viene. Por eso la pantalla manda su
+// propio día y el motor devuelve la semana que lo contiene.
+// ============================================================================
+
+appFamiliasRouter.get('/pacientes/:id/guardias', requiereRolFamilia, async (req, res) => {
+  const visibilidad = await visibilidadDelPedido(req);
+  const paciente = await pacienteDeLaFamilia(req.params.id, req.usuarioFamilia, visibilidad);
+  if (!paciente) {
+    return res.status(404).json({ error: 'Paciente no encontrado' });
+  }
+
+  // Si el día no viene o viene mal escrito se usa el del servidor. Es un plan B, no el camino
+  // normal: sirve para que un pedido roto muestre una semana razonable en vez de un error, y
+  // como mucho se corre un día en las horas del borde.
+  const dia = esFechaISO(req.query.dia) ? req.query.dia : new Date().toISOString().slice(0, 10);
+  const semana = semanaQueContiene(dia);
+
+  // Se pregunta por `guardia_pacientes` y no por `guardias.paciente_id`: la tabla del medio es
+  // la que dice a quiénes cubre cada guardia, y una guardia puede cubrir a más de una persona
+  // —el matrimonio que vive en la misma casa— (ver utils/pacientesDeGuardia.js). Buscando por
+  // la columna vieja, esa Familia vería media semana.
+  //
+  // Los tres filtros están escritos a mano y los tres hacen falta: el motor entra a la base con
+  // la llave maestra, así que las cerraduras de la base no lo frenan. `paciente_id` ya salió
+  // comprobado contra la Familia por `pacienteDeLaFamilia`, y la Prestadora se vuelve a exigir
+  // de los dos lados —en la tabla del medio y en la guardia— para que ni una fila de otra
+  // empresa pueda colarse por un dato mal cargado.
+  const { data: filas, error } = await supabase
+    .from('guardia_pacientes')
+    .select(`
+      guardias!inner(
+        id, fecha, hora_inicio, hora_fin, estado, cancelacion_origen,
+        checkin_at, checkout_at, prestadora_id,
+        asistentes(nombre)
+      )
+    `)
+    .eq('paciente_id', paciente.id)
+    .eq('prestadora_id', paciente.prestadora_id)
+    .eq('guardias.prestadora_id', req.usuarioFamilia.prestadoraId)
+    .gte('guardias.fecha', semana.desde)
+    .lte('guardias.fecha', semana.hasta);
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  // Qué viaja al teléfono: lo que la pantalla dibuja y nada más. El identificador del Asistente
+  // y su foto no se mandan —la pantalla muestra el nombre— y la ubicación tampoco entra acá:
+  // dónde está el Asistente ahora es la pantalla del Paciente, con su propio interruptor.
+  const guardias = (filas ?? []).map(({ guardias: g }) => ({
+    id: g.id,
+    fecha: g.fecha,
+    hora_inicio: g.hora_inicio,
+    hora_fin: g.hora_fin,
+    estado: g.estado,
+    // Quién canceló cambia lo que la Familia lee: no es lo mismo "ustedes la cancelaron" que
+    // "la canceló la Prestadora". Es un dato que ya está guardado, no uno que se calcule acá.
+    cancelacion_origen: g.cancelacion_origen,
+    checkin_at: g.checkin_at,
+    checkout_at: g.checkout_at,
+    asistente: g.asistentes?.nombre ?? null,
+  }));
+
+  // El orden se arma acá y no en la consulta porque el pedido ordena la tabla del medio, no la
+  // guardia de adentro: pedirle a la base que ordene por una columna prestada no ordena las
+  // filas de arriba. Son las guardias de una semana, así que ordenarlas cuesta nada.
+  guardias.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.hora_inicio.localeCompare(b.hora_inicio));
+
+  // La semana sale con los siete días escritos, incluidos los que no tienen ninguna guardia.
+  // "El jueves no viene nadie" también es una respuesta, y es de las que evitan la llamada.
+  // Una guardia de noche que empieza a las 22:00 y termina a las 06:00 se muestra en el día en
+  // que empieza, que es el día en que la Familia la espera.
+  res.json({
+    desde: semana.desde,
+    hasta: semana.hasta,
+    // Los días con los que la pantalla vuelve a pedir la semana de al lado. Van armados desde
+    // el motor para que la pantalla no tenga que hacer cuentas de calendario por su cuenta.
+    semanaAnterior: semana.semanaAnterior,
+    semanaSiguiente: semana.semanaSiguiente,
+    dias: semana.dias.map((fecha) => ({
+      fecha,
+      guardias: guardias.filter((g) => g.fecha === fecha),
+    })),
   });
 });
 

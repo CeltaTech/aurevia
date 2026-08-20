@@ -144,6 +144,11 @@ export default function PacienteDetalle() {
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '1.5rem' }}>
+        {/* Primero de la lista a propósito: arriba se ve una sola guardia, y la pregunta que
+            sigue siempre es qué pasa el resto de la semana. */}
+        <Link to={`/pacientes/${id}/guardias`} className="btn btn-secondary btn-full">
+          {t.paciente.ver_guardias_de_la_semana}
+        </Link>
         <Link to={`/pacientes/${id}/reportes`} className="btn btn-secondary btn-full">
           {t.paciente.ver_reportes}
         </Link>

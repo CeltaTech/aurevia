@@ -1,14 +1,9 @@
 import { supabase } from '../db/connection.js';
+import { sumarDias } from './fechas.js';
 import { pacientesDeSeries, anotarPacientesEnGuardias } from './pacientesDeGuardia.js';
 
 const DIAS_GENERACION_DEFAULT = 90;
 const UN_DIA_MS = 24 * 60 * 60 * 1000;
-
-function sumarDias(fechaISO, dias) {
-  const fecha = new Date(`${fechaISO}T00:00:00Z`);
-  fecha.setUTCDate(fecha.getUTCDate() + dias);
-  return fecha.toISOString().slice(0, 10);
-}
 
 function generarFechasFaltantes(desdeExclusiveISO, hastaInclusiveISO, diasSemana) {
   const diaIndices = { domingo: 0, lunes: 1, martes: 2, miercoles: 3, jueves: 4, viernes: 5, sabado: 6 };

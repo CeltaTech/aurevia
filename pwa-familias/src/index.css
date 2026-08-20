@@ -284,6 +284,10 @@ h2 {
 .guardia-completada { border-left: 4px solid var(--texto-secundario); }
 .guardia-cancelada  { border-left: 4px solid var(--rojo-peligro); }
 .guardia-ausente    { border-left: 4px solid var(--naranja-alerta); }
+/* La guardia queda en pausa cuando la Prestadora pausa el servicio del Paciente. Recién ahora
+   la Familia la ve, con la semana: hasta acá esta aplicación solo mostraba una guardia por vez
+   y esa nunca estaba pausada. Mismo tono de atención que le da el Panel. */
+.guardia-pausada    { border-left: 4px solid var(--naranja-alerta); }
 
 .guardia-card-paciente {
   font-family: var(--font-display);
@@ -313,6 +317,67 @@ h2 {
   font-weight: 600;
   background: var(--fondo-alt);
   color: var(--texto-secundario);
+}
+
+/* ---------- La semana de guardias ---------- */
+
+/* Los dos botones de mover la semana, y en el medio qué semana se está mirando. En un
+   teléfono angosto el rango se acomoda arriba en su propio renglón: los botones no se
+   achican, que son para tocar con el dedo. */
+.semana-navegador {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.semana-navegador .btn {
+  padding: 0.4rem 1rem;
+  font-size: 0.8rem;
+}
+
+.semana-rango {
+  flex: 1 1 100%;
+  order: -1;
+  text-align: center;
+  font-family: var(--font-display);
+  color: var(--azul-oscuro);
+  font-weight: 700;
+}
+
+/* Cada día es un bloque, tenga guardias o no: la semana se lee de corrido y el día sin
+   nadie también contesta la pregunta. */
+.semana-dia {
+  margin-bottom: 1.25rem;
+}
+
+/* El nombre del día lo escribe el teléfono en el idioma elegido, y en castellano y en
+   portugués viene en minúscula. La mayúscula se pone acá y no en el texto, porque el texto
+   no existe: es una fecha, no una frase de la aplicación. */
+.semana-dia-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-display);
+  color: var(--azul-oscuro);
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+/* Va en mayúscula la primera letra y nada más. Poner en mayúscula cada palabra escribiría
+   "Jueves, 20 De Agosto" en castellano y "Quinta-Feira" en portugués, que no es como se
+   escribe una fecha en ninguno de los dos idiomas. */
+.semana-dia-fecha::first-letter {
+  text-transform: uppercase;
+}
+
+.semana-dia-vacio {
+  color: var(--texto-secundario);
+  font-size: 0.85rem;
+  padding-left: 0.25rem;
+  margin-bottom: 0.75rem;
 }
 
 .reporte-preview-campo {

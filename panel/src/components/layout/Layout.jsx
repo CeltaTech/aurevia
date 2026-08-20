@@ -87,7 +87,7 @@ export function Layout() {
      (`ver`) está escrito una sola vez, al lado del enlace, en vez de repetido
      alrededor de bloques enteros de JSX.
 
-     El grupo "Marketplace" desapareció a propósito: el marketplace es un canal de
+     El grupo "Marketplace" desapareció a propósito: el marketplace es una modalidad de
      venta, no un lugar del sistema. Sus pantallas se fueron a donde corresponde
      por tema, cada una conservando su candado. Lo mismo vale para la modalidad de
      subcontratación: tampoco es un lugar del menú.

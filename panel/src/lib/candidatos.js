@@ -59,7 +59,7 @@ import {
   matriculaQueMandaAl,
   motivoDeBloqueo,
 } from './matricula';
-import { trabajaEnCanal } from './canales';
+import { trabajaEnModalidad } from './modalidades';
 import { DIAS_AVISO_POR_DEFECTO } from './reglaVencimientos';
 import { idsDePacientes } from './pacientesDeGuardia';
 
@@ -105,10 +105,10 @@ export const PESOS = {
   matricula_sin_verificar: -1000,
 
   /**
-   * El Asistente no trabaja en el canal de esta guardia. Bloquea, y resta lo mismo que los
+   * El Asistente no trabaja en la modalidad de esta guardia. Bloquea, y resta lo mismo que los
    * demás bloqueos por el mismo motivo: el número no decide nada, solo lo manda al fondo.
    */
-  canal_distinto: -1000,
+  modalidad_distinta: -1000,
 
   papeles_ok: 5,
   papeles_vencen: -10,
@@ -172,14 +172,14 @@ export const MOTIVO = {
   MATRICULA_VENCIDA: 'motivo_matricula_vencida',
   MATRICULA_SIN_VERIFICAR: 'motivo_matricula_sin_verificar',
   /**
-   * Uno por canal, en vez de uno solo con el canal adentro. La frase la arma la pantalla
-   * reemplazando valores a secas, así que un `{canal}` le llegaría en crudo —"marketplace",
-   * en minúscula y sin traducir— justo en el motivo que explica por qué alguien no puede
-   * tomar la guardia.
+   * Uno por modalidad, en vez de uno solo con la modalidad adentro. La frase la arma la
+   * pantalla reemplazando valores a secas, así que un `{modalidad}` le llegaría en crudo
+   * —"marketplace", en minúscula y sin traducir— justo en el motivo que explica por qué
+   * alguien no puede tomar la guardia.
    */
-  CANAL_DIRECTA: 'motivo_canal_directa',
-  CANAL_MARKETPLACE: 'motivo_canal_marketplace',
-  CANAL_SUBCONTRATACION: 'motivo_canal_subcontratacion',
+  MODALIDAD_DIRECTA: 'motivo_modalidad_directa',
+  MODALIDAD_MARKETPLACE: 'motivo_modalidad_marketplace',
+  MODALIDAD_SUBCONTRATACION: 'motivo_modalidad_subcontratacion',
   PAPELES_OK: 'motivo_papeles_ok',
   PAPELES_VENCEN: 'motivo_papeles_vencen',
   HORAS: 'motivo_horas',
@@ -189,18 +189,18 @@ export const MOTIVO = {
 };
 
 /**
- * Qué motivo le corresponde a cada canal de guardia.
+ * Qué motivo le corresponde a cada modalidad de guardia.
  *
- * La subcontratación tiene el suyo porque ninguna persona nuestra puede tener ese canal —la
- * regla de la columna solo admite los otros dos—, así que una guardia subcontratada bloquea a
+ * La subcontratación tiene el suyo porque ninguna persona nuestra puede estar en esa modalidad
+ * —la regla de la columna solo admite las otras dos—, así que una guardia subcontratada bloquea a
  * todo el plantel. Decirlo con las palabras del caso evita que quien mira crea que se trata de
  * un error de carga: esa guardia la cubre la otra empresa, y su gente no está en esta base
  * (decisión del Desarrollador, 2026-08-19).
  */
-const MOTIVO_POR_CANAL = {
-  directa: MOTIVO.CANAL_DIRECTA,
-  marketplace: MOTIVO.CANAL_MARKETPLACE,
-  subcontratacion: MOTIVO.CANAL_SUBCONTRATACION,
+const MOTIVO_POR_MODALIDAD = {
+  directa: MOTIVO.MODALIDAD_DIRECTA,
+  marketplace: MOTIVO.MODALIDAD_MARKETPLACE,
+  subcontratacion: MOTIVO.MODALIDAD_SUBCONTRATACION,
 };
 
 // ============================================================================
@@ -508,17 +508,17 @@ function evaluarAsistente(asistente, ctx) {
     suma(aFavor, MOTIVO.LIBRE, null, pesos.libre);
   }
 
-  // --- 2 bis. El canal. Bloquea igual que estar ocupado, y por un motivo parecido: en
-  //        prestación directa la Prestadora dirige el trabajo y en marketplace el Asistente
-  //        elige qué toma (CLAUDE.md §3). Quien no trabaja en el canal de esta guardia no es
-  //        que esté peor puesto que otro: es que esa guardia no es para él.
+  // --- 2 bis. La modalidad de trabajo. Bloquea igual que estar ocupado, y por un motivo
+  //        parecido: en prestación directa la Prestadora dirige el trabajo y en marketplace el
+  //        Asistente elige qué toma (CLAUDE.md §3). Quien no trabaja en la modalidad de esta
+  //        guardia no es que esté peor puesto que otro: es que esa guardia no es para él.
   //
   //        La regla la hace cumplir la base, en las tres puertas. Acá se la anticipa para que
-  //        el motivo se vea antes de elegir a esa persona (`lib/canales.js`).
-  const motivoDeCanal = MOTIVO_POR_CANAL[hueco.canal_modalidad];
-  if (motivoDeCanal && !trabajaEnCanal(asistente, hueco.canal_modalidad)) {
+  //        el motivo se vea antes de elegir a esa persona (`lib/modalidades.js`).
+  const motivoDeModalidad = MOTIVO_POR_MODALIDAD[hueco.canal_modalidad];
+  if (motivoDeModalidad && !trabajaEnModalidad(asistente, hueco.canal_modalidad)) {
     bloqueado = true;
-    suma(enContra, motivoDeCanal, null, pesos.canal_distinto);
+    suma(enContra, motivoDeModalidad, null, pesos.modalidad_distinta);
   }
 
   // --- 3. Matrícula. Bloquea cuando el tipo de Asistente la exige y algo no está en orden.

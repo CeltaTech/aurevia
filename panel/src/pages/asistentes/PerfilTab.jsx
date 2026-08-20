@@ -5,7 +5,12 @@ import { usePermisos } from '../../context/PermisosContext';
 import { useEmpresa } from '../../context/EmpresaContext';
 import { useModalidades } from '../../context/ModalidadesContext';
 import { esAdminOSuperior } from '../../lib/roles';
-import { CANALES, canalesHabilitados, mensajeDeCanal } from '../../lib/canales';
+import {
+  MODALIDADES_DE_ASISTENTE,
+  modalidadesDelAsistente,
+  modalidadesHabilitadas,
+  mensajeDeModalidad,
+} from '../../lib/modalidades';
 import { nombreTipo } from '../../lib/tiposAsistente';
 import { useTiposAsistente } from '../../hooks/useTiposAsistente';
 import { supabase } from '../../lib/supabaseClient';
@@ -30,13 +35,13 @@ export function PerfilTab({ asistente, onActualizado }) {
   /* Las formas de recibir trabajo que se pueden marcar en esta ficha. El techo lo pone la
      Prestadora con las modalidades que tenga activas. Se suma a la lista la que el Asistente
      ya tenga puesta aunque la Prestadora la haya apagado después: si no se mostrara, quedaría
-     escrita en la ficha sin que nadie la vea, y el primer cambio de canal lo rechazaría la
+     escrita en la ficha sin que nadie la vea, y el primer cambio de modalidad lo rechazaría la
      base sin explicación. Mismo criterio que el tipo de Asistente, más abajo. */
-  const canalesPosibles = useMemo(() => {
-    const habilitados = canalesHabilitados(modalidades);
-    const puestos = asistente.canales || [];
-    return CANALES.filter((canal) => habilitados.includes(canal) || puestos.includes(canal));
-  }, [modalidades, asistente.canales]);
+  const modalidadesPosibles = useMemo(() => {
+    const habilitadas = modalidadesHabilitadas(modalidades);
+    const puestas = modalidadesDelAsistente(asistente);
+    return MODALIDADES_DE_ASISTENTE.filter((m) => habilitadas.includes(m) || puestas.includes(m));
+  }, [modalidades, asistente]);
 
   const [form, setForm] = useState({
     nombre: asistente.nombre || '',
@@ -51,7 +56,7 @@ export function PerfilTab({ asistente, onActualizado }) {
     valor_hora: asistente.valor_hora || '',
     sueldo_basico: asistente.sueldo_basico || '',
     horas_semanales: asistente.horas_semanales || '',
-    canales: asistente.canales || [],
+    modalidades: modalidadesDelAsistente(asistente),
   });
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
@@ -64,12 +69,12 @@ export function PerfilTab({ asistente, onActualizado }) {
     setGuardado(false);
   }
 
-  function alternarCanal(canal) {
+  function alternarModalidad(modalidad) {
     setForm((f) => ({
       ...f,
-      canales: f.canales.includes(canal)
-        ? f.canales.filter((c) => c !== canal)
-        : [...f.canales, canal],
+      modalidades: f.modalidades.includes(modalidad)
+        ? f.modalidades.filter((m) => m !== modalidad)
+        : [...f.modalidades, modalidad],
     }));
     setGuardado(false);
   }
@@ -78,8 +83,8 @@ export function PerfilTab({ asistente, onActualizado }) {
     /* Sin ninguna forma de recibir trabajo, este Asistente no puede recibir una sola guardia.
        La base lo dejaría guardar así, y el problema recién aparecería el día que se le quiera
        asignar algo, lejos de la pantalla donde se produjo. */
-    if (esAdmin && form.canales.length === 0) {
-      setError(t.canales.falta_elegir);
+    if (esAdmin && form.modalidades.length === 0) {
+      setError(t.modalidades.falta_elegir);
       return;
     }
     setGuardando(true);
@@ -95,16 +100,18 @@ export function PerfilTab({ asistente, onActualizado }) {
       ...(esAdmin && {
         tipo_vinculo: form.tipo_vinculo,
         horas_semanales: form.horas_semanales || null,
-        canales: form.canales,
+        // La columna se llama `canales` de antes y no se renombra (regla 13). La palabra del
+        // producto, acá y en toda la pantalla, es modalidad de trabajo.
+        canales: form.modalidades,
       }),
     };
     const { error: errorUpdate } = await supabase.from('asistentes').update(payload).eq('id', asistente.id);
     if (errorUpdate) {
       setGuardando(false);
-      // La base tiene la última palabra sobre el canal: puede rechazar uno que la Prestadora
-      // apagó mientras esta pantalla estaba abierta. Ese rechazo se traduce a una frase que
-      // dice qué pasó y dónde se arregla, nunca el texto crudo del error.
-      setError(mensajeDeCanal(errorUpdate, t.canales) ?? t.comun.error_generico);
+      // La base tiene la última palabra sobre la modalidad: puede rechazar una que la
+      // Prestadora apagó mientras esta pantalla estaba abierta. Ese rechazo se traduce a una
+      // frase que dice qué pasó y dónde se arregla, nunca el texto crudo del error.
+      setError(mensajeDeModalidad(errorUpdate, t.modalidades) ?? t.comun.error_generico);
       return;
     }
 
@@ -243,16 +250,16 @@ export function PerfilTab({ asistente, onActualizado }) {
           )}
           <FormField label={t.asistentes.horas_semanales} name="horas_semanales" type="number" value={form.horas_semanales} onChange={(e) => set('horas_semanales', e.target.value)} />
 
-          <h2>{t.canales.etiqueta}</h2>
-          <p className="panel-explicacion">{t.canales.ayuda}</p>
-          {canalesPosibles.map((canal) => (
+          <h2>{t.modalidades.etiqueta}</h2>
+          <p className="panel-explicacion">{t.modalidades.ayuda}</p>
+          {modalidadesPosibles.map((modalidad) => (
             <FormField
-              key={canal}
-              label={t.canales[canal]}
-              name={`canal_${canal}`}
+              key={modalidad}
+              label={t.modalidades[modalidad]}
+              name={`modalidad_${modalidad}`}
               type="checkbox"
-              checked={form.canales.includes(canal)}
-              onChange={() => alternarCanal(canal)}
+              checked={form.modalidades.includes(modalidad)}
+              onChange={() => alternarModalidad(modalidad)}
             />
           ))}
         </>

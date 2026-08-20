@@ -237,13 +237,21 @@ ALTER TABLE asistentes ADD COLUMN fecha_alta DATE NOT NULL;
 ALTER TABLE asistentes ADD COLUMN fecha_baja DATE;         -- null mientras esté activo
 ALTER TABLE asistentes ADD COLUMN horas_semanales NUMERIC(5,2);
 
--- Pendiente #13 (docs/PENDIENTES.md), resuelto 2026-07-13 — canal(es) por el que el
--- Asistente está disponible: 'directo' (la prestadora lo asigna) y/o 'marketplace' (la
--- Familia lo elige). Ambos por default; si un canal no está habilitado, el motivo de la
--- exclusión vive en `datos_reservados_asistente`, no acá.
-ALTER TABLE asistentes ADD COLUMN canales TEXT[] NOT NULL DEFAULT ARRAY['directo','marketplace'];
+-- En qué modalidad de trabajo está el Asistente: 'directa' (la Prestadora le asigna las
+-- guardias) y/o 'marketplace' (el Asistente elige qué toma). Nunca 'subcontratacion': ese
+-- trabajo lo cubre otra empresa con su propio plantel, que no está en esta base.
+--
+-- La columna se llama `canales` porque así se creó, y un nombre guardado no se renombra
+-- (regla 13 de CLAUDE.md §7). La palabra del producto es **modalidad de trabajo**.
+--
+-- Quién decide: la Prestadora pone el techo con las modalidades que tenga activas y, dentro
+-- de ese techo, decide la ficha de cada Asistente. Lo hacen cumplir los disparadores
+-- `trg_modalidades_*` sobre esta tabla y `trg_modalidad_en_*` sobre guardias, series y
+-- ofertas. Si una modalidad no está habilitada, el motivo de la exclusión vive en
+-- `datos_reservados_asistente`, no acá.
+ALTER TABLE asistentes ADD COLUMN canales TEXT[] NOT NULL DEFAULT ARRAY['directa','marketplace'];
 ALTER TABLE asistentes ADD CONSTRAINT asistentes_canales_valido
-  CHECK (canales <@ ARRAY['directo','marketplace']::TEXT[] AND array_length(canales, 1) > 0);
+  CHECK (canales <@ ARRAY['directa','marketplace']::TEXT[] AND array_length(canales, 1) > 0);
 ```
 
 ### remuneraciones_asistente — lo que cobra el Asistente
@@ -285,7 +293,7 @@ CREATE TABLE datos_reservados_asistente (
   score_riesgo_reclasificacion  INTEGER NOT NULL DEFAULT 0
     CHECK (score_riesgo_reclasificacion >= 0 AND score_riesgo_reclasificacion <= 100),
   indicadores_riesgo            JSONB NOT NULL DEFAULT '{}'::jsonb,
-  motivo_exclusion_directo      TEXT,      -- NULL mientras el canal esté activo en `canales`
+  motivo_exclusion_directo      TEXT,      -- NULL mientras la modalidad esté activa en `canales`
   motivo_exclusion_marketplace  TEXT,      -- ídem
   created_at                    TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at                    TIMESTAMPTZ NOT NULL DEFAULT now()

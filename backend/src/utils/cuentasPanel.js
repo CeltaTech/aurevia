@@ -287,7 +287,7 @@ const FILAS_DE_UN_MIEMBRO_CIRCULO = [
 // aprobado: "no se construye un camino de creación de datos paralelo y distinto").
 export async function crearAsistenteDirecto({
   nombre, telefono, email, dni, tipo_asistente_id, tipo_asistente, zonas, estado,
-  tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales, canales,
+  tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales, modalidades,
   prestadoraId, usuarioPanelId, importacionId,
 }) {
   if (!nombre || !email) {
@@ -296,11 +296,12 @@ export async function crearAsistenteDirecto({
 
   const zonasArray = Array.isArray(zonas) ? zonas : [];
 
-  // Cómo va a recibir el trabajo esta persona. Si el alta no lo dice —una planilla importada,
-  // por ejemplo—, no se manda nada y la base lo completa con las modalidades que la Prestadora
-  // tenga activas. Elegirlo acá por las dudas sería adivinar en el único lugar donde no hace
-  // falta, y además duplicaría esa cuenta (Regla 12).
-  const canalesElegidos = Array.isArray(canales) && canales.length > 0 ? canales : null;
+  // En qué modalidad de trabajo va a estar esta persona. Si el alta no lo dice —una planilla
+  // importada, por ejemplo—, no se manda nada y la base lo completa con las modalidades que la
+  // Prestadora tenga activas. Elegirlo acá por las dudas sería adivinar en el único lugar donde
+  // no hace falta, y además duplicaría esa cuenta (Regla 12).
+  const modalidadesElegidas =
+    Array.isArray(modalidades) && modalidades.length > 0 ? modalidades : null;
 
   // Dos maneras de decir el tipo, según de dónde venga: el Panel manda el identificador
   // porque lo eligió de una lista; una planilla importada manda el nombre escrito, que hay
@@ -326,7 +327,8 @@ export async function crearAsistenteDirecto({
       estado: estado || 'activo',
       tipo_vinculo: tipo_vinculo || 'monotributo',
       horas_semanales: horas_semanales || null,
-      ...(canalesElegidos && { canales: canalesElegidos }),
+      // La columna se llama `canales` de antes y no se renombra (regla 13 de CLAUDE.md §7).
+      ...(modalidadesElegidas && { canales: modalidadesElegidas }),
       prestadora_id: prestadoraId,
       importacion_id: importacionId || null,
       pendiente_conformidad: Boolean(importacionId),

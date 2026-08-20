@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
-import { canalesHabilitados, mensajeDeCanal } from '../../lib/canales';
+import { modalidadesHabilitadas, mensajeDeModalidad } from '../../lib/modalidades';
 import { nombreTipo } from '../../lib/tiposAsistente';
 import { useTiposAsistente } from '../../hooks/useTiposAsistente';
 
@@ -26,25 +26,25 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
   /* Las formas de recibir trabajo que la Prestadora tiene activas. Arrancan todas marcadas:
      es lo mismo que haría la base si el alta no dijera nada, y así queda a la vista antes de
      crear a la persona, en vez de descubrirlo después en la ficha. */
-  const canalesPosibles = useMemo(() => canalesHabilitados(modalidades), [modalidades]);
-  const [canales, setCanales] = useState(null);
-  const canalesMarcados = canales ?? canalesPosibles;
+  const modalidadesPosibles = useMemo(() => modalidadesHabilitadas(modalidades), [modalidades]);
+  const [elegidas, setElegidas] = useState(null);
+  const modalidadesMarcadas = elegidas ?? modalidadesPosibles;
 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
 
-  function alternarCanal(canal) {
-    setCanales(
-      canalesMarcados.includes(canal)
-        ? canalesMarcados.filter((c) => c !== canal)
-        : [...canalesMarcados, canal],
+  function alternarModalidad(modalidad) {
+    setElegidas(
+      modalidadesMarcadas.includes(modalidad)
+        ? modalidadesMarcadas.filter((m) => m !== modalidad)
+        : [...modalidadesMarcadas, modalidad],
     );
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (canalesMarcados.length === 0) {
-      setError(t.canales.falta_elegir);
+    if (modalidadesMarcadas.length === 0) {
+      setError(t.modalidades.falta_elegir);
       return;
     }
     setError(null);
@@ -64,7 +64,7 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
           email,
           tipo_asistente_id: tipoAsistenteId || null,
           zonas: zonas.split(',').map((s) => s.trim()).filter(Boolean),
-          canales: canalesMarcados,
+          modalidades: modalidadesMarcadas,
         }),
       });
       const resultado = await respuesta.json();
@@ -73,7 +73,7 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
       }
       onCreado();
     } catch (err) {
-      setError(mensajeDeCanal(err, t.canales) ?? mensajeDeError(err, t));
+      setError(mensajeDeModalidad(err, t.modalidades) ?? mensajeDeError(err, t));
     } finally {
       setGuardando(false);
     }
@@ -99,16 +99,16 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
           </FormField>
           <FormField label={t.asistentes.col_zonas} name="zonas" value={zonas} onChange={(e) => setZonas(e.target.value)} />
 
-          <h3>{t.canales.etiqueta}</h3>
-          <p className="panel-explicacion">{t.canales.ayuda}</p>
-          {canalesPosibles.map((canal) => (
+          <h3>{t.modalidades.etiqueta}</h3>
+          <p className="panel-explicacion">{t.modalidades.ayuda}</p>
+          {modalidadesPosibles.map((modalidad) => (
             <FormField
-              key={canal}
-              label={t.canales[canal]}
-              name={`canal_${canal}`}
+              key={modalidad}
+              label={t.modalidades[modalidad]}
+              name={`modalidad_${modalidad}`}
               type="checkbox"
-              checked={canalesMarcados.includes(canal)}
-              onChange={() => alternarCanal(canal)}
+              checked={modalidadesMarcadas.includes(modalidad)}
+              onChange={() => alternarModalidad(modalidad)}
             />
           ))}
 

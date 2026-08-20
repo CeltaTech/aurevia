@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 import { mensajeDeBloqueo } from './matricula';
-import { mensajeDeCanal } from './canales';
+import { mensajeDeModalidad } from './modalidades';
 import { mensajeDeError } from './errores';
 
 /* Cambiarle el Asistente a una guardia: un solo lugar para las tres cosas que hay que hacer.
@@ -29,8 +29,8 @@ import { mensajeDeError } from './errores';
  * @param {string} fecha  En qué fecha queda. Puede ser la misma que ya tenía.
  * @param {object} t  Los textos del idioma en que está el Panel. Se piden desde afuera porque
  *                          acá no se sabe en qué idioma está, y hacen falta para las dos cosas
- *                          que nunca deben verse crudas: el rechazo por Matrícula vencida y
- *                          cualquier otro error de la base.
+ *                          que nunca deben verse crudas: el rechazo por Matrícula vencida, el
+ *                          rechazo por modalidad de trabajo y cualquier otro error de la base.
  * @returns {Promise<{ error: string | null }>} El motivo si algo falló, o null si salió todo.
  */
 export async function reasignarGuardia(guardia, asistenteId, fecha, t = null) {
@@ -47,11 +47,12 @@ export async function reasignarGuardia(guardia, asistenteId, fecha, t = null) {
   const { error: errorUpdate } = await supabase.from('guardias').update(cambios).eq('id', guardia.id);
   if (errorUpdate) {
     // Dos rechazos de la base pueden caer acá y ninguno se muestra crudo: la Matrícula vencida
-    // y el canal que este Asistente no trabaja. Cada uno tiene su frase y su "dónde se arregla".
+    // y la modalidad de trabajo en la que este Asistente no está. Cada uno tiene su frase y su
+    // "dónde se arregla".
     return {
       error:
         mensajeDeBloqueo(errorUpdate, t?.matricula) ??
-        mensajeDeCanal(errorUpdate, t?.canales) ??
+        mensajeDeModalidad(errorUpdate, t?.modalidades) ??
         mensajeDeError(errorUpdate, t),
     };
   }

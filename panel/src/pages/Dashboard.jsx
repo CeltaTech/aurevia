@@ -91,7 +91,8 @@ export function Dashboard() {
     setDocumentosPorVencer(null);
     setErrorAlertas(null);
 
-    // Trae el canal (guardias.canal_modalidad) de cada incidente para poder desglosar por
+    // Trae la modalidad de trabajo de cada incidente —columna `guardias.canal_modalidad`, un
+    // nombre viejo que no se renombra (regla 13)— para poder desglosar por
     // modalidad cuando la Prestadora tiene más de una activa (pendiente #85 ítem 3) sin
     // repetir la consulta — un solo punto de verdad para el conteo total y el desglose.
     const { data: filasAusentes, error: errorAusentes } = await supabase
@@ -115,8 +116,8 @@ export function Dashboard() {
     }
     const porModalidad = { directa: 0, marketplace: 0, subcontratacion: 0 };
     for (const fila of filasAusentes ?? []) {
-      const canal = fila.guardias?.canal_modalidad;
-      if (canal && canal in porModalidad) porModalidad[canal] += 1;
+      const modalidad = fila.guardias?.canal_modalidad;
+      if (modalidad && modalidad in porModalidad) porModalidad[modalidad] += 1;
     }
     setAusentesSinRelevo(filasAusentes?.length ?? 0);
     setAusentesPorModalidad(porModalidad);

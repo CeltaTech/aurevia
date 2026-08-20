@@ -104,9 +104,10 @@ export function EstadoActual() {
       // ordenar candidatos: `horas_semanales` es el tope propio de cada Asistente (el general
       // solo se usa si esa columna está vacía) y `estado` es lo que decide quién puede tomar
       // una guardia. Traerlas acá evita una segunda consulta al abrir cada hueco.
-      // `canales` viaja porque el panel de cobertura deja afuera a quien no trabaja en el canal
+      // `canales` —la columna vieja donde se guarda la modalidad de trabajo, regla 13— viaja
+      // porque el panel de cobertura deja afuera a quien no trabaja en la modalidad
       // de la vacante. Sin esa columna la pantalla no tendría con qué comparar y los daría a
-      // todos por buenos, hasta que la base rechazara la asignación (lib/canales.js).
+      // todos por buenos, hasta que la base rechazara la asignación (lib/modalidades.js).
       supabase.from('asistentes').select('id, nombre, estado, horas_semanales, canales'),
       supabase.from('pacientes').select('id, nombre'),
       supabase

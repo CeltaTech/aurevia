@@ -349,6 +349,15 @@ h2 {
   color: var(--texto-secundario);
 }
 
+/* El mismo cartelito, pero cuando avisa de algo que hay que atender: una guardia que quedó sin
+   cerrar, un envío que todavía está esperando. Al lado del cartelito gris del estado tiene que
+   distinguirse solo, sin leerlo. Es el naranja de aviso de la paleta, el mismo de `.alert-alerta`,
+   derivado de la variable para que no haya un color escrito a mano (regla 6). */
+.badge-alerta {
+  background: color-mix(in oklch, var(--naranja-alerta) 12%, transparent);
+  color: var(--naranja-alerta-texto);
+}
+
 .reporte-preview-campo {
   margin-bottom: 0.75rem;
 }

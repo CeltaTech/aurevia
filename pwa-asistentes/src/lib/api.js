@@ -69,6 +69,12 @@ export const api = {
     return pedido('/matricula', { method: 'POST', body: formData });
   },
   archivoDeMatricula: (ruta) => pedido(`/matricula/archivo-url?ruta=${encodeURIComponent(ruta)}`),
+  // Las guardias que le ofrecieron y todavía puede tomar. El motivo del rechazo es opcional:
+  // se pregunta, no se exige — obligar a explicarse antes de poder decir que no es una forma
+  // de que nadie diga que no.
+  ofertas: () => pedido('/ofertas'),
+  responderOferta: (id, respuesta, motivo) =>
+    pedido(`/ofertas/${id}/responder`, { method: 'POST', body: JSON.stringify({ respuesta, motivo }) }),
   suscribirPush: (suscripcion) => pedido('/push/suscribir', { method: 'POST', body: JSON.stringify(suscripcion) }),
   desuscribirPush: (endpoint) => pedido('/push/suscribir', { method: 'DELETE', body: JSON.stringify({ endpoint }) }),
 };

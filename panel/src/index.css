@@ -1986,6 +1986,20 @@ h2 {
   border-bottom: none;
 }
 
+/* El nombre del invitado y, debajo, el motivo por el que rechazó si lo escribió. Van juntos en
+   una columna para que el motivo quede claramente pegado a quien lo dijo. */
+.invitado-datos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.invitado-motivo {
+  color: var(--texto-secundario);
+  font-size: 0.8rem;
+}
+
 /* --- Los avisos del momento de asignar --- */
 
 /* Advierten, no impiden (CLAUDE.md §3: el software advierte, no impone). Por eso son una

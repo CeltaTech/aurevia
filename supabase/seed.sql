@@ -463,7 +463,33 @@ INSERT INTO public.guardias (
    '60000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000002',
    '50000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000003',
    CURRENT_DATE + 1, '07:00', '13:00', 'presencial', 'programada', 'directa',
+   NULL, NULL),
+
+  -- Pasado mañana: OFRECIDA. Sin Asistente asignado, publicada a dos personas a la
+  -- vez y con fecha límite. Es la que estrena la pantalla de guardias ofrecidas de
+  -- la aplicación del Asistente: sin ella, esa pantalla arranca vacía después de
+  -- rehacer la base y no hay forma de saber si anda o si está rota. Se la queda el
+  -- primero que conteste, así que también sirve para probar qué ve el que pierde.
+  ('70000000-0000-4000-8000-000000000009', '11111111-1111-4111-8111-111111111111',
+   '60000000-0000-4000-8000-000000000001', NULL,
+   '50000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000003',
+   CURRENT_DATE + 2, '08:00', '16:00', 'presencial', 'programada', 'directa',
    NULL, NULL);
+
+UPDATE public.guardias
+   SET ofrecida_at = now(),
+       ofrecida_por = '20000000-0000-4000-8000-000000000003',
+       oferta_limite_at = now() + INTERVAL '2 days'
+ WHERE id = '70000000-0000-4000-8000-000000000009';
+
+-- Las dos invitaciones, todavía sin contestar. Ana y Bruno trabajan los dos en
+-- prestación directa, que es la modalidad de esta guardia; si se invitara a alguien
+-- que no trabaja en esa modalidad, la propia base rechazaría la fila.
+INSERT INTO public.ofertas_guardia (prestadora_id, guardia_id, asistente_id, invitado_por) VALUES
+  ('11111111-1111-4111-8111-111111111111', '70000000-0000-4000-8000-000000000009',
+   '30000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000003'),
+  ('11111111-1111-4111-8111-111111111111', '70000000-0000-4000-8000-000000000009',
+   '30000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000003');
 
 -- ----------------------------------------------------------------------------
 -- 5.b Dos visitas compartidas: una que ya se cumplió y otra por venir.

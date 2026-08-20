@@ -323,7 +323,17 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
                   )}
                   {ofertas.map((o) => (
                     <div key={o.id} className="invitado-fila">
-                      <span>{nombrePorAsistente[o.asistente_id] ?? '—'}</span>
+                      <div className="invitado-datos">
+                        <span>{nombrePorAsistente[o.asistente_id] ?? '—'}</span>
+                        {/* Por qué dijo que no, cuando lo escribió. Es un campo opcional en su
+                            aplicación —a nadie se le exige explicarse para poder rechazar—, así
+                            que este renglón aparece solo si hay algo escrito. Es lo que le
+                            sirve a quien está armando la cobertura: sin él, un rechazo dice
+                            que hay que buscar a otro, pero no si conviene volver a llamarlo. */}
+                        {o.respuesta === 'rechaza' && o.motivo && (
+                          <span className="invitado-motivo">{o.motivo}</span>
+                        )}
+                      </div>
                       <span>
                         {o.respuesta === 'acepta'
                           ? tp.invitado_acepta

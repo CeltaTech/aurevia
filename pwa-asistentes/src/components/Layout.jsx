@@ -1,18 +1,43 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
 import { iniciarSincronizacionAutomatica } from '../lib/sincronizarCola';
 import { useMarca } from '../context/PerfilContext';
+import { api } from '../lib/api';
 
 export default function Layout() {
   const { logout } = useAuth();
   const { t } = useLocale();
   const marca = useMarca();
 
+  // Cuántas guardias le ofrecieron y todavía no contestó. El número va en la pestaña de abajo
+  // porque una oferta con fecha límite que nadie mira es una oferta perdida: si hubiera que
+  // entrar a la pantalla para enterarse de que hay algo, la pantalla no serviría de nada.
+  //
+  // Se pregunta una sola vez, cuando la aplicación arranca. Después lo mantiene al día la
+  // propia pantalla de ofertas, que es la única que lo puede cambiar.
+  const [ofertasAbiertas, setOfertasAbiertas] = useState(0);
+
   // Reintento de check-in/reporte guardados sin señal — solo con sesión activa (Fase 9).
   useEffect(() => {
     iniciarSincronizacionAutomatica();
+  }, []);
+
+  useEffect(() => {
+    let activo = true;
+    api
+      .ofertas()
+      .then(({ ofertas }) => {
+        if (activo) setOfertasAbiertas((ofertas ?? []).length);
+      })
+      .catch(() => {
+        // Sin señal o con el motor caído no se muestra ningún número. Un cero inventado sería
+        // peor que no decir nada: haría creer que no hay nada esperando.
+      });
+    return () => {
+      activo = false;
+    };
   }, []);
 
   return (
@@ -31,7 +56,7 @@ export default function Layout() {
         </button>
       </header>
       <main className="app-content">
-        <Outlet />
+        <Outlet context={{ avisarOfertas: setOfertasAbiertas }} />
         {/* La única mención del producto en toda la aplicación, y al pie. Se apaga si la
             Prestadora tiene contratada esa función (`CLAUDE.md` §7, regla 1). */}
         {marca.mostrarMarcaProducto && <p className="marca-del-producto">{t.marca.con_tecnologia_de}</p>}
@@ -39,6 +64,10 @@ export default function Layout() {
       <nav className="app-nav-inferior">
         <NavLink to="/guardias" className={({ isActive }) => (isActive ? 'active' : '')}>
           {t.nav.guardias}
+        </NavLink>
+        <NavLink to="/ofertas" className={({ isActive }) => (isActive ? 'active' : '')}>
+          {t.nav.ofertas}
+          {ofertasAbiertas > 0 && <span className="nav-cuenta">{ofertasAbiertas}</span>}
         </NavLink>
         <NavLink to="/perfil" className={({ isActive }) => (isActive ? 'active' : '')}>
           {t.nav.perfil}

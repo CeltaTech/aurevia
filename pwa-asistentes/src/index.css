@@ -245,6 +245,20 @@ h2 {
   color: var(--azul-medio-texto);
 }
 
+/* Cuántas ofertas esperan respuesta. Va en la pestaña porque una oferta con fecha límite que
+   nadie mira es una oferta perdida. */
+.nav-cuenta {
+  display: inline-block;
+  min-width: 1.25rem;
+  margin-top: 0.15rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--azul-medio);
+  color: #FFFFFF;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
 .estado-cargando,
 .estado-vacio {
   padding: 2rem 0;
@@ -293,6 +307,28 @@ h2 {
 .guardia-card-detalle {
   color: var(--texto-secundario);
   font-size: 0.85rem;
+}
+
+/* ---------- Ofertas de guardia ---------- */
+
+/* El plazo se lee antes que cualquier otra cosa de la tarjeta: es lo que decide si hay que
+   contestar ahora o se puede pensar. */
+.oferta-limite {
+  margin: 0.6rem 0 0.4rem;
+  font-weight: 600;
+  color: var(--azul-oscuro);
+}
+
+/* Aceptar y rechazar, uno al lado del otro y del mismo tamaño. En un teléfono, dos botones
+   apilados invitan a apretar el de arriba sin leer. */
+.oferta-botones {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.oferta-botones .btn {
+  flex: 1;
 }
 
 .guardia-timer {

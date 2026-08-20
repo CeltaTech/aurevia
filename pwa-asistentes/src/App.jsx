@@ -6,6 +6,7 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import ActivarCuenta from './pages/ActivarCuenta';
 import MisGuardias from './pages/MisGuardias';
+import OfertasDeGuardia from './pages/OfertasDeGuardia';
 import GuardiaActiva from './pages/GuardiaActiva';
 import ReporteDiario from './pages/ReporteDiario';
 import MiPerfil from './pages/MiPerfil';
@@ -39,6 +40,9 @@ function Rutas() {
       >
         <Route index element={<Navigate to="/guardias" replace />} />
         <Route path="guardias" element={<MisGuardias />} />
+        {/* Las guardias que le ofrecieron y todavía no contestó. Es una pantalla aparte de
+            "Mis Guardias" a propósito: un turno que le ofrecieron no es un turno suyo. */}
+        <Route path="ofertas" element={<OfertasDeGuardia />} />
         <Route path="guardias/:id" element={<GuardiaActiva />} />
         {/* El reporte lleva el Paciente en la dirección: un turno puede cubrir a varias
             personas y cada una tiene su propia hoja (tarea 93h). */}

@@ -6,7 +6,28 @@ import { agregarACola, nuevoId, pendientesDeGuardia } from '../lib/colaOffline';
 import { sincronizarCola, suscribirseASincronizacion } from '../lib/sincronizarCola';
 import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
+import { nombreTipo } from '../lib/tipoDeAsistente';
 import { useSeVe } from '../context/PerfilContext';
+
+// Una de las dos listas del tipo de Asistente. La de "qué no hace" se muestra igual de
+// grande que la otra a propósito: es la que evita la discusión en la puerta. Se dibuja
+// idéntica a la que ve la Familia, para que las dos partes miren lo mismo.
+function ListaDeTareas({ titulo, tareas, vacio }) {
+  return (
+    <>
+      <h2 style={{ marginTop: '1.5rem' }}>{titulo}</h2>
+      {tareas.length === 0 ? (
+        <div className="estado-vacio">{vacio}</div>
+      ) : (
+        <ul className="lista-tareas">
+          {tareas.map((tarea) => (
+            <li key={tarea.id}>{tarea.texto || tarea.clave}</li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
 
 /**
  * Lo que se puede consultar de UN Paciente durante el turno: sus reportes anteriores y sus
@@ -151,6 +172,11 @@ export default function GuardiaActiva() {
   // lleva el suyo: si el Asistente atendió a dos personas y escribió una sola hoja, el turno
   // todavía no está terminado.
   const [conReporte, setConReporte] = useState([]);
+  // Qué es esta persona y qué le toca hacer en el turno. Viene del catálogo en cada
+  // consulta, nunca guardado con la guardia: si la Prestadora corrige la lista, la
+  // corrección tiene que llegar al próximo turno.
+  const [tipo, setTipo] = useState(null);
+  const [tareas, setTareas] = useState(null);
   const [confirmandoCierre, setConfirmandoCierre] = useState(false);
   const [cerrando, setCerrando] = useState(false);
   const [cerradoPendiente, setCerradoPendiente] = useState(false);
@@ -158,9 +184,11 @@ export default function GuardiaActiva() {
   function cargar() {
     api
       .guardia(id)
-      .then(({ guardia: data, pacientesConReporte }) => {
+      .then(({ guardia: data, pacientesConReporte, tipo: elTipo, tareas: lasTareas }) => {
         setGuardia(data);
         setConReporte(pacientesConReporte ?? []);
+        setTipo(elTipo ?? null);
+        setTareas(lasTareas ?? null);
       })
       .catch((e) => setError(mensajeDeError(e, t, 'cargar la guardia')));
   }
@@ -403,6 +431,28 @@ export default function GuardiaActiva() {
       )}
 
       {guardia.checkout_at && <div className="alert alert-info">{t.guardia_activa.cerrar_ok}</div>}
+
+      {/* Qué le toca hacer en este turno y qué no. Sale del mismo catálogo que ve la Familia
+          en su pantalla, así que las dos partes leen exactamente lo mismo: es lo que corta la
+          discusión en la puerta cuando le piden algo que no es de su trabajo.
+          Si esta persona no tiene tipo cargado no hay lista que mostrar, y no se dibuja nada. */}
+      {tipo && (
+        <>
+          <p className="guardia-card-detalle" style={{ marginTop: '1.5rem' }}>
+            {t.guardia_activa.tipo}: {nombreTipo(tipo, t)}
+          </p>
+          <ListaDeTareas
+            titulo={t.guardia_activa.tareas_corresponde}
+            tareas={tareas?.corresponde || []}
+            vacio={t.guardia_activa.tareas_vacio}
+          />
+          <ListaDeTareas
+            titulo={t.guardia_activa.tareas_no_corresponde}
+            tareas={tareas?.no_corresponde || []}
+            vacio={t.guardia_activa.tareas_vacio}
+          />
+        </>
+      )}
 
       {pacientes.map((p) => (
         <DatosDelPaciente key={p.id} paciente={p} mostrarNombre={sonVarios} t={t} />

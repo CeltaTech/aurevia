@@ -14,6 +14,7 @@ import {
 import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
 import { visibilidadDelPedido, exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
+import { tipoConSusTareas } from '../utils/tareasDelTipo.js';
 
 export const appAsistentesRouter = Router();
 
@@ -195,6 +196,23 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
     }
   }
 
+  // Qué le corresponde hacer en este turno, y qué no. Las dos listas salen del mismo
+  // catálogo que ve la Familia, así que las dos partes leen lo mismo y nadie discute en la
+  // puerta con una lista distinta en la mano.
+  //
+  // El tipo se pide acá y no se guarda con la guardia: si la Prestadora corrige el catálogo,
+  // el cambio tiene que llegar al próximo turno sin arrastrar la copia vieja.
+  const { data: quienEs } = await supabase
+    .from('asistentes')
+    .select('tipo_asistente_id')
+    .eq('id', req.usuarioAsistente.id)
+    .maybeSingle();
+
+  const { tipo, tareas } = await tipoConSusTareas(
+    quienEs?.tipo_asistente_id,
+    req.usuarioAsistente.prestadoraId
+  );
+
   // La pantalla necesita saber a quiénes les falta el reporte: ofrece el cierre recién cuando
   // no queda ninguno, en vez de dejar apretar un botón que el backend va a rechazar.
   const reportes = await reportesDeLaGuardia(data.id);
@@ -202,6 +220,8 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
 
   res.json({
     guardia,
+    tipo,
+    tareas,
     pacientesConReporte: conReporte,
     // Se sigue mandando para las versiones de la aplicación que todavía no saben de la lista:
     // significa "ya está todo el trabajo del turno", que es lo que preguntaban.

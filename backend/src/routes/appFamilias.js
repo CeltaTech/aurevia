@@ -6,6 +6,7 @@ import { generarTokenQrCobro } from '../utils/qrCobroEfectivo.js';
 import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
 import { visibilidadDelPedido, exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
+import { tipoDelAsistente, tipoConSusTareas } from '../utils/tareasDelTipo.js';
 
 export const appFamiliasRouter = Router();
 
@@ -337,36 +338,12 @@ appFamiliasRouter.get('/pacientes/:id/asistente', requiereRolFamilia, async (req
     .eq('id', guardia.asistente_id)
     .maybeSingle();
 
-  // El tipo y sus dos listas. Se consultan por separado y filtrando otra vez por
-  // Prestadora: acá entramos con service_role, así que las políticas de la base
-  // no nos frenan y el filtro tiene que estar escrito en el código (CLAUDE.md §7).
-  // Un tipo general no tiene Prestadora y lo ven todas; uno propio, solo la suya.
-  let tipo = null;
-  let tareas = { corresponde: [], no_corresponde: [] };
-
-  if (asistente?.tipo_asistente_id) {
-    const { data: tipoFila } = await supabase
-      .from('tipos_asistente')
-      .select('id, clave, nombre, prestadora_id')
-      .eq('id', asistente.tipo_asistente_id)
-      .or(`prestadora_id.is.null,prestadora_id.eq.${paciente.prestadora_id}`)
-      .maybeSingle();
-
-    if (tipoFila) {
-      tipo = tipoFila;
-
-      const { data: filas } = await supabase
-        .from('tareas_tipo_asistente')
-        .select('id, clase, clave, texto, orden')
-        .eq('tipo_asistente_id', tipoFila.id)
-        .or(`prestadora_id.is.null,prestadora_id.eq.${paciente.prestadora_id}`)
-        .order('orden', { ascending: true });
-
-      for (const fila of filas || []) {
-        if (tareas[fila.clase]) tareas[fila.clase].push(fila);
-      }
-    }
-  }
+  // Qué es esta persona y qué le toca hacer. Sale del catálogo, que se lee desde un solo
+  // lugar para que la Familia y el Asistente vean exactamente la misma lista.
+  const { tipo, tareas } = await tipoConSusTareas(
+    asistente?.tipo_asistente_id,
+    paciente.prestadora_id
+  );
 
   const { data: certificado } = await supabase
     .from('certificados')
@@ -424,19 +401,12 @@ appFamiliasRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRol
     return res.status(404).json({ error: 'qr_no_reconocido' });
   }
 
-  // Qué es esta persona —cuidador/a, enfermero/a…—, para que la pantalla no
-  // muestre solo un nombre y una foto. Mismo filtro por Prestadora que arriba:
-  // entramos con la llave maestra, así que se escribe a mano.
-  let tipoEscaneado = null;
-  if (asistenteEscaneado.tipo_asistente_id) {
-    const { data: tipoFila } = await supabase
-      .from('tipos_asistente')
-      .select('id, clave, nombre, prestadora_id')
-      .eq('id', asistenteEscaneado.tipo_asistente_id)
-      .or(`prestadora_id.is.null,prestadora_id.eq.${paciente.prestadora_id}`)
-      .maybeSingle();
-    tipoEscaneado = tipoFila || null;
-  }
+  // Qué es esta persona —cuidador/a, enfermero/a…—, para que la pantalla no muestre
+  // solo un nombre y una foto. Acá alcanza con el tipo: al escanear no se listan tareas.
+  const tipoEscaneado = await tipoDelAsistente(
+    asistenteEscaneado.tipo_asistente_id,
+    paciente.prestadora_id
+  );
 
   const hoyISO = new Date().toISOString().slice(0, 10);
 

@@ -111,6 +111,10 @@ export const T = {
       varios_pacientes: 'Esta guardia cubre a {n} Pacientes. Se marca un solo check-in para toda la guardia.',
       domicilio: 'Domicilio',
       patologias: 'Patologías',
+      tipo: 'Tipo de Asistente',
+      tareas_corresponde: 'Qué hace',
+      tareas_no_corresponde: 'Qué no hace',
+      tareas_vacio: 'La Prestadora todavía no cargó esta lista.',
     },
     medicacion: {
       ver_ordenes: 'Ver órdenes de medicación',
@@ -334,6 +338,10 @@ export const T = {
       varios_pacientes: 'This shift covers {n} Patients. You check in once for the whole shift.',
       domicilio: 'Address',
       patologias: 'Conditions',
+      tipo: 'Caregiver type',
+      tareas_corresponde: 'What you do',
+      tareas_no_corresponde: 'What you do not do',
+      tareas_vacio: 'The Provider hasn\'t filled in this list yet.',
     },
     medicacion: {
       ver_ordenes: 'View medication orders',
@@ -552,6 +560,10 @@ export const T = {
       varios_pacientes: 'Este plantão atende {n} Pacientes. Marca-se um único check-in para todo o plantão.',
       domicilio: 'Endereço',
       patologias: 'Condições',
+      tipo: 'Tipo de Cuidador',
+      tareas_corresponde: 'O que faz',
+      tareas_no_corresponde: 'O que não faz',
+      tareas_vacio: 'A Prestadora ainda não preencheu esta lista.',
     },
     medicacion: {
       ver_ordenes: 'Ver ordens de medicação',

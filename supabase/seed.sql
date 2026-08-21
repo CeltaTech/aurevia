@@ -207,13 +207,13 @@ INSERT INTO public.asistentes (
    'Ana Álvarez', '+54 11 4001-0001', 'ana.asistente@sandbox.local',
    NULL, ARRAY['caba'],
    'activo', 'monotributo', CURRENT_DATE - 300, NULL,
-   40, '20000001', ARRAY['directo']),
+   40, '20000001', ARRAY['directa']),
 
   ('30000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111',
    'Bruno Bianchi', '+54 11 4001-0002', 'bruno.asistente@sandbox.local',
    ARRAY['Acompañamiento terapéutico'], ARRAY['caba', 'zona_norte'],
    'activo', 'dependencia', CURRENT_DATE - 220, NULL,
-   40, '20000002', ARRAY['directo', 'marketplace']),
+   40, '20000002', ARRAY['directa', 'marketplace']),
 
   ('30000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111',
    'Clara Cabrera', '+54 11 4001-0003', 'clara.asistente@sandbox.local',
@@ -225,7 +225,7 @@ INSERT INTO public.asistentes (
    'Delia Duarte', '+54 11 4001-0004', 'delia.asistente@sandbox.local',
    NULL, ARRAY['zona_norte'],
    'cesado', 'monotributo', CURRENT_DATE - 500, CURRENT_DATE - 40,
-   40, '20000004', ARRAY['directo']);
+   40, '20000004', ARRAY['directa']);
 
 -- Los datos de plata van en dos columnas distintas y no en una sola, porque quien
 -- está por monotributo cobra por hora (`valor_hora`) y quien está en relación de
@@ -723,6 +723,60 @@ VALUES
   -- Clara: le queda medio año. Es el que tiene que quedarse callado.
   ('11111111-1111-4111-8111-111111111111', '30000000-0000-4000-8000-000000000003',
    '3d000000-0000-4000-8000-000000000001', CURRENT_DATE + 180);
+
+
+-- ----------------------------------------------------------------------------
+-- 6.b Cinco conceptos de liquidación para la Prestadora de prueba
+-- ----------------------------------------------------------------------------
+-- PARA QUÉ ESTÁN. La pantalla de Pagos arma la liquidación de cada Asistente
+-- sumando y restando conceptos que configura la Prestadora. Con el catálogo
+-- vacío la pantalla se puede abrir pero no se puede mirar: toda liquidación
+-- saldría con el neto igual al bruto y no se vería ni un renglón.
+--
+-- LOS VALORES SON INVENTADOS. Ninguno de estos porcentajes ni de estos importes
+-- es una cifra legal de ningún país. No sirven de referencia para nada y no
+-- deben copiarse a la base de una Prestadora real: los valores de verdad los
+-- carga cada Prestadora, y los que salen de la ley los carga un abogado
+-- laboral en `escalas_legales` (regla 10 de `CLAUDE.md`: ningún porcentaje
+-- vive en el código).
+--
+-- QUÉ CASO CUBRE CADA UNO. Están elegidos para que se vean los cinco caminos
+-- distintos que sabe recorrer el generador:
+--   * importe fijo mensual con moneda propia
+--   * porcentaje sobre el bruto, que no lleva moneda
+--   * importe por hora trabajada
+--   * concepto que alcanza solo a una forma de vínculo
+--   * concepto atado a una escala legal todavía no cargada, que el generador
+--     tiene que saltear e informar en vez de estimar
+
+INSERT INTO public.conceptos_liquidacion
+  (id, prestadora_id, nombre, signo, unidad, origen_valor, valor, escala_tipo, moneda, aplica_a, orden)
+VALUES
+  -- Importe fijo, para todos. Es el caso más simple y el que prueba que la
+  -- moneda se completa sola desde la Prestadora.
+  ('6c000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+   'Adicional por título', 'suma', 'monto_fijo_mensual', 'propio', 35000, NULL, NULL, 'todos', 10),
+
+  -- Porcentaje sobre el bruto. Sin moneda a propósito: un porcentaje no es
+  -- plata hasta que se aplica, y la base rechaza la fila si trae moneda.
+  ('6c000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111',
+   'Adicional por antigüedad', 'suma', 'porcentaje', 'propio', 5, NULL, NULL, 'todos', 20),
+
+  -- Importe por hora efectivamente trabajada. Distingue a quien hizo guardias
+  -- de quien no hizo ninguna en el mes.
+  ('6c000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111',
+   'Refrigerio por hora', 'suma', 'monto_por_hora', 'propio', 300, NULL, NULL, 'todos', 30),
+
+  -- Solo para quien está en relación de dependencia. A un monotributista no
+  -- se le tiene que descontar: es el caso que prueba el filtro por vínculo.
+  ('6c000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111',
+   'Aportes del trabajador', 'resta', 'porcentaje', 'propio', 17, NULL, NULL, 'dependencia', 40),
+
+  -- Atado a una escala legal que hoy no está cargada (`escalas_legales` está
+  -- vacía hasta que la complete un abogado, pendiente #130). Tiene que quedar
+  -- afuera de la cuenta y aparecer en el aviso de la pantalla, nunca estimado.
+  ('6c000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111',
+   'Viático de traslado', 'suma', 'monto_fijo_mensual', 'escala_legal', NULL, 'viatico_traslado', NULL, 'todos', 50);
 
 
 -- ----------------------------------------------------------------------------

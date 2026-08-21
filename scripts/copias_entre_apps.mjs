@@ -50,6 +50,11 @@ export const GRUPOS = [
     copias: ['backend/src/utils/reglaMfaObligatorio.js'],
   },
   {
+    que: 'qué escala legal estaba vigente a la fecha del hecho',
+    original: 'panel/src/lib/escalasLegales.js',
+    copias: ['backend/src/utils/escalasLegales.js'],
+  },
+  {
     que: 'la marca de la Prestadora y qué funciones tiene encendidas',
     original: 'pwa-familias/src/context/PerfilContext.jsx',
     copias: ['pwa-asistentes/src/context/PerfilContext.jsx'],

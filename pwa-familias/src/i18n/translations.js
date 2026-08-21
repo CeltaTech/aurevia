@@ -66,6 +66,13 @@ export const T = {
       titulo: 'Mis Pacientes',
       sin_pacientes: 'Todavía no hay Pacientes vinculados a esta cuenta.',
     },
+    // El aviso de que el Paciente estos días no está en el domicilio de su ficha. Lo dibuja
+    // components/DomicilioTemporal.jsx, que es el mismo archivo en las dos aplicaciones, así
+    // que estas dos claves existen igual en la del Asistente.
+    domicilio: {
+      temporal: 'Domicilio temporal',
+      sin_motivo: 'Por estos días el Paciente no está en su domicilio habitual.',
+    },
     paciente: {
       domicilio: 'Domicilio',
       guardia_actual_titulo: 'Guardia en curso',
@@ -310,6 +317,10 @@ export const T = {
       titulo: 'My Patients',
       sin_pacientes: 'There are no Patients linked to your account yet.',
     },
+    domicilio: {
+      temporal: 'Temporary address',
+      sin_motivo: 'The Patient is not at their usual address these days.',
+    },
     paciente: {
       domicilio: 'Address',
       guardia_actual_titulo: 'Shift in progress',
@@ -546,6 +557,10 @@ export const T = {
     pacientes: {
       titulo: 'Meus Pacientes',
       sin_pacientes: 'Ainda não há Pacientes vinculados a esta conta.',
+    },
+    domicilio: {
+      temporal: 'Endereço temporário',
+      sin_motivo: 'Nestes dias o Paciente não está no seu endereço habitual.',
     },
     paciente: {
       domicilio: 'Endereço',

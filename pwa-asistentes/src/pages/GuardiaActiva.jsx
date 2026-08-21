@@ -8,6 +8,7 @@ import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
 import { nombreTipo } from '../lib/tipoDeAsistente';
 import { useSeVe } from '../context/PerfilContext';
+import DomicilioTemporal from '../components/DomicilioTemporal';
 
 // Una de las dos listas del tipo de Asistente. La de "qué no hace" se muestra igual de
 // grande que la otra a propósito: es la que evita la discusión en la puerta. Se dibuja
@@ -336,6 +337,10 @@ export default function GuardiaActiva() {
                 {t.guardia_activa.domicilio}: {p.domicilio}
               </p>
             )}
+            {/* Y si esa dirección no es la de siempre, se dice acá mismo, pegado a la
+                dirección. Con el interruptor de arriba apagado el domicilio no viaja, y este
+                renglón no se dibuja solo: no queda ningún cartel vacío. */}
+            <DomicilioTemporal paciente={p} t={t} />
             {vePatologias && p.patologias && (
               <p className="guardia-card-detalle">
                 {t.guardia_activa.patologias}: {p.patologias}

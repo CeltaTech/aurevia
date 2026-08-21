@@ -127,6 +127,13 @@ export const T = {
       tomada: 'La guardia quedó tomada.',
       ver_el_turno: 'Ver la guardia',
     },
+    // El aviso de que la dirección de esta guardia no es la de siempre. Lo dibuja
+    // components/DomicilioTemporal.jsx, que es el mismo archivo en las dos aplicaciones, así
+    // que estas dos claves existen igual en la de la Familia.
+    domicilio: {
+      temporal: 'Domicilio temporal',
+      sin_motivo: 'Por estos días el Paciente no está en su domicilio habitual.',
+    },
     guardia_activa: {
       titulo: 'Guardia',
       hacer_checkin: 'Marcar check-in',
@@ -385,6 +392,10 @@ export const T = {
       tomada: 'The shift has been taken.',
       ver_el_turno: 'See the shift',
     },
+    domicilio: {
+      temporal: 'Temporary address',
+      sin_motivo: 'The Patient is not at their usual address these days.',
+    },
     guardia_activa: {
       titulo: 'Shift',
       hacer_checkin: 'Check in',
@@ -637,6 +648,10 @@ export const T = {
       motivo_ejemplo: 'Por exemplo: não há disponibilidade nesse dia.',
       tomada: 'O plantão foi assumido.',
       ver_el_turno: 'Ver o plantão',
+    },
+    domicilio: {
+      temporal: 'Endereço temporário',
+      sin_motivo: 'Nestes dias o Paciente não está no seu endereço habitual.',
     },
     guardia_activa: {
       titulo: 'Plantão',

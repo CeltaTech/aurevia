@@ -14,6 +14,7 @@ import { PrestacionesPaciente } from './PrestacionesPaciente';
 import { EditarPacienteModal } from './EditarPacienteModal';
 import { NuevoPacienteModal } from './NuevoPacienteModal';
 import { MonitoreoVitalesPaciente } from './MonitoreoVitalesPaciente';
+import { DomiciliosTemporalesPaciente } from './DomiciliosTemporalesPaciente';
 import { InvitarCirculoModal } from './InvitarCirculoModal';
 import { mensajeDeError } from '../../lib/errores';
 
@@ -34,6 +35,7 @@ export function FamiliaDetalle() {
   const [error, setError] = useState(null);
   const [pacienteSeleccionado, setPacienteSeleccionado] = useState(null);
   const [pacienteParaVitales, setPacienteParaVitales] = useState(null);
+  const [pacienteParaDomicilios, setPacienteParaDomicilios] = useState(null);
   const [pacienteAEditar, setPacienteAEditar] = useState(null);
   const [mostrarNuevoPaciente, setMostrarNuevoPaciente] = useState(false);
   const [formContacto, setFormContacto] = useState(null);
@@ -239,6 +241,9 @@ export function FamiliaDetalle() {
                   </Button>{' '}
                   <Button variant="secondary" onClick={() => setPacienteParaVitales(p)}>
                     {t.vitales_autorizacion.titulo}
+                  </Button>{' '}
+                  <Button variant="secondary" onClick={() => setPacienteParaDomicilios(p)}>
+                    {t.domicilios_temporales.titulo}
                   </Button>
                 </td>
               </tr>
@@ -322,6 +327,14 @@ export function FamiliaDetalle() {
 
       {pacienteParaVitales && (
         <MonitoreoVitalesPaciente paciente={pacienteParaVitales} onClose={() => setPacienteParaVitales(null)} />
+      )}
+
+      {pacienteParaDomicilios && (
+        <DomiciliosTemporalesPaciente
+          paciente={pacienteParaDomicilios}
+          puedeEditar={puedeEditarPaciente}
+          onClose={() => setPacienteParaDomicilios(null)}
+        />
       )}
 
       {pacienteAEditar && (

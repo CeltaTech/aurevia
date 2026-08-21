@@ -11,6 +11,7 @@ import {
   pacientesDeGuardia,
   asistenteAtiendeAlPaciente,
 } from '../utils/pacientesDeGuardia.js';
+import { conDomicilioDelDia, pacientesConDomicilioDelDia } from '../utils/domicilioDelDia.js';
 import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
 import { visibilidadDelPedido, exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
@@ -137,6 +138,10 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
 // `guardia.pacientes` es una LISTA, no una persona: un mismo turno puede cubrir a más de un
 // Paciente (ver `utils/pacientesDeGuardia.js`). La lista ya no la engancha PostgREST por la
 // columna vieja `guardias.paciente_id` — sale de la tabla `guardia_pacientes`.
+//
+// Y la dirección de cada Paciente es la que rige **el día de esa guardia**, no la de la ficha:
+// un turno de enero puede caer en la temporada en que el Paciente está en la casa de un hijo
+// (`utils/domicilioDelDia.js`).
 appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
   const { data, error } = await supabase
     .from('guardias')
@@ -153,7 +158,8 @@ appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
 
   try {
     const visibilidad = await visibilidadDelPedido(req);
-    res.json({ guardias: await conPacientes(data ?? [], camposDePacienteParaElAsistente(visibilidad)) });
+    const guardias = await conPacientes(data ?? [], camposDePacienteParaElAsistente(visibilidad));
+    res.json({ guardias: await conDomicilioDelDia(guardias) });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -176,7 +182,11 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
 
   let guardia;
   try {
-    [guardia] = await conPacientes([data], camposDePacienteParaElAsistente(visibilidad, { conPatologias: true }));
+    const [conSuGente] = await conPacientes([data], camposDePacienteParaElAsistente(visibilidad, { conPatologias: true }));
+    // La dirección que se muestra es la del día de la guardia. Si es una temporal, cada
+    // Paciente viaja además con `domicilio_es_temporal` y `domicilio_motivo`, que es lo que le
+    // permite a la pantalla avisar que hoy no se lo atiende en su casa.
+    [guardia] = await conDomicilioDelDia([conSuGente]);
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
@@ -253,9 +263,19 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, async (r
 
   // Un solo check-in para todo el turno, aunque el turno cubra a varias personas: el Asistente
   // llega una vez a la casa y marca una vez.
+  //
+  // Las coordenadas contra las que se mide son las del DÍA DE ESTA GUARDIA, no las de la ficha:
+  // si el Paciente está pasando una temporada en otro lado, el Asistente fue a donde le
+  // dijeron, y medir contra la casa de siempre lo daba fuera de rango y le mandaba al
+  // Coordinador un aviso que era un falso positivo (pendiente #153).
+  //
+  // Acá no se pide `domicilio` a propósito: esto mide una distancia, no muestra una dirección.
+  // Y no se pasa por el interruptor `asistente_domicilio_del_paciente` tampoco: ese decide qué
+  // ve el Asistente en el teléfono, no contra qué mide el motor de este lado.
   let pacientes;
   try {
     pacientes = await pacientesDeGuardia(guardia, 'id, nombre, lat, lng, familia_id');
+    pacientes = await pacientesConDomicilioDelDia(guardia, pacientes);
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
@@ -270,10 +290,14 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, async (r
   // Con varios Pacientes se mide contra el domicilio MÁS CERCANO. Casi siempre viven todos en
   // la misma casa y da lo mismo; cuando no, estar en la puerta de uno de ellos no es llegar
   // tarde ni al lugar equivocado, y el aviso al Coordinador sería un falso positivo.
-  const distancias = pacientes
+  //
+  // Se guarda cuál fue el más cercano, no solamente cuántos metros: si la medición terminó
+  // siendo contra una dirección temporal, el aviso al Coordinador tiene que decirlo.
+  const medidos = pacientes
     .filter((p) => p.lat != null && p.lng != null)
-    .map((p) => Math.round(distanciaMetros(lat, lng, p.lat, p.lng)));
-  const distancia = distancias.length > 0 ? Math.min(...distancias) : null;
+    .map((p) => ({ paciente: p, metros: Math.round(distanciaMetros(lat, lng, p.lat, p.lng)) }));
+  const masCerca = medidos.reduce((mejor, actual) => (mejor && mejor.metros <= actual.metros ? mejor : actual), null);
+  const distancia = masCerca ? masCerca.metros : null;
   const dentroDeRango = distancia == null || distancia <= tolerancia;
 
   const { error } = await supabase
@@ -309,11 +333,23 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, async (r
     // Nota automática al coordinador (PRD_04_05_App_Servicio.md) — se registra en
     // mensajes_asistente, el mismo canal que ya usa el Panel para comunicación con Asistentes,
     // en vez de crear una tabla nueva de notas para un solo caso.
+    //
+    // Contra qué se midió, dicho en el aviso: si ese día regía una dirección temporal, el
+    // Coordinador tiene que saberlo, porque "fuera de rango" sin esa aclaración lo manda a
+    // buscar un problema donde no lo hay.
+    //
+    // Lo que NO va: ni la dirección, ni el motivo de la temporal —que lo escribe el Panel a
+    // mano y puede decir "internación"—, ni el nombre del Paciente. Es un mensaje que queda
+    // guardado en un hilo de conversación, y ahí no se meten datos sensibles (CLAUDE.md §6).
+    const contraQueSeMidio = masCerca?.paciente?.domicilio_es_temporal
+      ? 'del domicilio temporal del Paciente, el que regía ese día'
+      : 'del domicilio del Paciente';
+
     await supabase.from('mensajes_asistente').insert({
       asistente_id: guardia.asistente_id,
       prestadora_id: guardia.prestadora_id,
       usuario_id: guardia.asistente_id,
-      mensaje: `Aviso automático del sistema: check-in fuera de rango (${distancia} m del domicilio del Paciente) en la guardia del ${guardia.fecha}.`,
+      mensaje: `Aviso automático del sistema: check-in fuera de rango (${distancia} m ${contraQueSeMidio}) en la guardia del ${guardia.fecha}.`,
     }).then(({ error: errorNota }) => {
       if (errorNota) console.error('Error registrando nota de check-in fuera de rango:', errorNota.message);
     });

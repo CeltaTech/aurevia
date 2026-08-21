@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
+import DomicilioTemporal, { domiciliosDeLaGuardia } from '../components/DomicilioTemporal';
 
 // Las guardias que le ofrecieron y todavía puede tomar.
 //
@@ -39,7 +40,10 @@ function TarjetaDeOferta({ oferta, onResponder, enCurso, t, locale }) {
 
   const guardia = oferta.guardia;
   const nombres = (guardia.pacientes ?? []).map((p) => p.nombre).filter(Boolean);
-  const domicilios = [...new Set((guardia.pacientes ?? []).map((p) => p.domicilio).filter(Boolean))];
+  // Las direcciones distintas de la guardia, sin repetir la del matrimonio que vive junto, y
+  // cada una sabiendo si es la de siempre o una temporal. Antes de decidir si se toma el turno
+  // hay que saber adónde hay que ir de verdad.
+  const domicilios = domiciliosDeLaGuardia(guardia.pacientes);
   const queda = cuantoQueda(guardia.oferta_limite_at, t);
   const ocupado = enCurso !== null;
 
@@ -51,7 +55,12 @@ function TarjetaDeOferta({ oferta, onResponder, enCurso, t, locale }) {
       <div className="guardia-card-detalle">
         {guardia.fecha} · {guardia.hora_inicio?.slice(0, 5)} - {guardia.hora_fin?.slice(0, 5)}
       </div>
-      {domicilios.length > 0 && <div className="guardia-card-detalle">{domicilios.join(' · ')}</div>}
+      {domicilios.map((domicilio) => (
+        <Fragment key={domicilio.domicilio}>
+          <div className="guardia-card-detalle">{domicilio.domicilio}</div>
+          <DomicilioTemporal paciente={domicilio} t={t} />
+        </Fragment>
+      ))}
 
       {/* El plazo, cuando lo hay. Sin plazo la oferta queda abierta hasta que alguien la tome,
           y decirlo es mejor que dejar el renglón vacío. */}

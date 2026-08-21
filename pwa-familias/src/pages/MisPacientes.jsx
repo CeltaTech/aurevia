@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
+import DomicilioTemporal from '../components/DomicilioTemporal';
 
 export default function MisPacientes() {
   const { t } = useLocale();
@@ -35,6 +36,9 @@ export default function MisPacientes() {
         <Link key={p.id} to={`/pacientes/${p.id}`} className="guardia-card" style={{ display: 'block', textDecoration: 'none' }}>
           <div className="guardia-card-paciente">{p.nombre}</div>
           <div className="guardia-card-detalle">{p.domicilio || '—'}</div>
+          {/* Cuando el Paciente está pasando una temporada en otro lado, la dirección de arriba
+              es la de ahora y no la de su ficha. Sin este renglón se leen igual. */}
+          <DomicilioTemporal paciente={p} t={t} />
         </Link>
       ))}
     </div>

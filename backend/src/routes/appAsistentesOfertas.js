@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
 import { supabase } from '../db/connection.js';
 import { conPacientes } from '../utils/pacientesDeGuardia.js';
+import { conDomicilioDelDia } from '../utils/domicilioDelDia.js';
 import { visibilidadDelPedido } from '../utils/visibilidadPrestadora.js';
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
 
@@ -132,9 +133,16 @@ appAsistentesOfertasRouter.get('/', requiereRolAsistente, async (req, res) => {
 
   try {
     const visibilidad = await visibilidadDelPedido(req);
-    const guardias = await conPacientes(
-      vivas.map((o) => o.guardias),
-      camposDePacienteEnLaOferta(visibilidad)
+    // La dirección que se muestra es la del día del turno ofrecido, no la de la ficha. Acá
+    // pesa más que en ningún otro lado: es con ese dato que se decide si se toma el turno, y
+    // aceptar creyendo que queda a diez cuadras para después enterarse de que ese mes se lo
+    // atiende en otro barrio es exactamente lo que hace que alguien no vuelva a aceptar
+    // (`utils/domicilioDelDia.js`).
+    const guardias = await conDomicilioDelDia(
+      await conPacientes(
+        vivas.map((o) => o.guardias),
+        camposDePacienteEnLaOferta(visibilidad)
+      )
     );
     const porId = new Map(guardias.map((g) => [g.id, g]));
 

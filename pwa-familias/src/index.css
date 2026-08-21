@@ -319,6 +319,16 @@ h2 {
   color: var(--texto-secundario);
 }
 
+/* El mismo cartelito, pero cuando avisa de algo que hay que atender: el Paciente que estos
+   días no está en el domicilio de su ficha. Al lado del cartelito gris tiene que distinguirse
+   solo, sin leerlo. Es el naranja de aviso de la paleta, el mismo de `.alert-alerta`, derivado
+   de la variable para que no haya un color escrito a mano (regla 6). Idéntico al de la
+   aplicación del Asistente, que muestra este mismo aviso. */
+.badge-alerta {
+  background: color-mix(in oklch, var(--naranja-alerta) 12%, transparent);
+  color: var(--naranja-alerta-texto);
+}
+
 /* ---------- La semana de guardias ---------- */
 
 /* Los dos botones de mover la semana, y en el medio qué semana se está mirando. En un

@@ -8,6 +8,7 @@ import { suscribirseASincronizacion } from '../lib/sincronizarCola';
 import { con } from '../lib/textos';
 import { quedoSinCerrar } from '../lib/guardiaSinCerrar';
 import AvisoConsentimientoPendiente from '../components/AvisoConsentimientoPendiente';
+import { hayDomicilioTemporal } from '../components/DomicilioTemporal';
 
 // En la tarjeta de una guardia no entran diez nombres, así que se muestran los dos primeros y
 // se dice cuántos faltan. La lista completa está adentro, al abrir la guardia.
@@ -69,6 +70,13 @@ export default function MisGuardias() {
             {g.fecha} · {g.hora_inicio?.slice(0, 5)} - {g.hora_fin?.slice(0, 5)}
           </div>
           <span className="badge">{traducirValor(t.guardias, `estado_${g.estado}`)}</span>
+          {/* Esta tarjeta no muestra direcciones —alcanza con saber a quién y a qué hora—, pero
+              sí tiene que avisar cuando la de ese día no es la de siempre: es lo que hace abrir
+              la guardia antes de salir, en lugar de arrancar de memoria hacia la casa de
+              siempre. La dirección y el motivo están adentro. */}
+          {hayDomicilioTemporal(g.pacientes) && (
+            <span className="badge badge-alerta">{t.domicilio.temporal}</span>
+          )}
           {quedoSinCerrar(g) && <span className="badge badge-alerta">{t.guardias.sin_cerrar}</span>}
           {guardiasPendientes.has(g.id) && (
             <span className="badge badge-alerta">

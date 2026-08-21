@@ -502,8 +502,15 @@ RLS). Resumen de las tablas:
 - **`guardias`** — instancia concreta de una guardia; conserva `asistente_id`, `paciente_id`,
   `checkin/checkout` con GPS igual que el diseño original de abajo, más `serie_id` y
   `prestadora_id` (FK compuesta tenant-segura contra `pacientes`/`asistentes`).
-- **`domicilios_temporales_paciente`** — domicilio distinto al habitual del Paciente para una
-  guardia puntual (ej. internación en casa de un familiar).
+- **`domicilios_temporales_paciente`** — dónde se atiende al Paciente durante una temporada en
+  que no está en su casa: el verano en la casa de un hijo, una internación, una mudanza
+  mientras arreglan el departamento. Mientras dura, **reemplaza** a la dirección de la ficha;
+  no conviven. La carga y la da de baja el Panel, no la Familia. Dos períodos del mismo
+  Paciente no pueden compartir ni un día (restricción `domicilios_temp_sin_superposicion`),
+  para que "¿dónde se lo atiende hoy?" tenga siempre una sola respuesta. Quién contesta esa
+  pregunta está escrito una sola vez (regla 12), en la función
+  `public.domicilios_de_pacientes_en`: la usan el check-in, la aplicación del Asistente, la de
+  la Familia y el Panel.
 - **`personal_emergencia`** — contacto de emergencia asociado a una guardia/Paciente.
 - **`incidentes_relevo`** — registra un Asistente ausente a una guardia. `guardia_saliente_id`
   es **nullable**: el caso `NULL` es "Ausente sin relevo previo" (ver glosario en

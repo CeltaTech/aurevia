@@ -6,6 +6,7 @@ import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
 import { useSeVe } from '../context/PerfilContext';
 import { INTERRUPTOR_DE_LA_PANTALLA } from '../lib/interruptorDeCadaPantalla';
+import DomicilioTemporal from '../components/DomicilioTemporal';
 
 function segundosDesde(fecha) {
   return Math.max(0, Math.floor((Date.now() - new Date(fecha).getTime()) / 1000));
@@ -94,6 +95,10 @@ export default function PacienteDetalle() {
       <p className="guardia-card-detalle">
         {t.paciente.domicilio}: {paciente.domicilio || '—'}
       </p>
+      {/* La dirección de arriba es la de hoy: mientras dura una estadía en otro lado, es esa y
+          no la de la ficha. Acá se dice cuando ese es el caso, con el motivo que cargó la
+          Prestadora. */}
+      <DomicilioTemporal paciente={paciente} t={t} />
 
       {veAlertas && alertasActivas.length > 0 && (
         <div style={{ marginTop: '1rem' }}>

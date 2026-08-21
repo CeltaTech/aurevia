@@ -60,6 +60,7 @@ const TONO_POR_ESTADO = {
   finalizada: TONO.EXITO,
   otorgado: TONO.EXITO,
   pagada: TONO.EXITO,
+  registrado: TONO.EXITO,
   validado: TONO.EXITO,
   verde: TONO.EXITO,
   verificado: TONO.EXITO,

@@ -6,6 +6,7 @@ import { traducirValor } from '../i18n/valores';
 import { listarCola } from '../lib/colaOffline';
 import { suscribirseASincronizacion } from '../lib/sincronizarCola';
 import { con } from '../lib/textos';
+import { quedoSinCerrar } from '../lib/guardiaSinCerrar';
 import AvisoConsentimientoPendiente from '../components/AvisoConsentimientoPendiente';
 
 // En la tarjeta de una guardia no entran diez nombres, así que se muestran los dos primeros y
@@ -17,16 +18,6 @@ function nombresDeLaTarjeta(guardia, t) {
   const restantes = nombres.length - visibles.length;
   if (restantes > 0) visibles.push(con(t.guardias.y_mas, { n: restantes }));
   return visibles.join(' · ');
-}
-
-// Una guardia de un día anterior que sigue en curso es una guardia que nadie cerró. Antes no
-// podía pasar, porque el cierre venía pegado al envío del reporte; desde que cerrar es un acto
-// propio (tarea 66a) sí puede, así que la lista lo tiene que mostrar.
-function quedoSinCerrar(guardia) {
-  if (guardia.estado !== 'activa' || guardia.checkout_at) return false;
-  const hoy = new Date();
-  const hoyISO = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
-  return guardia.fecha < hoyISO;
 }
 
 export default function MisGuardias() {

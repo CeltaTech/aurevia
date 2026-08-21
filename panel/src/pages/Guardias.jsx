@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { NuevaGuardiaModal } from './guardias/NuevaGuardiaModal';
 import { GuardiaAcciones } from './guardias/GuardiaAcciones';
 import { GuardiasGrid } from './guardias/GuardiasGrid';
+import { GuardiasSinCerrar } from './guardias/GuardiasSinCerrar';
 import { COBERTURA, coberturaDeGuardia } from '../lib/cobertura';
 import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../lib/pacientesDeGuardia';
 import { reasignarGuardia } from '../lib/reasignarGuardia';
@@ -137,6 +138,12 @@ export function Guardias() {
   return (
     <div>
       <h1>{t.guardias.titulo}</h1>
+
+      {/* Va arriba de todo y antes de los filtros a propósito: es lo que hay que resolver, y no
+          depende del rango de fechas de abajo. Trae sus propios datos, mirando hacia atrás sin
+          límite, porque una guardia que quedó abierta el mes pasado no cae dentro de ningún
+          rango que alguien tenga puesto. */}
+      <GuardiasSinCerrar onCerrada={recargar} />
 
       <div className="panel-filtros-tarjeta">
         <FormFieldFecha label={t.guardias.filtro_desde} value={f.desde} onChange={(v) => set('desde', v)} />

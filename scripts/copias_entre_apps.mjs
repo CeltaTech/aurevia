@@ -67,7 +67,17 @@ export const GRUPOS = [
   {
     que: 'las cuentas de fecha y hora de una guardia',
     original: 'panel/src/lib/horarios.js',
-    copias: ['pwa-familias/src/lib/horarios.js'],
+    copias: ['pwa-familias/src/lib/horarios.js', 'pwa-asistentes/src/lib/horarios.js'],
+  },
+  {
+    que: 'cuándo una guardia quedó sin cerrar',
+    original: 'panel/src/lib/guardiaSinCerrar.js',
+    copias: ['pwa-asistentes/src/lib/guardiaSinCerrar.js'],
+  },
+  {
+    que: 'qué se admite como cobro de una Familia',
+    original: 'panel/src/lib/cobrosDeFamilia.js',
+    copias: ['backend/src/utils/cobrosDeFamilia.js'],
   },
 ];
 

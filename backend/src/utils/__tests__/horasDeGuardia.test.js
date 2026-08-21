@@ -27,6 +27,13 @@ describe('horasEntre', () => {
   it('acepta el formato con segundos que devuelve la base', () => {
     assert.equal(horasEntre('08:00:00', '16:00:00'), 8);
   });
+
+  it('la guardia de veinticuatro horas vale veinticuatro, no cero', () => {
+    // Misma hora de entrada y de salida es el turno de un día entero, que en este rubro
+    // es de los más comunes. Antes daba cero, y una guardia de cero horas se pagaba sola.
+    assert.equal(horasEntre('08:00', '08:00'), 24);
+    assert.equal(horasEntre('00:00:00', '00:00:00'), 24);
+  });
 });
 
 describe('horasImputadasAlPaciente', () => {

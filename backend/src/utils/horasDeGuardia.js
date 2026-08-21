@@ -22,13 +22,21 @@
 
 /**
  * Cuántas horas dura un turno, en número (2.5 son dos horas y media).
- * Si la hora de fin es menor que la de inicio, el turno cruza la medianoche.
+ * Si la hora de fin es menor o igual a la de inicio, el turno cruza la medianoche.
+ *
+ * POR QUÉ "O IGUAL". Una guardia escrita `08:00 → 08:00` es la guardia de veinticuatro
+ * horas, que en este rubro es de las más comunes. Leída literal daría cero, y cero es un
+ * resultado imposible: nadie programa un turno que dura nada. Hasta el 2026-08-21 esta
+ * cuenta devolvía cero en ese caso y la del Panel devolvía veinticuatro, así que la misma
+ * guardia valía dos cosas distintas según quién la mirara — y la que pagaba era la de acá.
+ * La regla quedó escrita igual en los dos lados (`panel/src/lib/horarios.js`, función
+ * `finDeGuardia`): fin menor o igual a inicio significa día siguiente.
  */
 export function horasEntre(horaInicio, horaFin) {
   const [hi, mi] = horaInicio.split(':').map(Number);
   const [hf, mf] = horaFin.split(':').map(Number);
   let minutos = hf * 60 + mf - (hi * 60 + mi);
-  if (minutos < 0) minutos += 24 * 60; // guardia que cruza medianoche
+  if (minutos <= 0) minutos += 24 * 60; // guardia que cruza medianoche, o de 24 horas
   return minutos / 60;
 }
 

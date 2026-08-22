@@ -8,8 +8,12 @@
 //     -> { estadoConexion: 'pendiente'|'exitoso', referenciaExterna, urlAccion? }
 //   cancelarSuscripcion({ credencial, referenciaExterna })
 //     -> { ok: true }
-//   verificarWebhook({ credencial, headers, body })
-//     -> { valido: boolean, referenciaExterna, estado: 'exitoso'|'fallido'|'pendiente' }
+//   verificarWebhook({ credencial, secretoFirma, headers, consulta, cuerpoCrudo, body })
+//     -> { valido: boolean, motivo, referenciaExterna, estado: 'exitoso'|'fallido'|'pendiente' }
+//     `cuerpoCrudo` son los bytes exactos que mandó la pasarela, sin pasar por express: una
+//     firma se calcula sobre eso y no sobre el objeto ya leído (pendiente #159). `motivo`
+//     dice por qué se rechazó, y lo mira la ruta para saber si contesta 401 (ver
+//     `firmaWebhook.js`).
 //   consultarEstado({ credencial, referenciaExterna })
 //     -> { estado: 'exitoso'|'fallido'|'pendiente' }
 //
@@ -34,6 +38,13 @@ const ADAPTADORES = {
 
 export function proveedoresDisponibles() {
   return Object.keys(ADAPTADORES);
+}
+
+/** ¿Este proveedor firma sus avisos de cobro? Lo contesta el adaptador, que es el único que
+ *  sabe cómo comprueba lo que le llega; el Panel lo consulta para saber si además de la
+ *  credencial le tiene que pedir a la Prestadora el secreto de firma (regla 12 del §7). */
+export function requiereSecretoFirma(proveedor) {
+  return Boolean(ADAPTADORES[proveedor]?.REQUIERE_SECRETO_FIRMA);
 }
 
 export function obtenerAdaptador(proveedor) {

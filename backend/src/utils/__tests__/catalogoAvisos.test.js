@@ -2,7 +2,8 @@
  * Pruebas del catálogo de avisos.
  *
  * Lo que se cuida acá es lo que salió mal antes: que un aviso desaparezca de la pantalla
- * porque nadie le sembró la fila. La mezcla tiene que devolver siempre los ocho.
+ * porque nadie le sembró la fila. La mezcla tiene que devolver siempre el catálogo entero,
+ * tenga las filas que tenga esa Prestadora.
  *
  *   npm test --prefix backend
  */

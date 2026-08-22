@@ -51,6 +51,16 @@ import { verificarPreciosIA } from './utils/verificarPreciosIA.js';
 
 const app = express();
 app.use(cors());
+
+/* Los avisos de cobro de las pasarelas van montados ANTES del lector de JSON general, y el
+   orden no es un detalle de estilo (pendiente #159): esa ruta comprueba la firma del aviso, y
+   una firma se calcula sobre los bytes exactos que llegaron. El primer middleware que lee el
+   pedido se queda con él, así que si `express.json()` va antes, la ruta recibe un objeto ya
+   armado y nunca vuelve a ver los bytes originales — la firma no coincidiría jamás y la
+   comprobación quedaría rota en silencio. El router trae su propio lector de cuerpo crudo
+   adentro; acá lo único que hace falta es que se monte primero. */
+app.use('/api/webhooks/pasarelas', webhooksPasarelasRouter);
+
 app.use(express.json());
 
 /* Qué versión del motor está corriendo ahora mismo.
@@ -113,7 +123,8 @@ app.use('/api/app-familias/medicacion', appFamiliasMedicacionRouter);
 app.use('/api/panel/medicacion', panelMedicacionRouter);
 app.use('/api/panel/marketplace', panelMarketplaceRouter);
 app.use('/api/panel/whatsapp', panelWhatsappRouter);
-app.use('/api/webhooks/pasarelas', webhooksPasarelasRouter);
+// `/api/webhooks/pasarelas` no está en esta lista a propósito: se monta más arriba, antes del
+// lector de JSON, por el motivo que explica el comentario de allá.
 
 const UN_DIA_MS = 24 * 60 * 60 * 1000;
 revisarVencimientos().catch((err) => console.error('Error en revisión inicial de vencimientos:', err.message));

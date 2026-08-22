@@ -52,6 +52,7 @@ export function PerfilTab({ asistente, onActualizado }) {
     dni: asistente.dni || '',
     telefono: asistente.telefono || '',
     email: asistente.email || '',
+    domicilio: asistente.domicilio || '',
     tipo_asistente_id: asistente.tipo_asistente_id || '',
     zonas: (asistente.zonas || []).join(', '),
     estado: asistente.estado,
@@ -102,6 +103,13 @@ export function PerfilTab({ asistente, onActualizado }) {
       zonas: form.zonas.split(',').map((s) => s.trim()).filter(Boolean),
       estado: form.estado,
       ...(esAdmin && {
+        /* Dónde vive, escrito para que lo lea una persona. Las coordenadas (`lat`/`lng`) no se
+           cargan a mano acá: se completan a partir de esta dirección por una vía todavía sin
+           decidir, y hasta entonces quedan en nulo.
+           Viaja solo cuando la pantalla lo tenía para mostrar: la vista que lee el Coordinador
+           (`asistentes_coordinador`) no trae esta columna, así que mandarlo igual borraría un
+           domicilio ya cargado que esa pantalla nunca llegó a mostrar. */
+        domicilio: form.domicilio.trim() || null,
         tipo_vinculo: form.tipo_vinculo,
         horas_semanales: form.horas_semanales || null,
         // La columna se llama `canales` de antes y no se renombra (regla 13). La palabra del
@@ -186,6 +194,11 @@ export function PerfilTab({ asistente, onActualizado }) {
       <FormField label={t.asistentes.dni} name="dni" value={form.dni} onChange={(e) => set('dni', e.target.value)} disabled={!puedeEditarIdentidad} />
       <FormField label={t.asistentes.telefono} name="telefono" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} disabled={!puedeEditarIdentidad} />
       <FormField label={t.asistentes.email} name="email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} disabled={!puedeEditarIdentidad} />
+      {/* El domicilio solo lo ve la administración: la vista del Coordinador no trae esa
+          columna, así que ahí el campo aparecería siempre vacío por más que el dato exista. */}
+      {esAdmin && (
+        <FormField label={t.asistentes.domicilio} name="domicilio" value={form.domicilio} onChange={(e) => set('domicilio', e.target.value)} disabled={!puedeEditarIdentidad} />
+      )}
 
       <dl className="panel-detalle-lista">
         <dt>{t.asistentes.fecha_alta}</dt>

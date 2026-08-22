@@ -23,29 +23,33 @@
 // cualquier cuenta que lea esas dos horas literalmente da mal justo en el caso más común.
 //
 // ----------------------------------------------------------------------------
-// Dos criterios que la gente espera ver y que HOY NO SE PUEDEN CALCULAR
+// La cercanía: cuándo se dice y cuándo se calla
 // ----------------------------------------------------------------------------
 //
-// 1. "A cuántos kilómetros vive el Asistente del Paciente."
-//    El Paciente sí tiene ubicación (`pacientes.lat`, `pacientes.lng`), pero el Asistente
-//    **no**: la tabla `asistentes` no tiene ni latitud, ni longitud, ni una zona comparable
-//    con la del Paciente (tiene `zonas`, que es una lista de nombres escritos a mano, y
-//    `pacientes` no tiene una columna de zona contra la cual compararla).
-//    No se estima, no se simula y no se inventa un número: un candidato ordenado por una
-//    distancia imaginaria es peor que un candidato sin ese criterio, porque parece confiable.
-//    Para tenerlo haría falta una de estas dos cosas, y es una decisión de esquema:
-//      a) `asistentes.lat` / `asistentes.lng` (domicilio del Asistente), o
-//      b) una zona de verdad —una tabla de zonas con id— referenciada por `asistentes` y por
-//         `pacientes`, para poder preguntar "¿es la misma zona?" sin comparar textos sueltos.
+// Desde que el legajo del Asistente guarda su domicilio (`asistentes.domicilio`, `lat`, `lng`),
+// la distancia hasta la casa del Paciente entra como un criterio más. Pero **solo cuando los
+// dos puntos existen de verdad**: si a cualquiera de los dos le falta la ubicación, este
+// archivo no dice nada sobre cercanía, ni a favor ni en contra. Un candidato ordenado por una
+// distancia inventada es peor que un candidato sin ese criterio, porque parece confiable.
 //
-// 2. "La autorización de la Obra Social está agotada."
-//    Ese dato no existe todavía en ningún lado. `pacientes.obra_social` es el nombre de la
-//    obra social, no un cupo de horas autorizadas ni un saldo. Haría falta guardar la
-//    autorización (período, horas o guardias autorizadas, consumidas) para poder avisarlo.
+// Y es distancia en línea recta, no tiempo de viaje. Cinco kilómetros del otro lado de un río
+// pueden ser una hora de colectivo. Por eso la cercanía suma bastante menos que la continuidad
+// y el motivo que se muestra dice los kilómetros, para que quien lee la lista pueda corregir
+// con lo que sabe del barrio.
 //
-// Mientras esas dos cosas no existan, este archivo no las nombra. Cuando existan, cada una es
-// un peso más en `PESOS` y una comprobación más abajo — nada del resto cambia.
+// ----------------------------------------------------------------------------
+// Un criterio que la gente espera ver y que HOY NO SE PUEDE CALCULAR
+// ----------------------------------------------------------------------------
+//
+// "La autorización de la Obra Social está agotada."
+// Ese dato no existe todavía en ningún lado. `pacientes.obra_social` es el nombre de la obra
+// social, no un cupo de horas autorizadas ni un saldo. Haría falta guardar la autorización
+// (período, horas o guardias autorizadas, consumidas) para poder avisarlo.
+//
+// Mientras eso no exista, este archivo no lo nombra. Cuando exista, es un peso más en `PESOS`
+// y una comprobación más abajo — nada del resto cambia.
 
+import { distanciaKm } from './distancia';
 import {
   inicioDeGuardia,
   finDeGuardia,
@@ -113,6 +117,16 @@ export const PESOS = {
   papeles_ok: 5,
   papeles_vencen: -10,
 
+  /**
+   * Vive cerca de la casa del Paciente. Suma parecido a estar libre y bastante menos que la
+   * continuidad, a propósito: la cuenta es en línea recta y no sabe nada del tránsito, del
+   * colectivo ni del río que puede haber en el medio. Es una ayuda para ordenar la lista, no
+   * un veredicto.
+   */
+  cerca: 10,
+  /** Vive lejos. Resta, no bloquea: hay gente que viaja una hora todos los días y está bien. */
+  lejos: -12,
+
   /** Lo máximo que resta acercarse al tope de horas. Se aplica proporcional, no de golpe. */
   horas_cerca_del_tope: -15,
   /** Con esta guardia se pasa del tope semanal. Resta mucho, pero no bloquea. */
@@ -158,6 +172,17 @@ export const TOPES = {
 
   /** Qué día arranca la semana para contar horas. 1 = lunes (0 sería domingo). */
   dia_inicio_semana: 1,
+
+  /**
+   * Los dos bordes de la cercanía, en kilómetros en línea recta entre el domicilio del Asistente
+   * y el del Paciente.
+   *
+   * Hasta `km_cerca` cuenta a favor; desde `km_lejos` cuenta en contra; **en el medio no se dice
+   * nada**. Ese silencio es deliberado: a doce kilómetros no hay nada que opinar, y forzar un
+   * veredicto para cada candidato llenaría la lista de renglones que no ayudan a decidir.
+   */
+  km_cerca: 8,
+  km_lejos: 25,
 };
 
 /** Las claves de traducción que devuelve este archivo. Viven en `t.guardias.cobertura_panel`. */
@@ -182,6 +207,8 @@ export const MOTIVO = {
   MODALIDAD_SUBCONTRATACION: 'motivo_modalidad_subcontratacion',
   PAPELES_OK: 'motivo_papeles_ok',
   PAPELES_VENCEN: 'motivo_papeles_vencen',
+  CERCA: 'motivo_cerca',
+  LEJOS: 'motivo_lejos',
   HORAS: 'motivo_horas',
   HORAS_PASA: 'motivo_horas_pasa',
   DESCANSO: 'motivo_descanso',
@@ -384,6 +411,36 @@ export function vecesQueAtendio(asistenteId, pacienteIds, guardias, ahora) {
  * Qué clave de traducción le corresponde a cada motivo de bloqueo de la Matrícula, y cuánto
  * resta. Los tres motivos vienen de `lib/matricula.js`, que es donde vive la regla.
  */
+/**
+ * A cuántos kilómetros vive el Asistente del Paciente más cercano de esta guardia, o `null`.
+ *
+ * Devuelve `null` —y no un número grande, ni un cero— cuando falta cualquiera de los dos puntos:
+ * si el Asistente no tiene su domicilio ubicado en el mapa, o si ninguno de los Pacientes de la
+ * guardia lo tiene. Quien llama tiene que callarse en ese caso. Una distancia inventada es peor
+ * que ninguna distancia, porque parece confiable y nadie la vuelve a revisar.
+ *
+ * Con varios Pacientes se toma **el más cercano**, que es lo único que se puede afirmar: el
+ * Asistente viaja hasta esa casa y las demás le quedan a un paso. Promediar daría un número que
+ * no corresponde a ningún viaje real.
+ *
+ * Es distancia en línea recta (`lib/distancia.js`), no tiempo de viaje.
+ */
+export function kmHastaElPaciente(asistente, pacientes) {
+  const lat = Number(asistente?.lat);
+  const lng = Number(asistente?.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+  let menor = null;
+  for (const paciente of lista(pacientes)) {
+    const pLat = Number(paciente?.lat);
+    const pLng = Number(paciente?.lng);
+    if (!Number.isFinite(pLat) || !Number.isFinite(pLng)) continue;
+    const km = distanciaKm(lat, lng, pLat, pLng);
+    if (menor === null || km < menor) menor = km;
+  }
+  return menor;
+}
+
 const MOTIVO_DE_BLOQUEO = {
   [BLOQUEO.SIN_MATRICULA]: { clave: MOTIVO.MATRICULA_FALTA, peso: 'matricula_falta' },
   [BLOQUEO.VENCIDA]: { clave: MOTIVO.MATRICULA_VENCIDA, peso: 'matricula_vencida' },
@@ -411,6 +468,9 @@ const MOTIVO_DE_BLOQUEO = {
  *                                     por Matrícula.
  *                    documentos     → filas de `documentos_asistente`
  *                    ofertas        → filas de `ofertas_guardia` de este hueco
+ *                    pacientes      → filas de `pacientes` con `id`, `lat` y `lng`, para poder
+ *                                     medir la distancia. Si no vienen, no se dice nada de la
+ *                                     cercanía; ningún otro criterio cambia.
  *                    ahora          → Date
  * @param opciones  `{ pesos, topes }` — todos opcionales, todos para pisar
  *                  los valores de arriba sin tocar este archivo.
@@ -436,6 +496,12 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
   const ofertas = lista(datos.ofertas);
   const estadosMatricula = lista(datos.estadoMatricula);
 
+  // Los Pacientes de este hueco, una sola vez para toda la lista: la distancia se mide contra
+  // los mismos puntos para cada Asistente, y volver a filtrarlos por candidato sería recorrer
+  // la lista entera de Pacientes tantas veces como plantel tenga la Prestadora.
+  const buscados = new Set(idsDePacientes(hueco).filter(Boolean));
+  const pacientesDelHueco = lista(datos.pacientes).filter((p) => buscados.has(p?.id));
+
   // Los ya invitados, en un conjunto: preguntarlo una vez por Asistente sobre un array sería
   // recorrer la lista de ofertas otras tantas veces para nada.
   const yaInvitados = new Set(
@@ -450,6 +516,7 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
       guardias,
       matriculas,
       documentos,
+      pacientesDelHueco,
       ahora,
       pesos,
       topes,
@@ -607,6 +674,21 @@ function evaluarAsistente(asistente, ctx) {
     } else if (descanso <= topes.horas_descanso_a_mencionar) {
       suma(aFavor, MOTIVO.DESCANSO, { horas: redondear(descanso) }, pesos.descanso_ok);
     }
+  }
+
+  // --- 7. Cercanía. No bloquea nunca: hay gente que viaja una hora todos los días y lo tiene
+  //        resuelto. Y se calla cuando falta cualquiera de los dos domicilios en el mapa, que
+  //        hoy es lo más común, porque nadie convierte todavía una dirección escrita en un par
+  //        de coordenadas. El motivo muestra los kilómetros para que quien lee la lista pueda
+  //        corregir con lo que sabe del barrio: son en línea recta, no de viaje.
+  const km = kmHastaElPaciente(asistente, ctx.pacientesDelHueco);
+  if (km !== null) {
+    if (km <= topes.km_cerca) {
+      suma(aFavor, MOTIVO.CERCA, { km: redondear(km) }, pesos.cerca);
+    } else if (km >= topes.km_lejos) {
+      suma(enContra, MOTIVO.LEJOS, { km: redondear(km) }, pesos.lejos);
+    }
+    // Entre un borde y el otro no se dice nada: a doce kilómetros no hay nada que opinar.
   }
 
   return {

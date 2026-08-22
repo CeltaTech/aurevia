@@ -3,15 +3,43 @@
 // propia URL del webhook (una URL distinta por Prestadora, configurada al conectar la
 // pasarela) — así no hace falta adivinar a qué tenant pertenece el evento antes de leer la
 // credencial correspondiente.
+//
+// Pendiente #159 — que la dirección sea pública quiere decir que cualquiera puede golpearla.
+// Lo único que separa un aviso de cobro de verdad de uno inventado es la firma que trae, y
+// esa firma se comprueba acá antes de tocar una sola fila. Dos consecuencias de eso, que son
+// las que hacen que esto funcione:
+//
+//   1. **El cuerpo se recibe crudo.** La firma se calcula sobre los bytes exactos que mandó
+//      la pasarela. Si express los convierte a objeto y el adaptador los vuelve a convertir a
+//      texto, el resultado se parece pero no es igual —un espacio, el orden de dos campos, un
+//      acento escapado— y la firma no coincide nunca. Por eso este router trae su propio
+//      lector de cuerpo (`express.raw`) y en `server.js` se monta **antes** del
+//      `express.json()` general, que si no se lleva el pedido primero.
+//   2. **Ante la duda se corta con 401.** No hay fila de credenciales, no hay secreto de
+//      firma guardado, falta la cabecera, la firma no da: se rechaza. Nunca "se sigue igual".
 
-import { Router } from 'express';
+import express, { Router } from 'express';
 import { supabase } from '../db/connection.js';
 import { obtenerAdaptador } from '../pasarelas/index.js';
+import { esRechazoDeAutenticidad, MOTIVO } from '../pasarelas/firmaWebhook.js';
 
 export const webhooksPasarelasRouter = Router();
 
+// El lector del cuerpo crudo viaja con el router y no suelto en `server.js`: quien monte este
+// router se lleva el lector puesto, y lo único que hay que recordar afuera es montarlo antes
+// del `express.json()` general. Un megabyte es holgado para el aviso más grande que manda
+// cualquiera de las dos pasarelas.
+webhooksPasarelasRouter.use(express.raw({ type: 'application/json', limit: '1mb' }));
+
 webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', async (req, res) => {
   const { proveedor, prestadoraId } = req.params;
+
+  function rechazar(motivo) {
+    // El motivo queda del lado del servidor. Al que golpeó la puerta se le contesta siempre
+    // lo mismo: decirle cuál de las comprobaciones falló es enseñarle a pasarla.
+    console.warn('Aviso de pasarela rechazado:', proveedor, prestadoraId, motivo);
+    return res.status(401).json({ error: 'Aviso no autenticado' });
+  }
 
   let adaptador;
   try {
@@ -20,31 +48,57 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', async (req, res) => {
     return res.status(404).json({ error: 'Proveedor desconocido' });
   }
 
+  // Si esto no es un Buffer, el lector de cuerpo crudo no corrió: o el router quedó montado
+  // después del `express.json()` general, o el que llama mandó un tipo de contenido que no
+  // es JSON. En los dos casos no hay con qué comprobar la firma, y sin eso no se sigue.
+  const cuerpoCrudo = Buffer.isBuffer(req.body) ? req.body : null;
+  if (!cuerpoCrudo) return rechazar(MOTIVO.CUERPO_AUSENTE);
+
+  let body;
+  try {
+    body = JSON.parse(cuerpoCrudo.toString('utf8'));
+  } catch {
+    return res.status(400).json({ error: 'Cuerpo ilegible' });
+  }
+
   const { data: credencialFila } = await supabase
     .from('credenciales_pasarela_pago')
-    .select('credencial_secret_id')
+    .select('credencial_secret_id, secreto_firma_secret_id')
     .eq('prestadora_id', prestadoraId)
     .eq('proveedor', proveedor)
     .maybeSingle();
 
-  let credencial = null;
-  if (credencialFila) {
-    const { data } = await supabase.rpc('leer_credencial_pasarela_pago', {
+  // Sin fila de credenciales no hay nada guardado para esta Prestadora en este proveedor: ni
+  // credencial ni secreto de firma. Antes el proceso seguía igual y terminaba dando por bueno
+  // un aviso que nadie firmó; ahora corta acá.
+  if (!credencialFila) return rechazar(MOTIVO.SECRETO_AUSENTE);
+
+  const [{ data: credencial }, { data: secretoFirma }] = await Promise.all([
+    supabase.rpc('leer_credencial_pasarela_pago', {
       p_prestadora_id: prestadoraId,
       p_proveedor: proveedor,
-    });
-    credencial = data;
-  }
+    }),
+    supabase.rpc('leer_secreto_firma_pasarela_pago', {
+      p_prestadora_id: prestadoraId,
+      p_proveedor: proveedor,
+    }),
+  ]);
 
-  const { valido, referenciaExterna, estado } = adaptador.verificarWebhook({
+  const { valido, motivo, referenciaExterna, estado } = adaptador.verificarWebhook({
     credencial,
+    secretoFirma,
     headers: req.headers,
-    body: req.body,
+    consulta: req.query,
+    cuerpoCrudo,
+    body,
   });
 
-  // Siempre 200: reintentar un webhook inválido no cambia nada (no hay estado que
-  // reconciliar), y devolver un error hace que el proveedor siga reintentando indefinidamente.
   if (!valido) {
+    // Un aviso que no se pudo probar auténtico se rechaza con 401. Los demás casos —viene
+    // firmado de verdad pero adentro no trae ninguna referencia de cobro— siguen contestando
+    // 200: reintentarlo no cambia nada, y devolver un error hace que el proveedor lo repita
+    // indefinidamente.
+    if (esRechazoDeAutenticidad(motivo)) return rechazar(motivo);
     return res.status(200).json({ ok: true });
   }
 

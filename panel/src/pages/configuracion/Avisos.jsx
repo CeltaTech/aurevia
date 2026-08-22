@@ -880,6 +880,19 @@ const esperaGuardiaSinCerrarValida = (valor) => {
   return Number.isInteger(minutos) && minutos > 0 && minutos <= MINUTOS_DE_UN_DIA;
 };
 
+/* El tope de la espera antes de que ese mismo aviso escale: tres días enteros. Más allá de
+   ahí ya no hay nada que escalar, porque una guardia que lleva tres días abierta significa
+   una Familia que hace tres días no sabe si a su Paciente lo cuidaron. La base rechaza igual
+   cualquier número que se pase; se comprueba también acá por el mismo motivo que la espera de
+   arriba, para que se lea qué se esperaba en vez de una falla del sistema. El valor con el
+   que arranca llega de la base con el resto de la configuración (`CLAUDE.md` §7, regla 1). */
+const HORAS_DE_TRES_DIAS = 72;
+
+const escaladaGraveSinCerrarValida = (valor) => {
+  const horas = Number(valor);
+  return Number.isInteger(horas) && horas > 0 && horas <= HORAS_DE_TRES_DIAS;
+};
+
 function TabWhatsappEscaladaCoordinador() {
   const { t } = useLocale();
   const [form, setForm] = useState(null);
@@ -924,6 +937,15 @@ function TabWhatsappEscaladaCoordinador() {
       setError(con(t.configuracion.whatsapp_escalada_minutos_guardia_sin_cerrar_invalido, { maximo: MINUTOS_DE_UN_DIA }));
       return;
     }
+    // Ni con una escalada imposible: pasado ese plazo el aviso sale una vez más, por el evento
+    // `guardia_sin_cerrar_grave`, hacia quien la Prestadora haya puesto en su propia lista de
+    // destinatarios — la gente con autoridad para resolverlo. Si el plazo no llega nunca, esa
+    // segunda salida tampoco.
+    if (!escaladaGraveSinCerrarValida(form.horas_antes_aviso_grave_sin_cerrar)) {
+      setGuardado(false);
+      setError(con(t.configuracion.whatsapp_escalada_horas_guardia_sin_cerrar_grave_invalido, { maximo: HORAS_DE_TRES_DIAS }));
+      return;
+    }
     setGuardando(true);
     setError(null);
     // Se ordenan antes de mandarlos: el motor lee la lista de arriba hacia abajo y se
@@ -940,6 +962,7 @@ function TabWhatsappEscaladaCoordinador() {
           fase_automatica_activa: form.fase_automatica_activa,
           minutos_antes_fase_automatica: Number(form.minutos_antes_fase_automatica),
           minutos_gracia_cierre_guardia: Number(form.minutos_gracia_cierre_guardia),
+          horas_antes_aviso_grave_sin_cerrar: Number(form.horas_antes_aviso_grave_sin_cerrar),
         }),
       });
       // La pantalla se queda con la lista tal como quedó guardada, no como se tipeó: si
@@ -1002,6 +1025,13 @@ function TabWhatsappEscaladaCoordinador() {
               type="number"
               value={form.minutos_gracia_cierre_guardia ?? ''}
               onChange={(e) => set('minutos_gracia_cierre_guardia', e.target.value)}
+            />
+            <FormField
+              label={t.configuracion.whatsapp_escalada_horas_guardia_sin_cerrar_grave}
+              name="horas_antes_aviso_grave_sin_cerrar"
+              type="number"
+              value={form.horas_antes_aviso_grave_sin_cerrar ?? ''}
+              onChange={(e) => set('horas_antes_aviso_grave_sin_cerrar', e.target.value)}
             />
             <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
           </div>

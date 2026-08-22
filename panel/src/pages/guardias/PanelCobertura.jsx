@@ -125,6 +125,21 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
       return;
     }
 
+    // Dónde vive la gente de este hueco, para poder medir la distancia hasta el domicilio de
+    // cada candidato. Va aparte y no en el pedido de arriba porque recién acá se sabe a quiénes
+    // atiende esta guardia; son una o dos filas, y sin ellas la cercanía simplemente no se
+    // menciona. Que falle no puede dejar sin pantalla a quien está tapando un hueco: se sigue
+    // igual, con un criterio menos.
+    const idsDelHueco = pacientesDeGuardia(guardia, pacientesPorGuardia);
+    let pacientes = [];
+    if (idsDelHueco.length) {
+      const { data } = await supabase
+        .from('pacientes')
+        .select('id, lat, lng')
+        .in('id', idsDelHueco);
+      pacientes = data ?? [];
+    }
+
     setDatos({
       asistentes: asistentes ?? [],
       guardias: (gs.data ?? []).map((g) => ({ ...g, paciente_ids: pacientesDeGuardia(g, pacientesPorGuardia) })),
@@ -132,6 +147,7 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
       documentos: ds.data ?? [],
       ofertas: os.data ?? [],
       estadoMatricula: em.data ?? [],
+      pacientes,
       ahora: new Date(),
     });
     setEstado('listo');

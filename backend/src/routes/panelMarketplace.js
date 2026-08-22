@@ -6,7 +6,7 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
-import { proveedoresDisponibles, obtenerAdaptador } from '../pasarelas/index.js';
+import { proveedoresDisponibles, obtenerAdaptador, requiereSecretoFirma } from '../pasarelas/index.js';
 import { tokenQrCobroValido } from '../utils/qrCobroEfectivo.js';
 
 export const panelMarketplaceRouter = Router();
@@ -38,15 +38,56 @@ panelMarketplaceRouter.get('/pasarela', async (req, res) => {
     .eq('prestadora_id', req.usuarioPanel.prestadoraId);
   if (error) return res.status(500).json({ error: error.message });
 
+  // Qué secretos tiene guardados cada proveedor. Nunca el texto —eso no sale de la caja
+  // fuerte ni para el Admin que lo cargó—, solamente si está o no está: sin el secreto de
+  // firma, los avisos de cobro de esa pasarela se rechazan y la pantalla tiene que poder
+  // decirlo (pendiente #159).
+  const { data: secretos, error: errorSecretos } = await supabase
+    .from('credenciales_pasarela_pago')
+    .select('proveedor, secreto_firma_secret_id')
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  if (errorSecretos) return res.status(500).json({ error: errorSecretos.message });
+
   const activados = new Map(data.map((fila) => [fila.proveedor, fila]));
+  const conSecretoDeFirma = new Set(
+    (secretos ?? []).filter((fila) => fila.secreto_firma_secret_id).map((fila) => fila.proveedor)
+  );
   const pasarelas = proveedoresDisponibles().map((proveedor) => ({
     proveedor,
     activo: activados.has(proveedor),
     estado_conexion: activados.get(proveedor)?.estado_conexion ?? null,
     conectada_en: activados.get(proveedor)?.conectada_en ?? null,
+    requiere_secreto_firma: requiereSecretoFirma(proveedor),
+    secreto_firma_cargado: conSecretoDeFirma.has(proveedor),
   }));
 
   res.json({ pasarelas });
+});
+
+// El secreto con el que la pasarela firma sus avisos de cobro (pendiente #159). Va aparte de
+// la credencial y de la activación porque se carga en otro momento: la Prestadora primero
+// conecta la pasarela y después saca el secreto del panel del proveedor, y porque se rota
+// cada tanto sin tocar nada más. Se guarda en la misma caja fuerte que la credencial y no se
+// vuelve a mostrar.
+panelMarketplaceRouter.put('/pasarela/:proveedor/secreto-firma', async (req, res) => {
+  const { proveedor } = req.params;
+  const { secretoFirma } = req.body || {};
+
+  if (!requiereSecretoFirma(proveedor)) {
+    return res.status(400).json({ error: 'Este proveedor no firma sus avisos de cobro' });
+  }
+  if (typeof secretoFirma !== 'string' || !secretoFirma.trim()) {
+    return res.status(400).json({ error: 'Hace falta el secreto de firma' });
+  }
+
+  const { error } = await supabase.rpc('guardar_secreto_firma_pasarela_pago', {
+    p_prestadora_id: req.usuarioPanel.prestadoraId,
+    p_proveedor: proveedor,
+    p_secreto: secretoFirma.trim(),
+  });
+  if (error) return res.status(500).json({ error: error.message });
+
+  res.json({ ok: true });
 });
 
 panelMarketplaceRouter.patch('/pasarela/:proveedor', async (req, res) => {

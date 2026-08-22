@@ -108,7 +108,10 @@ export function EstadoActual() {
       // porque el panel de cobertura deja afuera a quien no trabaja en la modalidad
       // de la vacante. Sin esa columna la pantalla no tendría con qué comparar y los daría a
       // todos por buenos, hasta que la base rechazara la asignación (lib/modalidades.js).
-      supabase.from('asistentes').select('id, nombre, estado, horas_semanales, canales'),
+      // `lat`/`lng` es dónde vive cada uno, para poder medir la distancia hasta la casa del
+      // Paciente. Viajan las coordenadas y no el domicilio escrito: acá no se muestra la
+      // dirección de nadie, solo se calculan kilómetros (CLAUDE.md §6).
+      supabase.from('asistentes').select('id, nombre, estado, horas_semanales, canales, lat, lng'),
       supabase.from('pacientes').select('id, nombre'),
       supabase
         .from('documentos_asistente')

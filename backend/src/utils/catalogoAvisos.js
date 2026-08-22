@@ -27,6 +27,7 @@
 // Verificado contra el código que los emite (2026-08-11):
 //   guardia_sin_cubrir             → utils/revisarGuardiasSinCubrir.js:100 (notificarCoordinador)
 //   guardia_sin_cerrar             → utils/revisarNotificacionesCoordinador.js (notificarCoordinador)
+//   guardia_sin_cerrar_grave       → utils/revisarNotificacionesCoordinador.js (notificarCoordinador)
 //   alerta_temprana_guardia        → utils/revisarNotificacionesCoordinador.js:65 (notificarCoordinador)
 //   incidente_relevo_sin_resolver  → utils/revisarNotificacionesCoordinador.js:113, 143, 213
 //                                    (notificarCoordinador) + :160 aviso a la Familia
@@ -54,6 +55,16 @@ export const CATALOGO_AVISOS = [
     // de la operación de la Prestadora, no del cuidado: el Asistente puede haber estado las
     // ocho horas y haberse ido a horario. Avisarle a la Familia sería alarmarla por algo que
     // no le pasó a su Paciente.
+    admite_familia: false,
+  },
+  {
+    evento: 'guardia_sin_cerrar_grave',
+    descripcion: 'Una guardia lleva horas sin cerrarse y nadie lo resolvió',
+    admite_whatsapp: true,
+    // Tiene su propio evento, y no es una repetición del anterior con otro texto. El de arriba
+    // le llega a quien coordina el día; este le llega a quien tiene autoridad para resolver lo
+    // que la coordinación no pudo. Separarlos es lo que le permite a la Prestadora poner
+    // destinatarios distintos sin que el primero le llegue a la dirección cada quince minutos.
     admite_familia: false,
   },
   {

@@ -286,7 +286,7 @@ const FILAS_DE_UN_MIEMBRO_CIRCULO = [
 // manual de la Fase 1, en vez de duplicar la lógica (ver alcance de la Fase 3 en el plan
 // aprobado: "no se construye un camino de creación de datos paralelo y distinto").
 export async function crearAsistenteDirecto({
-  nombre, telefono, email, dni, tipo_asistente_id, tipo_asistente, zonas, estado,
+  nombre, telefono, email, dni, domicilio, tipo_asistente_id, tipo_asistente, zonas, estado,
   tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales, modalidades,
   prestadoraId, usuarioPanelId, importacionId,
 }) {
@@ -322,6 +322,10 @@ export async function crearAsistenteDirecto({
       dni: dni || null,
       telefono: telefono || null,
       email,
+      // Dónde vive, escrito para que lo lea una persona. Las coordenadas (`lat`/`lng`) no se
+      // cargan en el alta: se sacan de esta dirección por una vía todavía sin decidir, y hasta
+      // entonces quedan en nulo. Dato sensible: no sale en registros ni en URLs (CLAUDE.md §6).
+      domicilio: domicilio || null,
       tipo_asistente_id: tipoAsistenteId,
       zonas: zonasArray,
       estado: estado || 'activo',

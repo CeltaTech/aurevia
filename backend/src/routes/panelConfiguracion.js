@@ -895,6 +895,8 @@ panelConfiguracionRouter.patch('/modalidades/:modalidad', async (req, res) => {
 // mostrar algo antes de que exista la fila.
 const MINUTOS_GRACIA_CIERRE_POR_DEFECTO = 15;
 const MINUTOS_DE_UN_DIA = 24 * 60;
+const HORAS_ANTES_DE_ESCALAR_POR_DEFECTO = 4;
+const HORAS_DE_TRES_DIAS = 72;
 
 panelConfiguracionRouter.get('/escalada-coordinador', async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
@@ -917,6 +919,7 @@ panelConfiguracionRouter.get('/escalada-coordinador', async (req, res) => {
       fase_automatica_activa: false,
       minutos_antes_fase_automatica: 120,
       minutos_gracia_cierre_guardia: MINUTOS_GRACIA_CIERRE_POR_DEFECTO,
+      horas_antes_aviso_grave_sin_cerrar: HORAS_ANTES_DE_ESCALAR_POR_DEFECTO,
     },
   });
 });
@@ -925,7 +928,7 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
   const {
     coordinador_backup_id, minutos_antes_backup, umbrales_premura,
     fase_automatica_activa, minutos_antes_fase_automatica,
-    minutos_gracia_cierre_guardia,
+    minutos_gracia_cierre_guardia, horas_antes_aviso_grave_sin_cerrar,
   } = req.body;
 
   // Los tramos deciden cada cuánto se le vuelve a insistir al Coordinador. Antes se guardaban
@@ -948,6 +951,15 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
     }
   }
 
+  if (horas_antes_aviso_grave_sin_cerrar !== undefined) {
+    const horas = Number(horas_antes_aviso_grave_sin_cerrar);
+    if (!Number.isInteger(horas) || horas <= 0 || horas > HORAS_DE_TRES_DIAS) {
+      return res.status(400).json({
+        error: `Las horas antes de escalar una guardia sin cerrar tienen que ser un número entero entre 1 y ${HORAS_DE_TRES_DIAS}`,
+      });
+    }
+  }
+
   const { error } = await supabase
     .from('configuracion_escalada_coordinador')
     .upsert({
@@ -958,6 +970,8 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
       fase_automatica_activa,
       minutos_antes_fase_automatica,
       minutos_gracia_cierre_guardia: minutos_gracia_cierre_guardia ?? MINUTOS_GRACIA_CIERRE_POR_DEFECTO,
+      horas_antes_aviso_grave_sin_cerrar:
+        horas_antes_aviso_grave_sin_cerrar ?? HORAS_ANTES_DE_ESCALAR_POR_DEFECTO,
       updated_at: new Date().toISOString(),
     });
   if (error) return res.status(500).json({ error: error.message });

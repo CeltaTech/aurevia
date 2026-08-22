@@ -20,6 +20,7 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
   const [dni, setDni] = useState('');
   const [telefono, setTelefono] = useState('');
   const [email, setEmail] = useState('');
+  const [domicilio, setDomicilio] = useState('');
   const [tipoAsistenteId, setTipoAsistenteId] = useState('');
   const [zonas, setZonas] = useState('');
   const { paraElegir: tiposAsistente } = useTiposAsistente();
@@ -64,6 +65,7 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
           dni,
           telefono,
           email,
+          domicilio,
           tipo_asistente_id: tipoAsistenteId || null,
           zonas: zonas.split(',').map((s) => s.trim()).filter(Boolean),
           modalidades: modalidadesMarcadas,
@@ -93,6 +95,8 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
           <FormField label={t.asistentes.dni} name="dni" value={dni} onChange={(e) => setDni(e.target.value)} />
           <FormField label={t.asistentes.telefono} name="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
           <FormField label={t.asistentes.email} name="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          {/* Opcional: si no se sabe al dar de alta, se carga después desde el legajo. */}
+          <FormField label={t.asistentes.domicilio} name="domicilio" value={domicilio} onChange={(e) => setDomicilio(e.target.value)} />
           <FormField label={t.asistentes.col_tipo} name="tipo_asistente_id" type="select" value={tipoAsistenteId} onChange={(e) => setTipoAsistenteId(e.target.value)}>
             <option value="">{t.asistentes.tipo_sin_asignar}</option>
             {tiposAsistente.map((tipo) => (

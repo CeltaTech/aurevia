@@ -61,6 +61,7 @@ async function revisarGuardiasSinCerrar(config, ahora) {
     minutos_antes_backup: minutosAntesBackup,
     coordinador_backup_id: backupId,
     minutos_gracia_cierre_guardia: minutosDeGracia,
+    horas_antes_aviso_grave_sin_cerrar: horasAntesDeEscalar,
   } = config;
 
   // Sin margen configurado no se avisa nada. La columna tiene valor por defecto, así que esto
@@ -71,7 +72,7 @@ async function revisarGuardiasSinCerrar(config, ahora) {
   // después contra la hora de fin, que la base guarda en otra columna.
   const { data: guardias, error } = await supabase
     .from('guardias')
-    .select('id, fecha, hora_inicio, hora_fin, paciente_id, checkout_at, aviso_sin_cerrar_at, aviso_sin_cerrar_veces, aviso_sin_cerrar_backup_at, asistentes(nombre)')
+    .select('id, fecha, hora_inicio, hora_fin, paciente_id, checkout_at, aviso_sin_cerrar_at, aviso_sin_cerrar_veces, aviso_sin_cerrar_backup_at, aviso_sin_cerrar_grave_at, asistentes(nombre)')
     .eq('prestadora_id', prestadoraId)
     .eq('estado', 'activa')
     .is('cerrada_at', null)
@@ -140,6 +141,37 @@ async function revisarGuardiasSinCerrar(config, ahora) {
       });
       await supabase.from('guardias').update({ aviso_sin_cerrar_backup_at: ahora.toISOString() }).eq('id', guardia.id);
     }
+
+    // El tercer escalón. A esta altura la insistencia al Coordinador y el aviso a su respaldo
+    // ya salieron y no alcanzaron: la guardia lleva horas abierta. Deja de ser un aviso de
+    // operación y pasa a ser una emergencia, que sale una sola vez por su propio evento y a
+    // sus propios destinatarios. Ver la migración
+    // 20260822210000_una_guardia_sin_cerrar_que_no_se_resuelve_escala_a_la_direccion.sql.
+    if (
+      horasAntesDeEscalar &&
+      !guardia.aviso_sin_cerrar_grave_at &&
+      minutosPremura >= horasAntesDeEscalar * 60
+    ) {
+      await notificarCoordinador({
+        evento: 'guardia_sin_cerrar_grave',
+        prestadoraId,
+        asunto: 'Urgente: una guardia lleva horas sin cerrarse',
+        texto: textoGuardiaSinCerrarGrave({
+          guardia,
+          pacientes: pacientesPorGuardia.get(guardia.id) ?? [],
+          fin,
+          ahora,
+        }),
+      });
+
+      const { error: errorGrave } = await supabase
+        .from('guardias')
+        .update({ aviso_sin_cerrar_grave_at: ahora.toISOString() })
+        .eq('id', guardia.id);
+      if (errorGrave) {
+        console.error(`Error marcando el aviso grave de guardia sin cerrar (${guardia.id}):`, errorGrave.message);
+      }
+    }
   }
 }
 
@@ -160,19 +192,9 @@ function finDeLaGuardia(guardia) {
 // se fue y lo que falta es la confirmación; si no la marcó, puede seguir en el domicilio y
 // eso es otra conversación.
 function textoGuardiaSinCerrar({ guardia, pacientes, fin, ahora, veces }) {
-  const nombres = pacientes.map((p) => p.nombre).filter(Boolean);
-  const paciente =
-    nombres.length === 0
-      ? 'Paciente sin nombre cargado'
-      : [nombres.slice(0, -1).join(', '), nombres.at(-1)].filter(Boolean).join(' y ');
-
-  const asistente = guardia.asistentes?.nombre ?? 'Asistente sin asignar';
-  const minutos = Math.round((ahora.getTime() - fin.getTime()) / MS_POR_MINUTO);
-  const atraso = minutos < 120 ? `${minutos} minutos` : `${Math.round(minutos / 60)} horas`;
-
   const lineas = [
-    `Guardia del ${guardia.fecha}, de ${guardia.hora_inicio} a ${guardia.hora_fin}, para ${paciente}.`,
-    `A cargo de ${asistente}. Terminaba hace ${atraso} y sigue abierta.`,
+    `Guardia del ${guardia.fecha}, de ${guardia.hora_inicio} a ${guardia.hora_fin}, para ${nombresDePacientes(pacientes)}.`,
+    `A cargo de ${asistenteDe(guardia)}. Terminaba hace ${atrasoDesde(fin, ahora)} y sigue abierta.`,
     guardia.checkout_at
       ? 'El Asistente ya marcó su salida: falta confirmar que quedó todo hecho.'
       : 'El Asistente todavía no marcó su salida.',
@@ -181,6 +203,43 @@ function textoGuardiaSinCerrar({ guardia, pacientes, fin, ahora, veces }) {
   if (veces > 1) lineas.push(`Es el aviso número ${veces} de esta misma guardia.`);
 
   return lineas.join('\n');
+}
+
+// El aviso que escala. Dice lo mismo que el anterior más las dos cosas que lo vuelven otra
+// conversación: que a esto ya se le avisó al Coordinador y no se resolvió, y qué está en juego
+// si sigue así. Lo segundo no es dramatismo: una guardia abierta durante días es, en los
+// hechos, una Familia que no sabe si a su Paciente lo cuidaron.
+function textoGuardiaSinCerrarGrave({ guardia, pacientes, fin, ahora }) {
+  const lineas = [
+    `Guardia del ${guardia.fecha}, de ${guardia.hora_inicio} a ${guardia.hora_fin}, para ${nombresDePacientes(pacientes)}.`,
+    `A cargo de ${asistenteDe(guardia)}. Terminaba hace ${atrasoDesde(fin, ahora)} y sigue abierta.`,
+    'Ya se avisó al Coordinador y la guardia sigue sin cerrarse. Hace falta que intervenga alguien con autoridad para resolverlo.',
+    guardia.checkout_at
+      ? 'El Asistente marcó su salida, así que se fue del domicilio: lo que falta es confirmar que quedó todo hecho.'
+      : 'El Asistente no marcó su salida, así que no hay constancia de que la guardia haya terminado ni de quién quedó a cargo del Paciente.',
+    'Este aviso sale una sola vez por guardia.',
+  ];
+
+  return lineas.join('\n');
+}
+
+/** Los Pacientes de una guardia, en una frase: «Ana», «Ana y Luis», «Ana, Luis y Marta». */
+function nombresDePacientes(pacientes) {
+  const nombres = pacientes.map((p) => p.nombre).filter(Boolean);
+  if (nombres.length === 0) return 'Paciente sin nombre cargado';
+  return [nombres.slice(0, -1).join(', '), nombres.at(-1)].filter(Boolean).join(' y ');
+}
+
+const asistenteDe = (guardia) => guardia.asistentes?.nombre ?? 'Asistente sin asignar';
+
+/**
+ * Cuánto hace que terminaba la guardia, en la unidad que se entiende de un vistazo. Por debajo
+ * de dos horas se dice en minutos y por encima en horas: «185 minutos» obliga a hacer la cuenta
+ * justo cuando quien lee tiene que decidir rápido.
+ */
+function atrasoDesde(fin, ahora) {
+  const minutos = Math.round((ahora.getTime() - fin.getTime()) / MS_POR_MINUTO);
+  return minutos < 120 ? `${minutos} minutos` : `${Math.round(minutos / 60)} horas`;
 }
 
 // La fecha de un momento tal como la guarda la base (`2026-08-22`), en hora local.

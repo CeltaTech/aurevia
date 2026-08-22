@@ -3,8 +3,15 @@
 // la cuenta conectada de la Prestadora.
 
 import { IDENTIDAD } from '../config/identidadProducto.js';
+import { comprobarFirma, MOTIVO } from './firmaWebhook.js';
 
 const API_BASE = process.env.STRIPE_API_BASE || 'https://api.stripe.com/v1';
+
+/** Stripe firma sus avisos, así que la Prestadora tiene que cargar el secreto de firma del
+ *  endpoint además de la credencial de cobro. El Panel lee esta marca para saber si le pide
+ *  ese segundo dato o no (regla 12: la lista de quién firma vive en el adaptador, no
+ *  copiada en la pantalla). */
+export const REQUIERE_SECRETO_FIRMA = true;
 
 function form(objeto) {
   return new URLSearchParams(objeto).toString();
@@ -50,17 +57,43 @@ export async function cancelarSuscripcion({ credencial, referenciaExterna }) {
   return { ok: true };
 }
 
-export function verificarWebhook({ body }) {
-  // La verificación real de firma (Stripe-Signature) requiere el webhook signing secret
-  // por Prestadora, guardado junto a la credencial — se valida en la ruta de webhook antes
-  // de llamar acá, este adaptador solo interpreta el evento ya verificado.
+/**
+ * Comprueba que el aviso vino de Stripe y recién ahí lo interpreta (pendiente #159).
+ *
+ * Stripe manda la cabecera `Stripe-Signature` con la forma `t=<instante>,v1=<firma>`, y la
+ * firma es el HMAC-SHA256 de `<instante>.<cuerpo crudo>` con el secreto de firma de ese
+ * endpoint (el `whsec_…` que la Prestadora carga en el Panel). El cuerpo tiene que ser el
+ * que llegó, byte por byte: si express lo convirtió a objeto y se lo vuelve a convertir a
+ * texto, un espacio de más o el orden de dos campos alcanzan para que la firma no dé nunca.
+ * Por eso la ruta pasa `cuerpoCrudo` aparte del `body` ya leído.
+ */
+export function verificarWebhook({ secretoFirma, headers, cuerpoCrudo, body, ahoraMs }) {
+  if (!Buffer.isBuffer(cuerpoCrudo)) {
+    return { valido: false, motivo: MOTIVO.CUERPO_AUSENTE, referenciaExterna: null, estado: 'pendiente' };
+  }
+
+  const comprobacion = comprobarFirma({
+    secreto: secretoFirma,
+    cabecera: headers?.['stripe-signature'],
+    claveDelInstante: 't',
+    textoFirmado: (instante) => [`${instante}.`, cuerpoCrudo],
+    ahoraMs,
+  });
+  if (!comprobacion.valido) {
+    return { valido: false, motivo: comprobacion.motivo, referenciaExterna: null, estado: 'pendiente' };
+  }
+
   const referenciaExterna = body?.data?.object?.id;
+  if (!referenciaExterna) {
+    return { valido: false, motivo: MOTIVO.SIN_REFERENCIA, referenciaExterna: null, estado: 'pendiente' };
+  }
+
   const mapa = {
     'invoice.paid': 'exitoso',
     'invoice.payment_failed': 'fallido',
     'customer.subscription.deleted': 'fallido',
   };
-  return { valido: Boolean(referenciaExterna), referenciaExterna, estado: mapa[body?.type] || 'pendiente' };
+  return { valido: true, motivo: null, referenciaExterna, estado: mapa[body?.type] || 'pendiente' };
 }
 
 export async function consultarEstado({ credencial, referenciaExterna }) {

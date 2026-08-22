@@ -97,13 +97,13 @@ export default function Medicacion() {
 
       <h1>{t.medicacion.titulo}</h1>
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && <div className="alert alert-error" role="alert">{error}</div>}
 
-      {indicaciones === undefined && <div className="estado-cargando">{t.comun.cargando}</div>}
+      {indicaciones === undefined && <div className="estado-cargando" role="status">{t.comun.cargando}</div>}
 
       {indicaciones !== undefined && (
         <>
-          {indicaciones.length === 0 && <div className="estado-vacio">{t.medicacion.sin_indicaciones}</div>}
+          {indicaciones.length === 0 && <div className="estado-vacio" role="status">{t.medicacion.sin_indicaciones}</div>}
           {indicaciones.map((ind) => (
             <div key={ind.id} className="guardia-card-detalle" style={{ marginBottom: '0.6rem' }}>
               <div>
@@ -127,7 +127,7 @@ export default function Medicacion() {
         <>
           <h2 style={{ marginTop: '1.5rem' }}>{t.medicacion.nueva_titulo}</h2>
 
-          {soloLectura && <div className="alert alert-error">{t.medicacion.solo_lectura}</div>}
+          {soloLectura && <div className="alert alert-error" role="alert">{t.medicacion.solo_lectura}</div>}
 
           {!soloLectura && (
             <form onSubmit={handleSubmit}>
@@ -152,7 +152,7 @@ export default function Medicacion() {
               <label>{t.medicacion.campo_prescripcion}</label>
               <input type="file" accept="application/pdf,image/jpeg,image/png" onChange={(e) => setArchivo(e.target.files?.[0] || null)} />
 
-              {exito && <div className="alert alert-success">{t.medicacion.enviada_exito}</div>}
+              {exito && <div className="alert alert-success" role="status">{t.medicacion.enviada_exito}</div>}
 
               <button type="submit" className="btn btn-primary btn-full" disabled={enviando} style={{ marginTop: '1rem' }}>
                 {enviando ? t.medicacion.enviando : t.medicacion.enviar}

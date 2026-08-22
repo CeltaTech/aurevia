@@ -11,6 +11,7 @@ import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import { COLUMNAS_ESTADO_MATRICULA } from '../../lib/matricula';
 import { URGENCIA, diasParaVencer, urgenciaDeVencimiento } from '../../lib/reglaVencimientos';
+import { useModalAccesible } from '../../hooks/useModalAccesible';
 
 /* La solapa de Matrículas de un Asistente.
    ==========================================================================
@@ -286,6 +287,7 @@ export function MatriculasTab({ asistente }) {
 }
 
 function NuevaMatriculaModal({ asistente, usuario, tipos, tipoSugerido, onClose, onCreada }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const tmat = t.asistentes.matriculas;
   // Si el tipo de este Asistente ya dice qué Matrícula le hace falta, viene elegida: es la que
@@ -329,8 +331,8 @@ function NuevaMatriculaModal({ asistente, usuario, tipos, tipoSugerido, onClose,
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{tmat.nueva}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{tmat.nueva}</h2>
         {error && <Alert variant="error">{error}</Alert>}
 
         <label htmlFor="tipo-matricula">{tmat.col_tipo}</label>
@@ -353,8 +355,8 @@ function NuevaMatriculaModal({ asistente, usuario, tipos, tipoSugerido, onClose,
         {/* Sin fecha de vencimiento, la Matrícula no vence nunca. Es válido —hay títulos que no
             caducan— y por eso el campo no es obligatorio. */}
         <FormField label={tmat.col_hasta} name="vigente_hasta" type="date" value={vigenteHasta} onChange={(e) => setVigenteHasta(e.target.value)} />
-        <label>{tmat.archivo}</label>
-        <input type="file" accept="application/pdf,image/jpeg,image/png" onChange={(e) => setArchivo(e.target.files?.[0] || null)} />
+        <label htmlFor="matricula-archivo">{tmat.archivo}</label>
+        <input id="matricula-archivo" type="file" accept="application/pdf,image/jpeg,image/png" onChange={(e) => setArchivo(e.target.files?.[0] || null)} />
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>
           <Button onClick={handleGuardar} disabled={guardando || !tipo || !vigenteDesde}>
@@ -370,6 +372,7 @@ function NuevaMatriculaModal({ asistente, usuario, tipos, tipoSugerido, onClose,
    Por eso se pide cómo se comprobó y se pide confirmación (regla 4 de CLAUDE.md §7): la base
    guarda quién, cuándo y de qué manera, y esas tres cosas van juntas o no va ninguna. */
 function VerificarMatriculaModal({ fila, usuario, onClose, onVerificada }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const tm = t.matricula;
   const [metodo, setMetodo] = useState(METODOS[0]);
@@ -399,8 +402,8 @@ function VerificarMatriculaModal({ fila, usuario, onClose, onVerificada }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{tm.verificar}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{tm.verificar}</h2>
         {error && <Alert variant="error">{error}</Alert>}
         <p className="panel-explicacion">{tm.confirmar_verificar}</p>
 

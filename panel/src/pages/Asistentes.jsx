@@ -69,10 +69,11 @@ export function Asistentes() {
         <input
           type="text"
           placeholder={t.asistentes.buscar}
+          aria-label={t.asistentes.buscar}
           value={f.busqueda}
           onChange={(e) => set('busqueda', e.target.value)}
         />
-        <select value={f.estado} onChange={(e) => set('estado', e.target.value)}>
+        <select value={f.estado} onChange={(e) => set('estado', e.target.value)} aria-label={t.comun.filtro_estado}>
           <option value="">{t.comun.todos}</option>
           {ESTADOS.map((e) => (
             <option key={e} value={e}>
@@ -80,7 +81,7 @@ export function Asistentes() {
             </option>
           ))}
         </select>
-        <select value={f.tipo} onChange={(e) => set('tipo', e.target.value)}>
+        <select value={f.tipo} onChange={(e) => set('tipo', e.target.value)} aria-label={t.comun.filtro_tipo}>
           <option value="">{t.asistentes.filtro_tipo_todos}</option>
           {tiposAsistente.map((tipo) => (
             <option key={tipo.id} value={tipo.id}>{nombreTipo(tipo, t)}</option>

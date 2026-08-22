@@ -27,7 +27,7 @@ function Rutas() {
     <Routes>
       <Route
         path="/login"
-        element={cargando ? <div className="estado-cargando">{t.comun.cargando}</div> : session ? <Navigate to="/guardias" replace /> : <Login />}
+        element={cargando ? <div className="estado-cargando" role="status">{t.comun.cargando}</div> : session ? <Navigate to="/guardias" replace /> : <Login />}
       />
       <Route path="/activar-cuenta" element={<ActivarCuenta />} />
       <Route

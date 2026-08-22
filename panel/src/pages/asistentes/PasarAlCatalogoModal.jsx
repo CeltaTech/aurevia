@@ -6,6 +6,8 @@ import { useTiposAsistente } from '../../hooks/useTiposAsistente';
 import { mensajeDeError } from '../../lib/errores';
 import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
+import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { con } from '../../lib/textos';
 
 // La pantalla donde se le pone tipo a los Asistentes que todavía no lo tienen.
 //
@@ -29,6 +31,7 @@ import { Alert } from '../../components/ui/Alert';
 // El día que no quede ningún Asistente sin tipo, el aviso de la lista deja de
 // aparecer y esta pantalla no se abre más.
 export function PasarAlCatalogoModal({ asistentes, onClose, onGuardado }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const { paraElegir: tipos } = useTiposAsistente();
   const [elegidos, setElegidos] = useState({});
@@ -76,8 +79,8 @@ export function PasarAlCatalogoModal({ asistentes, onClose, onGuardado }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.asistentes.pasar_al_catalogo.titulo}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.asistentes.pasar_al_catalogo.titulo}</h2>
         <p className="panel-explicacion">{t.asistentes.pasar_al_catalogo.explicacion}</p>
 
         {error && <Alert variant="error">{error}</Alert>}
@@ -99,6 +102,7 @@ export function PasarAlCatalogoModal({ asistentes, onClose, onGuardado }) {
                   <select
                     value={valorDe(asistente.id)}
                     onChange={(e) => setElegidos((previos) => ({ ...previos, [asistente.id]: e.target.value }))}
+                    aria-label={con(t.comun.campo_de_fila, { campo: t.asistentes.col_tipo, nombre: asistente.nombre })}
                   >
                     <option value="">{t.asistentes.pasar_al_catalogo.dejar_para_despues}</option>
                     {tipos.map((tipo) => (

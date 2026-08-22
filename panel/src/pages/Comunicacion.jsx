@@ -146,7 +146,7 @@ export function Comunicacion() {
       <div className="panel-comunicacion-layout">
         <div className="panel-comunicacion-lista-wrap">
           <div className="panel-comunicacion-filtros">
-            <select value={f.canal} onChange={(e) => set('canal', e.target.value)}>
+            <select value={f.canal} onChange={(e) => set('canal', e.target.value)} aria-label={t.comun.filtro_canal}>
               <option value="todos">{t.comunicacion.filtro_todos_los_canales}</option>
               <option value="interno">{t.comunicacion.canal_interno}</option>
               <option value="whatsapp">{t.comunicacion.canal_whatsapp}</option>

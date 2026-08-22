@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
+import { con } from '../../lib/textos';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useModalidades } from '../../context/ModalidadesContext';
 import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
@@ -9,6 +10,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
+import { useModalAccesible } from '../../hooks/useModalAccesible';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -174,6 +176,7 @@ function TabModalidades() {
                     checked={fila.activa}
                     onChange={() => toggleActiva(fila)}
                     disabled={actualizandoModalidad === fila.modalidad}
+                    aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.modalidades_col_activa, nombre: t.configuracion[`modalidades_${fila.modalidad}`] })}
                   />
                 </td>
               </tr>
@@ -263,7 +266,13 @@ function TabZonas() {
                 <td>{z.nombre}</td>
                 <td>{z.categoria}</td>
                 <td>
-                  <input type="checkbox" checked={z.activa} onChange={() => toggleActiva(z)} disabled={actualizandoZona === z.id} />
+                  <input
+                    type="checkbox"
+                    checked={z.activa}
+                    onChange={() => toggleActiva(z)}
+                    disabled={actualizandoZona === z.id}
+                    aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.zonas_col_activa, nombre: z.nombre })}
+                  />
                 </td>
                 <td>
                   <button onClick={() => borrar(z)} disabled={actualizandoZona === z.id}>{t.comun.borrar}</button>
@@ -282,6 +291,7 @@ function TabZonas() {
 }
 
 function NuevaZona({ onClose, onCreada }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const [codigo, setCodigo] = useState('');
   const [nombre, setNombre] = useState('');
@@ -304,8 +314,8 @@ function NuevaZona({ onClose, onCreada }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.configuracion.zonas_nueva}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.configuracion.zonas_nueva}</h2>
         {error && <Alert variant="error">{error}</Alert>}
         <FormField label={t.configuracion.zonas_col_codigo} name="codigo" value={codigo} onChange={(e) => setCodigo(e.target.value)} required />
         <FormField label={t.configuracion.zonas_col_nombre} name="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />

@@ -62,8 +62,8 @@ export default function MiPerfil() {
     }
   }
 
-  if (error) return <div className="alert alert-error">{error}</div>;
-  if (!perfil) return <div className="estado-cargando">{t.comun.cargando}</div>;
+  if (error) return <div className="alert alert-error" role="alert">{error}</div>;
+  if (!perfil) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
 
   return (
     <div>
@@ -103,7 +103,7 @@ export default function MiPerfil() {
               : t.perfil.notificaciones_activar}
           </button>
           {notifActivas && !notifCargando && <p>{t.perfil.notificaciones_activas}</p>}
-          {notifError && <div className="alert alert-error">{notifError}</div>}
+          {notifError && <div className="alert alert-error" role="alert">{notifError}</div>}
         </>
       )}
 

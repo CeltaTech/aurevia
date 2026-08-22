@@ -72,6 +72,7 @@ export function Servicios() {
         <input
           type="text"
           placeholder={t.servicios.buscar}
+          aria-label={t.servicios.buscar}
           value={f.busqueda}
           onChange={(e) => set('busqueda', e.target.value)}
         />

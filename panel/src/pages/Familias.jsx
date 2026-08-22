@@ -68,6 +68,7 @@ export function Familias() {
         <input
           type="text"
           placeholder={t.familias.buscar}
+          aria-label={t.familias.buscar}
           value={f.busqueda}
           onChange={(e) => set('busqueda', e.target.value)}
         />

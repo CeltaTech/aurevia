@@ -49,9 +49,9 @@ export default function ReporteDetalle() {
     };
   }, [id, reporteId]);
 
-  if (error) return <div className="alert alert-error">{error}</div>;
-  if (reporte === null) return <div className="estado-cargando">{t.comun.cargando}</div>;
-  if (reporte === false) return <div className="estado-vacio">{t.comun.vacio}</div>;
+  if (error) return <div className="alert alert-error" role="alert">{error}</div>;
+  if (reporte === null) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
+  if (reporte === false) return <div className="estado-vacio" role="status">{t.comun.vacio}</div>;
 
   return (
     <div>

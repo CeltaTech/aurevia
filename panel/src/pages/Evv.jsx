@@ -146,7 +146,7 @@ export function Evv() {
           {t.guardias.filtro_hasta}
           <input type="date" value={f.hasta} onChange={(e) => set('hasta', e.target.value)} />
         </label>
-        <select value={f.estado} onChange={(e) => set('estado', e.target.value)}>
+        <select value={f.estado} onChange={(e) => set('estado', e.target.value)} aria-label={t.comun.filtro_estado}>
           <option value="">{t.comun.todos}</option>
           <option value="verificado">{t.evv.estado_verificado}</option>
           <option value="fuera_de_rango">{t.evv.estado_fuera_de_rango}</option>

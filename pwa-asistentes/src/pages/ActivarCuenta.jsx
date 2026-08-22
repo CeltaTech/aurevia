@@ -52,7 +52,7 @@ export default function ActivarCuenta() {
       <div className="login-pantalla">
         <div className="login-card">
           <h1>{t.auth.activar_titulo}</h1>
-          <div className="alert alert-error">{t.auth.activar_token_invalido}</div>
+          <div className="alert alert-error" role="alert">{t.auth.activar_token_invalido}</div>
         </div>
       </div>
     );
@@ -63,7 +63,7 @@ export default function ActivarCuenta() {
       <div className="login-pantalla">
         <div className="login-card">
           <h1>{t.auth.activar_titulo}</h1>
-          <div className="alert alert-info">{t.auth.activar_exito}</div>
+          <div className="alert alert-info" role="status">{t.auth.activar_exito}</div>
           <Link to="/login" className="btn btn-primary btn-full">{t.auth.ingresar}</Link>
         </div>
       </div>
@@ -75,7 +75,7 @@ export default function ActivarCuenta() {
       <div className="login-card">
         <h1>{t.auth.activar_titulo}</h1>
         <p className="login-subtitulo">{t.auth.activar_subtitulo}</p>
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && <div className="alert alert-error" role="alert">{error}</div>}
         <form onSubmit={alEnviar}>
           <div className="form-field">
             <label htmlFor="password">{t.auth.activar_password_nueva}</label>

@@ -7,6 +7,8 @@ import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { TiposAsistenteTab } from './TiposAsistenteTab';
 import { mensajeDeError } from '../../lib/errores';
+import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { con } from '../../lib/textos';
 
 /* Cómo es el plantel: qué tipos de Asistente existen —con sus tareas y su
    matrícula— y qué documentación se les exige. */
@@ -117,7 +119,13 @@ function TabDocumentos() {
                 <td>{tipo.nombre}</td>
                 <td>{tipo.requiere_vencimiento ? t.comun.si : t.comun.no}</td>
                 <td>
-                  <input type="checkbox" checked={tipo.activo} onChange={() => toggleActivo(tipo)} disabled={actualizandoId === tipo.id} />
+                  <input
+                    type="checkbox"
+                    checked={tipo.activo}
+                    onChange={() => toggleActivo(tipo)}
+                    disabled={actualizandoId === tipo.id}
+                    aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.documentos_tipos_col_activo, nombre: tipo.nombre })}
+                  />
                 </td>
               </tr>
             ))}
@@ -133,6 +141,7 @@ function TabDocumentos() {
 }
 
 function NuevoTipoDocumento({ onClose, onCreado }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const [nombre, setNombre] = useState('');
   const [requiereVencimiento, setRequiereVencimiento] = useState(true);
@@ -157,8 +166,8 @@ function NuevoTipoDocumento({ onClose, onCreado }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.configuracion.documentos_tipos_nuevo}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.configuracion.documentos_tipos_nuevo}</h2>
         {error && <Alert variant="error">{error}</Alert>}
         <FormField label={t.configuracion.documentos_tipos_col_nombre} name="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
         <FormField

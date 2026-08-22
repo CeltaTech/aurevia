@@ -24,8 +24,8 @@ export default function Reportes() {
     };
   }, [id]);
 
-  if (error) return <div className="alert alert-error">{error}</div>;
-  if (reportes === null) return <div className="estado-cargando">{t.comun.cargando}</div>;
+  if (error) return <div className="alert alert-error" role="alert">{error}</div>;
+  if (reportes === null) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
 
   return (
     <div>
@@ -34,7 +34,7 @@ export default function Reportes() {
       </Link>
       <h1>{t.reportes.titulo}</h1>
       {reportes.length === 0 ? (
-        <div className="estado-vacio">{t.reportes.sin_reportes}</div>
+        <div className="estado-vacio" role="status">{t.reportes.sin_reportes}</div>
       ) : (
         reportes.map((r) => (
           <Link key={r.id} to={`/pacientes/${id}/reportes/${r.id}`} className="guardia-card" style={{ display: 'block', textDecoration: 'none' }}>

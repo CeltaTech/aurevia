@@ -11,6 +11,7 @@ import { traducirValor } from '../i18n/valores';
 import { claseBadge } from '../lib/tonos';
 import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
+import { useModalAccesible } from '../hooks/useModalAccesible';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -140,6 +141,7 @@ function ContenidoInforme({ contenido, t }) {
 }
 
 function AnularInformeModal({ onCerrar, onConfirmar, guardando, t }) {
+  const modal = useModalAccesible(onCerrar);
   const [motivo, setMotivo] = useState('');
   const motivoValido = motivo.trim() !== '';
 
@@ -151,8 +153,8 @@ function AnularInformeModal({ onCerrar, onConfirmar, guardando, t }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onCerrar}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.informesObraSocial.anular}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.informesObraSocial.anular}</h2>
         <form onSubmit={handleSubmit}>
           <FormField
             label={t.informesObraSocial.motivo_anulacion}
@@ -175,9 +177,10 @@ function AnularInformeModal({ onCerrar, onConfirmar, guardando, t }) {
 }
 
 function VistaImpresion({ informe, onCerrar, t }) {
+  const modal = useModalAccesible(onCerrar, t.informesObraSocial.vista_impresion_titulo);
   return (
     <div className="panel-modal-fondo" onClick={onCerrar}>
-      <div className="panel-modal informe-obra-social-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="panel-modal informe-obra-social-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <div className="informe-obra-social-acciones-no-imprimir">
           <Button variant="secondary" onClick={onCerrar}>{t.comun.cerrar}</Button>
           <Button onClick={() => window.print()}>{t.informesObraSocial.imprimir}</Button>

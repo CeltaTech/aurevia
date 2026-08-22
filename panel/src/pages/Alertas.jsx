@@ -113,12 +113,12 @@ export function Alertas() {
       )}
 
       <div className="panel-filtros">
-        <select value={f.estado} onChange={(e) => set('estado', e.target.value)}>
+        <select value={f.estado} onChange={(e) => set('estado', e.target.value)} aria-label={t.comun.filtro_estado}>
           <option value="pendientes">{t.alertas.filtro_pendientes}</option>
           <option value="resueltas">{t.alertas.filtro_resueltas}</option>
           <option value="todas">{t.comun.todos}</option>
         </select>
-        <select value={f.nivel} onChange={(e) => set('nivel', e.target.value)}>
+        <select value={f.nivel} onChange={(e) => set('nivel', e.target.value)} aria-label={t.comun.filtro_nivel}>
           <option value="todos">{t.alertas.filtro_todos_los_niveles}</option>
           <option value="roja">{t.alertas.nivel_roja}</option>
           <option value="amarilla">{t.alertas.nivel_amarilla}</option>

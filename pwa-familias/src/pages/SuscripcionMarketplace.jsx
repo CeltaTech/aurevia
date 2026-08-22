@@ -68,8 +68,8 @@ export default function SuscripcionMarketplace() {
     }
   }
 
-  if (error) return <div className="alert alert-error">{error}</div>;
-  if (suscripcion === undefined) return <div className="estado-cargando">{t.comun.cargando}</div>;
+  if (error) return <div className="alert alert-error" role="alert">{error}</div>;
+  if (suscripcion === undefined) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
 
   const qrVencido = qr && !cobrado && new Date(qr.expira_en).getTime() < Date.now();
 
@@ -81,7 +81,7 @@ export default function SuscripcionMarketplace() {
 
       <h1>{t.suscripcion.titulo}</h1>
 
-      {!suscripcion && <div className="estado-vacio">{t.suscripcion.sin_suscripcion}</div>}
+      {!suscripcion && <div className="estado-vacio" role="status">{t.suscripcion.sin_suscripcion}</div>}
 
       {suscripcion && (
         <>
@@ -102,7 +102,7 @@ export default function SuscripcionMarketplace() {
               <h2>{t.suscripcion.generar_qr_titulo}</h2>
               <p className="guardia-card-detalle">{t.suscripcion.generar_qr_explicacion}</p>
 
-              {cobrado && <div className="alert alert-success">{t.suscripcion.qr_cobrado}</div>}
+              {cobrado && <div className="alert alert-success" role="status">{t.suscripcion.qr_cobrado}</div>}
 
               {!cobrado && qr && !qrVencido && qrDataUrl && (
                 <div style={{ textAlign: 'center', marginTop: '1rem' }}>
@@ -112,7 +112,7 @@ export default function SuscripcionMarketplace() {
                 </div>
               )}
 
-              {qrVencido && <div className="alert alert-error">{t.suscripcion.qr_vencido}</div>}
+              {qrVencido && <div className="alert alert-error" role="alert">{t.suscripcion.qr_vencido}</div>}
 
               {(!qr || qrVencido || cobrado) && (
                 <button type="button" className="btn btn-primary btn-full" onClick={generarQr} disabled={generando} style={{ marginTop: '1rem' }}>

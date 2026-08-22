@@ -26,9 +26,9 @@ export default function Alertas() {
     };
   }, [id]);
 
-  if (error) return <div className="alert alert-error">{error}</div>;
-  if (alertas === null) return <div className="estado-cargando">{t.comun.cargando}</div>;
-  if (alertas.length === 0) return <div className="estado-vacio">{t.alertas.sin_alertas}</div>;
+  if (error) return <div className="alert alert-error" role="alert">{error}</div>;
+  if (alertas === null) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
+  if (alertas.length === 0) return <div className="estado-vacio" role="status">{t.alertas.sin_alertas}</div>;
 
   return (
     <div>

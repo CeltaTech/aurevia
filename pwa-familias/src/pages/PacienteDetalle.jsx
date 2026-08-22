@@ -78,8 +78,8 @@ export default function PacienteDetalle() {
     return () => clearInterval(intervalo);
   }, [ubicacion]);
 
-  if (error) return <div className="alert alert-error">{error}</div>;
-  if (datos === null) return <div className="estado-cargando">{t.comun.cargando}</div>;
+  if (error) return <div className="alert alert-error" role="alert">{error}</div>;
+  if (datos === null) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
 
   const { paciente, guardiaProxima, alertasActivas } = datos;
   const guardia = guardiaActiva || guardiaProxima;
@@ -113,7 +113,7 @@ export default function PacienteDetalle() {
 
       <h2 style={{ marginTop: '1.5rem' }}>{guardiaActiva ? t.paciente.guardia_actual_titulo : t.paciente.guardia_proxima_titulo}</h2>
 
-      {!guardia && <div className="estado-vacio">{t.paciente.sin_guardia}</div>}
+      {!guardia && <div className="estado-vacio" role="status">{t.paciente.sin_guardia}</div>}
 
       {guardia && (
         <div className={`guardia-card guardia-${guardia.estado}`}>

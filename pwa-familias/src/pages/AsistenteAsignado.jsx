@@ -14,7 +14,7 @@ function ListaDeTareas({ titulo, tareas, vacio }) {
     <>
       <h2 style={{ marginTop: '1.5rem' }}>{titulo}</h2>
       {tareas.length === 0 ? (
-        <div className="estado-vacio">{vacio}</div>
+        <div className="estado-vacio" role="status">{vacio}</div>
       ) : (
         <ul className="lista-tareas">
           {tareas.map((tarea) => (
@@ -77,9 +77,9 @@ export default function AsistenteAsignado() {
     }
   }
 
-  if (error) return <div className="alert alert-error">{error}</div>;
-  if (datos === null) return <div className="estado-cargando">{t.comun.cargando}</div>;
-  if (!datos.asistente) return <div className="estado-vacio">{t.comun.vacio}</div>;
+  if (error) return <div className="alert alert-error" role="alert">{error}</div>;
+  if (datos === null) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
+  if (!datos.asistente) return <div className="estado-vacio" role="status">{t.comun.vacio}</div>;
 
   const { asistente, tipo, tareas, certificado, evaluaciones, guardiaId } = datos;
 
@@ -124,7 +124,7 @@ export default function AsistenteAsignado() {
         <>
           <h2 style={{ marginTop: '1.5rem' }}>{t.asistente.evaluaciones_titulo}</h2>
           {evaluaciones.length === 0 ? (
-            <div className="estado-vacio">{t.asistente.sin_evaluaciones}</div>
+            <div className="estado-vacio" role="status">{t.asistente.sin_evaluaciones}</div>
           ) : (
             evaluaciones.map((e) => (
               <div key={e.id} className="guardia-card">
@@ -161,7 +161,7 @@ export default function AsistenteAsignado() {
               </button>
             </div>
           )}
-          {enviado && <div className="alert alert-info">{t.asistente.calificacion_enviada}</div>}
+          {enviado && <div className="alert alert-info" role="status">{t.asistente.calificacion_enviada}</div>}
         </>
       )}
     </div>

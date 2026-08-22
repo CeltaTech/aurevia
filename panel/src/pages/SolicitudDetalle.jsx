@@ -9,11 +9,13 @@ import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { mensajeDeError } from '../lib/errores';
+import { useModalAccesible } from '../hooks/useModalAccesible';
 
 const ESTADOS = ['nueva', 'en_gestion', 'asignada', 'cancelada', 'completada'];
 const API_URL = import.meta.env.VITE_API_URL;
 
 export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const { usuario } = useAuth();
   const confirmarDestructivo = useConfirmarDestructivo();
@@ -79,8 +81,8 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{solicitud.nombre}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{solicitud.nombre}</h2>
 
         {error && <Alert variant="error">{error}</Alert>}
 

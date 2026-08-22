@@ -24,9 +24,9 @@ export default function MisPacientes() {
     };
   }, []);
 
-  if (error) return <div className="alert alert-error">{error}</div>;
-  if (pacientes === null) return <div className="estado-cargando">{t.comun.cargando}</div>;
-  if (pacientes.length === 0) return <div className="estado-vacio">{t.pacientes.sin_pacientes}</div>;
+  if (error) return <div className="alert alert-error" role="alert">{error}</div>;
+  if (pacientes === null) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
+  if (pacientes.length === 0) return <div className="estado-vacio" role="status">{t.pacientes.sin_pacientes}</div>;
   if (pacientes.length === 1) return <Navigate to={`/pacientes/${pacientes[0].id}`} replace />;
 
   return (

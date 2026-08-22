@@ -6,6 +6,8 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
+import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -21,8 +23,10 @@ async function llamarApi(path, opciones = {}) {
 }
 
 export function MonitoreoVitalesPaciente({ paciente, onClose }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const [autorizacion, setAutorizacion] = useState(null);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -102,7 +106,7 @@ export function MonitoreoVitalesPaciente({ paciente, onClose }) {
       }
 
       const { error: errorInsert } = await supabase.from('autorizaciones_monitoreo_paciente').insert({
-        prestadora_id: usuario.prestadora_id,
+        prestadora_id: prestadoraId,
         paciente_id: paciente.id,
         nombre_avala: nombreAvala,
         rol_avala: rolAvala,
@@ -128,8 +132,8 @@ export function MonitoreoVitalesPaciente({ paciente, onClose }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.vitales_autorizacion.titulo} — {paciente.nombre}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.vitales_autorizacion.titulo} — {paciente.nombre}</h2>
         <p className="panel-explicacion">{t.vitales_autorizacion.explicacion}</p>
 
         {estado === 'cargando' && <p className="estado-cargando">{t.comun.cargando}</p>}

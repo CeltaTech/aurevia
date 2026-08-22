@@ -36,6 +36,7 @@ export function ListaPrecios() {
         <input
           type="text"
           placeholder={t.lista_precios.buscar}
+          aria-label={t.lista_precios.buscar}
           value={f.busqueda}
           onChange={(e) => set('busqueda', e.target.value)}
         />

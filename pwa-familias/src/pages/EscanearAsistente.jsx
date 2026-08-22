@@ -88,7 +88,7 @@ export default function EscanearAsistente() {
       </Link>
       <h1>{t.escaneo.titulo}</h1>
 
-      {estado === 'pidiendo_permiso' && <div className="estado-cargando">{t.escaneo.pidiendo_permiso}</div>}
+      {estado === 'pidiendo_permiso' && <div className="estado-cargando" role="status">{t.escaneo.pidiendo_permiso}</div>}
 
       {(estado === 'pidiendo_permiso' || estado === 'escaneando') && (
         <>
@@ -97,11 +97,11 @@ export default function EscanearAsistente() {
         </>
       )}
 
-      {estado === 'verificando' && <div className="estado-cargando">{t.escaneo.verificando}</div>}
+      {estado === 'verificando' && <div className="estado-cargando" role="status">{t.escaneo.verificando}</div>}
 
       {estado === 'error' && (
         <div>
-          <div className="alert alert-error">{error}</div>
+          <div className="alert alert-error" role="alert">{error}</div>
           <button className="btn btn-primary btn-full" onClick={escanearDeNuevo} style={{ marginTop: '1rem' }}>
             {t.escaneo.volver_a_escanear}
           </button>
@@ -113,16 +113,16 @@ export default function EscanearAsistente() {
           {/* Estos motivos no son errores: llegan en una respuesta correcta y cada uno pinta
               el aviso de otro color, así que no pasan por lib/errores.js. */}
           {resultado.motivo === 'sin_guardia_hoy' && (
-            <div className="alert alert-info">{t.escaneo.resultado_sin_guardia}</div>
+            <div className="alert alert-info" role="status">{t.escaneo.resultado_sin_guardia}</div>
           )}
           {resultado.motivo === 'guardia_sin_cubrir' && (
-            <div className="alert alert-alerta">{t.escaneo.resultado_sin_cubrir}</div>
+            <div className="alert alert-alerta" role="status">{t.escaneo.resultado_sin_cubrir}</div>
           )}
           {resultado.motivo === 'asignado' && (
-            <div className="alert alert-success">{t.escaneo.resultado_coincide}</div>
+            <div className="alert alert-success" role="status">{t.escaneo.resultado_coincide}</div>
           )}
           {resultado.motivo === 'no_asignado' && (
-            <div className="alert alert-error">{t.escaneo.resultado_no_coincide}</div>
+            <div className="alert alert-error" role="alert">{t.escaneo.resultado_no_coincide}</div>
           )}
 
           <div className="guardia-card" style={{ marginTop: '1rem' }}>

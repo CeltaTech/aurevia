@@ -59,8 +59,8 @@ export default function Guardias() {
     };
   }, [id, dia]);
 
-  if (error) return <div className="alert alert-error">{error}</div>;
-  if (semana === null) return <div className="estado-cargando">{t.comun.cargando}</div>;
+  if (error) return <div className="alert alert-error" role="alert">{error}</div>;
+  if (semana === null) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
 
   const hoy = hoyISO();
   // Comparar fechas escritas así —`2026-08-20`— es comparar dos textos, y da bien: el año va
@@ -98,7 +98,7 @@ export default function Guardias() {
       )}
 
       {vacia ? (
-        <div className="estado-vacio">{t.guardias.sin_guardias_en_la_semana}</div>
+        <div className="estado-vacio" role="status">{t.guardias.sin_guardias_en_la_semana}</div>
       ) : (
         semana.dias.map((d) => (
           <div key={d.fecha} className="semana-dia">

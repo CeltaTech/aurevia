@@ -173,9 +173,15 @@ export function Layout() {
 
   return (
     <div className="panel-layout">
+      {/* Primer elemento de la página y único que lo antecede todo: quien navega con el
+          teclado salta el menú entero de una vez en lugar de recorrer sus treinta enlaces
+          antes de llegar a la pantalla que vino a usar. No se ve hasta que recibe el foco. */}
+      <a className="salto-al-contenido" href="#contenido-principal">
+        {t.nav.saltar_al_contenido}
+      </a>
       <aside className="panel-sidebar">
         <div className="panel-logo">{empresa?.nombre ?? ''}</div>
-        <nav>
+        <nav aria-label={t.nav.menu_principal}>
           {/* Arriba de todo, sin grupo: el Estado actual es el punto de partida del día, el
               resumen del mes queda justo debajo para el que quiera el número grande, y la
               bandeja de conversaciones sube acá porque se abre a cada rato y desde cualquier
@@ -192,7 +198,10 @@ export function Layout() {
             if (visibles.length === 0) return null;
             return (
               <Fragment key={grupo.titulo}>
-                <span className="panel-nav-grupo">{grupo.titulo}</span>
+                {/* El título del grupo se ve como siempre, pero además se anuncia como
+                    encabezado: es lo que permite recorrer el menú por grupos en vez de
+                    enlace por enlace. */}
+                <span className="panel-nav-grupo" role="heading" aria-level="2">{grupo.titulo}</span>
                 {visibles.map((enlace) => (
                   <NavLink key={enlace.a} to={enlace.a}>{enlace.texto}</NavLink>
                 ))}
@@ -212,7 +221,7 @@ export function Layout() {
             {t.nav.cerrar_sesion}
           </button>
         </header>
-        <main className="panel-content">
+        <main className="panel-content" id="contenido-principal" tabIndex={-1}>
           <Outlet />
         </main>
       </div>

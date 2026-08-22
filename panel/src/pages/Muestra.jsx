@@ -6,6 +6,7 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { SelectoresPreferencias } from '../components/layout/SelectoresPreferencias';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
+import { useModalAccesible } from '../hooks/useModalAccesible';
 
 /* PANTALLA DE MUESTRA DEL SISTEMA DE DISEÑO — herramienta de desarrollo, no es producto.
    ====================================================================================
@@ -66,6 +67,7 @@ function Bloque({ titulo, ayuda, children }) {
 }
 
 export function Muestra() {
+  const modal = useModalAccesible(() => setModalAbierto(false));
   const { t } = useLocale();
   // El mismo hook que usan las once listas del Panel: así el vacío de abajo es el de verdad,
   // no una imitación.
@@ -126,6 +128,7 @@ export function Muestra() {
           <input
             type="text"
             placeholder={t.comun.buscar}
+            aria-label={t.comun.buscar}
             value={f.busqueda}
             onChange={(e) => set('busqueda', e.target.value)}
           />
@@ -231,8 +234,8 @@ export function Muestra() {
 
       {modalAbierto && (
         <div className="panel-modal-fondo" onClick={() => setModalAbierto(false)}>
-          <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>Ejemplo de modal</h2>
+          <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+            <h2 id={modal.idTitulo}>Ejemplo de modal</h2>
             <p className="panel-explicacion">
               El velo de atrás también es un token, así que se oscurece solo cuando la
               pantalla está en modo oscuro.

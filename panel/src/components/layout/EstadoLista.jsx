@@ -46,7 +46,9 @@ export function EstadoLista({
   const { t } = useLocale();
 
   if (estado === 'cargando') {
-    return <p className="estado-cargando">{t.comun.cargando}</p>;
+    // `role="status"` para que el cambio de estado se anuncie solo: quien no ve la pantalla
+    // tiene que enterarse de que está cargando, y después de que apareció la lista.
+    return <p className="estado-cargando" role="status">{t.comun.cargando}</p>;
   }
 
   if (estado === 'error') {
@@ -64,7 +66,7 @@ export function EstadoLista({
     // Con filtros puestos: el filtro no encontró nada, y la salida es sacarlo.
     if (filtrado) {
       return (
-        <div className="estado-vacio-bloque">
+        <div className="estado-vacio-bloque" role="status">
           <p className="estado-vacio-titulo">{t.comun.sin_resultados_titulo}</p>
           <p className="estado-vacio">{t.comun.sin_resultados_ayuda}</p>
           {onLimpiarFiltros && (
@@ -78,7 +80,7 @@ export function EstadoLista({
 
     // Sin filtros: no hay ni un dato todavía, y la salida es crear el primero.
     return (
-      <div className="estado-vacio-bloque">
+      <div className="estado-vacio-bloque" role="status">
         <p className="estado-vacio-titulo">{mensajeVacio || t.comun.sin_datos_titulo}</p>
         <p className="estado-vacio">{t.comun.sin_datos_ayuda}</p>
         {accionVacio}

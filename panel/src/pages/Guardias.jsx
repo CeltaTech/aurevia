@@ -148,7 +148,7 @@ export function Guardias() {
       <div className="panel-filtros-tarjeta">
         <FormFieldFecha label={t.guardias.filtro_desde} value={f.desde} onChange={(v) => set('desde', v)} />
         <FormFieldFecha label={t.guardias.filtro_hasta} value={f.hasta} onChange={(v) => set('hasta', v)} />
-        <select value={f.estado} onChange={(e) => set('estado', e.target.value)}>
+        <select value={f.estado} onChange={(e) => set('estado', e.target.value)} aria-label={t.comun.filtro_estado}>
           <option value="">{t.comun.todos}</option>
           {ESTADOS.map((e) => (
             <option key={e} value={e}>{t.guardias[`estado_${e}`]}</option>
@@ -157,6 +157,7 @@ export function Guardias() {
         <input
           type="text"
           placeholder={t.guardias.buscar}
+          aria-label={t.guardias.buscar}
           value={f.busqueda}
           onChange={(e) => set('busqueda', e.target.value)}
         />

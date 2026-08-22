@@ -18,7 +18,7 @@ function ListaDeTareas({ titulo, tareas, vacio }) {
     <>
       <h2 style={{ marginTop: '1.5rem' }}>{titulo}</h2>
       {tareas.length === 0 ? (
-        <div className="estado-vacio">{vacio}</div>
+        <div className="estado-vacio" role="status">{vacio}</div>
       ) : (
         <ul className="lista-tareas">
           {tareas.map((tarea) => (
@@ -96,8 +96,8 @@ function DatosDelPaciente({ paciente, mostrarNombre, t }) {
 
       {veReportes && mostrandoReportes && (
         <div style={{ marginTop: '1rem' }}>
-          {reportes === null && <div className="estado-cargando">{t.comun.cargando}</div>}
-          {reportes?.length === 0 && <div className="estado-vacio">{t.comun.vacio}</div>}
+          {reportes === null && <div className="estado-cargando" role="status">{t.comun.cargando}</div>}
+          {reportes?.length === 0 && <div className="estado-vacio" role="status">{t.comun.vacio}</div>}
           {reportes?.map((r) => (
             <div key={r.id} className="guardia-card">
               <div className="guardia-card-detalle">{r.guardias?.fecha}</div>
@@ -115,8 +115,8 @@ function DatosDelPaciente({ paciente, mostrarNombre, t }) {
 
       {veMedicacion && mostrandoMedicacion && (
         <div style={{ marginTop: '1rem' }}>
-          {ordenesMedicacion === null && <div className="estado-cargando">{t.comun.cargando}</div>}
-          {ordenesMedicacion?.length === 0 && <div className="estado-vacio">{t.medicacion.sin_ordenes}</div>}
+          {ordenesMedicacion === null && <div className="estado-cargando" role="status">{t.comun.cargando}</div>}
+          {ordenesMedicacion?.length === 0 && <div className="estado-vacio" role="status">{t.medicacion.sin_ordenes}</div>}
           {ordenesMedicacion?.map((o) => (
             <div key={o.id} className="guardia-card">
               <div className="guardia-card-detalle">
@@ -297,8 +297,8 @@ export default function GuardiaActiva() {
     }
   }
 
-  if (error) return <div className="alert alert-error">{error}</div>;
-  if (!guardia) return <div className="estado-cargando">{t.comun.cargando}</div>;
+  if (error) return <div className="alert alert-error" role="alert">{error}</div>;
+  if (!guardia) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
 
   // Una guardia puede cubrir a más de un Paciente: una casa donde viven dos, o un grupo
   // entero en una residencia. Por eso acá siempre hay una lista, aunque casi siempre tenga
@@ -322,7 +322,7 @@ export default function GuardiaActiva() {
 
       <h1>{sonVarios ? t.guardia_activa.pacientes : `${t.guardia_activa.paciente}: ${pacientes[0]?.nombre ?? ''}`}</h1>
 
-      {pacientes.length === 0 && <div className="estado-vacio">{t.guardias.sin_paciente}</div>}
+      {pacientes.length === 0 && <div className="estado-vacio" role="status">{t.guardias.sin_paciente}</div>}
 
       {pacientes.map((p) => {
         // Con las dos cosas apagadas la tarjeta se saltea entera, salvo que el turno cubra a
@@ -351,13 +351,13 @@ export default function GuardiaActiva() {
       })}
 
       {sonVarios && (
-        <div className="alert alert-info">{con(t.guardia_activa.varios_pacientes, { n: pacientes.length })}</div>
+        <div className="alert alert-info" role="status">{con(t.guardia_activa.varios_pacientes, { n: pacientes.length })}</div>
       )}
 
-      {aviso && <div className="alert alert-alerta">{aviso}</div>}
+      {aviso && <div className="alert alert-alerta" role="status">{aviso}</div>}
 
       {checkinPendiente && (
-        <div className="alert alert-info" aria-label={t.comun.pendiente_de_enviar}>
+        <div className="alert alert-info" role="status">
           <span aria-hidden="true">⏳</span> {t.comun.pendiente_de_enviar}
         </div>
       )}
@@ -399,7 +399,7 @@ export default function GuardiaActiva() {
           {/* El cierre es un acto propio, no un efecto secundario de mandar el reporte
               (tarea 66a). Es también el lugar donde va a enchufarse el pase por QR. */}
           {reportesCompletos && cerradoPendiente && (
-            <div className="alert alert-info" aria-label={t.comun.pendiente_de_enviar} style={{ marginTop: '1rem' }}>
+            <div className="alert alert-info" role="status" style={{ marginTop: '1rem' }}>
               <span aria-hidden="true">⏳</span> {t.comun.pendiente_de_enviar}
             </div>
           )}
@@ -407,7 +407,7 @@ export default function GuardiaActiva() {
           {/* El aviso de antes del intento y el rechazo de después son la misma regla, así que
               son un solo texto: el del motivo `continuidad` que manda el motor. */}
           {reportesCompletos && !cerradoPendiente && guardia.checkout_bloqueado && (
-            <div className="alert alert-alerta" style={{ marginTop: '1rem' }}>{t.errores.motivos.continuidad}</div>
+            <div className="alert alert-alerta" role="status" style={{ marginTop: '1rem' }}>{t.errores.motivos.continuidad}</div>
           )}
 
           {reportesCompletos && !cerradoPendiente && !guardia.checkout_bloqueado && !confirmandoCierre && (
@@ -435,7 +435,7 @@ export default function GuardiaActiva() {
         </>
       )}
 
-      {guardia.checkout_at && <div className="alert alert-info">{t.guardia_activa.cerrar_ok}</div>}
+      {guardia.checkout_at && <div className="alert alert-info" role="status">{t.guardia_activa.cerrar_ok}</div>}
 
       {/* Qué le toca hacer en este turno y qué no. Sale del mismo catálogo que ve la Familia
           en su pantalla, así que las dos partes leen exactamente lo mismo: es lo que corta la

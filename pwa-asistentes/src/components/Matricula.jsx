@@ -108,8 +108,8 @@ export default function Matricula() {
     }
   }
 
-  if (cargando) return <div className="estado-cargando">{t.comun.cargando}</div>;
-  if (error) return <div className="alert alert-error">{error}</div>;
+  if (cargando) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
+  if (error) return <div className="alert alert-error" role="alert">{error}</div>;
 
   const estado = datos?.estado;
   if (!estado || estado.requiere_matricula !== true) return null;
@@ -164,7 +164,7 @@ export default function Matricula() {
         {cartel.texto}
       </div>
 
-      {aviso && <div className="alert alert-info">{aviso}</div>}
+      {aviso && <div className="alert alert-info" role="status">{aviso}</div>}
 
       {puedeCargar && !formAbierto && (
         <button type="button" className="btn btn-primary" onClick={() => setFormAbierto(true)}>
@@ -174,7 +174,7 @@ export default function Matricula() {
 
       {puedeCargar && formAbierto && (
         <form onSubmit={guardar} className="tarjeta-consentimiento">
-          {errorForm && <div className="alert alert-error">{errorForm}</div>}
+          {errorForm && <div className="alert alert-error" role="alert">{errorForm}</div>}
 
           <label htmlFor="matricula-numero">{tm.numero}</label>
           <input

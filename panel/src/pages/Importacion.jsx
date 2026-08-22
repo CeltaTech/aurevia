@@ -6,6 +6,8 @@ import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { mensajeDeError } from '../lib/errores';
+import { con } from '../lib/textos';
+import { useModalAccesible } from '../hooks/useModalAccesible';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -24,6 +26,7 @@ async function llamarApi(path, opciones = {}) {
 }
 
 export function Importacion() {
+  const modal = useModalAccesible(() => setConfirmandoRechazo(false));
   const { t } = useLocale();
   const { puede, cargado } = usePermisos();
 
@@ -205,6 +208,7 @@ export function Importacion() {
                     <select
                       value={mapeo[columna] || ''}
                       onChange={(e) => setMapeo({ ...mapeo, [columna]: e.target.value || null })}
+                      aria-label={con(t.importacion.campo_de_columna, { columna })}
                     >
                       <option value="">{t.importacion.campo_ninguno}</option>
                       {analisis.camposDisponibles.map((campo) => (
@@ -350,8 +354,8 @@ export function Importacion() {
 
           {confirmandoRechazo && (
             <div className="panel-modal-fondo" onClick={() => setConfirmandoRechazo(false)}>
-              <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-                <h2>{t.importacion.rechazar}</h2>
+              <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+                <h2 id={modal.idTitulo}>{t.importacion.rechazar}</h2>
                 <p>{t.importacion.confirmar_rechazo}</p>
                 <div className="panel-modal-acciones">
                   <Button variant="secondary" onClick={() => setConfirmandoRechazo(false)} disabled={cargando}>

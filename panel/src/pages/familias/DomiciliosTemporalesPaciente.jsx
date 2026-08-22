@@ -9,6 +9,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
+import { useModalAccesible } from '../../hooks/useModalAccesible';
 
 // Dónde se atiende al Paciente cuando no está en el domicilio de su ficha.
 //
@@ -18,6 +19,7 @@ import { mensajeDeError } from '../../lib/errores';
 // otra vez en el navegador, el día que cambie la regla esta pantalla contestaría distinto que
 // el resto del sistema.
 export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const confirmarDestructivo = useConfirmarDestructivo();
 
@@ -171,8 +173,8 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.domicilios_temporales.titulo} — {paciente.nombre}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.domicilios_temporales.titulo} — {paciente.nombre}</h2>
         <p className="panel-explicacion">{t.domicilios_temporales.explicacion}</p>
 
         {estado === 'cargando' && <p className="estado-cargando">{t.comun.cargando}</p>}

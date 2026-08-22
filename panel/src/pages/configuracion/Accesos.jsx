@@ -8,6 +8,8 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
+import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { con } from '../../lib/textos';
 
 /* Quién puede hacer qué: los permisos de cada rol y, para el rol técnico de
    CeltaTech, el segundo factor de ingreso. */
@@ -131,6 +133,7 @@ function TabPermisos() {
                   <select
                     value={fila.alcance}
                     onChange={(e) => actualizarLocal(fila.accion, { alcance: e.target.value })}
+                    aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.permisos_col_alcance, nombre: t.configuracion[`permisos_accion_${fila.accion}`] })}
                   >
                     <option value="solo_admin">{t.configuracion.permisos_alcance_solo_admin}</option>
                     <option value="admin_y_coordinador">{t.configuracion.permisos_alcance_admin_y_coordinador}</option>
@@ -194,6 +197,7 @@ function TabPermisos() {
 // nombraba otra cosa (pendiente #115).
 
 function TabSeguridad() {
+  const modal = useModalAccesible(() => setConfirmandoActivacion(false));
   const { t } = useLocale();
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -271,8 +275,8 @@ function TabSeguridad() {
 
       {confirmandoActivacion && (
         <div className="panel-modal-fondo" onClick={() => setConfirmandoActivacion(false)}>
-          <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>{t.configuracion.seguridad_mfa_confirmar_titulo}</h2>
+          <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+            <h2 id={modal.idTitulo}>{t.configuracion.seguridad_mfa_confirmar_titulo}</h2>
             <ul>
               <li>{t.configuracion.seguridad_mfa_confirmar_item_alcance}</li>
               <li>{t.configuracion.seguridad_mfa_confirmar_item_preparacion}</li>

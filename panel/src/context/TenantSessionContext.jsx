@@ -3,6 +3,7 @@ import { useAuth } from './AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
 import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
+import { useModalAccesible } from '../hooks/useModalAccesible';
 
 const API_URL = import.meta.env.VITE_API_URL;
 const TenantSessionContext = createContext(null);
@@ -26,6 +27,7 @@ async function llamarApi(path, opciones = {}) {
 }
 
 export function TenantSessionProvider({ children }) {
+  const modal = useModalAccesible(() => resolverConfirmacion(false));
   const { t } = useLocale();
   const { usuario } = useAuth();
   // Solo superadmin abre sesiones de soporte técnico dentro de una Prestadora (CLAUDE.md §5).
@@ -110,8 +112,8 @@ export function TenantSessionProvider({ children }) {
       {children}
       {mensajeConfirmacion !== null && (
         <div className="panel-modal-fondo" onClick={() => resolverConfirmacion(false)}>
-          <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-            <p>{mensajeConfirmacion}</p>
+          <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+            <p id={modal.idTitulo}>{mensajeConfirmacion}</p>
             <div className="panel-modal-acciones">
               <Button variant="secondary" onClick={() => resolverConfirmacion(false)}>
                 {t.comun.cancelar}

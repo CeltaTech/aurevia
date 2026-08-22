@@ -8,6 +8,7 @@ import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError } from '../lib/errores';
+import { useModalAccesible } from '../hooks/useModalAccesible';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -120,6 +121,8 @@ export function UsuariosPanel() {
 }
 
 function NuevoUsuarioPanel({ esSuperadmin, onClose, onCreado }) {
+  const modal = useModalAccesible(onClose);
+  const modalCreada = useModalAccesible(onClose);
   const { t } = useLocale();
   const [email, setEmail] = useState('');
   const [nombre, setNombre] = useState('');
@@ -157,8 +160,8 @@ function NuevoUsuarioPanel({ esSuperadmin, onClose, onCreado }) {
   if (creado) {
     return (
       <div className="panel-modal-fondo" onClick={onClose}>
-        <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-          <h2>{t.usuarios_panel.cuenta_creada_titulo}</h2>
+        <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modalCreada.props}>
+          <h2 id={modalCreada.idTitulo}>{t.usuarios_panel.cuenta_creada_titulo}</h2>
           <p className="panel-explicacion">{t.usuarios_panel.cuenta_creada_explicacion}</p>
           <dl className="panel-detalle-lista">
             <dt>{t.usuarios_panel.col_email}</dt>
@@ -176,8 +179,8 @@ function NuevoUsuarioPanel({ esSuperadmin, onClose, onCreado }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{esSuperadmin ? t.usuarios_panel.nuevo_usuario : t.usuarios_panel.nuevo_coordinador}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{esSuperadmin ? t.usuarios_panel.nuevo_usuario : t.usuarios_panel.nuevo_coordinador}</h2>
         {error && <Alert variant="error">{error}</Alert>}
         <FormField label={t.usuarios_panel.col_nombre} name="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
         <FormField label={t.usuarios_panel.col_email} name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
@@ -210,6 +213,7 @@ function NuevoUsuarioPanel({ esSuperadmin, onClose, onCreado }) {
 }
 
 function EditarUsuarioPanel({ usuario, onClose, onActualizado }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const confirmarDestructivo = useConfirmarDestructivo();
   const [nombre, setNombre] = useState(usuario.nombre);
@@ -255,8 +259,8 @@ function EditarUsuarioPanel({ usuario, onClose, onActualizado }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{usuario.nombre}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{usuario.nombre}</h2>
         {error && <Alert variant="error">{error}</Alert>}
         <FormField label={t.usuarios_panel.col_nombre} name="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
         <FormField label={t.usuarios_panel.col_telefono} name="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />

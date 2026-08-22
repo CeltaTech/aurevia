@@ -456,7 +456,7 @@ export function GrillaGuardias({
                 onClick={() => cambiarDia(sumarDias(diaActivo, -1))}
                 disabled={diaActivo <= dias[0]}
               >
-                ‹ {t.guardias.dia_anterior}
+                <span aria-hidden="true">‹</span> {t.guardias.dia_anterior}
               </button>
               <button
                 type="button"
@@ -470,7 +470,7 @@ export function GrillaGuardias({
                 onClick={() => cambiarDia(sumarDias(diaActivo, 1))}
                 disabled={diaActivo >= dias[dias.length - 1]}
               >
-                {t.guardias.dia_siguiente} ›
+                {t.guardias.dia_siguiente} <span aria-hidden="true">›</span>
               </button>
             </div>
             {/* Qué día se está mirando, escrito. En Línea de tiempo las columnas son horas y

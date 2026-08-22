@@ -3,6 +3,7 @@ import { useAuth } from './AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
 import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
+import { useModalAccesible } from '../hooks/useModalAccesible';
 
 const AdvertenciaLegalContext = createContext(null);
 
@@ -20,6 +21,7 @@ const AdvertenciaLegalContext = createContext(null);
 // función, verificarAntesDeActivar resuelve true de inmediato, sin mostrar nada (CLAUDE.md
 // §3: "si la jurisdicción no tiene documento legal cargado, no se muestra advertencia").
 export function AdvertenciaLegalProvider({ children }) {
+  const modal = useModalAccesible(cancelar);
   const { usuario } = useAuth();
   const { t } = useLocale();
   const [pendiente, setPendiente] = useState(null); // { texto, prestadoraId, jurisdiccion, funcionClave }
@@ -77,8 +79,8 @@ export function AdvertenciaLegalProvider({ children }) {
       {children}
       {pendiente && (
         <div className="panel-modal-fondo" onClick={cancelar}>
-          <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>{t.advertencias_legales.titulo}</h2>
+          <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+            <h2 id={modal.idTitulo}>{t.advertencias_legales.titulo}</h2>
             <p>{pendiente.texto}</p>
             <div className="panel-modal-acciones">
               <Button variant="secondary" onClick={cancelar}>{t.advertencias_legales.cancelar}</Button>

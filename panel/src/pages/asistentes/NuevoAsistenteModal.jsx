@@ -9,10 +9,12 @@ import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { modalidadesHabilitadas, mensajeDeModalidad } from '../../lib/modalidades';
 import { nombreTipo } from '../../lib/tiposAsistente';
 import { useTiposAsistente } from '../../hooks/useTiposAsistente';
+import { useModalAccesible } from '../../hooks/useModalAccesible';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 export function NuevoAsistenteModal({ onClose, onCreado }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const [nombre, setNombre] = useState('');
   const [dni, setDni] = useState('');
@@ -81,8 +83,8 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.asistentes.nuevo.titulo}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.asistentes.nuevo.titulo}</h2>
 
         {error && <Alert variant="error">{error}</Alert>}
 

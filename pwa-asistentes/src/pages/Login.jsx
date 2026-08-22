@@ -26,7 +26,7 @@ export default function Login() {
       <div className="login-card">
         <h1>{t.auth.titulo}</h1>
         <p className="login-subtitulo">{t.auth.subtitulo}</p>
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && <div className="alert alert-error" role="alert">{error}</div>}
         <form onSubmit={alEnviar}>
           <div className="form-field">
             <label htmlFor="email">{t.auth.email}</label>

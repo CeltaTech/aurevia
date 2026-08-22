@@ -49,13 +49,13 @@ export default function MisGuardias() {
     };
   }, []);
 
-  if (error) return <div className="alert alert-error">{error}</div>;
-  if (guardias === null) return <div className="estado-cargando">{t.comun.cargando}</div>;
+  if (error) return <div className="alert alert-error" role="alert">{error}</div>;
+  if (guardias === null) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
   if (guardias.length === 0)
     return (
       <div>
         <AvisoConsentimientoPendiente />
-        <div className="estado-vacio">{t.guardias.sin_guardias}</div>
+        <div className="estado-vacio" role="status">{t.guardias.sin_guardias}</div>
       </div>
     );
 

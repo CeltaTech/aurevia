@@ -175,24 +175,24 @@ export default function OfertasDeGuardia() {
     await cargar();
   }
 
-  if (error && ofertas === null) return <div className="alert alert-error">{error}</div>;
-  if (ofertas === null) return <div className="estado-cargando">{t.comun.cargando}</div>;
+  if (error && ofertas === null) return <div className="alert alert-error" role="alert">{error}</div>;
+  if (ofertas === null) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
 
   return (
     <div>
       <h1>{t.ofertas.titulo}</h1>
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && <div className="alert alert-error" role="alert">{error}</div>}
 
       {tomada && (
-        <div className="alert alert-info">
+        <div className="alert alert-info" role="status">
           {t.ofertas.tomada}{' '}
           <Link to={`/guardias/${tomada}`}>{t.ofertas.ver_el_turno}</Link>
         </div>
       )}
 
       {ofertas.length === 0 ? (
-        <div className="estado-vacio">{t.ofertas.sin_ofertas}</div>
+        <div className="estado-vacio" role="status">{t.ofertas.sin_ofertas}</div>
       ) : (
         ofertas.map((oferta) => (
           <TarjetaDeOferta

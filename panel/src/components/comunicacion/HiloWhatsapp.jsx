@@ -145,6 +145,7 @@ export function HiloWhatsapp({ conversacionId, onCambio }) {
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
           placeholder={t.comunicacion.placeholder_whatsapp}
+          aria-label={t.comunicacion.placeholder_whatsapp}
           rows={3}
         />
         <Button onClick={enviar} disabled={enviando || !texto.trim()}>

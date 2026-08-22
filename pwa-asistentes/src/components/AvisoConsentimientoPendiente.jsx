@@ -44,7 +44,7 @@ export default function AvisoConsentimientoPendiente() {
   if (!haySeguimiento || !hayPendiente) return null;
 
   return (
-    <div className="alert alert-info">
+    <div className="alert alert-info" role="status">
       <Link to="/perfil">{t.consentimientos.pendiente_aviso}</Link>
     </div>
   );

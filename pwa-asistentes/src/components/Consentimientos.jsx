@@ -73,8 +73,8 @@ export default function Consentimientos({ onCambio }) {
   // La respuesta de la Prestadora puede llegar después de la lista: si llega diciendo que no
   // hay seguimiento, lo ya cargado se deja de mostrar igual.
   if (!haySeguimiento) return null;
-  if (error && !items) return <div className="alert alert-error">{error}</div>;
-  if (!items) return <div className="estado-cargando">{t.comun.cargando}</div>;
+  if (error && !items) return <div className="alert alert-error" role="alert">{error}</div>;
+  if (!items) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
   // Sin texto cargado para el país de la Prestadora no hay nada que preguntar.
   // No es un error ni un vacío que haya que explicar: es el caso normal.
   if (items.length === 0) return null;
@@ -82,7 +82,7 @@ export default function Consentimientos({ onCambio }) {
   return (
     <div>
       <h2 style={{ marginTop: '2rem' }}>{t.consentimientos.titulo}</h2>
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && <div className="alert alert-error" role="alert">{error}</div>}
 
       {items.map((item) => {
         const otorgado = item.decision?.valor === 'otorgado' && !item.decision?.desactualizada;

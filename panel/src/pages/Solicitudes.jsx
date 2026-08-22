@@ -35,10 +35,11 @@ export function Solicitudes() {
         <input
           type="text"
           placeholder={t.comun.buscar}
+          aria-label={t.comun.buscar}
           value={f.busqueda}
           onChange={(e) => set('busqueda', e.target.value)}
         />
-        <select value={f.estado} onChange={(e) => set('estado', e.target.value)}>
+        <select value={f.estado} onChange={(e) => set('estado', e.target.value)} aria-label={t.comun.filtro_estado}>
           <option value="">{t.comun.todos}</option>
           {ESTADOS.map((e) => (
             <option key={e} value={e}>

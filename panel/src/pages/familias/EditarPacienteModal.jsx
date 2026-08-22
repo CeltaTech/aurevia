@@ -4,8 +4,10 @@ import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
+import { useModalAccesible } from '../../hooks/useModalAccesible';
 
 export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const [nombre, setNombre] = useState(paciente.nombre || '');
   const [fechaNacimiento, setFechaNacimiento] = useState(paciente.fecha_nacimiento || '');
@@ -43,8 +45,8 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.familias.editar_paciente.titulo}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.familias.editar_paciente.titulo}</h2>
 
         {error && <Alert variant="error">{error}</Alert>}
 

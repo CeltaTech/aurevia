@@ -11,6 +11,7 @@ import { ESTADO_EN_CURSO, guardiasSinCerrar } from '../../lib/guardiaSinCerrar';
 import { hoyISO } from '../../lib/horarios';
 import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../../lib/pacientesDeGuardia';
 import { mensajeDeError } from '../../lib/errores';
+import { useModalAccesible } from '../../hooks/useModalAccesible';
 
 // Las guardias que nadie cerró: el Coordinador (y el Admin de la Prestadora) las ve acá y las
 // cierra él.
@@ -172,6 +173,7 @@ export function GuardiasSinCerrar({ onCerrada }) {
 // El cierre se hace en su propia ventana y no con un botón suelto en la fila, porque hay que
 // escribir por qué se cierra y hay que dejar leído que no se va a anotar ninguna hora de salida.
 function CerrarGuardiaModal({ guardia, usuario, confirmarDestructivo, onClose, onCerrada }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const [motivo, setMotivo] = useState('');
   const [procesando, setProcesando] = useState(false);
@@ -210,8 +212,8 @@ function CerrarGuardiaModal({ guardia, usuario, confirmarDestructivo, onClose, o
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.guardias_sin_cerrar.modal_titulo}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.guardias_sin_cerrar.modal_titulo}</h2>
 
         {error && <Alert variant="error">{error}</Alert>}
 

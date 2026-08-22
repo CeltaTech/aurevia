@@ -205,10 +205,10 @@ export default function ReporteDiario() {
     }
   }
 
-  if (guardadoOk) return <div className="alert alert-info">{t.reporte.guardado_ok}</div>;
+  if (guardadoOk) return <div className="alert alert-info" role="status">{t.reporte.guardado_ok}</div>;
   if (guardadoPendiente) {
     return (
-      <div className="alert alert-alerta" aria-label={t.reporte.guardado_pendiente}>
+      <div className="alert alert-alerta" role="status">
         <span aria-hidden="true">⏳</span> {t.reporte.guardado_pendiente}
       </div>
     );
@@ -220,7 +220,7 @@ export default function ReporteDiario() {
         <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
       <h1>{paciente ? con(t.reporte.titulo_de, { nombre: paciente.nombre }) : t.reporte.titulo}</h1>
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && <div className="alert alert-error" role="alert">{error}</div>}
 
       {veElRelatoConIa && !estructurado && (
         <>

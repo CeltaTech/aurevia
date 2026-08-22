@@ -1,22 +1,12 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
-import { tienePermiso } from '../utils/permisos.js';
+import { requierePermiso } from '../utils/permisos.js';
 import { horasEntre, horasImputadasAlPaciente } from '../utils/horasDeGuardia.js';
 
 export const panelInformesObraSocialRouter = Router();
 
 const TIPOS_INFORME = ['planilla_asistencia', 'resumen_mensual'];
-
-function requierePermiso(accion) {
-  return async (req, res, next) => {
-    const permitido = await tienePermiso({ accion, usuarioId: req.usuarioPanel?.id });
-    if (!permitido) {
-      return res.status(403).json({ error: 'La Prestadora no habilitó esta acción' });
-    }
-    next();
-  };
-}
 
 /**
  * A cuántos Pacientes cubrió cada uno de estos turnos.

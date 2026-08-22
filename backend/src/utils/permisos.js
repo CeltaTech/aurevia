@@ -41,6 +41,27 @@ export async function tienePermiso({ accion, usuarioId }) {
   return data === true;
 }
 
+// El portero de una ruta que la Prestadora puede reservar: deja pasar solo si esta persona
+// tiene habilitada la acción.
+//
+// Vive acá y no en cada archivo de rutas por la regla 12 del §7 de CLAUDE.md. Hasta hoy
+// estaba escrito cuatro veces, palabra por palabra, en panelCuentas.js, panelImportacion.js,
+// panelLiquidaciones.js y panelInformesObraSocial.js. Cuatro copias de la misma decisión son
+// cuatro lugares donde corregirla, y basta con que alguien arregle tres para que la cuarta
+// ruta quede contestando otra cosa.
+//
+// El texto del rechazo también es uno solo, y es a propósito: desde afuera, una acción que la
+// Prestadora no habilitó tiene que verse siempre igual, venga de la ruta que venga.
+export function requierePermiso(accion) {
+  return async (req, res, next) => {
+    const permitido = await tienePermiso({ accion, usuarioId: req.usuarioPanel?.id });
+    if (!permitido) {
+      return res.status(403).json({ error: 'La Prestadora no habilitó esta acción' });
+    }
+    next();
+  };
+}
+
 // Las respuestas de todas las acciones de una sola vez, para cuando el Panel necesita saber
 // qué botones mostrar. Una consulta en vez de una por acción.
 export async function permisosEfectivos(usuarioId) {

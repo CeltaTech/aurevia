@@ -15,7 +15,7 @@ import {
 } from '../utils/cuentasPanel.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { reenviarActivacionCuenta } from '../utils/activacionCuenta.js';
-import { tienePermiso, permisosEfectivos } from '../utils/permisos.js';
+import { requierePermiso, permisosEfectivos } from '../utils/permisos.js';
 
 export const panelCuentasRouter = Router();
 
@@ -32,15 +32,6 @@ function requiereAdmin(req, res, next) {
 // admin-only sin cambios — el motor de permisos de la Fase 2 (docs/PENDIENTES.md, plan
 // aprobado) solo cubre el alta manual (/familia-directa y /asistente-directo), que es lo
 // que el plan pidió hacer configurable para Coordinador.
-function requierePermiso(accion) {
-  return async (req, res, next) => {
-    const permitido = await tienePermiso({ accion, usuarioId: req.usuarioPanel?.id });
-    if (!permitido) {
-      return res.status(403).json({ error: 'La Prestadora no habilitó esta acción' });
-    }
-    next();
-  };
-}
 
 // Usado por el frontend (botones "Nuevo Asistente"/"Nueva Familia", campos de edición de
 // Fase 1) para saber qué mostrar sin duplicar la lógica de permisos en el cliente — la
@@ -346,8 +337,6 @@ panelCuentasRouter.delete('/familia/:familiaId/circulo/:usuarioId', requiereRolP
 // automático de crearCuentaConPerfil); Coordinador/Admin/Superadmin siguen con el flujo
 // manual de panelUsuarios.js y no tienen esta ruta disponible.
 panelCuentasRouter.post('/:usuarioId/reenviar-activacion', requiereRolPanel, exigirOrganizacionActiva, requiereAdmin, async (req, res) => {
-  const prestadoraId = req.usuarioPanel.prestadoraId;
-
   let queryUsuario = supabase.from('usuarios').select('id, rol, prestadora_id').eq('id', req.params.usuarioId);
   queryUsuario = acotarAPrestadora(queryUsuario, req.usuarioPanel);
   const { data: usuario } = await queryUsuario.maybeSingle();

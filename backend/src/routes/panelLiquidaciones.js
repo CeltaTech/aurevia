@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
-import { tienePermiso } from '../utils/permisos.js';
+import { requierePermiso } from '../utils/permisos.js';
 import { horasEntre } from '../utils/horasDeGuardia.js';
 import { resolverEscalasVigentes } from '../utils/escalasLegales.js';
 
@@ -62,16 +62,6 @@ async function traerPaginado(armarConsulta) {
     todas.push(...(data || []));
     if (!data || data.length < TAMANO_PAGINA) return todas;
   }
-}
-
-function requierePermiso(accion) {
-  return async (req, res, next) => {
-    const permitido = await tienePermiso({ accion, usuarioId: req.usuarioPanel?.id });
-    if (!permitido) {
-      return res.status(403).json({ error: 'La Prestadora no habilitó esta acción' });
-    }
-    next();
-  };
 }
 
 // Tocar la plata de una persona es de la administración de la Prestadora, no de cualquiera

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
-import { tienePermiso } from '../utils/permisos.js';
+import { requierePermiso } from '../utils/permisos.js';
 import {
   crearAsistenteDirecto, crearFamiliaDirecta,
   activarVerificacionAltaAsistente, revertirAsistenteImportado, revertirFamiliaImportada,
@@ -29,16 +29,6 @@ function manejarErrorMulter(err, req, res, next) {
     return res.status(400).json({ error: 'Archivo no permitido (hasta 5 MB)' });
   }
   next();
-}
-
-function requierePermiso(accion) {
-  return async (req, res, next) => {
-    const permitido = await tienePermiso({ accion, usuarioId: req.usuarioPanel?.id });
-    if (!permitido) {
-      return res.status(403).json({ error: 'La Prestadora no habilitó esta acción' });
-    }
-    next();
-  };
 }
 
 // Sube un archivo (Excel/CSV), lo interpreta y devuelve un mapeo propuesto por IA para que

@@ -8,6 +8,7 @@ import { cosaDelCatalogo, mezclarVisibilidadConCatalogo } from '../utils/catalog
 import { LIMITES_ALERTAS_IA, VALORES_POR_DEFECTO_ALERTAS_IA } from '../utils/revisarAlertasIA.js';
 import { validarUmbralesPremura } from '../utils/umbralesPremura.js';
 import { LIMITES_AVISO_PREVIO_GUARDIA } from '../utils/revisarRecordatoriosPush.js';
+import { METROS_TOLERANCIA_POR_OMISION, MINUTOS_TOLERANCIA_POR_OMISION } from '../utils/toleranciaCheckin.js';
 
 export const panelConfiguracionRouter = Router();
 
@@ -711,7 +712,11 @@ panelConfiguracionRouter.get('/ausencia-automatica', async (req, res) => {
     .maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
   res.json({
-    configuracion: data || { activo: true, minutos_tolerancia_checkin: 15, metros_tolerancia_checkin: 150 },
+    configuracion: data || {
+      activo: true,
+      minutos_tolerancia_checkin: MINUTOS_TOLERANCIA_POR_OMISION,
+      metros_tolerancia_checkin: METROS_TOLERANCIA_POR_OMISION,
+    },
   });
 });
 

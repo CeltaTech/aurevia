@@ -6,13 +6,21 @@ import { claseBadge } from '../lib/tonos';
 import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { cargarPacientesDeGuardias, pacientesDeGuardia, textoDePacientes } from '../lib/pacientesDeGuardia';
+import { llegoAlDomicilio } from '../lib/toleranciaCheckin';
+import { domiciliosPorFecha, domicilioDe } from '../lib/domicilioDelDia';
 import { mensajeDeError } from '../lib/errores';
 
-// Umbral de cercanía para considerar un check-in/check-out "verificado" contra el
-// domicilio registrado del Paciente — mismo criterio de constante local ya usado en
-// Guardias.jsx (HORAS_ALERTA_CHECKIN_SIN_CHECKOUT), no es un valor legal/económico
-// (CLAUDE.md §3/§7.10) sino un umbral técnico de tolerancia GPS.
-const RADIO_VERIFICACION_KM = 0.3;
+/*
+ * Esta pantalla existe para auditar los check-in, así que tiene que dar el mismo veredicto que
+ * dio el motor cuando ese check-in entró. Dos cosas hacen falta para eso, y las dos vienen de
+ * afuera de este archivo:
+ *
+ *   - **Cuántos metros se toleran** los elige cada Prestadora en Configuración → El cuidado.
+ *     Antes acá había un número fijo de trescientos metros, más del doble de lo que tolera el
+ *     motor por omisión: el mismo check-in podía estar bien para uno y mal para la otra.
+ *   - **Contra qué dirección se mide** es la del día de ese turno, no la que figura hoy en la
+ *     ficha. Si el Paciente pasó una temporada en otra casa, el Asistente fue ahí.
+ */
 
 function hoyISO() {
   return new Date().toISOString().slice(0, 10);
@@ -24,11 +32,13 @@ function sumarDias(fechaISO, dias) {
   return f.toISOString().slice(0, 10);
 }
 
-function estadoVerificacion(punto, paciente) {
+function estadoVerificacion(punto, paciente, configuracion) {
   if (!punto?.lat || !punto?.lng) return 'sin_datos';
   if (!paciente?.lat || !paciente?.lng) return 'sin_domicilio';
-  const distancia = distanciaKm(punto.lat, punto.lng, paciente.lat, paciente.lng);
-  return distancia <= RADIO_VERIFICACION_KM ? 'verificado' : 'fuera_de_rango';
+  const metros = distanciaKm(punto.lat, punto.lng, paciente.lat, paciente.lng) * 1000;
+  const llego = llegoAlDomicilio(metros, configuracion);
+  if (llego === null) return 'sin_domicilio';
+  return llego ? 'verificado' : 'fuera_de_rango';
 }
 
 /*
@@ -44,10 +54,10 @@ function estadoVerificacion(punto, paciente) {
  */
 const ORDEN_VERIFICACION = ['verificado', 'fuera_de_rango', 'sin_domicilio'];
 
-function estadoVerificacionDelTurno(punto, pacientes) {
+function estadoVerificacionDelTurno(punto, pacientes, configuracion) {
   if (!punto?.lat || !punto?.lng) return 'sin_datos';
   if (!pacientes?.length) return 'sin_domicilio';
-  const estados = pacientes.map((p) => estadoVerificacion(punto, p));
+  const estados = pacientes.map((p) => estadoVerificacion(punto, p, configuracion));
   return ORDEN_VERIFICACION.find((e) => estados.includes(e)) ?? 'sin_domicilio';
 }
 
@@ -67,7 +77,12 @@ export function Evv() {
     setEstadoCarga('cargando');
     setError(null);
 
-    const [{ data: guardiasData, error: errorGuardias }, { data: asistentesData }, { data: pacientesData }] = await Promise.all([
+    const [
+      { data: guardiasData, error: errorGuardias },
+      { data: asistentesData },
+      { data: pacientesData },
+      { data: configuracion },
+    ] = await Promise.all([
       supabase
         .from('guardias')
         .select('id, fecha, hora_inicio, hora_fin, estado, asistente_id, paciente_id, checkin_at, checkin_lat, checkin_lng, checkout_at, checkout_lat, checkout_lng')
@@ -77,7 +92,12 @@ export function Evv() {
         .order('fecha', { ascending: false })
         .order('hora_inicio', { ascending: true }),
       supabase.from('asistentes').select('id, nombre'),
-      supabase.from('pacientes').select('id, nombre, lat, lng'),
+      // Del Paciente alcanza con el nombre: las coordenadas contra las que se mide no son las
+      // de la ficha sino las del día de cada turno, y esas las contesta la base más abajo.
+      supabase.from('pacientes').select('id, nombre'),
+      // Los metros que tolera esta Prestadora. No lleva filtro por Prestadora porque la regla
+      // de acceso de la base ya deja ver una sola fila, la del tenant de esta sesión.
+      supabase.from('configuracion_ausencia_automatica').select('metros_tolerancia_checkin').maybeSingle(),
     ]);
 
     if (errorGuardias) {
@@ -98,11 +118,29 @@ export function Evv() {
       return;
     }
 
+    // A quién hay que ubicar en cada fecha. Un turno de esta semana y otro del mes pasado
+    // pueden ser del mismo Paciente sin ser la misma dirección, así que la pregunta se agrupa
+    // por día y no por persona.
+    const pacientesPorFecha = {};
+    for (const g of guardiasData ?? []) {
+      const pedidos = pacientesPorFecha[g.fecha] ?? [];
+      for (const id of pacientesDeGuardia(g, pacientesPorGuardia)) {
+        if (!pedidos.includes(id)) pedidos.push(id);
+      }
+      pacientesPorFecha[g.fecha] = pedidos;
+    }
+    const domicilios = await domiciliosPorFecha(pacientesPorFecha);
+
     const filasConEstado = (guardiasData ?? []).map((g) => {
       // Todos los Pacientes del turno, ordenados por nombre para que dos turnos con la misma
-      // gente se lean igual.
+      // gente se lean igual, y cada uno con las coordenadas que le regían ese día.
       const pacientes = pacientesDeGuardia(g, pacientesPorGuardia)
-        .map((id) => pacientesPorId[id])
+        .map((id) => {
+          const paciente = pacientesPorId[id];
+          if (!paciente) return null;
+          const delDia = domicilioDe(domicilios, g.fecha, id);
+          return { ...paciente, lat: delDia?.lat ?? null, lng: delDia?.lng ?? null };
+        })
         .filter(Boolean)
         .sort((a, b) => (a.nombre ?? '').localeCompare(b.nombre ?? ''));
       return {
@@ -112,8 +150,8 @@ export function Evv() {
           pacientes.map((p) => p.nombre),
           t.guardias.pacientes_y_mas,
         ),
-        estado_checkin: estadoVerificacionDelTurno({ lat: g.checkin_lat, lng: g.checkin_lng }, pacientes),
-        estado_checkout: estadoVerificacionDelTurno({ lat: g.checkout_lat, lng: g.checkout_lng }, pacientes),
+        estado_checkin: estadoVerificacionDelTurno({ lat: g.checkin_lat, lng: g.checkin_lng }, pacientes, configuracion),
+        estado_checkout: estadoVerificacionDelTurno({ lat: g.checkout_lat, lng: g.checkout_lng }, pacientes, configuracion),
       };
     });
 

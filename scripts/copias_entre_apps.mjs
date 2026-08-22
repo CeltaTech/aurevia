@@ -80,6 +80,11 @@ export const GRUPOS = [
     copias: ['backend/src/utils/cobrosDeFamilia.js'],
   },
   {
+    que: 'cuán lejos del domicilio se puede marcar y que cuente como haber llegado',
+    original: 'panel/src/lib/toleranciaCheckin.js',
+    copias: ['backend/src/utils/toleranciaCheckin.js'],
+  },
+  {
     que: 'cómo se avisa que el Paciente está en un domicilio temporal',
     original: 'pwa-asistentes/src/components/DomicilioTemporal.jsx',
     copias: ['pwa-familias/src/components/DomicilioTemporal.jsx'],

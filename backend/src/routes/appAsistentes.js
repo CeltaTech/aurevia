@@ -12,6 +12,7 @@ import {
   asistenteAtiendeAlPaciente,
 } from '../utils/pacientesDeGuardia.js';
 import { conDomicilioDelDia, pacientesConDomicilioDelDia } from '../utils/domicilioDelDia.js';
+import { llegoAlDomicilio } from '../utils/toleranciaCheckin.js';
 import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
 import { visibilidadDelPedido, exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
@@ -285,7 +286,6 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, async (r
     .select('metros_tolerancia_checkin')
     .eq('prestadora_id', guardia.prestadora_id)
     .maybeSingle();
-  const tolerancia = config?.metros_tolerancia_checkin ?? 150;
 
   // Con varios Pacientes se mide contra el domicilio MÁS CERCANO. Casi siempre viven todos en
   // la misma casa y da lo mismo; cuando no, estar en la puerta de uno de ellos no es llegar
@@ -298,7 +298,9 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, async (r
     .map((p) => ({ paciente: p, metros: Math.round(distanciaMetros(lat, lng, p.lat, p.lng)) }));
   const masCerca = medidos.reduce((mejor, actual) => (mejor && mejor.metros <= actual.metros ? mejor : actual), null);
   const distancia = masCerca ? masCerca.metros : null;
-  const dentroDeRango = distancia == null || distancia <= tolerancia;
+  // `llegoAlDomicilio` contesta `null` cuando no hay con qué medir, y eso no es llegar lejos:
+  // es no saber. Sin coordenadas no se le manda un aviso al Coordinador.
+  const dentroDeRango = llegoAlDomicilio(distancia, config) !== false;
 
   const { error } = await supabase
     .from('guardias')

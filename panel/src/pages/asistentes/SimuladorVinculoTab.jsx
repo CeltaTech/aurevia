@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
-import { useAuth } from '../../context/AuthContext';
+import { useMonedaActual } from '../../hooks/useMonedaActual';
 import { useEscalasLegales } from '../../hooks/useEscalasLegales';
 import { useFormulasCese } from '../../hooks/useFormulasCese';
 import { resolverEscalasVigentes, resolverFormulasVigentes } from '../../lib/escalasLegales';
@@ -49,9 +49,8 @@ function proyectarCosto(asistenteBase, tipoVinculo, escalasResueltas, formulasRe
 
 export function SimuladorVinculoTab({ asistente }) {
   const { t, locale } = useLocale();
-  const { usuario } = useAuth();
   // Son proyecciones: no están guardadas y no traen moneda propia (regla 14, §7).
-  const moneda = usuario?.moneda ?? null;
+  const moneda = useMonedaActual();
   const { filas: escalasCrudas, estado: estadoEscalas, error: errorEscalas, recargar: recargarEscalas, jurisdiccion } = useEscalasLegales(asistente.prestadora_id);
   const { filas: formulasCrudas, estado: estadoFormulas, error: errorFormulas, recargar: recargarFormulas } = useFormulasCese(asistente.prestadora_id);
   const hoy = new Date().toISOString().slice(0, 10);

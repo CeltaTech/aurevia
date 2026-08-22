@@ -6,6 +6,8 @@ import { useConfirmarDestructivo } from '../context/TenantSessionContext';
 import { traducirValor } from '../i18n/valores';
 import { useFiltros } from '../hooks/useFiltros';
 import { useEscalasLegales } from '../hooks/useEscalasLegales';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
+import { useMonedaActual } from '../hooks/useMonedaActual';
 import { llamarApiLiquidaciones } from '../lib/apiLiquidaciones';
 import {
   ALCANCES,
@@ -24,6 +26,7 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
+import { useModalAccesible } from '../hooks/useModalAccesible';
 
 /* Lo que la Prestadora le paga al Asistente, guardado.
    ==========================================================================
@@ -208,6 +211,7 @@ function LiquidacionesTab({ esAdmin }) {
         <input
           type="text"
           placeholder={t.pagos_asistentes.buscar}
+          aria-label={t.pagos_asistentes.buscar}
           value={f.busqueda}
           onChange={(e) => set('busqueda', e.target.value)}
         />
@@ -337,6 +341,7 @@ function ResultadoGeneracion({ resultado }) {
  * lee sale de `base_unidad`, que sí está en los tres idiomas.
  */
 function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
+  const modal = useModalAccesible(onCerrar);
   const { t, locale } = useLocale();
   const confirmarDestructivo = useConfirmarDestructivo();
 
@@ -392,8 +397,8 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onCerrar}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.pagos_asistentes.detalle_titulo}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.pagos_asistentes.detalle_titulo}</h2>
         {estado !== 'error' && error && <Alert variant="error">{error}</Alert>}
 
         <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
@@ -670,9 +675,11 @@ function ConceptosTab() {
  * el formulario entero con un error que no dice cuál de los datos sobraba.
  */
 function ConceptoModal({ concepto, onCerrar, onGuardado }) {
+  const modal = useModalAccesible(onCerrar);
   const { t } = useLocale();
-  const { usuario } = useAuth();
-  const { filas: escalas, estado: estadoEscalas } = useEscalasLegales(usuario?.prestadora_id);
+  const prestadoraId = usePrestadoraActual();
+  const moneda = useMonedaActual();
+  const { filas: escalas, estado: estadoEscalas } = useEscalasLegales(prestadoraId);
 
   const [datos, setDatos] = useState({
     nombre: concepto.nombre ?? '',
@@ -691,7 +698,7 @@ function ConceptoModal({ concepto, onCerrar, onGuardado }) {
 
   // La moneda no se elige: es la de la Prestadora, la misma en la que se liquida. Se muestra
   // igual, porque un valor sin moneda a la vista no se puede leer (regla 14).
-  const paraGuardar = { ...datos, moneda: usuario?.moneda ?? null };
+  const paraGuardar = { ...datos, moneda };
   const campos = camposDelConcepto(datos);
   const falta = loQueFaltaDelConcepto(paraGuardar);
 
@@ -716,8 +723,8 @@ function ConceptoModal({ concepto, onCerrar, onGuardado }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onCerrar}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{concepto.id ? t.comun.editar : t.pagos_asistentes.conceptos_nuevo}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{concepto.id ? t.comun.editar : t.pagos_asistentes.conceptos_nuevo}</h2>
         {error && <Alert variant="error">{error}</Alert>}
 
         <FormField
@@ -786,7 +793,7 @@ function ConceptoModal({ concepto, onCerrar, onGuardado }) {
           <FormField
             label={t.pagos_asistentes.concepto_moneda}
             name="concepto_moneda"
-            value={usuario?.moneda ?? ''}
+            value={moneda ?? ''}
             readOnly
             disabled
             ayuda={t.pagos_asistentes.concepto_moneda_ayuda}

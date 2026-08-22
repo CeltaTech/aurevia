@@ -43,7 +43,9 @@ function requiereSoporteTecnico(req, res, next) {
 async function buscarSesionVigenteYCerrarSiVencio(adminId) {
   const { data: sesion, error } = await supabase
     .from('sesiones_soporte_tecnico')
-    .select('id, prestadora_id, entrada_at, expira_at, ultima_actividad_at, prestadoras(nombre_fantasia)')
+    // La moneda viaja con la sesión porque los importes que se muestran y se guardan durante
+    // el soporte son de la Prestadora visitada, no de la de quien mira (regla 14, §7).
+    .select('id, prestadora_id, entrada_at, expira_at, ultima_actividad_at, prestadoras(nombre_fantasia, moneda)')
     .eq('admin_id', adminId)
     .is('salida_at', null)
     .order('entrada_at', { ascending: false })

@@ -13,12 +13,15 @@ import {
 } from '../../lib/modalidades';
 import { nombreTipo } from '../../lib/tiposAsistente';
 import { useTiposAsistente } from '../../hooks/useTiposAsistente';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
+import { useMonedaActual } from '../../hooks/useMonedaActual';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { generarCertificadoTrabajo, generarCertificadoRemuneracionesServicios, descargarPDF } from '../../lib/generarDocumentoCese';
+import { con } from '../../lib/textos';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -27,6 +30,7 @@ export function PerfilTab({ asistente, onActualizado }) {
   const { usuario } = useAuth();
   const { empresa } = useEmpresa();
   const esAdmin = esAdminOSuperior(usuario?.rol);
+  const moneda = useMonedaActual();
   const { puede } = usePermisos();
   const puedeEditarIdentidad = esAdmin || puede('editar_identidad_asistente');
   const { paraElegir: tiposAsistente, porId: tiposPorId } = useTiposAsistente();
@@ -170,7 +174,7 @@ export function PerfilTab({ asistente, onActualizado }) {
   }
 
   function descargarCertificadoRemuneraciones() {
-    descargarPDF(generarCertificadoRemuneracionesServicios({ asistente, nombreEmpresa: empresa?.nombre ?? '', moneda: usuario?.moneda ?? null }), `certificado-remuneraciones-${asistente.nombre}.pdf`);
+    descargarPDF(generarCertificadoRemuneracionesServicios({ asistente, nombreEmpresa: empresa?.nombre ?? '', moneda }), `certificado-remuneraciones-${asistente.nombre}.pdf`);
   }
 
   return (
@@ -294,7 +298,7 @@ export function PerfilTab({ asistente, onActualizado }) {
 // supabase/migrations/).
 function DocumentosVencimiento({ asistenteId }) {
   const { t } = useLocale();
-  const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const [tipos, setTipos] = useState([]);
   const [valores, setValores] = useState({});
   const [documentoIds, setDocumentoIds] = useState({});
@@ -337,7 +341,7 @@ function DocumentosVencimiento({ asistenteId }) {
     const { error: errorGuardar } = await supabase
       .from('documentos_asistente')
       .upsert(
-        { id: documentoIds[tipoId], asistente_id: asistenteId, tipo_documento_id: tipoId, fecha_vencimiento: fecha, prestadora_id: usuario?.prestadora_id },
+        { id: documentoIds[tipoId], asistente_id: asistenteId, tipo_documento_id: tipoId, fecha_vencimiento: fecha, prestadora_id: prestadoraId },
         { onConflict: 'asistente_id,tipo_documento_id' },
       );
     setGuardandoTipoId(null);
@@ -371,6 +375,7 @@ function DocumentosVencimiento({ asistenteId }) {
                       type="date"
                       value={valores[tipo.id] || ''}
                       onChange={(e) => setValores((v) => ({ ...v, [tipo.id]: e.target.value }))}
+                      aria-label={con(t.comun.campo_de_fila, { campo: t.asistentes.documentos.vencimientos_col_vencimiento, nombre: tipo.nombre })}
                     />
                   ) : '—'}
                 </td>

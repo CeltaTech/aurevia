@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
-import { useAuth } from '../../context/AuthContext';
 import { useEmpresa } from '../../context/EmpresaContext';
 import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
 import { useEscalasLegales } from '../../hooks/useEscalasLegales';
 import { useFormulasCese } from '../../hooks/useFormulasCese';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
+import { useMonedaActual } from '../../hooks/useMonedaActual';
 import { resolverEscalasVigentes, resolverFormulasVigentes } from '../../lib/escalasLegales';
 import { formatearImporte } from '../../lib/dinero';
 import { calcularCese } from '../../lib/calcularCese';
@@ -42,10 +42,10 @@ const CAUSALES = [
 
 export function VinculoCeseTab({ asistente, onActualizado }) {
   const { t, locale } = useLocale();
-  const { usuario } = useAuth();
   const { empresa } = useEmpresa();
   const confirmarDestructivo = useConfirmarDestructivo();
   const prestadoraId = usePrestadoraActual();
+  const moneda = useMonedaActual();
   const { filas: escalasCrudas, estado: estadoEscalas, jurisdiccion } = useEscalasLegales(prestadoraId);
   const { filas: formulasCrudas, estado: estadoFormulas } = useFormulasCese(prestadoraId);
   const [ceses, setCeses] = useState([]);
@@ -209,7 +209,7 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
 
           {resultado && (
             <div className="panel-resultado-calculo">
-              <p><strong>{t.asistentes.cese.monto}:</strong> {resultado.montoTotal !== null ? formatearImporte(resultado.montoTotal, usuario?.moneda ?? null, locale) : t.asistentes.cese.requiere_calculo_manual}</p>
+              <p><strong>{t.asistentes.cese.monto}:</strong> {resultado.montoTotal !== null ? formatearImporte(resultado.montoTotal, moneda, locale) : t.asistentes.cese.requiere_calculo_manual}</p>
 
               <details>
                 <summary>{t.asistentes.cese.ver_detalle_calculo}</summary>

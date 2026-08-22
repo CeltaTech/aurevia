@@ -25,7 +25,13 @@ panelAuditoriaRouter.get('/', requiereRolPanel, async (req, res) => {
   // admin_prestadora (dueño de la Prestadora auditada) solo ve lo que pasó dentro de la
   // suya — mismo criterio que la policy RLS "admin_prestadora_lee_auditoria_de_su_prestadora".
   // Superadmin ve el log completo: es quien hace el soporte y quien tiene que poder
-  // reconstruir qué se tocó en cada Prestadora (policy "superadmin_lee_toda_la_auditoria").
+  // reconstruir qué se tocó en cada Prestadora.
+  //
+  // Ese alcance completo lo da este filtro y nada más: la consulta sale con la llave de
+  // servicio, que no pasa por las reglas de la base. Del lado de la base el Superadmin ya
+  // no lee el registro entero — solo el de la Prestadora donde tiene la sesión de soporte
+  // abierta (policy "superadmin_lee_auditoria_de_su_sesion_activa"). Que los dos lados
+  // digan cosas distintas es una diferencia abierta, anotada en docs/PENDIENTES.md.
   if (rol === 'admin_prestadora') {
     if (!prestadoraId) return res.status(403).json({ error: 'Sin prestadora asociada' });
     consulta = consulta.eq('prestadora_id', prestadoraId);

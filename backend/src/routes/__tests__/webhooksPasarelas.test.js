@@ -58,6 +58,20 @@ await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 
+// Un Mercado Pago de mentira. Hace falta porque su aviso no dice si la plata entró —solo trae
+// el identificador del cobro—, así que la ruta le vuelve a preguntar antes de imputar nada, y
+// eso es lo que se prueba más abajo.
+let respuestaDelProveedor = { status: 'authorized' };
+let codigoDelProveedor = 200;
+let consultasAlProveedor = [];
+const proveedorFalso = createServer((req, res) => {
+  consultasAlProveedor.push(req.url);
+  res.writeHead(codigoDelProveedor, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(respuestaDelProveedor));
+});
+await new Promise((listo) => proveedorFalso.listen(0, '127.0.0.1', listo));
+process.env.MERCADOPAGO_API_BASE = `http://127.0.0.1:${proveedorFalso.address().port}`;
+
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se
 // arma en el momento en que se importa.
 const { default: express } = await import('express');
@@ -81,6 +95,7 @@ after(() => {
   console.warn = avisarDeVerdad;
   motor.close();
   baseFalsa.close();
+  proveedorFalso.close();
 });
 
 const EVENTO = { type: 'invoice.paid', data: { object: { id: 'sub_1234567890' } } };
@@ -112,6 +127,9 @@ async function avisar({ cuerpo = CRUDO, firma, tipoDeContenido = 'application/js
 beforeEach(() => {
   llamadas = [];
   anotados = [];
+  respuestaDelProveedor = { status: 'authorized' };
+  codigoDelProveedor = 200;
+  consultasAlProveedor = [];
   respuestas.clear();
   respuestas.set('GET /rest/v1/credenciales_pasarela_pago', () => [
     { credencial_secret_id: 'aaaaaaaa-0000-4000-8000-000000000000', secreto_firma_secret_id: 'bbbbbbbb-0000-4000-8000-000000000000' },
@@ -233,5 +251,98 @@ describe('el cuerpo crudo', () => {
     assert.ok(montaje > 0, 'el router de webhooks tiene que estar montado en server.js');
     assert.ok(lectorJson > 0, 'el lector de JSON general tiene que estar en server.js');
     assert.ok(montaje < lectorJson, 'el router de webhooks va antes del express.json() general');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// El aviso que no alcanza por sí solo (pendiente #159, decisión del 2026-08-22)
+//
+// Mercado Pago avisa "pasó algo con este cobro" y nada más: el estado no viaja adentro de lo
+// que firma. Comprobar la firma prueba que el aviso es auténtico, no que la plata entró. Por
+// eso la ruta le vuelve a preguntar al propio Mercado Pago, de sistema a sistema, y recién con
+// esa respuesta imputa. Lo que se prueba acá es que esa segunda pregunta pase de verdad, que
+// mande el mismo identificador que venía firmado, y que si se cae no dé nada por cobrado.
+// ---------------------------------------------------------------------------
+
+const CRUDO_MP = Buffer.from(JSON.stringify({ action: 'payment.updated', data: { id: 'PAGO-123' } }), 'utf8');
+const REQUISITORIA = 'req-de-mentira';
+
+async function avisarMercadoPago({ idDelAviso = 'PAGO-123' } = {}) {
+  const instante = Math.floor(Date.now() / 1000);
+  // Mercado Pago firma una plantilla de tres datos, no el cuerpo, y pide el identificador en
+  // minúsculas. Acá se manda en mayúsculas a propósito, para que la prueba falle si algún día
+  // se deja de bajar a minúsculas antes de firmar.
+  const firma = createHmac('sha256', SECRETO)
+    .update(`id:${idDelAviso.toLowerCase()};request-id:${REQUISITORIA};ts:${instante};`)
+    .digest('hex');
+  const respuesta = await fetch(`${DIRECCION}/mercadopago/${PRESTADORA}?data.id=${idDelAviso}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-request-id': REQUISITORIA,
+      'x-signature': `ts=${instante},v1=${firma}`,
+    },
+    body: CRUDO_MP,
+  });
+  return { estado: respuesta.status, cuerpo: await respuesta.json() };
+}
+
+describe('el aviso de Mercado Pago, que no dice si la plata entró', () => {
+  it('se confirma preguntándole al proveedor, y ahí sí se imputa', async () => {
+    const { estado } = await avisarMercadoPago();
+    assert.equal(estado, 200);
+
+    assert.equal(consultasAlProveedor.length, 1);
+    assert.ok(consultasAlProveedor[0].includes('PAGO-123'), 'se pregunta por el mismo cobro que venía firmado');
+
+    const cobro = escrituras().find((l) => l.clave.endsWith('/cobros_marketplace'));
+    assert.equal(cobro.cuerpo.estado_cobro, 'exitoso');
+    const suscripcion = escrituras().find((l) => l.clave.endsWith('/suscripciones_marketplace'));
+    assert.equal(suscripcion.cuerpo.estado, 'activa');
+  });
+
+  it('si el proveedor dice que todavía no entró, el cobro queda pendiente y la suscripción sin tocar', async () => {
+    respuestaDelProveedor = { status: 'pending' };
+    const { estado } = await avisarMercadoPago();
+    assert.equal(estado, 200);
+
+    const cobro = escrituras().find((l) => l.clave.endsWith('/cobros_marketplace'));
+    assert.equal(cobro.cuerpo.estado_cobro, 'pendiente');
+    assert.equal(escrituras().some((l) => l.clave.endsWith('/suscripciones_marketplace')), false);
+  });
+
+  it('si el proveedor dice que se canceló, el cobro queda fallido y la suscripción vencida', async () => {
+    respuestaDelProveedor = { status: 'cancelled' };
+    await avisarMercadoPago();
+
+    const cobro = escrituras().find((l) => l.clave.endsWith('/cobros_marketplace'));
+    assert.equal(cobro.cuerpo.estado_cobro, 'fallido');
+    const suscripcion = escrituras().find((l) => l.clave.endsWith('/suscripciones_marketplace'));
+    assert.equal(suscripcion.cuerpo.estado, 'vencida');
+  });
+
+  it('si no se puede preguntar, no se escribe nada: quedarse corto se arregla, cobrar de más no', async () => {
+    codigoDelProveedor = 500;
+    respuestaDelProveedor = { message: 'el proveedor se cayó' };
+    const { estado } = await avisarMercadoPago();
+    assert.equal(estado, 200);
+    assert.equal(escrituras().length, 0);
+    assert.ok(anotados.some((linea) => linea.includes('No se pudo confirmar el cobro')));
+  });
+
+  it('un aviso con la firma cambiada ni siquiera llega a preguntarle al proveedor', async () => {
+    const instante = Math.floor(Date.now() / 1000);
+    const respuesta = await fetch(`${DIRECCION}/mercadopago/${PRESTADORA}?data.id=PAGO-123`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-request-id': REQUISITORIA,
+        'x-signature': `ts=${instante},v1=${'a'.repeat(64)}`,
+      },
+      body: CRUDO_MP,
+    });
+    assert.equal(respuesta.status, 401);
+    assert.equal(consultasAlProveedor.length, 0);
+    assert.equal(escrituras().length, 0);
   });
 });

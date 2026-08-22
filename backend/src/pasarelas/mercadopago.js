@@ -14,6 +14,15 @@ const API_BASE = process.env.MERCADOPAGO_API_BASE || 'https://api.mercadopago.co
  *  en la pantalla). */
 export const REQUIERE_SECRETO_FIRMA = true;
 
+/** El aviso de Mercado Pago dice que algo pasó con un cobro, no que la plata entró: el estado
+ *  no viaja adentro de lo que se firma, solo el identificador. Así que después de comprobar la
+ *  firma hay que volver a preguntarle a Mercado Pago por ese identificador, y recién ahí se
+ *  sabe. Decisión del Desarrollador del 2026-08-22 (pendiente #159): preguntar siempre, porque
+ *  es una consulta por cobro y es la diferencia entre creerle a un mensaje y ver la plata.
+ *  La marca vive acá y no en la ruta porque quién necesita re-preguntar depende de cómo avisa
+ *  cada proveedor, y eso lo sabe su adaptador (regla 12 del §7). */
+export const CONFIRMA_CONSULTANDO = true;
+
 export async function crearSuscripcion({ credencial, suscripcionId, monto, moneda, familiaId }) {
   // La moneda llega de la suscripción, que la heredó de la Prestadora. No hay valor por
   // descarte: cobrarle a una Familia en una moneda que nadie eligió es peor que fallar
@@ -82,10 +91,9 @@ export async function cancelarSuscripcion({ credencial, referenciaExterna }) {
  * cae al del cuerpo. Va en minúsculas porque así lo pide Mercado Pago para los
  * identificadores con letras; para los que son solo números no cambia nada.
  *
- * **El estado sigue siendo `pendiente` a propósito.** Comprobar la firma dice que el aviso es
- * auténtico, no que la plata entró. Si además hay que volver a preguntarle el estado a
- * Mercado Pago antes de dar un cobro por bueno es una decisión del Desarrollador que sigue
- * abierta en el pendiente #159, y no se toca desde acá.
+ * **Devuelve `pendiente` a propósito, y no es el estado final.** Comprobar la firma dice que
+ * el aviso es auténtico, no que la plata entró. Quien resuelve el estado de verdad es la
+ * consulta que la ruta hace después, porque este adaptador declara `CONFIRMA_CONSULTANDO`.
  */
 export function verificarWebhook({ secretoFirma, headers, consulta, body, ahoraMs }) {
   const idDelAviso = consulta?.['data.id'] ?? body?.data?.id;

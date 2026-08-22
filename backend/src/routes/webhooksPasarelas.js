@@ -20,7 +20,7 @@
 
 import express, { Router } from 'express';
 import { supabase } from '../db/connection.js';
-import { obtenerAdaptador } from '../pasarelas/index.js';
+import { obtenerAdaptador, confirmaConsultando } from '../pasarelas/index.js';
 import { esRechazoDeAutenticidad, MOTIVO } from '../pasarelas/firmaWebhook.js';
 
 export const webhooksPasarelasRouter = Router();
@@ -113,16 +113,32 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', async (req, res) => {
     return res.status(200).json({ ok: true });
   }
 
-  await supabase.from('cobros_marketplace').update({ estado_cobro: estado }).eq('id', cobro.id);
+  // Hay proveedores cuyo aviso no dice si la plata entró: dice que pasó algo con un cobro y
+  // nada más. Para esos se vuelve a preguntar, de sistema a sistema, usando el mismo
+  // identificador que acabó de matchear la fila — el mismo que venía firmado, no uno parecido.
+  // Si la consulta se cae, el cobro queda como estaba: quedarse corto es recuperable, dar por
+  // cobrada una plata que no entró no lo es.
+  let estadoFinal = estado;
+  if (confirmaConsultando(proveedor)) {
+    try {
+      const confirmado = await adaptador.consultarEstado({ credencial, referenciaExterna });
+      estadoFinal = confirmado.estado;
+    } catch (fallo) {
+      console.warn('No se pudo confirmar el cobro con el proveedor:', proveedor, prestadoraId, fallo.message);
+      return res.status(200).json({ ok: true });
+    }
+  }
 
-  if (estado === 'exitoso') {
+  await supabase.from('cobros_marketplace').update({ estado_cobro: estadoFinal }).eq('id', cobro.id);
+
+  if (estadoFinal === 'exitoso') {
     const proximoCobro = new Date();
     proximoCobro.setMonth(proximoCobro.getMonth() + 1);
     await supabase
       .from('suscripciones_marketplace')
       .update({ estado: 'activa', proximo_cobro: proximoCobro.toISOString().slice(0, 10) })
       .eq('id', cobro.suscripcion_id);
-  } else if (estado === 'fallido') {
+  } else if (estadoFinal === 'fallido') {
     await supabase.from('suscripciones_marketplace').update({ estado: 'vencida' }).eq('id', cobro.suscripcion_id);
   }
 

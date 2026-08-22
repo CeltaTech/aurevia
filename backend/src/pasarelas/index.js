@@ -47,6 +47,15 @@ export function requiereSecretoFirma(proveedor) {
   return Boolean(ADAPTADORES[proveedor]?.REQUIERE_SECRETO_FIRMA);
 }
 
+/** ¿Al aviso de este proveedor hay que confirmarlo preguntándole el estado a él mismo? Hay
+ *  proveedores cuyo aviso trae el estado adentro de lo que firman —ahí el aviso alcanza— y
+ *  otros cuyo aviso solo dice "pasó algo con este cobro". Para los segundos, comprobar la
+ *  firma no es saber si la plata entró, y la ruta vuelve a preguntar antes de imputar nada.
+ *  Lo contesta el adaptador, que es el único que sabe cómo avisa su proveedor (regla 12). */
+export function confirmaConsultando(proveedor) {
+  return Boolean(ADAPTADORES[proveedor]?.CONFIRMA_CONSULTANDO);
+}
+
 export function obtenerAdaptador(proveedor) {
   const adaptador = ADAPTADORES[proveedor];
   if (!adaptador) {

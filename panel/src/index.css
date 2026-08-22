@@ -176,6 +176,14 @@ h2 {
   color: var(--tono-info-texto);
 }
 
+/* Faltaba, y se usaba igual: los carteles de "salió bien" se venían mostrando sin color, con
+   el mismo aspecto que uno neutro. */
+.alert-success {
+  background: var(--tono-exito-fondo);
+  border-left: 4px solid var(--verde-exito);
+  color: var(--tono-exito-texto);
+}
+
 /* Antes esta alerta era naranja sobre naranja y prácticamente no se leía. */
 .alert-warning {
   background: var(--tono-atencion-fondo);

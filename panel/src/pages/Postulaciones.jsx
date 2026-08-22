@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
-import { useAuth } from '../context/AuthContext';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { useFiltros } from '../hooks/useFiltros';
 import { useZonasCobertura } from '../hooks/useZonasCobertura';
 import { EstadoLista } from '../components/layout/EstadoLista';
@@ -13,9 +13,9 @@ const ESTADOS = ['pendiente', 'en_revision', 'aprobado', 'rechazado'];
 
 export function Postulaciones() {
   const { t } = useLocale();
-  const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const { filas, estado, error, recargar } = useSupabaseTable('postulaciones');
-  const { filas: zonas } = useZonasCobertura(usuario.prestadora_id);
+  const { filas: zonas } = useZonasCobertura(prestadoraId);
   const zonasLabels = useMemo(
     () => Object.fromEntries(zonas.map((z) => [z.codigo, z.nombre])),
     [zonas],
@@ -49,10 +49,11 @@ export function Postulaciones() {
         <input
           type="text"
           placeholder={t.comun.buscar}
+          aria-label={t.comun.buscar}
           value={f.busqueda}
           onChange={(e) => set('busqueda', e.target.value)}
         />
-        <select value={f.estado} onChange={(e) => set('estado', e.target.value)}>
+        <select value={f.estado} onChange={(e) => set('estado', e.target.value)} aria-label={t.comun.filtro_estado}>
           <option value="">{t.comun.todos}</option>
           {ESTADOS.map((e) => (
             <option key={e} value={e}>
@@ -60,19 +61,19 @@ export function Postulaciones() {
             </option>
           ))}
         </select>
-        <select value={f.especialidad} onChange={(e) => set('especialidad', e.target.value)}>
+        <select value={f.especialidad} onChange={(e) => set('especialidad', e.target.value)} aria-label={t.postulaciones.filtro_especialidad}>
           <option value="">{t.postulaciones.filtro_especialidad}</option>
           {Object.entries(t.postulaciones.especialidades_labels).map(([codigo, label]) => (
             <option key={codigo} value={codigo}>{label}</option>
           ))}
         </select>
-        <select value={f.zona} onChange={(e) => set('zona', e.target.value)}>
+        <select value={f.zona} onChange={(e) => set('zona', e.target.value)} aria-label={t.postulaciones.filtro_zona}>
           <option value="">{t.postulaciones.filtro_zona}</option>
           {zonas.map((z) => (
             <option key={z.codigo} value={z.codigo}>{z.nombre}</option>
           ))}
         </select>
-        <select value={f.disponibilidad} onChange={(e) => set('disponibilidad', e.target.value)}>
+        <select value={f.disponibilidad} onChange={(e) => set('disponibilidad', e.target.value)} aria-label={t.postulaciones.filtro_disponibilidad}>
           <option value="">{t.postulaciones.filtro_disponibilidad}</option>
           {Object.entries(t.postulaciones.disponibilidad_labels).map(([codigo, label]) => (
             <option key={codigo} value={codigo}>{label}</option>

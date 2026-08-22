@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useConfirmarDestructivo } from '../context/TenantSessionContext';
 import { useZonasCobertura } from '../hooks/useZonasCobertura';
 import { useTiposAsistente } from '../hooks/useTiposAsistente';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { esAdminOSuperior } from '../lib/roles';
 import { nombreTipo } from '../lib/tiposAsistente';
 import { traducirCodigos } from '../lib/postulacionCodigos';
@@ -13,16 +14,19 @@ import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
+import { useModalAccesible } from '../hooks/useModalAccesible';
 
 const ESTADOS = ['pendiente', 'en_revision', 'aprobado', 'rechazado'];
 const API_URL = import.meta.env.VITE_API_URL;
 
 export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const { usuario } = useAuth();
   const confirmarDestructivo = useConfirmarDestructivo();
   const navigate = useNavigate();
-  const { filas: zonas } = useZonasCobertura(usuario.prestadora_id);
+  const prestadoraId = usePrestadoraActual();
+  const { filas: zonas } = useZonasCobertura(prestadoraId);
   const zonasLabels = useMemo(
     () => Object.fromEntries(zonas.map((z) => [z.codigo, z.nombre])),
     [zonas],
@@ -107,8 +111,8 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{postulacion.nombre}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{postulacion.nombre}</h2>
 
         {error && <Alert variant="error">{error}</Alert>}
 

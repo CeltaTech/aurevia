@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
-import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
+import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 
 const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
 const DIAS_GENERACION_SIN_VIGENCIA_HASTA_DEFAULT = 90;
 
 export function NuevaGuardiaModal({ onClose, onCreada }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
-  const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const [esSerie, setEsSerie] = useState(false);
   const [asistentes, setAsistentes] = useState([]);
   const [pacientes, setPacientes] = useState([]);
@@ -38,7 +40,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
         // Se pide también el domicilio: cuando dos personas viven en la misma casa, verlo al
         // lado del nombre es lo que hace evidente que ese turno los cubre a los dos.
         supabase.from('pacientes').select('id, nombre, domicilio').is('deleted_at', null).order('nombre'),
-        supabase.from('prestadoras').select('dias_generacion_series_guardia').eq('id', usuario.prestadora_id).single(),
+        supabase.from('prestadoras').select('dias_generacion_series_guardia').eq('id', prestadoraId).single(),
       ]);
       setAsistentes(asistentesData ?? []);
       setPacientes(pacientesData ?? []);
@@ -47,7 +49,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
       }
     }
     cargarListas();
-  }, [usuario.prestadora_id]);
+  }, [prestadoraId]);
 
   function togglePaciente(id) {
     setPacienteIds((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
@@ -99,7 +101,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
       const { data: guardia, error: errorInsert } = await supabase
         .from('guardias')
         .insert({
-          prestadora_id: usuario.prestadora_id,
+          prestadora_id: prestadoraId,
           asistente_id: asistenteId || null,
           paciente_id: primero,
           fecha,
@@ -121,7 +123,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
           resto.map((id) => ({
             guardia_id: guardia.id,
             paciente_id: id,
-            prestadora_id: usuario.prestadora_id,
+            prestadora_id: prestadoraId,
           })),
         );
         if (errorPacientes) {
@@ -139,7 +141,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
     const { data: serie, error: errorSerie } = await supabase
       .from('series_guardias')
       .insert({
-        prestadora_id: usuario.prestadora_id,
+        prestadora_id: prestadoraId,
         asistente_id: asistenteId || null,
         paciente_id: primero,
         dias_semana: diasSemana,
@@ -163,7 +165,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
         resto.map((id) => ({
           serie_id: serie.id,
           paciente_id: id,
-          prestadora_id: usuario.prestadora_id,
+          prestadora_id: prestadoraId,
         })),
       );
       if (errorPacientesSerie) {
@@ -175,7 +177,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
 
     const fechas = generarFechasSerie(vigenteDesde, vigenteHasta, diasSemana);
     const filasGuardias = fechas.map((f) => ({
-      prestadora_id: usuario.prestadora_id,
+      prestadora_id: prestadoraId,
       serie_id: serie.id,
       asistente_id: asistenteId || null,
       paciente_id: primero,
@@ -203,7 +205,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
         resto.map((id) => ({
           guardia_id: g.id,
           paciente_id: id,
-          prestadora_id: usuario.prestadora_id,
+          prestadora_id: prestadoraId,
         })),
       );
       const { error: errorPacientesGuardias } = await supabase
@@ -222,8 +224,8 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.guardias.nueva_guardia.titulo}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.guardias.nueva_guardia.titulo}</h2>
 
         {error && <Alert variant="error">{error}</Alert>}
 

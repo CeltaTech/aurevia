@@ -370,6 +370,32 @@ h2 {
   color: var(--texto-principal);
 }
 
+/* El enlace que saltea el menú y va derecho a la pantalla. Vive fuera del flujo mientras
+   nadie lo use —así ni el acomodo ni lo que se ve cambian en nada— y aparece arriba a la
+   izquierda solo cuando el tabulador lo alcanza, que es cuando sirve. */
+.salto-al-contenido {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  background: var(--superficie);
+  color: var(--texto-principal);
+  border: 1px solid var(--borde-card);
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+}
+
+.salto-al-contenido:focus {
+  left: 0.5rem;
+  top: 0.5rem;
+}
+
+/* El destino del enlace de arriba recibe el foco para que la lectura siga desde ahí. No es
+   un control: no se llega a él con el tabulador y no lleva marca de foco. */
+.panel-content:focus {
+  outline: none;
+}
+
 /* Rótulo que existe solo para los lectores de pantalla: sin él, tres desplegables seguidos
    sin nombre son tres cajas sin sentido para quien no ve la pantalla. */
 .solo-lectores-pantalla {
@@ -1033,6 +1059,13 @@ h2 {
   max-width: 560px;
   max-height: 90vh;
   overflow-y: auto;
+}
+
+/* Al abrirse, el foco entra al recuadro para que el lector de pantalla lea de qué se trata
+   la ventana (`hooks/useModalAccesible.js`). El recuadro no es un control —no se llega a él
+   con el tabulador—, así que no lleva marca de foco: la ventana se ve igual que siempre. */
+.panel-modal:focus {
+  outline: none;
 }
 
 .panel-detalle-lista {

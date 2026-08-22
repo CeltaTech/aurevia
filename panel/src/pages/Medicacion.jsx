@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
-import { useAuth } from '../context/AuthContext';
 import { useAdvertenciaLegal } from '../context/AdvertenciaLegalContext';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
@@ -28,7 +28,7 @@ async function llamarApi(path, opciones = {}) {
 
 export function Medicacion() {
   const { t } = useLocale();
-  const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const { verificarAntesDeActivar } = useAdvertenciaLegal();
   const [pendientes, setPendientes] = useState([]);
   const [estado, setEstado] = useState('cargando');
@@ -56,7 +56,7 @@ export function Medicacion() {
 
   async function aceptar(fila) {
     if (fila.sinMatricula) {
-      const confirmado = await verificarAntesDeActivar(usuario.prestadora_id, 'medicacion_via_sin_matricula');
+      const confirmado = await verificarAntesDeActivar(prestadoraId, 'medicacion_via_sin_matricula');
       if (!confirmado) return;
     }
     setAccionEnCurso(fila.id);

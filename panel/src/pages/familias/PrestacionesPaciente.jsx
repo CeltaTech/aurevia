@@ -8,6 +8,9 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
+import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
+import { con } from '../../lib/textos';
 
 function calcularPrecioFinal(precioLista, tipoDescuento, valorDescuento) {
   const base = Number(precioLista) || 0;
@@ -18,8 +21,10 @@ function calcularPrecioFinal(precioLista, tipoDescuento, valorDescuento) {
 }
 
 export function PrestacionesPaciente({ paciente, onClose }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const confirmarDestructivo = useConfirmarDestructivo();
   const [listaPrecios, setListaPrecios] = useState([]);
   const [prestaciones, setPrestaciones] = useState([]);
@@ -154,7 +159,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     setErrorForm(null);
 
     const { error: errorInsert } = await supabase.from('prestaciones').insert({
-      prestadora_id: usuario.prestadora_id,
+      prestadora_id: prestadoraId,
       paciente_id: paciente.id,
       tipo_servicio: `${precioSeleccionado.tipo_servicio} — ${precioSeleccionado.modalidad}`,
       configuracion: {
@@ -207,7 +212,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     const { data: cierreInsertado, error: errorInsert } = await supabase
       .from('cierres_servicio_paciente')
       .insert({
-        prestadora_id: usuario.prestadora_id,
+        prestadora_id: prestadoraId,
         paciente_id: paciente.id,
         motivo: motivoCierre,
         motivo_detalle: motivoCierre === 'otro' ? motivoDetalleCierre : null,
@@ -249,7 +254,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
 
     const ahora = new Date().toISOString();
     const asistentesAInsertar = [...asistentesInvolucrados.keys()].map((asistenteId) => ({
-      prestadora_id: usuario.prestadora_id,
+      prestadora_id: prestadoraId,
       cierre_id: cierreInsertado.id,
       asistente_id: asistenteId,
     }));
@@ -284,7 +289,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       if (asistentesFueraDeZona.length > 0) {
         await supabase.from('notificaciones_cierre_servicio').insert(
           asistentesFueraDeZona.map(([asistenteId]) => ({
-            prestadora_id: usuario.prestadora_id,
+            prestadora_id: prestadoraId,
             cierre_id: cierreInsertado.id,
             paciente_id: paciente.id,
             asistente_id: asistenteId,
@@ -318,7 +323,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     const { data: hospInsertada, error: errorInsert } = await supabase
       .from('hospitalizaciones_paciente')
       .insert({
-        prestadora_id: usuario.prestadora_id,
+        prestadora_id: prestadoraId,
         paciente_id: paciente.id,
         institucion: institucionHosp,
         motivo: motivoHosp || null,
@@ -363,7 +368,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       if (convivientes.length > 0) {
         await supabase.from('alertas_contingencia_hospitalizacion').insert(
           convivientes.map((p) => ({
-            prestadora_id: usuario.prestadora_id,
+            prestadora_id: prestadoraId,
             hospitalizacion_id: hospInsertada.id,
             paciente_hospitalizado_id: paciente.id,
             paciente_conviviente_id: p.id,
@@ -438,7 +443,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     const { data: paqueteCreado, error: errorPaquete_ } = await supabase
       .from('paquetes_prestaciones')
       .insert({
-        prestadora_id: usuario.prestadora_id,
+        prestadora_id: prestadoraId,
         paciente_id: paciente.id,
         nombre: nombrePaquete,
         precio_paquete: Number(precioPaquete),
@@ -454,7 +459,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     }
 
     const items = seleccionadasParaPaquete.map((prestacionId) => ({
-      prestadora_id: usuario.prestadora_id,
+      prestadora_id: prestadoraId,
       paquete_id: paqueteCreado.id,
       prestacion_id: prestacionId,
     }));
@@ -477,8 +482,8 @@ export function PrestacionesPaciente({ paciente, onClose }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.prestaciones.titulo} — {paciente.nombre}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.prestaciones.titulo} — {paciente.nombre}</h2>
 
         {estado === 'cargando' && <p className="estado-cargando">{t.comun.cargando}</p>}
         {estado === 'error' && <Alert variant="error">{error || t.comun.error_generico}</Alert>}
@@ -521,6 +526,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                           type="checkbox"
                           checked={seleccionadasParaPaquete.includes(p.id)}
                           onChange={() => toggleSeleccionParaPaquete(p.id)}
+                          aria-label={con(t.comun.campo_de_fila, { campo: t.comun.seleccionar, nombre: p.tipo_servicio })}
                         />
                       </td>
                       <td>{p.tipo_servicio}</td>

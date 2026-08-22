@@ -5,6 +5,7 @@ import { useEmpresa } from '../../context/EmpresaContext';
 import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
 import { useEscalasLegales } from '../../hooks/useEscalasLegales';
 import { useFormulasCese } from '../../hooks/useFormulasCese';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { resolverEscalasVigentes, resolverFormulasVigentes } from '../../lib/escalasLegales';
 import { formatearImporte } from '../../lib/dinero';
 import { calcularCese } from '../../lib/calcularCese';
@@ -44,8 +45,9 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
   const { usuario } = useAuth();
   const { empresa } = useEmpresa();
   const confirmarDestructivo = useConfirmarDestructivo();
-  const { filas: escalasCrudas, estado: estadoEscalas, jurisdiccion } = useEscalasLegales(usuario.prestadora_id);
-  const { filas: formulasCrudas, estado: estadoFormulas } = useFormulasCese(usuario.prestadora_id);
+  const prestadoraId = usePrestadoraActual();
+  const { filas: escalasCrudas, estado: estadoEscalas, jurisdiccion } = useEscalasLegales(prestadoraId);
+  const { filas: formulasCrudas, estado: estadoFormulas } = useFormulasCese(prestadoraId);
   const [ceses, setCeses] = useState([]);
   const [estadoCeses, setEstadoCeses] = useState('cargando');
   const [errorCeses, setErrorCeses] = useState(null);
@@ -95,7 +97,7 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
     setError(null);
 
     const { error: errorCese } = await supabase.from('ceses').insert({
-      prestadora_id: usuario.prestadora_id,
+      prestadora_id: prestadoraId,
       asistente_id: asistente.id,
       fecha_cese: fechaCese,
       causal,
@@ -114,7 +116,7 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
       await supabase.from('datos_reservados_asistente').upsert(
         {
           asistente_id: asistente.id,
-          prestadora_id: usuario.prestadora_id,
+          prestadora_id: prestadoraId,
           causal_baja: causal,
           updated_at: new Date().toISOString(),
         },

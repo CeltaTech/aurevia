@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
-import { useAuth } from '../../context/AuthContext';
 import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
 import { supabase } from '../../lib/supabaseClient';
 import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion';
@@ -11,6 +10,9 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
+import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
+import { con } from '../../lib/textos';
 
 /* A quién se le avisa y por dónde: los correos de cada evento, la casilla desde la
    que salen, el aviso de cese, la revisión con inteligencia artificial y todo lo de
@@ -103,50 +105,63 @@ function TabNotificaciones() {
             </tr>
           </thead>
           <tbody>
-            {notificaciones.map((fila) => (
-              <tr key={fila.evento}>
-                <td>{t.configuracion[`notificaciones_evento_${fila.evento}`] || fila.descripcion}</td>
-                <td>
-                  <input
-                    type="text"
-                    placeholder={t.configuracion.notificaciones_emails_placeholder}
-                    value={(fila.emails || []).join(', ')}
-                    onChange={(e) => set(fila.evento, 'emails', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
-                  />
-                </td>
-                <td>
-                  <input type="checkbox" checked={fila.activo} onChange={(e) => set(fila.evento, 'activo', e.target.checked)} />
-                </td>
-                <td>
-                  {fila.admite_whatsapp
-                    ? (
-                      <input
-                        type="checkbox"
-                        checked={fila.whatsapp_activo || false}
-                        onChange={(e) => set(fila.evento, 'whatsapp_activo', e.target.checked)}
-                      />
-                    )
-                    : <span className="panel-dato-vacio" title={t.configuracion.notificaciones_canal_no_disponible}>—</span>}
-                </td>
-                <td>
-                  {fila.admite_familia
-                    ? (
-                      <input
-                        type="checkbox"
-                        checked={fila.notificar_familia || false}
-                        title={t.configuracion.notificaciones_notificar_familia_ayuda}
-                        onChange={(e) => set(fila.evento, 'notificar_familia', e.target.checked)}
-                      />
-                    )
-                    : <span className="panel-dato-vacio" title={t.configuracion.notificaciones_canal_no_disponible}>—</span>}
-                </td>
-                <td>
-                  <button onClick={() => guardar(fila)} disabled={guardandoEvento === fila.evento}>
-                    {guardandoEvento === fila.evento ? t.comun.guardando : t.comun.guardar}
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {notificaciones.map((fila) => {
+              /* El nombre del evento se resuelve una sola vez: además de la primera celda, lo
+                 llevan los tres controles de la fila, que sueltos dirían solo "Activo". */
+              const nombreEvento = t.configuracion[`notificaciones_evento_${fila.evento}`] || fila.descripcion;
+              return (
+                <tr key={fila.evento}>
+                  <td>{nombreEvento}</td>
+                  <td>
+                    <input
+                      type="text"
+                      placeholder={t.configuracion.notificaciones_emails_placeholder}
+                      value={(fila.emails || []).join(', ')}
+                      onChange={(e) => set(fila.evento, 'emails', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
+                      aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.notificaciones_col_emails, nombre: nombreEvento })}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={fila.activo}
+                      onChange={(e) => set(fila.evento, 'activo', e.target.checked)}
+                      aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.notificaciones_col_activo, nombre: nombreEvento })}
+                    />
+                  </td>
+                  <td>
+                    {fila.admite_whatsapp
+                      ? (
+                        <input
+                          type="checkbox"
+                          checked={fila.whatsapp_activo || false}
+                          onChange={(e) => set(fila.evento, 'whatsapp_activo', e.target.checked)}
+                          aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.notificaciones_col_whatsapp_activo, nombre: nombreEvento })}
+                        />
+                      )
+                      : <span className="panel-dato-vacio" title={t.configuracion.notificaciones_canal_no_disponible}>—</span>}
+                  </td>
+                  <td>
+                    {fila.admite_familia
+                      ? (
+                        <input
+                          type="checkbox"
+                          checked={fila.notificar_familia || false}
+                          title={t.configuracion.notificaciones_notificar_familia_ayuda}
+                          onChange={(e) => set(fila.evento, 'notificar_familia', e.target.checked)}
+                          aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.notificaciones_col_notificar_familia, nombre: nombreEvento })}
+                        />
+                      )
+                      : <span className="panel-dato-vacio" title={t.configuracion.notificaciones_canal_no_disponible}>—</span>}
+                  </td>
+                  <td>
+                    <button onClick={() => guardar(fila)} disabled={guardandoEvento === fila.evento}>
+                      {guardandoEvento === fila.evento ? t.comun.guardando : t.comun.guardar}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </EstadoLista>
@@ -436,7 +451,7 @@ function TabEmailRemitente() {
 
 function TabAvisoCese() {
   const { t } = useLocale();
-  const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const [config, setConfig] = useState(null);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -448,7 +463,7 @@ function TabAvisoCese() {
     const { data, error: errorConsulta } = await supabase
       .from('configuracion_aviso_cese_asistente')
       .select('*')
-      .eq('prestadora_id', usuario.prestadora_id)
+      .eq('prestadora_id', prestadoraId)
       .maybeSingle();
     if (errorConsulta) {
       setError(mensajeDeError(errorConsulta, t));
@@ -457,7 +472,7 @@ function TabAvisoCese() {
     }
     setConfig(data ?? { activo: true, horas_plazo_aviso_verbal: 24 });
     setEstado('listo');
-  }, [usuario.prestadora_id, t]);
+  }, [prestadoraId, t]);
 
   useEffect(() => {
     recargar();
@@ -467,7 +482,7 @@ function TabAvisoCese() {
     setGuardando(true);
     setError(null);
     const { error: errorUpsert } = await supabase.from('configuracion_aviso_cese_asistente').upsert({
-      prestadora_id: usuario.prestadora_id,
+      prestadora_id: prestadoraId,
       activo: config.activo,
       horas_plazo_aviso_verbal: Number(config.horas_plazo_aviso_verbal),
     });
@@ -514,7 +529,7 @@ function TabAvisoCese() {
 // una ruta nueva del backend: es la misma clase de dato y no hay motivo para dos caminos.
 function TabAvisoGuardiaSinCubrir() {
   const { t } = useLocale();
-  const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const [config, setConfig] = useState(null);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -526,7 +541,7 @@ function TabAvisoGuardiaSinCubrir() {
     const { data, error: errorConsulta } = await supabase
       .from('configuracion_aviso_guardia_sin_cubrir')
       .select('*')
-      .eq('prestadora_id', usuario.prestadora_id)
+      .eq('prestadora_id', prestadoraId)
       .maybeSingle();
     if (errorConsulta) {
       setError(mensajeDeError(errorConsulta, t));
@@ -538,7 +553,7 @@ function TabAvisoGuardiaSinCubrir() {
     // el usuario toque "Guardar", y el que manda sigue siendo el de la base.
     setConfig(data ?? { activo: true, horas_antes: 48, horas_entre_avisos: 12 });
     setEstado('listo');
-  }, [usuario.prestadora_id, t]);
+  }, [prestadoraId, t]);
 
   useEffect(() => {
     recargar();
@@ -548,7 +563,7 @@ function TabAvisoGuardiaSinCubrir() {
     setGuardando(true);
     setError(null);
     const { error: errorUpsert } = await supabase.from('configuracion_aviso_guardia_sin_cubrir').upsert({
-      prestadora_id: usuario.prestadora_id,
+      prestadora_id: prestadoraId,
       activo: config.activo,
       horas_antes: Number(config.horas_antes),
       horas_entre_avisos: Number(config.horas_entre_avisos),
@@ -805,6 +820,7 @@ function TabWhatsappPlantillas() {
 }
 
 function NuevaPlantillaWhatsapp({ onClose, onCreada }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const [nombreInterno, setNombreInterno] = useState('');
   const [categoria, setCategoria] = useState('utility');
@@ -830,8 +846,8 @@ function NuevaPlantillaWhatsapp({ onClose, onCreada }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.configuracion.whatsapp_plantillas_nueva}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.configuracion.whatsapp_plantillas_nueva}</h2>
         {error && <Alert variant="error">{error}</Alert>}
         <FormField label={t.configuracion.whatsapp_plantillas_col_nombre} name="nombre_interno" value={nombreInterno} onChange={(e) => setNombreInterno(e.target.value)} required />
         <FormField label={t.configuracion.whatsapp_plantillas_col_categoria} name="categoria" type="select" value={categoria} onChange={(e) => setCategoria(e.target.value)}>

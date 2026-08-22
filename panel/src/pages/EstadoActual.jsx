@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
-import { useAuth } from '../context/AuthContext';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { supabase } from '../lib/supabaseClient';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
@@ -59,7 +59,7 @@ const DIAS_HACIA_ATRAS = 2;
 
 export function EstadoActual() {
   const { t } = useLocale();
-  const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
 
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -89,7 +89,7 @@ export function EstadoActual() {
     setEstado('cargando');
     setError(null);
 
-    const diasAviso = await diasDeAvisoDeLaPrestadora(usuario.prestadora_id);
+    const diasAviso = await diasDeAvisoDeLaPrestadora(prestadoraId);
     const limitePapeles = fechaLimiteDeAviso(diasAviso);
 
     const [gs, as, ps, ds, em] = await Promise.all([
@@ -210,7 +210,7 @@ export function EstadoActual() {
       asistentesConMatriculaPorVencer: matriculaPorVencer,
     });
     setEstado('listo');
-  }, [desde, hasta, t, usuario.prestadora_id]);
+  }, [desde, hasta, t, prestadoraId]);
 
   useEffect(() => {
     cargar();

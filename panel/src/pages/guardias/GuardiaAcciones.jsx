@@ -5,17 +5,21 @@ import { obtenerUbicacion } from '../../lib/ubicacion';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
 import { useMotivosAvisoPrevio } from '../../hooks/useMotivosAvisoPrevio';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { COBERTURA, claveTextoCobertura, coberturaDeGuardia } from '../../lib/cobertura';
 import { mensajeDeError } from '../../lib/errores';
+import { useModalAccesible } from '../../hooks/useModalAccesible';
 
 export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose, onActualizada }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const confirmarDestructivo = useConfirmarDestructivo();
-  const { filas: motivosAvisoPrevio } = useMotivosAvisoPrevio(usuario.prestadora_id);
+  const { filas: motivosAvisoPrevio } = useMotivosAvisoPrevio(prestadoraId);
   const [medioTransporte, setMedioTransporte] = useState('');
   const [cancelacionOrigen, setCancelacionOrigen] = useState('');
   const [cancelacionAlcance, setCancelacionAlcance] = useState('');
@@ -103,7 +107,7 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
       .limit(1);
 
     const { error: errorIncidente } = await supabase.from('incidentes_relevo').insert({
-      prestadora_id: usuario.prestadora_id,
+      prestadora_id: prestadoraId,
       guardia_saliente_id: candidatas?.[0]?.id ?? null,
       guardia_entrante_id: guardia.id,
       nivel_actual: 1,
@@ -125,7 +129,7 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
     setProcesando(true);
 
     const { error: errorAlerta } = await supabase.from('alertas_tempranas_guardia').insert({
-      prestadora_id: usuario.prestadora_id,
+      prestadora_id: prestadoraId,
       guardia_id: guardia.id,
       fuente: 'aviso_telefonico',
       motivo: avisoPrevioMotivo,
@@ -181,8 +185,8 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.guardias.detalle.titulo}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.guardias.detalle.titulo}</h2>
 
         {error && <Alert variant="error">{error}</Alert>}
 

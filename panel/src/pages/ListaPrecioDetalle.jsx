@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
-import { useAuth } from '../context/AuthContext';
 import { useConfirmarDestructivo } from '../context/TenantSessionContext';
 import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
+import { useModalAccesible } from '../hooks/useModalAccesible';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 
 export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
-  const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const confirmarDestructivo = useConfirmarDestructivo();
   const esNuevo = !precio;
   const [tipoServicio, setTipoServicio] = useState(precio?.tipo_servicio || '');
@@ -38,7 +40,7 @@ export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada
     };
 
     const { error: errorGuardado } = esNuevo
-      ? await supabase.from('lista_precios').insert({ ...datos, prestadora_id: usuario.prestadora_id })
+      ? await supabase.from('lista_precios').insert({ ...datos, prestadora_id: prestadoraId })
       : await supabase.from('lista_precios').update(datos).eq('id', precio.id);
 
     if (errorGuardado) {
@@ -53,8 +55,8 @@ export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{esNuevo ? t.lista_precios.nuevo : `${precio.tipo_servicio} — ${precio.modalidad}`}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{esNuevo ? t.lista_precios.nuevo : `${precio.tipo_servicio} — ${precio.modalidad}`}</h2>
 
         {error && <Alert variant="error">{error}</Alert>}
 

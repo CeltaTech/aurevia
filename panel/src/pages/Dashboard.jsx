@@ -6,6 +6,7 @@ import { useTenantSession } from '../context/TenantSessionContext';
 import { useModalidades } from '../context/ModalidadesContext';
 import { esAdminOSuperior } from '../lib/roles';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
@@ -63,14 +64,15 @@ export function Dashboard() {
   const { t } = useLocale();
   const { usuario } = useAuth();
   const { sesion } = useTenantSession();
+  const prestadoraId = usePrestadoraActual();
   const { tieneModalidad, modalidades, cargado: modalidadesCargadas } = useModalidades();
   const desgloseModalidadHabilitado = modalidades.length > 1;
   const esAdmin = esAdminOSuperior(usuario?.rol);
-  // Sin Prestadora propia y sin sesión de soporte abierta no se está "dentro" de ninguna
-  // Prestadora — no hay contexto de configuración inicial que mostrar (mismo criterio que
-  // panelUsuarios.js). Admin_prestadora siempre tiene la suya, y superadmin normalmente la
-  // Sandbox.
-  const mostrarOnboarding = esAdmin && (Boolean(usuario?.prestadora_id) || sesion !== null);
+  // Sin Prestadora no se está "dentro" de ninguna — no hay contexto de configuración inicial
+  // que mostrar (mismo criterio que panelUsuarios.js). El hook ya contempla los dos casos:
+  // la Prestadora de la sesión de soporte si hay una abierta, y si no la propia, que
+  // admin_prestadora siempre tiene y superadmin normalmente es la Sandbox.
+  const mostrarOnboarding = esAdmin && Boolean(prestadoraId);
   // Entrando por una sesión de soporte técnico, la configuración inicial es de la Prestadora
   // visitada, no de quien mira: se muestra solo para informar, sin invitar a completarla.
   const onboardingInformativo = sesion !== null;
@@ -85,7 +87,7 @@ export function Dashboard() {
   const [errorAlertas, setErrorAlertas] = useState(null);
 
   const cargarAlertas = useCallback(async () => {
-    if (!usuario?.prestadora_id) return;
+    if (!prestadoraId) return;
     setAusentesSinRelevo(null);
     setAusentesPorModalidad(null);
     setDocumentosPorVencer(null);
@@ -103,7 +105,7 @@ export function Dashboard() {
 
     // El plazo de aviso y hasta qué día hay que mirar salen del mismo lugar que en el Estado
     // actual y en Documentación, así que los tres contadores dicen lo mismo (regla 12).
-    const diasAviso = await diasDeAvisoDeLaPrestadora(usuario.prestadora_id);
+    const diasAviso = await diasDeAvisoDeLaPrestadora(prestadoraId);
     const { count: countDocumentos, error: errorDocumentos } = await supabase
       .from('documentos_asistente')
       .select('id', { count: 'exact', head: true })
@@ -122,7 +124,7 @@ export function Dashboard() {
     setAusentesSinRelevo(filasAusentes?.length ?? 0);
     setAusentesPorModalidad(porModalidad);
     setDocumentosPorVencer(countDocumentos ?? 0);
-  }, [usuario?.prestadora_id, t]);
+  }, [prestadoraId, t]);
 
   useEffect(() => {
     cargarAlertas();

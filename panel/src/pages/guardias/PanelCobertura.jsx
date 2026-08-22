@@ -11,6 +11,7 @@ import { COLUMNAS_ESTADO_MATRICULA, mensajeDeBloqueo } from '../../lib/matricula
 import { mensajeDeModalidad } from '../../lib/modalidades';
 import { cargarPacientesDeGuardias, pacientesDeGuardia } from '../../lib/pacientesDeGuardia';
 import { mensajeDeError } from '../../lib/errores';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 
 /* El panel lateral para cubrir una vacante.
    ==========================================================================
@@ -44,6 +45,7 @@ const DIAS_DE_CONTEXTO = 14;
 export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
   const { t } = useLocale();
   const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const tp = t.guardias.cobertura_panel;
   const ta = t.guardias.avisos;
   const tm = t.matricula;
@@ -215,7 +217,7 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
 
     const ahoraISO = new Date().toISOString();
     const filas = Array.from(elegidos).map((asistenteId) => ({
-      prestadora_id: usuario.prestadora_id,
+      prestadora_id: prestadoraId,
       guardia_id: guardia.id,
       asistente_id: asistenteId,
       invitado_por: usuario.id,

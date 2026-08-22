@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { useLocale } from '../../i18n/LocaleContext';
-import { useAuth } from '../../context/AuthContext';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { supabase } from '../../lib/supabaseClient';
 import { claseBadge } from '../../lib/tonos';
 import { Button } from '../../components/ui/Button';
@@ -11,7 +11,7 @@ import { mensajeDeError } from '../../lib/errores';
 
 export function CertificadoTab({ asistente }) {
   const { t } = useLocale();
-  const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const [certificado, setCertificado] = useState(null);
   const [qrDataUrl, setQrDataUrl] = useState(null);
   const [estado, setEstado] = useState('cargando');
@@ -48,7 +48,7 @@ export function CertificadoTab({ asistente }) {
     setEmitiendo(true);
     setError(null);
     const { error: errorInsert } = await supabase.from('certificados').insert({
-      prestadora_id: usuario.prestadora_id,
+      prestadora_id: prestadoraId,
       asistente_id: asistente.id,
       fecha_emision: new Date().toISOString().slice(0, 10),
     });

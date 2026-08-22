@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
-import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { claseBadge } from '../lib/tonos';
 import { useFiltros } from '../hooks/useFiltros';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError } from '../lib/errores';
 import { diasParaVencer, estadoDeVencimiento } from '../lib/reglaVencimientos';
@@ -11,7 +11,7 @@ import { diasDeAvisoDeLaPrestadora } from '../lib/plazoDeAviso';
 
 export function Documentacion() {
   const { t } = useLocale();
-  const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const [filas, setFilas] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -28,7 +28,7 @@ export function Documentacion() {
         .from('documentos_asistente')
         .select('id, fecha_vencimiento, tipos_documento_asistente(nombre, requiere_vencimiento), asistentes(nombre, estado)')
         .not('fecha_vencimiento', 'is', null),
-      diasDeAvisoDeLaPrestadora(usuario.prestadora_id),
+      diasDeAvisoDeLaPrestadora(prestadoraId),
     ]);
 
     if (errorDocs) {
@@ -54,7 +54,7 @@ export function Documentacion() {
 
     setFilas(filasConEstado);
     setEstado('listo');
-  }, [usuario.prestadora_id, t]);
+  }, [prestadoraId, t]);
 
   useEffect(() => {
     recargar();
@@ -72,7 +72,7 @@ export function Documentacion() {
       <p className="panel-explicacion">{t.documentacion.explicacion}</p>
 
       <div className="panel-filtros">
-        <select value={f.filtro} onChange={(e) => set('filtro', e.target.value)}>
+        <select value={f.filtro} onChange={(e) => set('filtro', e.target.value)} aria-label={t.comun.filtro_estado}>
           <option value="vencido_o_por_vencer">{t.documentacion.filtro_vencido_o_por_vencer}</option>
           <option value="vencido">{t.documentacion.estado_vencido}</option>
           <option value="por_vencer">{t.documentacion.estado_por_vencer}</option>

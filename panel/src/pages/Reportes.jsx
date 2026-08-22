@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
-import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { useFiltros } from '../hooks/useFiltros';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
 import { mensajeDeError } from '../lib/errores';
@@ -26,7 +26,7 @@ function fechaISO(desplazamientoDias = 0) {
 
 export function Reportes() {
   const { t } = useLocale();
-  const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const [filas, setFilas] = useState([]);
   const [rangoDe, setRangoDe] = useState(() => () => null);
   const [estado, setEstado] = useState('cargando');
@@ -54,7 +54,7 @@ export function Reportes() {
       supabase
         .from('rangos_referencia_vitales')
         .select('signo, paciente_id, valor_min, valor_max, unidad')
-        .eq('prestadora_id', usuario.prestadora_id),
+        .eq('prestadora_id', prestadoraId),
     ]);
 
     if (errorReportes) {
@@ -79,7 +79,7 @@ export function Reportes() {
     setEstado('listo');
     // Solo las dos fechas, no el objeto de filtros entero: el desplegable filtra las filas ya
     // traídas, y si dependiera de `f` cambiarlo volvería a pedirle todo al servidor.
-  }, [f.desde, f.hasta, usuario.prestadora_id, t]);
+  }, [f.desde, f.hasta, prestadoraId, t]);
 
   useEffect(() => {
     recargar();
@@ -106,7 +106,7 @@ export function Reportes() {
           {t.reportes.hasta}{' '}
           <input type="date" value={f.hasta} min={f.desde} onChange={(e) => set('hasta', e.target.value)} />
         </label>
-        <select value={f.filtro} onChange={(e) => set('filtro', e.target.value)}>
+        <select value={f.filtro} onChange={(e) => set('filtro', e.target.value)} aria-label={t.comun.filtrar}>
           <option value="todos">{t.comun.todos}</option>
           <option value="incidentes">{t.reportes.filtro_incidentes}</option>
           <option value="fuera_rango">{t.reportes.filtro_fuera_rango}</option>

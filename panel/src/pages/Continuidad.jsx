@@ -9,6 +9,8 @@ import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { cargarPacientesDeGuardias, conPacientes, pacientesDeGuardia, textoDePacientes } from '../lib/pacientesDeGuardia';
 import { mensajeDeError } from '../lib/errores';
+import { useModalAccesible } from '../hooks/useModalAccesible';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 
 const TIPOS_RESOLUCION = ['suplente', 'franquero', 'emergencia', 'familiar'];
 
@@ -295,7 +297,9 @@ export function Continuidad() {
 }
 
 function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
+  const prestadoraId = usePrestadoraActual();
   const confirmarDestructivo = useConfirmarDestructivo();
   const [tipo, setTipo] = useState('suplente');
   const [asistenteId, setAsistenteId] = useState('');
@@ -315,7 +319,7 @@ function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto
 
       if (esFamiliar) {
         const { error: errorExcepcion } = await supabase.from('excepciones_familiar_relevo').insert({
-          prestadora_id: usuario.prestadora_id,
+          prestadora_id: prestadoraId,
           incidente_id: incidente.id,
           familiar_nombre: familiarNombre,
           autorizado_por: usuario.id,
@@ -359,8 +363,8 @@ function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.continuidad.resolver}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.continuidad.resolver}</h2>
         {error && <Alert variant="error">{error}</Alert>}
 
         <FormField label={t.continuidad.resolver_tipo} name="tipo" type="select" value={tipo} onChange={(e) => setTipo(e.target.value)}>

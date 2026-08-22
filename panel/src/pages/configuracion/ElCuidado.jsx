@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
-import { useAuth } from '../../context/AuthContext';
 import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
 import { supabase } from '../../lib/supabaseClient';
 import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion';
@@ -9,6 +8,9 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
+import { con } from '../../lib/textos';
+import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 
 /* Las reglas del cuidado en sí: cómo se arman los Servicios y sus guardias, qué
    signos vitales se toman, y qué matrícula hace falta para cada vía de medicación. */
@@ -204,6 +206,7 @@ function TabServicios() {
 }
 
 function TabServiciosMotivosAvisoPrevio() {
+  const modal = useModalAccesible(() => setCreandoNuevo(false));
   const { t } = useLocale();
   const [motivos, setMotivos] = useState([]);
   const [estado, setEstado] = useState('cargando');
@@ -281,7 +284,13 @@ function TabServiciosMotivosAvisoPrevio() {
               <tr key={m.id}>
                 <td>{m.nombre}</td>
                 <td>
-                  <input type="checkbox" checked={m.activo} onChange={() => toggleActivo(m)} disabled={actualizandoId === m.id} />
+                  <input
+                    type="checkbox"
+                    checked={m.activo}
+                    onChange={() => toggleActivo(m)}
+                    disabled={actualizandoId === m.id}
+                    aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.documentos_tipos_col_activo, nombre: m.nombre })}
+                  />
                 </td>
               </tr>
             ))}
@@ -291,8 +300,8 @@ function TabServiciosMotivosAvisoPrevio() {
 
       {creandoNuevo && (
         <div className="panel-modal-fondo" onClick={() => setCreandoNuevo(false)}>
-          <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>{t.configuracion.motivos_aviso_previo_nuevo}</h2>
+          <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+            <h2 id={modal.idTitulo}>{t.configuracion.motivos_aviso_previo_nuevo}</h2>
             <FormField label={t.configuracion.motivos_aviso_previo_col_nombre} name="nombre" value={nombreNuevo} onChange={(e) => setNombreNuevo(e.target.value)} required />
             <div className="panel-modal-acciones">
               <Button variant="secondary" onClick={() => setCreandoNuevo(false)} disabled={guardando}>{t.comun.cancelar}</Button>
@@ -306,6 +315,7 @@ function TabServiciosMotivosAvisoPrevio() {
 }
 
 function TabServiciosEtapasIncorporacion() {
+  const modal = useModalAccesible(() => setCreandoNueva(false));
   const { t } = useLocale();
   const [etapas, setEtapas] = useState([]);
   const [estado, setEstado] = useState('cargando');
@@ -400,11 +410,32 @@ function TabServiciosEtapasIncorporacion() {
                 <td>{e.orden}</td>
                 <td>{e.nombre}</td>
                 <td>
-                  <input type="checkbox" checked={e.activa} onChange={() => toggleActiva(e)} disabled={actualizandoId === e.id} />
+                  {/* Las tres cosas de esta fila —la casilla y las dos flechas— dicen a qué
+                      etapa se refieren: una fila de una tabla se lee sola, fuera del renglón,
+                      y "activar" o "subir" sin el nombre al lado no dice nada. */}
+                  <input
+                    type="checkbox"
+                    checked={e.activa}
+                    onChange={() => toggleActiva(e)}
+                    disabled={actualizandoId === e.id}
+                    aria-label={con(t.comun.activo_de, { nombre: e.nombre })}
+                  />
                 </td>
                 <td>
-                  <button onClick={() => mover(e, 'arriba')} disabled={actualizandoId === e.id || i === 0}>↑</button>
-                  <button onClick={() => mover(e, 'abajo')} disabled={actualizandoId === e.id || i === etapas.length - 1}>↓</button>
+                  <button
+                    onClick={() => mover(e, 'arriba')}
+                    disabled={actualizandoId === e.id || i === 0}
+                    aria-label={con(t.comun.subir, { nombre: e.nombre })}
+                  >
+                    <span aria-hidden="true">↑</span>
+                  </button>
+                  <button
+                    onClick={() => mover(e, 'abajo')}
+                    disabled={actualizandoId === e.id || i === etapas.length - 1}
+                    aria-label={con(t.comun.bajar, { nombre: e.nombre })}
+                  >
+                    <span aria-hidden="true">↓</span>
+                  </button>
                 </td>
               </tr>
             ))}
@@ -414,8 +445,8 @@ function TabServiciosEtapasIncorporacion() {
 
       {creandoNueva && (
         <div className="panel-modal-fondo" onClick={() => setCreandoNueva(false)}>
-          <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>{t.configuracion.etapas_incorporacion_nueva}</h2>
+          <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+            <h2 id={modal.idTitulo}>{t.configuracion.etapas_incorporacion_nueva}</h2>
             <FormField label={t.configuracion.etapas_incorporacion_col_clave} name="clave" value={claveNueva} onChange={(e) => setClaveNueva(e.target.value)} required />
             <FormField label={t.configuracion.etapas_incorporacion_col_nombre} name="nombre" value={nombreNueva} onChange={(e) => setNombreNueva(e.target.value)} required />
             <div className="panel-modal-acciones">
@@ -519,7 +550,16 @@ function TabServiciosPersonalEmergencia() {
                 <td>{fila.asistentes?.nombre || '—'}</td>
                 <td>{t.configuracion[`personal_emergencia_tipo_${fila.tipo}`]}</td>
                 <td>
-                  <input type="checkbox" checked={fila.activo} onChange={() => toggleActivo(fila)} disabled={actualizandoId === fila.id} />
+                  <input
+                    type="checkbox"
+                    checked={fila.activo}
+                    onChange={() => toggleActivo(fila)}
+                    disabled={actualizandoId === fila.id}
+                    aria-label={con(t.comun.campo_de_fila, {
+                      campo: t.configuracion.documentos_tipos_col_activo,
+                      nombre: fila.asistentes?.nombre || t.configuracion[`personal_emergencia_tipo_${fila.tipo}`],
+                    })}
+                  />
                 </td>
                 <td>
                   <button onClick={() => borrar(fila)} disabled={actualizandoId === fila.id}>{t.comun.borrar}</button>
@@ -542,6 +582,7 @@ function TabServiciosPersonalEmergencia() {
 }
 
 function NuevoPersonalEmergencia({ asistentes, onClose, onCreado }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const [asistenteId, setAsistenteId] = useState('');
   const [tipo, setTipo] = useState('franquero');
@@ -566,8 +607,8 @@ function NuevoPersonalEmergencia({ asistentes, onClose, onCreado }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.configuracion.personal_emergencia_nuevo}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.configuracion.personal_emergencia_nuevo}</h2>
         {error && <Alert variant="error">{error}</Alert>}
         <FormField
           label={t.configuracion.personal_emergencia_col_asistente}
@@ -605,6 +646,7 @@ function NuevoPersonalEmergencia({ asistentes, onClose, onCreado }) {
 }
 
 function NuevoNivelEscalada({ onClose, onCreado }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const [nivel, setNivel] = useState('');
   const [minutosDemora, setMinutosDemora] = useState('');
@@ -640,8 +682,8 @@ function NuevoNivelEscalada({ onClose, onCreado }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.configuracion.escalada_nuevo_nivel}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.configuracion.escalada_nuevo_nivel}</h2>
         {error && <Alert variant="error">{error}</Alert>}
         <FormField label={t.configuracion.escalada_col_nivel} name="nivel" type="number" value={nivel} onChange={(e) => setNivel(e.target.value)} required />
         <FormField label={t.configuracion.escalada_minutos_label} name="minutos_demora" type="number" value={minutosDemora} onChange={(e) => setMinutosDemora(e.target.value)} />
@@ -681,7 +723,7 @@ function NuevoNivelEscalada({ onClose, onCreado }) {
 
 function TabVitales() {
   const { t } = useLocale();
-  const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const [rangos, setRangos] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -693,7 +735,7 @@ function TabVitales() {
     const { data, error: errorConsulta } = await supabase
       .from('rangos_referencia_vitales')
       .select('*')
-      .eq('prestadora_id', usuario.prestadora_id)
+      .eq('prestadora_id', prestadoraId)
       .is('paciente_id', null)
       .order('signo');
     if (errorConsulta) {
@@ -703,7 +745,7 @@ function TabVitales() {
     }
     setRangos(data ?? []);
     setEstado('listo');
-  }, [usuario.prestadora_id, t]);
+  }, [prestadoraId, t]);
 
   useEffect(() => {
     recargar();
@@ -752,20 +794,25 @@ function TabVitales() {
             </tr>
           </thead>
           <tbody>
-            {rangos.map((fila) => (
-              <tr key={fila.signo}>
-                <td>{t.configuracion[`vitales_signo_${fila.signo}`]}</td>
-                <td><input type="number" step="0.1" value={fila.valor_min} onChange={(e) => set(fila.signo, 'valor_min', e.target.value)} /></td>
-                <td><input type="number" step="0.1" value={fila.valor_max} onChange={(e) => set(fila.signo, 'valor_max', e.target.value)} /></td>
-                <td><input type="text" value={fila.unidad} onChange={(e) => set(fila.signo, 'unidad', e.target.value)} /></td>
-                <td><input type="text" value={fila.fuente} onChange={(e) => set(fila.signo, 'fuente', e.target.value)} /></td>
-                <td>
-                  <button onClick={() => guardar(fila)} disabled={guardandoSigno === fila.signo}>
-                    {guardandoSigno === fila.signo ? t.comun.guardando : t.comun.guardar}
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {rangos.map((fila) => {
+              /* El nombre del signo se resuelve una sola vez porque lo usan la celda visible y
+                 los cuatro campos, que fuera del renglón se leerían como "Mínimo" a secas. */
+              const nombreSigno = t.configuracion[`vitales_signo_${fila.signo}`];
+              return (
+                <tr key={fila.signo}>
+                  <td>{nombreSigno}</td>
+                  <td><input type="number" step="0.1" value={fila.valor_min} onChange={(e) => set(fila.signo, 'valor_min', e.target.value)} aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.vitales_col_min, nombre: nombreSigno })} /></td>
+                  <td><input type="number" step="0.1" value={fila.valor_max} onChange={(e) => set(fila.signo, 'valor_max', e.target.value)} aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.vitales_col_max, nombre: nombreSigno })} /></td>
+                  <td><input type="text" value={fila.unidad} onChange={(e) => set(fila.signo, 'unidad', e.target.value)} aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.vitales_col_unidad, nombre: nombreSigno })} /></td>
+                  <td><input type="text" value={fila.fuente} onChange={(e) => set(fila.signo, 'fuente', e.target.value)} aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.vitales_col_fuente, nombre: nombreSigno })} /></td>
+                  <td>
+                    <button onClick={() => guardar(fila)} disabled={guardandoSigno === fila.signo}>
+                      {guardandoSigno === fila.signo ? t.comun.guardando : t.comun.guardar}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </EstadoLista>
@@ -775,7 +822,7 @@ function TabVitales() {
 
 function TabMatriculaMedicacion() {
   const { t } = useLocale();
-  const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const confirmarDestructivo = useConfirmarDestructivo();
   const [filas, setFilas] = useState([]);
   const [estado, setEstado] = useState('cargando');
@@ -791,7 +838,7 @@ function TabMatriculaMedicacion() {
     const { data, error: errorConsulta } = await supabase
       .from('configuracion_matricula_via_medicacion')
       .select('*')
-      .eq('prestadora_id', usuario.prestadora_id)
+      .eq('prestadora_id', prestadoraId)
       .order('via_administracion');
     if (errorConsulta) {
       setError(mensajeDeError(errorConsulta, t));
@@ -800,7 +847,7 @@ function TabMatriculaMedicacion() {
     }
     setFilas(data ?? []);
     setEstado('listo');
-  }, [usuario.prestadora_id, t]);
+  }, [prestadoraId, t]);
 
   useEffect(() => {
     recargar();
@@ -829,7 +876,7 @@ function TabMatriculaMedicacion() {
     setAgregando(true);
     setError(null);
     const { error: errorInsert } = await supabase.from('configuracion_matricula_via_medicacion').insert({
-      prestadora_id: usuario.prestadora_id,
+      prestadora_id: prestadoraId,
       via_administracion: nuevaVia,
       tipo_matricula_requerida: nuevoTipo || null,
     });
@@ -880,6 +927,7 @@ function TabMatriculaMedicacion() {
                     value={fila.tipo_matricula_requerida || ''}
                     placeholder={t.configuracion.matricula_medicacion_sin_requisito}
                     onChange={(e) => set(fila.id, e.target.value)}
+                    aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.matricula_medicacion_col_tipo, nombre: fila.via_administracion })}
                   />
                 </td>
                 <td>

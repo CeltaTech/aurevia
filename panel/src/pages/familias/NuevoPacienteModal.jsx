@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
-import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
+import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 
 export function NuevoPacienteModal({ familiaId, onClose, onCreado }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
-  const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const [nombre, setNombre] = useState('');
   const [fechaNacimiento, setFechaNacimiento] = useState('');
   const [domicilio, setDomicilio] = useState('');
@@ -26,7 +28,7 @@ export function NuevoPacienteModal({ familiaId, onClose, onCreado }) {
       fecha_nacimiento: fechaNacimiento || null,
       domicilio: domicilio || null,
       nivel_complejidad: nivelComplejidad || null,
-      prestadora_id: usuario.prestadora_id,
+      prestadora_id: prestadoraId,
     });
     setGuardando(false);
     if (errorInsert) {
@@ -38,8 +40,8 @@ export function NuevoPacienteModal({ familiaId, onClose, onCreado }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.familias.agregar_paciente}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.familias.agregar_paciente}</h2>
 
         {error && <Alert variant="error">{error}</Alert>}
 

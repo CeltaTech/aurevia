@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
-import { useAuth } from '../../context/AuthContext';
 import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
 import { supabase } from '../../lib/supabaseClient';
 import { llamarApiConfiguracion } from '../../lib/apiConfiguracion';
@@ -10,6 +9,9 @@ import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { esTipoGeneral, nombreTipo, nombreMatricula, viasVedadasPorMatricula } from '../../lib/tiposAsistente';
 import { mensajeDeError } from '../../lib/errores';
+import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
+import { con } from '../../lib/textos';
 
 /* Los tipos de Asistente y sus tareas.
    Tres cosas conviven en esta pantalla y conviene no confundirlas:
@@ -23,7 +25,7 @@ import { mensajeDeError } from '../../lib/errores';
    tareas propias. Los tipos que crea ella son suyos por completo. */
 export function TiposAsistenteTab() {
   const { t } = useLocale();
-  const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const confirmarDestructivo = useConfirmarDestructivo();
   const [tipos, setTipos] = useState([]);
   const [vias, setVias] = useState([]);
@@ -43,7 +45,7 @@ export function TiposAsistenteTab() {
       supabase
         .from('configuracion_matricula_via_medicacion')
         .select('via_administracion, tipo_matricula_requerida')
-        .eq('prestadora_id', usuario.prestadora_id),
+        .eq('prestadora_id', prestadoraId),
       llamarApiConfiguracion('/modo-control-matricula').catch(() => null),
     ]);
     if (resTipos.error || resVias.error) {
@@ -55,7 +57,7 @@ export function TiposAsistenteTab() {
     setVias(resVias.data ?? []);
     setModoControl(resModo?.modo ?? 'flexible');
     setEstado('listo');
-  }, [usuario.prestadora_id, t]);
+  }, [prestadoraId, t]);
 
   useEffect(() => {
     recargar();
@@ -182,6 +184,7 @@ export function TiposAsistenteTab() {
                       checked={tipo.activo}
                       onChange={() => alternarActivo(tipo)}
                       disabled={ocupadoId === tipo.id}
+                      aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.tipos_col_activo, nombre: tipo.nombre })}
                     />
                   )}
                 </td>
@@ -207,13 +210,13 @@ export function TiposAsistenteTab() {
         <TareasDelTipo
           tipo={tipos.find((x) => x.id === tipoAbierto)}
           vias={vias}
-          prestadoraId={usuario.prestadora_id}
+          prestadoraId={prestadoraId}
         />
       )}
 
       {creando && (
         <NuevoTipoModal
-          prestadoraId={usuario.prestadora_id}
+          prestadoraId={prestadoraId}
           onClose={() => setCreando(false)}
           onCreado={() => {
             setCreando(false);
@@ -386,6 +389,7 @@ function ListaDeClase({ clase, titulo, vacio, tareas, tipo, prestadoraId, ocupad
 }
 
 function NuevoTipoModal({ prestadoraId, onClose, onCreado }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -418,8 +422,8 @@ function NuevoTipoModal({ prestadoraId, onClose, onCreado }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.configuracion.tipos_nuevo}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.configuracion.tipos_nuevo}</h2>
         {error && <Alert variant="error">{error}</Alert>}
         <FormField
           label={t.configuracion.tipos_nombre_label}

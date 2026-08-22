@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
-import { useAuth } from '../context/AuthContext';
 import { useConfirmarDestructivo } from '../context/TenantSessionContext';
 import { supabase } from '../lib/supabaseClient';
 import { llamarApiCobros } from '../lib/apiCobros';
@@ -14,6 +13,8 @@ import { Alert } from '../components/ui/Alert';
 import { FormField } from '../components/ui/FormField';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError } from '../lib/errores';
+import { useModalAccesible } from '../hooks/useModalAccesible';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 
 /* Los saldos de las Familias: lo facturado, lo que entró y lo que falta.
    ==========================================================================
@@ -57,7 +58,7 @@ function soloLaFecha(momento) {
 
 export function Facturacion() {
   const { t, locale } = useLocale();
-  const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const confirmarDestructivo = useConfirmarDestructivo();
 
   const [mes, setMes] = useState(mesActual());
@@ -162,7 +163,7 @@ export function Facturacion() {
       const { data: facturaCreada, error: errorFactura } = await supabase
         .from('facturas_familia')
         .insert({
-          prestadora_id: usuario.prestadora_id,
+          prestadora_id: prestadoraId,
           familia_id: familia.id,
           periodo,
           monto_total: montoTotal,
@@ -283,6 +284,7 @@ export function Facturacion() {
    Anular no es borrar: una plata que desaparece sin rastro es indistinguible de una que nunca
    existió, y con plata de un tercero eso es justo lo que no puede pasar. */
 function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
+  const modal = useModalAccesible(onCerrar);
   const { t, locale } = useLocale();
   const confirmarDestructivo = useConfirmarDestructivo();
 
@@ -368,8 +370,8 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
 
   return (
     <div className="panel-modal-fondo" onClick={onCerrar}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.facturacion.detalle_titulo}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.facturacion.detalle_titulo}</h2>
 
         {error && estado !== 'error' && <Alert variant="error">{error}</Alert>}
 

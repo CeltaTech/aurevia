@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../ui/Button';
 import { Alert } from '../ui/Alert';
@@ -10,6 +11,7 @@ import { mensajeDeError } from '../../lib/errores';
 export function HiloComunicacion({ asistenteId, mostrarEncabezado = true, onEnviado }) {
   const { t } = useLocale();
   const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const [mensajes, setMensajes] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -43,7 +45,7 @@ export function HiloComunicacion({ asistenteId, mostrarEncabezado = true, onEnvi
     setEnviando(true);
     setError(null);
     const { error: errorInsert } = await supabase.from('mensajes_asistente').insert({
-      prestadora_id: usuario.prestadora_id,
+      prestadora_id: prestadoraId,
       asistente_id: asistenteId,
       usuario_id: usuario.id,
       mensaje: texto.trim(),
@@ -92,6 +94,7 @@ export function HiloComunicacion({ asistenteId, mostrarEncabezado = true, onEnvi
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
           placeholder={t.asistentes.comunicacion.placeholder}
+          aria-label={t.asistentes.comunicacion.placeholder}
           rows={2}
         />
         <Button onClick={enviar} disabled={enviando || !texto.trim()}>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
-import { useAuth } from '../../context/AuthContext';
 import { useEmpresa } from '../../context/EmpresaContext';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
@@ -29,7 +29,7 @@ async function llamarApiAusencias(path, opciones = {}) {
 
 export function AusenciasCoberturaTab({ asistente }) {
   const { t } = useLocale();
-  const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const { empresa } = useEmpresa();
   const [ausencias, setAusencias] = useState([]);
   const [otrosAsistentes, setOtrosAsistentes] = useState([]);
@@ -64,7 +64,7 @@ export function AusenciasCoberturaTab({ asistente }) {
     setGuardando(true);
     setError(null);
     const { error: errorInsert } = await supabase.from('ausencias').insert({
-      prestadora_id: usuario.prestadora_id,
+      prestadora_id: prestadoraId,
       asistente_id: asistente.id,
       tipo: nueva.tipo,
       fecha_inicio: nueva.fecha_inicio,
@@ -118,7 +118,7 @@ export function AusenciasCoberturaTab({ asistente }) {
     setGuardando(true);
     setError(null);
     const { error: errorInsert } = await supabase.from('guardias_cobertura').insert({
-      prestadora_id: usuario.prestadora_id,
+      prestadora_id: prestadoraId,
       ausencia_id: ausenciaId,
       asistente_sustituto_id: sustitutoId,
       costo_adicional: coberturaForm[ausenciaId]?.costo_adicional || null,

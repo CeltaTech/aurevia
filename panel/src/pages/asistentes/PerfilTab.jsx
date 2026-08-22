@@ -104,8 +104,11 @@ export function PerfilTab({ asistente, onActualizado }) {
       estado: form.estado,
       ...(esAdmin && {
         /* Dónde vive, escrito para que lo lea una persona. Las coordenadas (`lat`/`lng`) no se
-           cargan a mano acá: se completan a partir de esta dirección por una vía todavía sin
-           decidir, y hasta entonces quedan en nulo.
+           cargan a mano acá: se sacan de esta dirección con el servicio del país de la
+           Prestadora, que vive en el motor (`backend/src/geocodificacion/`) y hoy corre solo en
+           las altas. Esta pantalla escribe derecho contra la base, sin pasar por el motor, así
+           que un domicilio corregido desde acá deja las coordenadas como estaban — mientras
+           esta pantalla no guarde a través del motor, eso no cambia.
            Viaja solo cuando la pantalla lo tenía para mostrar: la vista que lee el Coordinador
            (`asistentes_coordinador`) no trae esta columna, así que mandarlo igual borraría un
            domicilio ya cargado que esa pantalla nunca llegó a mostrar. */

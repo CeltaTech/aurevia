@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { supabase } from '../db/connection.js';
 import { invitarActivacionCuenta } from './activacionCuenta.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
+import { coordenadasDeDomicilio } from '../geocodificacion/index.js';
 
 const ETAPAS_INCORPORACION = [
   'postulacion',
@@ -310,6 +311,14 @@ export async function crearAsistenteDirecto({
     ? await validarTipoAsistente(tipo_asistente_id, prestadoraId)
     : await resolverTipoAsistentePorNombre(tipo_asistente, prestadoraId);
 
+  // Dónde vive, escrito para que lo lea una persona, y ese mismo lugar en coordenadas para
+  // poder medir distancias — la cercanía al elegir a quién llamar, y de dónde salió el viaje.
+  // Las coordenadas las saca de la dirección el servicio del país de la Prestadora
+  // (`geocodificacion/`); si no hay servicio para ese país, si se cae o si no la encuentra,
+  // quedan en nulo y el alta sigue igual: el texto es el dato. Dato sensible: no sale en
+  // registros ni en URLs (CLAUDE.md §6).
+  const ubicacion = await coordenadasDeDomicilio({ prestadoraId, direccion: domicilio });
+
   let asistenteId;
   try {
     ({ userId: asistenteId } = await crearCuentaConPerfil({
@@ -322,10 +331,8 @@ export async function crearAsistenteDirecto({
       dni: dni || null,
       telefono: telefono || null,
       email,
-      // Dónde vive, escrito para que lo lea una persona. Las coordenadas (`lat`/`lng`) no se
-      // cargan en el alta: se sacan de esta dirección por una vía todavía sin decidir, y hasta
-      // entonces quedan en nulo. Dato sensible: no sale en registros ni en URLs (CLAUDE.md §6).
       domicilio: domicilio || null,
+      ...ubicacion,
       tipo_asistente_id: tipoAsistenteId,
       zonas: zonasArray,
       estado: estado || 'activo',
@@ -465,6 +472,17 @@ export async function crearFamiliaDirecta({
     throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombreContacto, email, nombrePaciente)');
   }
 
+  // Lo que va a quedar escrito en `pacientes.domicilio`, y su punto en el mapa si se lo puede
+  // ubicar. La localidad viaja aparte porque desempata: la misma calle con el mismo número
+  // existe en decenas de partidos. Si no se puede ubicar, el Paciente se da de alta igual con
+  // las coordenadas en nulo (ver `geocodificacion/index.js`).
+  const domicilioDelPaciente = domicilioPaciente || localidad || null;
+  const ubicacion = await coordenadasDeDomicilio({
+    prestadoraId,
+    direccion: domicilioDelPaciente,
+    localidad,
+  });
+
   let familiaId;
   let solicitudId;
   try {
@@ -509,7 +527,8 @@ export async function crearFamiliaDirecta({
       .insert({
         familia_id: familiaId,
         nombre: nombrePaciente,
-        domicilio: domicilioPaciente || localidad || null,
+        domicilio: domicilioDelPaciente,
+        ...ubicacion,
         fecha_nacimiento: fechaNacimientoPaciente || null,
         nivel_complejidad: nivelComplejidadPaciente || null,
         patologias: patologiasPaciente || [],

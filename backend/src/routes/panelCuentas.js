@@ -14,6 +14,7 @@ import {
   FILAS_DE_UNA_FAMILIA,
 } from '../utils/cuentasPanel.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
+import { coordenadasDeDomicilio } from '../geocodificacion/index.js';
 import { reenviarActivacionCuenta } from '../utils/activacionCuenta.js';
 import { requierePermiso, permisosEfectivos } from '../utils/permisos.js';
 
@@ -81,6 +82,16 @@ panelCuentasRouter.post('/familia', requiereRolPanel, exigirOrganizacionActiva, 
 
   const prestadoraId = req.usuarioPanel.prestadoraId;
 
+  // La solicitud trae una localidad y no una dirección con altura, así que casi siempre esto
+  // vuelve sin coordenadas — y está bien: lo que se guarda en `pacientes.domicilio` es ese
+  // texto, y lo que se manda a ubicar es exactamente lo que se guarda. El día que la solicitud
+  // pida la dirección completa, esto ya funciona sin tocar nada (ver `geocodificacion/`).
+  const ubicacion = await coordenadasDeDomicilio({
+    prestadoraId,
+    direccion: solicitud.localidad,
+    localidad: solicitud.localidad,
+  });
+
   let familiaId;
   try {
     ({ userId: familiaId } = await crearCuentaConPerfil({
@@ -103,6 +114,7 @@ panelCuentasRouter.post('/familia', requiereRolPanel, exigirOrganizacionActiva, 
         familia_id: familiaId,
         nombre: solicitud.nombre_paciente || solicitud.nombre,
         domicilio: solicitud.localidad,
+        ...ubicacion,
         prestadora_id: prestadoraId,
       })
       .select()

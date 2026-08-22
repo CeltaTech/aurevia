@@ -340,8 +340,9 @@ function TabPasarela() {
   const [proveedorAbierto, setProveedorAbierto] = useState(null);
   const [credencial, setCredencial] = useState('');
   const [accionEnCurso, setAccionEnCurso] = useState(null);
-  // El secreto de firma se carga aparte de la credencial: la Prestadora lo saca del panel del
-  // proveedor después de conectar la pasarela, y lo cambia cada tanto sin tocar el resto.
+  // El secreto de firma se pide en el mismo formulario que la credencial: los dos datos salen
+  // del panel del proveedor y se copian de una sola vez. El formulario aparte de abajo es solo
+  // para cambiarlo después, en una pasarela que ya está conectada.
   const [secretoAbierto, setSecretoAbierto] = useState(null);
   const [secretoFirma, setSecretoFirma] = useState('');
 
@@ -369,9 +370,14 @@ function TabPasarela() {
       const requiereCredencial = !PROVEEDORES_SIN_CREDENCIAL.includes(proveedor);
       await llamarApiMarketplace(`/pasarela/${proveedor}`, {
         method: 'PATCH',
-        body: JSON.stringify({ activo: true, credencial: requiereCredencial ? credencial || undefined : undefined }),
+        body: JSON.stringify({
+          activo: true,
+          credencial: requiereCredencial ? credencial || undefined : undefined,
+          secretoFirma: secretoFirma.trim() || undefined,
+        }),
       });
       setCredencial('');
+      setSecretoFirma('');
       setProveedorAbierto(null);
       await recargar();
     } catch (err) {
@@ -463,7 +469,9 @@ function TabPasarela() {
                               activar(fila.proveedor);
                             } else {
                               setProveedorAbierto(abierta ? null : fila.proveedor);
+                              setSecretoAbierto(null);
                               setCredencial('');
+                              setSecretoFirma('');
                             }
                           }}
                           disabled={accionEnCurso === fila.proveedor}
@@ -471,11 +479,15 @@ function TabPasarela() {
                           {t.configuracion.pasarela_activar}
                         </Button>
                       )}
-                      {fila.requiere_secreto_firma && (
+                      {/* Solo cuando la pasarela ya está conectada: si todavía no lo está, el
+                          secreto se pide en el mismo formulario que la credencial y este botón
+                          sería un segundo trámite para lo mismo. */}
+                      {fila.activo && fila.requiere_secreto_firma && (
                         <Button
                           variant="secondary"
                           onClick={() => {
                             setSecretoAbierto(secretoAbiertoAca ? null : fila.proveedor);
+                            setProveedorAbierto(null);
                             setSecretoFirma('');
                           }}
                           disabled={accionEnCurso === fila.proveedor}
@@ -497,13 +509,25 @@ function TabPasarela() {
                           value={credencial}
                           onChange={(e) => setCredencial(e.target.value)}
                         />
+                        {/* Los dos datos salen del mismo panel del proveedor: se copian de una
+                            sola vez y la pasarela queda lista para cobrar sin volver acá. */}
+                        {fila.requiere_secreto_firma && (
+                          <FormField
+                            label={t.configuracion.pasarela_secreto_firma_cargar}
+                            name={`secreto-firma-alta-${fila.proveedor}`}
+                            type="password"
+                            value={secretoFirma}
+                            onChange={(e) => setSecretoFirma(e.target.value)}
+                            ayuda={t.configuracion.pasarela_secreto_firma_ayuda}
+                          />
+                        )}
                         <Button onClick={() => activar(fila.proveedor)} disabled={accionEnCurso === fila.proveedor}>
                           {accionEnCurso === fila.proveedor ? t.comun.guardando : t.comun.guardar}
                         </Button>
                       </td>
                     </tr>
                   )}
-                  {secretoAbiertoAca && fila.requiere_secreto_firma && (
+                  {secretoAbiertoAca && fila.activo && fila.requiere_secreto_firma && (
                     <tr>
                       <td colSpan={3}>
                         <FormField

@@ -64,11 +64,13 @@ panelMarketplaceRouter.get('/pasarela', async (req, res) => {
   res.json({ pasarelas });
 });
 
-// El secreto con el que la pasarela firma sus avisos de cobro (pendiente #159). Va aparte de
-// la credencial y de la activación porque se carga en otro momento: la Prestadora primero
-// conecta la pasarela y después saca el secreto del panel del proveedor, y porque se rota
-// cada tanto sin tocar nada más. Se guarda en la misma caja fuerte que la credencial y no se
-// vuelve a mostrar.
+// El secreto con el que la pasarela firma sus avisos de cobro (pendiente #159). Lo normal es
+// que llegue junto con la credencial, en el mismo paso de conexión (ver el PATCH de más
+// abajo): los dos datos se sacan del mismo panel del proveedor y en el mismo viaje, y
+// partirlo en dos trámites era pedirle a la Prestadora que volviera por lo mismo. Esta ruta
+// queda para el caso que sí es aparte: cambiar el secreto de una pasarela ya conectada,
+// porque se rota cada tanto sin tocar la credencial. Se guarda en la misma caja fuerte que
+// la credencial y no se vuelve a mostrar.
 panelMarketplaceRouter.put('/pasarela/:proveedor/secreto-firma', async (req, res) => {
   const { proveedor } = req.params;
   const { secretoFirma } = req.body || {};
@@ -92,7 +94,7 @@ panelMarketplaceRouter.put('/pasarela/:proveedor/secreto-firma', async (req, res
 
 panelMarketplaceRouter.patch('/pasarela/:proveedor', async (req, res) => {
   const { proveedor } = req.params;
-  const { activo, credencial } = req.body || {};
+  const { activo, credencial, secretoFirma } = req.body || {};
 
   if (!proveedoresDisponibles().includes(proveedor)) {
     return res.status(400).json({ error: 'Proveedor desconocido' });
@@ -116,6 +118,19 @@ panelMarketplaceRouter.patch('/pasarela/:proveedor', async (req, res) => {
       p_credencial: credencial,
     });
     if (errorCredencial) return res.status(500).json({ error: errorCredencial.message });
+  }
+
+  // El secreto de firma viaja en la misma llamada que la credencial cuando el proveedor firma
+  // sus avisos: son dos datos del mismo panel del proveedor, se copian de una sola vez. Si no
+  // vino, la pasarela igual se conecta y la pantalla avisa que le falta — hay pasarelas que se
+  // conectaron antes de que esto existiera, y no se las deja tiradas.
+  if (requiereSecretoFirma(proveedor) && typeof secretoFirma === 'string' && secretoFirma.trim()) {
+    const { error: errorSecreto } = await supabase.rpc('guardar_secreto_firma_pasarela_pago', {
+      p_prestadora_id: req.usuarioPanel.prestadoraId,
+      p_proveedor: proveedor,
+      p_secreto: secretoFirma.trim(),
+    });
+    if (errorSecreto) return res.status(500).json({ error: errorSecreto.message });
   }
 
   const { error } = await supabase.from('prestadora_pasarela_pago').upsert(

@@ -67,6 +67,13 @@ export const T = {
       ofertas: 'Ofrecidas',
       perfil: 'Mi Perfil',
       cerrar_sesion: 'Cerrar sesión',
+      // El nombre de la barra de abajo. Sin él, un lector de pantalla anuncia tres enlaces
+      // sueltos y no una zona de navegación por la que se pueda saltar de una vez.
+      menu_principal: 'Menú principal',
+      // El número que lleva la pestaña de ofertas se ve y se entiende por dónde está; dicho
+      // en voz alta, un "3" solo no dice nada. Esta frase es la que se escucha.
+      ofertas_sin_contestar_una: '1 guardia ofrecida sin contestar',
+      ofertas_sin_contestar: '{n} guardias ofrecidas sin contestar',
     },
     marca: {
       con_tecnologia_de: 'con la tecnología de {{producto}}',
@@ -151,6 +158,10 @@ export const T = {
       cargar_reporte_de: 'Cargar el Reporte Diario de {nombre}',
       un_reporte_por_paciente: 'Cada persona lleva su propio Reporte Diario. Hace falta cargar uno por cada una antes de cerrar la guardia.',
       ver_reportes_anteriores: 'Ver reportes anteriores',
+      // Cuando el turno cubre a más de una persona hay un botón igual por cada una. En la
+      // pantalla se distinguen por el nombre que tienen arriba; dichos en voz alta serían
+      // todos la misma frase, así que el nombre se dice adentro del botón.
+      ver_reportes_anteriores_de: 'Ver reportes anteriores de {nombre}',
       tiempo_transcurrido: 'Tiempo desde el check-in',
       paciente: 'Paciente',
       pacientes: 'Pacientes de este turno',
@@ -164,6 +175,7 @@ export const T = {
     },
     medicacion: {
       ver_ordenes: 'Ver órdenes de medicación',
+      ver_ordenes_de: 'Ver órdenes de medicación de {nombre}',
       sin_ordenes: 'No hay órdenes de medicación vigentes para este Paciente dentro de lo que este Asistente está habilitado a administrar.',
       desde: 'Desde',
       hasta: 'Hasta',
@@ -335,6 +347,9 @@ export const T = {
       ofertas: 'Offered',
       perfil: 'My Profile',
       cerrar_sesion: 'Log out',
+      menu_principal: 'Main menu',
+      ofertas_sin_contestar_una: '1 offered shift with no reply yet',
+      ofertas_sin_contestar: '{n} offered shifts with no reply yet',
     },
     marca: {
       con_tecnologia_de: 'powered by {{producto}}',
@@ -413,6 +428,7 @@ export const T = {
       cargar_reporte_de: "Fill {nombre}'s Daily Report",
       un_reporte_por_paciente: 'Each person has their own Daily Report. File one for each before closing the shift.',
       ver_reportes_anteriores: 'View previous reports',
+      ver_reportes_anteriores_de: 'View previous reports for {nombre}',
       tiempo_transcurrido: 'Time since check-in',
       paciente: 'Patient',
       pacientes: 'Patients on this shift',
@@ -426,6 +442,7 @@ export const T = {
     },
     medicacion: {
       ver_ordenes: 'View medication orders',
+      ver_ordenes_de: 'View medication orders for {nombre}',
       sin_ordenes: 'There are no active medication orders for this Patient that you are qualified to administer.',
       desde: 'From',
       hasta: 'Until',
@@ -592,6 +609,9 @@ export const T = {
       ofertas: 'Oferecidos',
       perfil: 'Meu Perfil',
       cerrar_sesion: 'Sair',
+      menu_principal: 'Menu principal',
+      ofertas_sin_contestar_una: '1 plantão oferecido sem resposta',
+      ofertas_sin_contestar: '{n} plantões oferecidos sem resposta',
     },
     marca: {
       con_tecnologia_de: 'com a tecnologia de {{producto}}',
@@ -670,6 +690,7 @@ export const T = {
       cargar_reporte_de: 'Preencher o Relatório Diário de {nombre}',
       un_reporte_por_paciente: 'Cada pessoa tem o seu próprio Relatório Diário. É preciso preencher um para cada uma antes de encerrar o plantão.',
       ver_reportes_anteriores: 'Ver relatórios anteriores',
+      ver_reportes_anteriores_de: 'Ver relatórios anteriores de {nombre}',
       tiempo_transcurrido: 'Tempo desde o check-in',
       paciente: 'Paciente',
       pacientes: 'Pacientes deste turno',
@@ -683,6 +704,7 @@ export const T = {
     },
     medicacion: {
       ver_ordenes: 'Ver ordens de medicação',
+      ver_ordenes_de: 'Ver ordens de medicação de {nombre}',
       sin_ordenes: 'Não há ordens de medicação vigentes para este Paciente dentro do que este Assistente está habilitado a administrar.',
       desde: 'Desde',
       hasta: 'Até',

@@ -13,18 +13,25 @@ export default function ActivarCuenta() {
   const [confirmacion, setConfirmacion] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
+  // Cuál de los dos campos es el que está mal. Los dos errores que revisa esta pantalla son
+  // de un campo concreto —la contraseña corta y la repetición que no coincide—, así que el
+  // motivo queda atado a ese campo y se escucha al pararse ahí, no solo arriba del todo.
+  const [campoConError, setCampoConError] = useState('');
   const [activada, setActivada] = useState(false);
 
   async function alEnviar(evento) {
     evento.preventDefault();
     setError('');
+    setCampoConError('');
 
     if (password.length < 8) {
       setError(t.auth.activar_password_corta);
+      setCampoConError('password');
       return;
     }
     if (password !== confirmacion) {
       setError(t.auth.activar_no_coincide);
+      setCampoConError('confirmacion');
       return;
     }
 
@@ -75,7 +82,7 @@ export default function ActivarCuenta() {
       <div className="login-card">
         <h1>{t.auth.activar_titulo}</h1>
         <p className="login-subtitulo">{t.auth.activar_subtitulo}</p>
-        {error && <div className="alert alert-error" role="alert">{error}</div>}
+        {error && <div id="activar-error" className="alert alert-error" role="alert">{error}</div>}
         <form onSubmit={alEnviar}>
           <div className="form-field">
             <label htmlFor="password">{t.auth.activar_password_nueva}</label>
@@ -84,8 +91,13 @@ export default function ActivarCuenta() {
               type="password"
               autoComplete="new-password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (campoConError === 'password') setCampoConError('');
+              }}
               required
+              aria-invalid={campoConError === 'password' ? true : undefined}
+              aria-describedby={campoConError === 'password' ? 'activar-error' : undefined}
             />
           </div>
           <div className="form-field">
@@ -95,8 +107,13 @@ export default function ActivarCuenta() {
               type="password"
               autoComplete="new-password"
               value={confirmacion}
-              onChange={(e) => setConfirmacion(e.target.value)}
+              onChange={(e) => {
+                setConfirmacion(e.target.value);
+                if (campoConError === 'confirmacion') setCampoConError('');
+              }}
               required
+              aria-invalid={campoConError === 'confirmacion' ? true : undefined}
+              aria-describedby={campoConError === 'confirmacion' ? 'activar-error' : undefined}
             />
           </div>
           <button type="submit" className="btn btn-primary btn-full" disabled={enviando}>

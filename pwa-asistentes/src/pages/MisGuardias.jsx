@@ -55,6 +55,10 @@ export default function MisGuardias() {
     return (
       <div>
         <AvisoConsentimientoPendiente />
+        {/* El título va también cuando no hay ninguna guardia. Sin él, la pantalla vacía no
+            tiene encabezado y quien la recorre con un lector de pantalla no sabe dónde
+            está. */}
+        <h1>{t.guardias.titulo}</h1>
         <div className="estado-vacio" role="status">{t.guardias.sin_guardias}</div>
       </div>
     );

@@ -26,6 +26,23 @@ h2 {
   margin: 0 0 0.75rem;
 }
 
+/* Texto que existe solo para los lectores de pantalla: no se ve, pero se escucha. Sirve para
+   nombrar lo que en la pantalla se entiende por dónde está —un número suelto al lado de una
+   pestaña, por ejemplo— y que dicho en voz alta no se entendería. Misma definición que en el
+   Panel: no se saca de la vista con `display: none` ni con `visibility: hidden`, porque eso
+   también lo saca de la lectura. */
+.solo-lectores-pantalla {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -186,7 +203,12 @@ h2 {
   z-index: 5;
 }
 
-.app-header h1 {
+/* El nombre de la Prestadora en el encabezado. No es un título de la pantalla —el título es
+   el de la pantalla que se está mirando, y hay uno solo por pantalla—, así que se dibuja como
+   texto y no como encabezado. Lleva escrito lo que antes heredaba del `h1`. */
+.app-header .nombre-prestadora {
+  font-family: var(--font-display);
+  font-weight: 700;
   color: #FFFFFF;
   font-size: 1.1rem;
   margin: 0;
@@ -362,7 +384,12 @@ h2 {
   margin-bottom: 0.75rem;
 }
 
-.reporte-preview-campo label {
+/* El rótulo de un campo del reporte. Los que nombran a un grupo entero —los cinco signos
+   vitales, las cinco caras del estado de ánimo— no son rótulos de un control, así que ahí
+   se dibuja `.campo-titulo` en vez de un `label`, que sin control al que apuntar no nombra
+   nada para un lector de pantalla. Los dos se ven igual. */
+.reporte-preview-campo label,
+.reporte-preview-campo .campo-titulo {
   font-weight: 700;
   color: var(--azul-oscuro);
   font-size: 0.8rem;

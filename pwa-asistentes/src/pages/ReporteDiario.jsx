@@ -256,17 +256,22 @@ export default function ReporteDiario() {
           {veElRelatoConIa && <h2>{t.reporte.revisar_titulo}</h2>}
 
           <div className="reporte-preview-campo">
-            <label>{t.reporte.campo_alimentacion}</label>
+            <label htmlFor="campo-alimentacion">{t.reporte.campo_alimentacion}</label>
             <textarea
+              id="campo-alimentacion"
               value={estructurado.alimentacion?.descripcion || ''}
               onChange={(e) => actualizarAlimentacion('descripcion', e.target.value)}
               rows={2}
             />
           </div>
 
+          {/* Los cinco signos son un grupo, no un campo: el rótulo de arriba nombra al grupo
+              entero y cada casilla lleva el suyo. Por eso arriba no va un `label` —un rótulo
+              sin control al que apuntar no nombra nada para un lector de pantalla— sino el
+              nombre del grupo, atado al grupo. */}
           {veLosSignos && (
-            <div className="reporte-preview-campo">
-              <label>{t.reporte.campo_signos_vitales}</label>
+            <div className="reporte-preview-campo" role="group" aria-labelledby="grupo-signos-vitales">
+              <span className="campo-titulo" id="grupo-signos-vitales">{t.reporte.campo_signos_vitales}</span>
               {SIGNOS.map((signo) => {
                 const rango = rangosVitales[signo];
                 const color = colorSigno(estructurado.signos_vitales?.[signo], rango);
@@ -275,6 +280,9 @@ export default function ReporteDiario() {
                     <label htmlFor={`signo-${signo}`}>
                       {t.reporte[`signo_${signo}`]} {rango ? `(${rango.unidad})` : ''}
                     </label>
+                    {/* El aviso de que el valor quedó fuera de rango va atado a la casilla que
+                        lo produjo: al pararse en ella se escucha el motivo, y no solo el
+                        borde rojo, que no se ve sin verlo. */}
                     <input
                       id={`signo-${signo}`}
                       type="number"
@@ -282,16 +290,24 @@ export default function ReporteDiario() {
                       value={estructurado.signos_vitales?.[signo] || ''}
                       onChange={(e) => actualizarSignos(signo, e.target.value)}
                       style={{ width: '100%' }}
+                      aria-invalid={color === 'alerta' ? true : undefined}
+                      aria-describedby={color === 'alerta' ? `signo-${signo}-aviso` : undefined}
                     />
-                    {color === 'alerta' && <span className="signo-vital-aviso">{t.reporte.signo_fuera_de_rango}</span>}
+                    {color === 'alerta' && (
+                      <span className="signo-vital-aviso" id={`signo-${signo}-aviso`}>
+                        {t.reporte.signo_fuera_de_rango}
+                      </span>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
 
-          <div className="reporte-preview-campo">
-            <label>{t.reporte.campo_estado_animo}</label>
+          {/* Las cinco caras son otro grupo: el rótulo nombra a las cinco juntas y cada botón
+              dice cuál es y si está elegida. */}
+          <div className="reporte-preview-campo" role="group" aria-labelledby="grupo-estado-animo">
+            <span className="campo-titulo" id="grupo-estado-animo">{t.reporte.campo_estado_animo}</span>
             <div className="escala-animo">
               {ESTADOS_ANIMO.map((estado) => (
                 <button
@@ -310,13 +326,23 @@ export default function ReporteDiario() {
           </div>
 
           <div className="reporte-preview-campo">
-            <label>{t.reporte.campo_incidentes}</label>
-            <textarea value={estructurado.incidentes || ''} onChange={(e) => actualizarCampo('incidentes', e.target.value)} rows={2} />
+            <label htmlFor="campo-incidentes">{t.reporte.campo_incidentes}</label>
+            <textarea
+              id="campo-incidentes"
+              value={estructurado.incidentes || ''}
+              onChange={(e) => actualizarCampo('incidentes', e.target.value)}
+              rows={2}
+            />
           </div>
 
           <div className="reporte-preview-campo">
-            <label>{t.reporte.campo_observaciones}</label>
-            <textarea value={estructurado.observaciones || ''} onChange={(e) => actualizarCampo('observaciones', e.target.value)} rows={3} />
+            <label htmlFor="campo-observaciones">{t.reporte.campo_observaciones}</label>
+            <textarea
+              id="campo-observaciones"
+              value={estructurado.observaciones || ''}
+              onChange={(e) => actualizarCampo('observaciones', e.target.value)}
+              rows={3}
+            />
           </div>
 
           {veLaFoto && (

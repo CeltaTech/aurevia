@@ -53,6 +53,10 @@ export default function Matricula() {
   const [archivo, setArchivo] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState('');
+  // Cuál de los campos es el que está mal, cuando el error es de un campo y no del envío
+  // entero. Sirve para atarle el motivo a ese campo: quien se para ahí escucha qué falta, en
+  // vez de tener que volver arriba del formulario a buscar el cartel.
+  const [campoConError, setCampoConError] = useState('');
 
   async function cargar() {
     try {
@@ -71,8 +75,10 @@ export default function Matricula() {
   async function guardar(evento) {
     evento.preventDefault();
     setErrorForm('');
+    setCampoConError('');
     if (!desde) {
       setErrorForm(tm.falta_desde);
+      setCampoConError('desde');
       return;
     }
     setGuardando(true);
@@ -174,7 +180,10 @@ export default function Matricula() {
 
       {puedeCargar && formAbierto && (
         <form onSubmit={guardar} className="tarjeta-consentimiento">
-          {errorForm && <div className="alert alert-error" role="alert">{errorForm}</div>}
+          {/* El cartel se ve arriba del formulario, y además queda atado al campo que lo
+              provocó (`aria-describedby`), que también queda marcado como mal cargado
+              (`aria-invalid`). Así el motivo se escucha al pararse en el campo. */}
+          {errorForm && <div id="matricula-error" className="alert alert-error" role="alert">{errorForm}</div>}
 
           <label htmlFor="matricula-numero">{tm.numero}</label>
           <input
@@ -189,8 +198,13 @@ export default function Matricula() {
             id="matricula-desde"
             type="date"
             value={desde}
-            onChange={(e) => setDesde(e.target.value)}
+            onChange={(e) => {
+              setDesde(e.target.value);
+              if (campoConError === 'desde') setCampoConError('');
+            }}
             required
+            aria-invalid={campoConError === 'desde' ? true : undefined}
+            aria-describedby={campoConError === 'desde' ? 'matricula-error' : undefined}
           />
 
           <label htmlFor="matricula-hasta">{tm.vigente_hasta}</label>

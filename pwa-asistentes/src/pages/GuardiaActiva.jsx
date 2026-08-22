@@ -84,50 +84,86 @@ function DatosDelPaciente({ paciente, mostrarNombre, t }) {
   const veMedicacion = seVe('asistente_medicacion_del_paciente');
   if (!veReportes && !veMedicacion) return null;
 
+  // Los dos botones abren y cierran el bloque que tienen debajo. Un lector de pantalla no ve
+  // que el bloque se desplegó, así que hay que decírselo: `aria-expanded` dice si está
+  // abierto o cerrado, y `aria-controls` dice qué bloque es el que abre. Los dos bloques se
+  // dibujan siempre, vacíos mientras están cerrados, para que el botón nunca apunte a algo
+  // que no existe.
+  const idReportes = `reportes-anteriores-${paciente.id}`;
+  const idMedicacion = `ordenes-medicacion-${paciente.id}`;
+
   return (
     <div style={{ marginTop: '1rem' }}>
       {mostrarNombre && <h2 className="guardia-card-paciente">{paciente.nombre}</h2>}
 
       {veReportes && (
-        <button className="btn btn-secondary btn-full" onClick={verReportesAnteriores}>
-          {t.guardia_activa.ver_reportes_anteriores}
-        </button>
-      )}
-
-      {veReportes && mostrandoReportes && (
-        <div style={{ marginTop: '1rem' }}>
-          {reportes === null && <div className="estado-cargando" role="status">{t.comun.cargando}</div>}
-          {reportes?.length === 0 && <div className="estado-vacio" role="status">{t.comun.vacio}</div>}
-          {reportes?.map((r) => (
-            <div key={r.id} className="guardia-card">
-              <div className="guardia-card-detalle">{r.guardias?.fecha}</div>
-              {r.observaciones && <p>{r.observaciones}</p>}
-            </div>
-          ))}
-        </div>
+        <>
+          {/* Con varios Pacientes hay un botón igual por cada uno. En la pantalla se
+              distinguen por el nombre que tienen arriba; para quien escucha, todos dirían lo
+              mismo, así que ahí el nombre va adentro del botón. */}
+          <button
+            className="btn btn-secondary btn-full"
+            onClick={verReportesAnteriores}
+            aria-expanded={mostrandoReportes}
+            aria-controls={idReportes}
+            aria-label={
+              mostrarNombre
+                ? con(t.guardia_activa.ver_reportes_anteriores_de, { nombre: paciente.nombre })
+                : undefined
+            }
+          >
+            {t.guardia_activa.ver_reportes_anteriores}
+          </button>
+          <div id={idReportes} style={mostrandoReportes ? { marginTop: '1rem' } : undefined}>
+            {mostrandoReportes && (
+              <>
+                {reportes === null && <div className="estado-cargando" role="status">{t.comun.cargando}</div>}
+                {reportes?.length === 0 && <div className="estado-vacio" role="status">{t.comun.vacio}</div>}
+                {reportes?.map((r) => (
+                  <div key={r.id} className="guardia-card">
+                    <div className="guardia-card-detalle">{r.guardias?.fecha}</div>
+                    {r.observaciones && <p>{r.observaciones}</p>}
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        </>
       )}
 
       {veMedicacion && (
-        <button className="btn btn-secondary btn-full" onClick={verOrdenesMedicacion} style={{ marginTop: '1rem' }}>
-          {t.medicacion.ver_ordenes}
-        </button>
-      )}
-
-      {veMedicacion && mostrandoMedicacion && (
-        <div style={{ marginTop: '1rem' }}>
-          {ordenesMedicacion === null && <div className="estado-cargando" role="status">{t.comun.cargando}</div>}
-          {ordenesMedicacion?.length === 0 && <div className="estado-vacio" role="status">{t.medicacion.sin_ordenes}</div>}
-          {ordenesMedicacion?.map((o) => (
-            <div key={o.id} className="guardia-card">
-              <div className="guardia-card-detalle">
-                <strong>{o.medicamento}</strong> · {o.dosis} · {o.frecuencia} ({o.via_administracion})
-              </div>
-              <div className="guardia-card-detalle">
-                {t.medicacion.desde}: {o.fecha_desde} {o.fecha_hasta ? `— ${t.medicacion.hasta}: ${o.fecha_hasta}` : ''}
-              </div>
-            </div>
-          ))}
-        </div>
+        <>
+          <button
+            className="btn btn-secondary btn-full"
+            onClick={verOrdenesMedicacion}
+            style={{ marginTop: '1rem' }}
+            aria-expanded={mostrandoMedicacion}
+            aria-controls={idMedicacion}
+            aria-label={mostrarNombre ? con(t.medicacion.ver_ordenes_de, { nombre: paciente.nombre }) : undefined}
+          >
+            {t.medicacion.ver_ordenes}
+          </button>
+          <div id={idMedicacion} style={mostrandoMedicacion ? { marginTop: '1rem' } : undefined}>
+            {mostrandoMedicacion && (
+              <>
+                {ordenesMedicacion === null && <div className="estado-cargando" role="status">{t.comun.cargando}</div>}
+                {ordenesMedicacion?.length === 0 && (
+                  <div className="estado-vacio" role="status">{t.medicacion.sin_ordenes}</div>
+                )}
+                {ordenesMedicacion?.map((o) => (
+                  <div key={o.id} className="guardia-card">
+                    <div className="guardia-card-detalle">
+                      <strong>{o.medicamento}</strong> · {o.dosis} · {o.frecuencia} ({o.via_administracion})
+                    </div>
+                    <div className="guardia-card-detalle">
+                      {t.medicacion.desde}: {o.fecha_desde} {o.fecha_hasta ? `— ${t.medicacion.hasta}: ${o.fecha_hasta}` : ''}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

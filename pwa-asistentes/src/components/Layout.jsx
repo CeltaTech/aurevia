@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
 import { iniciarSincronizacionAutomatica } from '../lib/sincronizarCola';
 import { useMarca } from '../context/PerfilContext';
+import { con } from '../lib/textos';
 import { api } from '../lib/api';
 
 export default function Layout() {
@@ -44,12 +45,15 @@ export default function Layout() {
     <div className="app-layout">
       {/* Arriba va la Prestadora, que es para quien el Asistente trabaja. Si cargó su logo
           se muestra el logo; si no, su nombre escrito. Mientras el nombre viaja queda el
-          espacio vacío: es preferible a mostrar un nombre que después cambia. */}
+          espacio vacío: es preferible a mostrar un nombre que después cambia.
+          El nombre no es un encabezado: el único título de la pantalla es el de la pantalla
+          que se está mirando, y dos `h1` seguidos dejan a un lector de pantalla sin saber
+          cuál de los dos es el título. */}
       <header className="app-header">
         {marca.logoUrl ? (
           <img className="logo-prestadora" src={marca.logoUrl} alt={marca.nombre || ''} />
         ) : (
-          <h1>{marca.nombre || ''}</h1>
+          <p className="nombre-prestadora">{marca.nombre || ''}</p>
         )}
         <button className="btn btn-secondary" onClick={logout} style={{ padding: '0.4rem 1rem', fontSize: '0.8rem' }}>
           {t.nav.cerrar_sesion}
@@ -61,13 +65,27 @@ export default function Layout() {
             Prestadora tiene contratada esa función (`CLAUDE.md` §7, regla 1). */}
         {marca.mostrarMarcaProducto && <p className="marca-del-producto">{t.marca.con_tecnologia_de}</p>}
       </main>
-      <nav className="app-nav-inferior">
+      {/* La barra de abajo lleva nombre: sin él, un lector de pantalla anuncia tres enlaces
+          sueltos en vez de una zona por la que se puede saltar de una vez. */}
+      <nav className="app-nav-inferior" aria-label={t.nav.menu_principal}>
         <NavLink to="/guardias" className={({ isActive }) => (isActive ? 'active' : '')}>
           {t.nav.guardias}
         </NavLink>
         <NavLink to="/ofertas" className={({ isActive }) => (isActive ? 'active' : '')}>
           {t.nav.ofertas}
-          {ofertasAbiertas > 0 && <span className="nav-cuenta">{ofertasAbiertas}</span>}
+          {/* El número se ve y se entiende por dónde está. Dicho en voz alta, un "3" pegado a
+              "Ofrecidas" no dice de qué es, así que el número dibujado no se lee y al lado va
+              la frase entera, que no se ve. */}
+          {ofertasAbiertas > 0 && (
+            <>
+              <span className="nav-cuenta" aria-hidden="true">{ofertasAbiertas}</span>
+              <span className="solo-lectores-pantalla">
+                {ofertasAbiertas === 1
+                  ? t.nav.ofertas_sin_contestar_una
+                  : con(t.nav.ofertas_sin_contestar, { n: ofertasAbiertas })}
+              </span>
+            </>
+          )}
         </NavLink>
         <NavLink to="/perfil" className={({ isActive }) => (isActive ? 'active' : '')}>
           {t.nav.perfil}

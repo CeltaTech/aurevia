@@ -26,7 +26,10 @@ export default function Login() {
       <div className="login-card">
         <h1>{t.auth.titulo}</h1>
         <p className="login-subtitulo">{t.auth.subtitulo}</p>
-        {error && <div className="alert alert-error" role="alert">{error}</div>}
+        {/* El motivo queda atado a los dos campos y no a uno: no se dice cuál de los dos está
+            mal, a propósito, porque decirlo le regalaría a cualquiera la mitad de la
+            respuesta. Los dos quedan marcados y los dos leen el mismo motivo. */}
+        {error && <div id="login-error" className="alert alert-error" role="alert">{error}</div>}
         <form onSubmit={alEnviar}>
           <div className="form-field">
             <label htmlFor="email">{t.auth.email}</label>
@@ -35,8 +38,13 @@ export default function Login() {
               type="email"
               autoComplete="username"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (error) setError('');
+              }}
               required
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? 'login-error' : undefined}
             />
           </div>
           <div className="form-field">
@@ -46,8 +54,13 @@ export default function Login() {
               type="password"
               autoComplete="current-password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (error) setError('');
+              }}
               required
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? 'login-error' : undefined}
             />
           </div>
           <button type="submit" className="btn btn-primary btn-full" disabled={enviando}>

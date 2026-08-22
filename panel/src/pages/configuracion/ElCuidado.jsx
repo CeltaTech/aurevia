@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
+import { ESTADO_ACTIVO } from '../../lib/candidatos';
 import { mensajeDeError } from '../../lib/errores';
 import { con } from '../../lib/textos';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
@@ -476,7 +477,15 @@ function TabServiciosPersonalEmergencia() {
     try {
       const [{ personal: filas }, { data: asistentesData, error: errorAsistentes }] = await Promise.all([
         llamarApi('/personal-emergencia'),
-        supabase.from('asistentes').select('id, nombre').order('nombre'),
+        /* Anotar a alguien como personal de emergencia es ponerlo en la lista de a quién llamar
+           cuando se cae una guardia, o sea repartir trabajo: quien ya no está en la Prestadora no
+           puede entrar ahí. Acá sí se filtra en la consulta, y no en el desplegable como en las
+           otras puertas, porque esta lista no se usa para mostrar a nadie —los nombres de la
+           tabla de arriba salen de `/personal-emergencia`, no de esto—, así que no hay ningún
+           nombre que se pueda quedar sin dueño. El valor sale de `ESTADO_ACTIVO` y no escrito a
+           mano: es la misma regla que contesta `estaEnElPlantel`, y una consulta a la base no
+           puede llamar a una función de JavaScript (regla 12 de CLAUDE.md §7). */
+        supabase.from('asistentes').select('id, nombre').eq('estado', ESTADO_ACTIVO).order('nombre'),
       ]);
       if (errorAsistentes) throw errorAsistentes;
       setPersonal(filas);

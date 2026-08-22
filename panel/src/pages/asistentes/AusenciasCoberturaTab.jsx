@@ -8,6 +8,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { generarConstanciaAusencia, descargarPDF } from '../../lib/generarDocumentoCese';
+import { ESTADO_ACTIVO } from '../../lib/candidatos';
 import { mensajeDeError } from '../../lib/errores';
 
 const TIPOS = ['enfermedad_inculpable', 'accidente_inculpable', 'otra_licencia', 'ausencia_no_justificada'];
@@ -45,7 +46,12 @@ export function AusenciasCoberturaTab({ asistente }) {
     setEstado('cargando');
     const [{ data: dataAusencias, error: errorAusencias }, { data: dataAsistentes }] = await Promise.all([
       supabase.from('ausencias').select('*').eq('asistente_id', asistente.id).order('fecha_inicio', { ascending: false }),
-      supabase.from('asistentes').select('id, nombre').eq('estado', 'activo').neq('id', asistente.id),
+      // Quién puede cubrir esta ausencia. Es repartir trabajo, así que solo entra quien sigue en
+      // el plantel; y se filtra en la consulta porque esta lista no muestra a nadie, solo llena
+      // el desplegable del sustituto. El valor sale de `ESTADO_ACTIVO`, la misma constante que
+      // contesta `estaEnElPlantel`, para que la regla quede escrita en un solo lugar
+      // (regla 12 de CLAUDE.md §7).
+      supabase.from('asistentes').select('id, nombre').eq('estado', ESTADO_ACTIVO).neq('id', asistente.id),
     ]);
     if (errorAusencias) {
       setError(mensajeDeError(errorAusencias, t));

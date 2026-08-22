@@ -95,6 +95,13 @@ export const PESOS = {
   /** Ya tiene una guardia encima. Bloquea igual; el número es para que quede al fondo. */
   ocupado: -1000,
 
+  /**
+   * Tiene una ausencia registrada que cubre la fecha de la guardia. Bloquea igual que estar
+   * ocupado y resta lo mismo por el mismo motivo: el número no decide nada —el bloqueo ya está
+   * decidido—, solo la manda al fondo para que no se mezcle con quienes sí pueden tomarla.
+   */
+  ausencia: -1000,
+
   /** Tiene la Matrícula que su tipo le exige, vigente y comprobada. */
   matricula_ok: 8,
   /** La tiene bien, pero está por vencerse. Resta y se avisa; no bloquea. */
@@ -191,6 +198,13 @@ export const MOTIVO = {
   SIN_CONTINUIDAD: 'motivo_sin_continuidad',
   LIBRE: 'motivo_libre',
   OCUPADO: 'motivo_ocupado',
+  /**
+   * Uno solo para las cuatro clases de ausencia que admite la tabla, y el texto que se muestra
+   * no nombra ninguna: dice que esa persona no está disponible ese día y nada más. Una licencia
+   * por enfermedad es información de salud (CLAUDE.md §6) y no tiene por qué leerse desde una
+   * lista de candidatos; el tipo ni siquiera llega hasta este archivo (ver `ausenciaQueTapa`).
+   */
+  AUSENCIA: 'motivo_ausencia',
   MATRICULA_OK: 'motivo_matricula_ok',
   MATRICULA_VENCE: 'motivo_matricula_vence',
   MATRICULA_FALTA: 'motivo_matricula_falta',
@@ -273,6 +287,22 @@ const lista = (x) => (Array.isArray(x) ? x : []);
 // ============================================================================
 
 /**
+ * El único valor de `asistentes.estado` que significa que esa persona sigue trabajando en la
+ * Prestadora. La columna admite tres —`activo`, `inactivo` y `cesado`, por la regla
+ * `asistentes_estado_check` de la base— y los otros dos son formas de haberse ido: uno con
+ * vuelta y el otro sin ella.
+ */
+export const ESTADO_ACTIVO = 'activo';
+
+/**
+ * ¿Sigue en el plantel? Es lo único que este archivo le pregunta al estado del Asistente, y
+ * está escrito una sola vez para que la respuesta no se bifurque (regla 12 de CLAUDE.md §7).
+ */
+export function estaEnElPlantel(asistente) {
+  return asistente?.estado === ESTADO_ACTIVO;
+}
+
+/**
  * Las guardias que ocupan realmente a un Asistente.
  *
  * Se sacan las canceladas —una guardia cancelada no ocupa a nadie— y la guardia que se está
@@ -293,6 +323,39 @@ export function guardiasDeAsistente(asistenteId, guardias, excluirGuardiaId = nu
  */
 export function guardiaQueSePisa(guardia, guardiasDelAsistente) {
   return lista(guardiasDelAsistente).find((g) => seSuperponen(g, guardia)) ?? null;
+}
+
+/**
+ * La ausencia registrada del Asistente que tapa esta guardia, o `null` si no hay ninguna.
+ *
+ * Estar de licencia pesa exactamente lo mismo que tener otra guardia encima: los dos casos
+ * contestan que esa persona no está ese día. Por eso bloquea y no descuenta puntos.
+ *
+ * Se compara contra los **dos** días que puede ocupar la guardia, el primero y el último: la de
+ * noche arranca a las 22:00 y termina a las 06:00 del día siguiente, y una licencia que empieza
+ * ese día siguiente igual la parte al medio.
+ *
+ * Una ausencia sin `fecha_fin` es una que sigue abierta, no una que terminó: cuenta desde su
+ * inicio y hacia adelante sin límite. Tratarla como cerrada sería dar por trabajando a quien
+ * está de licencia y todavía no tiene fecha de vuelta, que es el caso más común de todos.
+ *
+ * **El tipo de ausencia no entra acá, a propósito.** Una licencia por enfermedad o por accidente
+ * es información de salud (CLAUDE.md §6) y no tiene por qué salir del legajo, ni viajar hasta
+ * una lista de candidatos, ni terminar en un renglón de pantalla. Y no hace ninguna falta: las
+ * cuatro clases que admite la tabla contestan lo mismo a la única pregunta de acá —ese día esa
+ * persona no está—, así que distinguirlas agregaría un dato sensible sin cambiar ninguna
+ * decisión. Quien llama tampoco lo trae en su consulta.
+ */
+export function ausenciaQueTapa(asistenteId, ausencias, primerDia, ultimoDia) {
+  return (
+    lista(ausencias).find(
+      (a) =>
+        a.asistente_id === asistenteId &&
+        a.fecha_inicio &&
+        a.fecha_inicio <= ultimoDia &&
+        (!a.fecha_fin || a.fecha_fin >= primerDia)
+    ) ?? null
+  );
 }
 
 /**
@@ -459,8 +522,14 @@ const MOTIVO_DE_BLOQUEO = {
  *
  * @param hueco     la fila de `guardias` sin Asistente que hay que tapar.
  * @param datos     lo que la pantalla ya cargó:
- *                    asistentes     → los activos de la Prestadora
+ *                    asistentes     → el plantel de la Prestadora, entero. Quién sigue estando
+ *                                     se decide acá adentro, no en la consulta de la pantalla
+ *                                     (ver `estaEnElPlantel` y el porqué unas líneas más abajo)
  *                    guardias       → todas las del rango, para ver ocupación y carga semanal
+ *                    ausencias      → filas de `ausencias` que se pisan con el rango cargado,
+ *                                     con `asistente_id`, `fecha_inicio` y `fecha_fin` y nada
+ *                                     más: el tipo de ausencia no viaja (CLAUDE.md §6). Si no
+ *                                     vienen, nadie se bloquea por ausencia
  *                    matriculas     → filas de `matriculas_asistente`
  *                    estadoMatricula→ filas de la vista `estado_matricula_asistente`: dicen si
  *                                     el tipo de cada Asistente exige Matrícula, cuál, y si la
@@ -489,8 +558,26 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
   const topes = { ...TOPES, ...(opciones.topes ?? {}) };
   const ahora = datos.ahora ?? new Date();
 
-  const asistentes = lista(datos.asistentes);
+  /* Quien ya no trabaja en la Prestadora se va de la lista.
+     ------------------------------------------------------------------------------------------
+     POR QUÉ EL FILTRO VIVE ACÁ Y NO EN LA CONSULTA DE LA PANTALLA. La pantalla que abre el panel
+     de cobertura pide el plantel una sola vez y lo usa para tres cosas distintas: poner el
+     nombre del Asistente en cada guardia ya asignada de la grilla, llenar los desplegables de
+     reasignación, y alimentar esta lista. Filtrar en esa consulta arreglaría esta lista y
+     rompería la primera: una guardia de la semana pasada que cubrió alguien que después fue
+     cesado se quedaría sin nombre, con un guión donde antes había una persona.
+     Y sobre todo, la pregunta "¿a quién se puede proponer para un hueco?" es de este archivo,
+     que es el punto único de verdad (regla 12 de CLAUDE.md §7). Dejarla escrita en cada consulta
+     que arme una lista de candidatos es garantizar que la próxima pantalla se la olvide.
+
+     POR QUÉ SE VAN Y NO QUEDAN AL FONDO CON SU MOTIVO, que es lo que hace todo el resto de este
+     archivo. La diferencia es real: los bloqueados de más abajo son gente del plantel que no
+     puede tomar ESTA guardia, y verlos ahí cierra la pregunta "¿por qué no aparece fulana?".
+     Quien ya no trabaja en la Prestadora no es un candidato bloqueado: no es un candidato.
+     Arrastrarlo por el fondo de todos los huecos, para siempre, sería ruido. */
+  const asistentes = lista(datos.asistentes).filter(estaEnElPlantel);
   const guardias = lista(datos.guardias);
+  const ausencias = lista(datos.ausencias);
   const matriculas = lista(datos.matriculas);
   const documentos = lista(datos.documentos);
   const ofertas = lista(datos.ofertas);
@@ -514,6 +601,7 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
     evaluarAsistente(asistente, {
       hueco,
       guardias,
+      ausencias,
       matriculas,
       documentos,
       pacientesDelHueco,
@@ -550,6 +638,12 @@ function evaluarAsistente(asistente, ctx) {
   };
 
   const propias = guardiasDeAsistente(asistente.id, guardias, hueco.id);
+
+  // El último día que ocupa la guardia. La de noche arranca a las 22:00 y termina a las 06:00
+  // del día siguiente, así que "el día de la guardia" en realidad son dos, y las dos
+  // comprobaciones que miran el almanaque —la ausencia y la Matrícula— tienen que llegar hasta
+  // el final y no quedarse en el comienzo. Es el mismo día que mira la base.
+  const ultimoDiaDeLaGuardia = diaDe(finDeGuardia(hueco));
 
   // --- 1. Continuidad. El criterio que más pesa: para el Paciente y su Familia, que venga
   //        alguien conocido vale más que cualquier comodidad de la agenda.
@@ -588,6 +682,21 @@ function evaluarAsistente(asistente, ctx) {
     suma(enContra, motivoDeModalidad, null, pesos.modalidad_distinta);
   }
 
+  // --- 2 ter. Ausencias registradas. Bloquea igual que estar ocupado, y por el mismo motivo:
+  //        quien tiene una ausencia que cubre esa fecha no está ese día, y eso no se arregla
+  //        con un descuento de puntaje.
+  //
+  //        Es la única comprobación de este archivo que empezó siendo un error a favor: sin
+  //        ella, quien estaba de licencia no solo aparecía, aparecía **arriba**, porque no
+  //        tenía ninguna guardia encima y se llevaba los puntos de "ese día lo tiene libre".
+  //
+  //        El motivo que se muestra no dice de qué ausencia se trata, y el tipo ni siquiera
+  //        llega hasta acá: la razón está escrita en `ausenciaQueTapa` (CLAUDE.md §6).
+  if (ausenciaQueTapa(asistente.id, ctx.ausencias, hueco.fecha, ultimoDiaDeLaGuardia)) {
+    bloqueado = true;
+    suma(enContra, MOTIVO.AUSENCIA, null, pesos.ausencia);
+  }
+
   // --- 3. Matrícula. Bloquea cuando el tipo de Asistente la exige y algo no está en orden.
   //
   //        La regla no se decide acá: se decide en la base, que además la hace cumplir en las
@@ -595,10 +704,8 @@ function evaluarAsistente(asistente, ctx) {
   //        motivo esté a la vista antes de que alguien elija a esta persona y se choque con
   //        la pared. La cuenta vive una sola vez, en `lib/matricula.js`.
   //
-  //        Se mira contra el día en que la guardia **termina**, no el que empieza: la de noche
-  //        arranca a las 22:00 y termina a las 06:00 del día siguiente, y lo que importa es que
-  //        la Matrícula llegue hasta el final. Es el mismo día que mira la base.
-  const ultimoDiaDeLaGuardia = diaDe(finDeGuardia(hueco));
+  //        Se mira contra el día en que la guardia **termina**, no el que empieza: lo que
+  //        importa es que la Matrícula llegue hasta el final (ver `ultimoDiaDeLaGuardia`).
   const bloqueoMatricula = motivoDeBloqueo(
     asistente.id,
     ctx.estadoMatricula,

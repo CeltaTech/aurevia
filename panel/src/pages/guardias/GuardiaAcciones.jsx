@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { supabase } from '../../lib/supabaseClient';
 import { obtenerUbicacion } from '../../lib/ubicacion';
@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { COBERTURA, claveTextoCobertura, coberturaDeGuardia } from '../../lib/cobertura';
+import { estaEnElPlantel } from '../../lib/candidatos';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 
@@ -28,6 +29,16 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
   const [nuevaFecha, setNuevaFecha] = useState(guardia.fecha);
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState(null);
+
+  /* A quién se le puede pasar esta guardia: solo quien sigue en el plantel.
+     La lista que llega por `asistentes` es el plantel entero a propósito —la misma consulta le
+     pone el nombre a las guardias ya asignadas, y una guardia vieja que cubrió alguien que
+     después fue cesado tiene que seguir mostrando ese nombre—, así que el filtro va acá, en la
+     puerta que reparte trabajo nuevo, y no en la consulta. La pregunta "¿sigue trabajando en la
+     Prestadora?" se contesta con `estaEnElPlantel`, que es donde está escrita una sola vez para
+     todo el Panel (regla 12 de CLAUDE.md §7); repetir acá el `estado === 'activo'` sería
+     garantizar que el día que la regla cambie, este desplegable se quede con la vieja. */
+  const asistentesAsignables = useMemo(() => asistentes.filter(estaEnElPlantel), [asistentes]);
 
   // Alternativa por teclado/botón a la reasignación por arrastre de GuardiasGrid.jsx
   // (WCAG 2.5.7 — el drag-and-drop nunca puede ser la única forma de reasignar).
@@ -351,7 +362,7 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
               onChange={(e) => setNuevoAsistenteId(e.target.value)}
             >
               <option value="">{t.guardias.nueva_guardia.elegir}</option>
-              {asistentes.map((a) => (
+              {asistentesAsignables.map((a) => (
                 <option key={a.id} value={a.id}>{a.nombre}</option>
               ))}
             </FormField>

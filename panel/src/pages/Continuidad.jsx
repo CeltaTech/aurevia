@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
 import { useConfirmarDestructivo } from '../context/TenantSessionContext';
@@ -8,6 +8,7 @@ import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { cargarPacientesDeGuardias, conPacientes, pacientesDeGuardia, textoDePacientes } from '../lib/pacientesDeGuardia';
+import { estaEnElPlantel } from '../lib/candidatos';
 import { mensajeDeError } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
@@ -69,7 +70,11 @@ export function Continuidad() {
 
       const [{ data: pacientesData }, { data: asistentesData }, { data: coordinadoresData }] = await Promise.all([
         idsPacientes.length ? supabase.from('pacientes').select('id, nombre').in('id', idsPacientes) : Promise.resolve({ data: [] }),
-        supabase.from('asistentes').select('id, nombre').order('nombre'),
+        // El plantel entero, con su estado. Sin filtrar acá porque esta misma lista le pone el
+        // nombre al Asistente que faltó en cada incidente y en cada alerta, y quien después se
+        // fue de la Prestadora tiene que seguir teniendo nombre en un incidente de la semana
+        // pasada. Quién puede tomar el reemplazo lo decide `ResolverIncidente`, más abajo.
+        supabase.from('asistentes').select('id, nombre, estado').order('nombre'),
         idsCoordinadores.length ? supabase.from('usuarios').select('id, nombre').in('id', idsCoordinadores) : Promise.resolve({ data: [] }),
       ]);
 
@@ -310,6 +315,16 @@ function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto
 
   const esFamiliar = tipo === 'familiar';
 
+  /* Quién puede cubrir el hueco que dejó la ausencia: solo quien sigue en el plantel. Resolver
+     un incidente de continuidad es mandar a alguien a una casa, o sea repartir trabajo nuevo, y
+     ahí quien ya se fue de la Prestadora no es un candidato peor puesto: no es un candidato.
+     Se pregunta con `estaEnElPlantel`, la misma función que usa el panel de cobertura, y no con
+     una condición escrita de nuevo acá (regla 12 de CLAUDE.md §7). */
+  const asistentesAsignables = useMemo(
+    () => (asistentes ?? []).filter(estaEnElPlantel),
+    [asistentes]
+  );
+
   async function handleResolver() {
     if (!(await confirmarDestructivo(t.continuidad.confirmar_resolver))) return;
     setGuardando(true);
@@ -381,7 +396,7 @@ function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto
         ) : (
           <FormField label={t.continuidad.resolver_asistente} name="asistente_id" type="select" value={asistenteId} onChange={(e) => setAsistenteId(e.target.value)} required>
             <option value="">{t.configuracion.escalada_prioridad_vacio}</option>
-            {asistentes.map((a) => (
+            {asistentesAsignables.map((a) => (
               <option key={a.id} value={a.id}>{a.nombre}</option>
             ))}
           </FormField>

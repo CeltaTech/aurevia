@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
 import { FormField } from '../../components/ui/FormField';
 import { correrHora, sumarDias } from '../../lib/horarios';
+import { estaEnElPlantel } from '../../lib/candidatos';
 import { con } from '../../lib/textos';
 
 // La barra de acciones de a muchas.
@@ -59,6 +60,15 @@ export function BarraAccionesMasivas({ seleccionadas = [], asistentes = [], onAp
 
   const textos = t.guardias.seleccion;
   const cantidad = seleccionadas.length;
+
+  /* A quién se le pueden pasar las guardias marcadas: solo quien sigue en el plantel.
+     `asistentes` llega con el plantel entero porque la pantalla que lo carga usa esa misma lista
+     para ponerle el nombre a cada guardia ya asignada de la grilla, y quien se fue tiene que
+     seguir apareciendo ahí. El filtro va entonces en la puerta que reparte trabajo nuevo, que es
+     esta, y usa `estaEnElPlantel` en vez de repetir la condición: la regla vive escrita una sola
+     vez (regla 12 de CLAUDE.md §7). Acá pesa más que en el detalle de a una, porque un error
+     no asigna una guardia a quien ya no trabaja: asigna cuarenta. */
+  const asistentesAsignables = useMemo(() => asistentes.filter(estaEnElPlantel), [asistentes]);
 
   // El texto que dice sobre cuántas guardias cae la acción. Una acción masiva que no dice
   // sobre cuántas filas cae es una acción a ciegas.
@@ -186,7 +196,7 @@ export function BarraAccionesMasivas({ seleccionadas = [], asistentes = [], onAp
               disabled={enCurso}
             >
               <option value="">{t.guardias.nueva_guardia.elegir}</option>
-              {asistentes.map((a) => (
+              {asistentesAsignables.map((a) => (
                 <option key={a.id} value={a.id}>{a.nombre}</option>
               ))}
             </FormField>

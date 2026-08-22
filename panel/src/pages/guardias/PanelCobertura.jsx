@@ -35,9 +35,9 @@ import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
    y es la razón de ser de la tabla `ofertas_guardia`.
 
    LOS CUATRO ESTADOS (CLAUDE.md §7 regla 3) se manejan acá adentro, porque este panel
-   carga datos propios que ninguna otra pantalla necesita: las matriculas, los papeles y
-   las invitaciones ya hechas. Cargarlos en la pantalla de arriba obligaría a traerlos
-   siempre, aunque nadie abra el panel. */
+   carga datos propios que ninguna otra pantalla necesita: las matriculas, los papeles, las
+   ausencias registradas y las invitaciones ya hechas. Cargarlos en la pantalla de arriba
+   obligaría a traerlos siempre, aunque nadie abra el panel. */
 
 /** Cuánto se mira hacia atrás y hacia adelante para saber si un Asistente está ocupado. */
 const DIAS_DE_CONTEXTO = 14;
@@ -91,7 +91,7 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
     hasta.setDate(hasta.getDate() + DIAS_DE_CONTEXTO);
     const iso = (d) => d.toISOString().slice(0, 10);
 
-    const [gs, hs, ds, os, em] = await Promise.all([
+    const [gs, hs, ds, os, em, au] = await Promise.all([
       supabase
         .from('guardias')
         .select('id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, estado')
@@ -104,9 +104,34 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
       // comprobado. Viene ya resuelto de la base —no se decide acá— para que la pantalla diga
       // exactamente lo mismo que después van a hacer cumplir los disparadores al guardar.
       supabase.from('estado_matricula_asistente').select(COLUMNAS_ESTADO_MATRICULA),
+      // Quién tiene una ausencia registrada que se pisa con este rango. Estar de licencia
+      // bloquea igual que tener otra guardia encima, y hasta que esto se cargó no se miraba:
+      // quien estaba de licencia aparecía como libre y encima sumaba puntos por eso.
+      //
+      // POR QUÉ ESTO NO LE PREGUNTA A LA TABLA, que es lo que hacen las otras seis consultas de
+      // acá. Porque preguntándole a la tabla el bloqueo fallaba callado entre zonas. Lo que una
+      // Coordinadora VE de `ausencias` está acotado a los Asistentes de su zona; lo que PUEDE
+      // HACER, no: invitar a alguien a una guardia sin cubrir le está permitido con cualquier
+      // Asistente de la Prestadora, sin mirar zonas. Sobre esa diferencia, la fila no volvía, el
+      // bloqueo no se aplicaba, y la pantalla mostraba como disponible a quien estaba de licencia
+      // — sin ningún error a la vista, que es la peor forma de fallar.
+      //
+      // Aflojar la regla de acceso de la tabla no servía: decide por fila y no por columna, así
+      // que dejar entrar la fila traería también el tipo de licencia —que puede ser por
+      // enfermedad—, el certificado médico y las observaciones. Información de salud que no
+      // tiene por qué salir del legajo para armar una lista de candidatos (CLAUDE.md §6).
+      //
+      // `ausencias_que_tapan` contesta la única pregunta de acá —quién no está entre estas
+      // fechas— y devuelve tres columnas y nada más: a quién, desde cuándo y hasta cuándo.
+      // Resuelve la Prestadora adentro y solo le contesta a los tres roles de Panel; el rango
+      // es lo único que viaja. Es el único camino por el que se pregunta esto en todo el
+      // producto (regla 12 de CLAUDE.md §7).
+      //
+      // Una ausencia sin fecha de vuelta sigue abierta: por eso entra igual, con `fecha_fin` nula.
+      supabase.rpc('ausencias_que_tapan', { p_desde: iso(desde), p_hasta: iso(hasta) }),
     ]);
 
-    const fallo = gs.error || hs.error || ds.error || os.error || em.error;
+    const fallo = gs.error || hs.error || ds.error || os.error || em.error || au.error;
     if (fallo) {
       setError(mensajeDeError(fallo, t));
       setEstado('error');
@@ -143,6 +168,7 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
     setDatos({
       asistentes: asistentes ?? [],
       guardias: (gs.data ?? []).map((g) => ({ ...g, paciente_ids: pacientesDeGuardia(g, pacientesPorGuardia) })),
+      ausencias: au.data ?? [],
       matriculas: hs.data ?? [],
       documentos: ds.data ?? [],
       ofertas: os.data ?? [],

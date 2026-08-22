@@ -1154,6 +1154,9 @@ export const T = {
         motivo_sin_continuidad: 'Nunca atendió a este Paciente',
         motivo_libre: 'Ese día lo tiene libre',
         motivo_ocupado: 'Ese día ya tiene una guardia de {desde} a {hasta}',
+        // No dice de qué ausencia se trata, ni siquiera si es una licencia: el tipo de ausencia
+        // es información de salud y no sale del legajo (CLAUDE.md §6, `lib/candidatos.js`).
+        motivo_ausencia: 'Ese día no está disponible',
         motivo_matricula_ok: 'Matrícula vigente',
         motivo_matricula_vence: 'La matrícula vence el {fecha}',
         motivo_matricula_falta: 'No tiene matrícula registrada',
@@ -2996,6 +2999,7 @@ export const T = {
         motivo_sin_continuidad: 'Has never cared for this Patient',
         motivo_libre: 'That day is free',
         motivo_ocupado: 'That day already has a shift from {desde} to {hasta}',
+        motivo_ausencia: 'Not available that day',
         motivo_matricula_ok: 'Licence in force',
         motivo_matricula_vence: 'The licence expires on {fecha}',
         motivo_matricula_falta: 'No licence on record',
@@ -4834,6 +4838,7 @@ export const T = {
         motivo_sin_continuidad: 'Nunca atendeu este Paciente',
         motivo_libre: 'Esse dia está livre',
         motivo_ocupado: 'Esse dia já tem um plantão das {desde} às {hasta}',
+        motivo_ausencia: 'Nesse dia não está disponível',
         motivo_matricula_ok: 'Registro vigente',
         motivo_matricula_vence: 'O registro vence em {fecha}',
         motivo_matricula_falta: 'Não tem registro profissional',

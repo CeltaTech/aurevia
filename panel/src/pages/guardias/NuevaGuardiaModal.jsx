@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
+import { ESTADO_ACTIVO } from '../../lib/candidatos';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
@@ -36,7 +37,13 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
   useEffect(() => {
     async function cargarListas() {
       const [{ data: asistentesData }, { data: pacientesData }, { data: prestadoraData }] = await Promise.all([
-        supabase.from('asistentes').select('id, nombre').eq('estado', 'activo').order('nombre'),
+        // Una guardia nueva solo se le puede dar a quien sigue en el plantel. Esta lista no
+        // muestra a nadie, solo llena el desplegable de quién la toma, así que se filtra en la
+        // consulta. El valor sale de `ESTADO_ACTIVO`, la misma constante que contesta
+        // `estaEnElPlantel`, y no escrito a mano acá: si mañana la Prestadora suma otra forma de
+        // seguir en el plantel, esta puerta no puede quedarse con la regla vieja
+        // (regla 12 de CLAUDE.md §7).
+        supabase.from('asistentes').select('id, nombre').eq('estado', ESTADO_ACTIVO).order('nombre'),
         // Se pide también el domicilio: cuando dos personas viven en la misma casa, verlo al
         // lado del nombre es lo que hace evidente que ese turno los cubre a los dos.
         supabase.from('pacientes').select('id, nombre, domicilio').is('deleted_at', null).order('nombre'),

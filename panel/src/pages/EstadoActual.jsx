@@ -100,10 +100,17 @@ export function EstadoActual() {
         .lte('fecha', hasta)
         .order('fecha', { ascending: true })
         .order('hora_inicio', { ascending: true }),
+      // Viene el plantel entero, sin filtrar por `estado`, y es a propósito: esta lista se usa
+      // para tres cosas distintas. Una es ponerle el nombre a cada guardia ya asignada de la
+      // grilla, y ahí hace falta también quien ya no trabaja más —si no, una guardia de la
+      // semana pasada aparecería con un guión donde antes había una persona—. Quién puede
+      // *tomar* un hueco es otra pregunta, y la contesta `lib/candidatos.js`, que deja afuera a
+      // quien no está activo: ahí vive esa regla, una sola vez (regla 12 de CLAUDE.md §7).
+      //
       // Se piden más columnas que el nombre porque el panel de cobertura las necesita para
       // ordenar candidatos: `horas_semanales` es el tope propio de cada Asistente (el general
-      // solo se usa si esa columna está vacía) y `estado` es lo que decide quién puede tomar
-      // una guardia. Traerlas acá evita una segunda consulta al abrir cada hueco.
+      // solo se usa si esa columna está vacía) y `estado` es lo que separa a quien sigue en el
+      // plantel de quien se fue. Traerlas acá evita una segunda consulta al abrir cada hueco.
       // `canales` —la columna vieja donde se guarda la modalidad de trabajo, regla 13— viaja
       // porque el panel de cobertura deja afuera a quien no trabaja en la modalidad
       // de la vacante. Sin esa columna la pantalla no tendría con qué comparar y los daría a

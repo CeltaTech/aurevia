@@ -13,18 +13,26 @@ export default function ActivarCuenta() {
   const [confirmacion, setConfirmacion] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
+  // Los dos problemas de acá son de un campo concreto —la contraseña corta, la repetida que no
+  // coincide—, así que el aviso se cuelga de ese campo y no de todo el formulario: quien lo
+  // recorre con un lector de pantalla lo escucha al llegar ahí. Arriba queda el cartel general
+  // solo para lo que contesta el motor, que no es de ningún campo en particular.
+  const [errorCampo, setErrorCampo] = useState(null);
+
+  const avisoDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
   const [activada, setActivada] = useState(false);
 
   async function alEnviar(evento) {
     evento.preventDefault();
     setError('');
+    setErrorCampo(null);
 
     if (password.length < 8) {
-      setError(t.auth.activar_password_corta);
+      setErrorCampo({ campo: 'password', texto: t.auth.activar_password_corta });
       return;
     }
     if (password !== confirmacion) {
-      setError(t.auth.activar_no_coincide);
+      setErrorCampo({ campo: 'confirmacion', texto: t.auth.activar_no_coincide });
       return;
     }
 
@@ -86,7 +94,12 @@ export default function ActivarCuenta() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              aria-invalid={avisoDe('password') ? 'true' : undefined}
+              aria-describedby={avisoDe('password') ? 'password-error' : undefined}
             />
+            {avisoDe('password') && (
+              <span className="form-error" id="password-error" role="alert">{avisoDe('password')}</span>
+            )}
           </div>
           <div className="form-field">
             <label htmlFor="confirmacion">{t.auth.activar_password_confirmar}</label>
@@ -97,7 +110,12 @@ export default function ActivarCuenta() {
               value={confirmacion}
               onChange={(e) => setConfirmacion(e.target.value)}
               required
+              aria-invalid={avisoDe('confirmacion') ? 'true' : undefined}
+              aria-describedby={avisoDe('confirmacion') ? 'confirmacion-error' : undefined}
             />
+            {avisoDe('confirmacion') && (
+              <span className="form-error" id="confirmacion-error" role="alert">{avisoDe('confirmacion')}</span>
+            )}
           </div>
           <button type="submit" className="btn btn-primary btn-full" disabled={enviando}>
             {enviando ? t.auth.activar_enviando : t.auth.activar_confirmar}

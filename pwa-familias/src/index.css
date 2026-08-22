@@ -12,6 +12,22 @@ body {
   margin: 0;
 }
 
+/* Texto que existe solo para los lectores de pantalla: no se ve, pero se escucha. Lo usan
+   las estrellas dibujadas —que un lector nombraría una por una, o saltearía— y las etiquetas
+   de los campos que en la pantalla se entienden solos. Es la misma definición que en el
+   Panel: si esta clase no existe, el texto aparece escrito en el medio de la pantalla. */
+.solo-lectores-pantalla {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 h1 {
   font-family: var(--font-display);
   color: var(--azul-oscuro);
@@ -132,6 +148,14 @@ h2 {
   color: var(--azul-oscuro);
 }
 
+/* Faltaba, y se usaba igual: los carteles de "salió bien" se venían mostrando sin color, con
+   el mismo aspecto que uno neutro. */
+.alert-success {
+  background: var(--verde-exito-bg);
+  border-left: 4px solid var(--verde-exito);
+  color: var(--verde-exito-texto);
+}
+
 .alert-alerta {
   background: oklch(0.62 0.13 70 / 0.12);
   border-left: 4px solid var(--naranja-alerta);
@@ -186,7 +210,13 @@ h2 {
   z-index: 5;
 }
 
-.app-header h1 {
+/* El nombre de la Prestadora encabeza la aplicación, pero no es el título de la pantalla:
+   ese es el `h1` de cada pantalla. Por eso va como texto y no como encabezado — así queda
+   un solo `h1` por pantalla y el índice de títulos que arma un lector de pantalla no
+   empieza siempre por el mismo nombre repetido. Se ve exactamente igual que antes. */
+.app-header .nombre-prestadora {
+  font-family: var(--font-display);
+  font-weight: 700;
   color: #FFFFFF;
   font-size: 1.1rem;
   margin: 0;
@@ -394,7 +424,10 @@ h2 {
   margin-bottom: 0.75rem;
 }
 
-.reporte-preview-campo label {
+/* El nombre de cada dato del reporte. Era un `label`, pero un `label` promete un campo que
+   se completa y acá no hay ninguno: el reporte se lee, no se escribe. Un lector de pantalla
+   anunciaba "etiqueta" y después no encontraba a qué campo pertenecía. Se ve igual. */
+.reporte-preview-titulo {
   font-weight: 700;
   color: var(--azul-oscuro);
   font-size: 0.8rem;
@@ -485,4 +518,12 @@ h2 {
 
 .estrellas button.activa {
   color: var(--naranja-alerta-texto);
+}
+
+/* Estos botones no tienen fondo ni borde, así que sin esto quien se mueve con el teclado no
+   ve en cuál está parado. Es el mismo recuadro que marca un campo enfocado. */
+.estrellas button:focus-visible {
+  outline: 2px solid var(--azul-medio);
+  outline-offset: 2px;
+  border-radius: 4px;
 }

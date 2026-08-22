@@ -12,6 +12,36 @@ const ESTADO_CLASE = {
   finalizada: '',
 };
 
+// Los cinco que hay que completar sí o sí. Están acá y no repartidos por el formulario para
+// que el aviso general de arriba y el que se cuelga de cada campo digan siempre lo mismo.
+const CAMPOS_OBLIGATORIOS = ['medicamento', 'dosis', 'frecuencia', 'via', 'fecha_desde'];
+
+// Un campo del formulario, con su etiqueta atada al control (`htmlFor`/`id`) y, cuando falta
+// completarlo, el aviso colgado del propio campo (`aria-describedby` + `aria-invalid`). Sin
+// esto un lector de pantalla anuncia siete cajas sin nombre, y el motivo del rechazo queda
+// arriba de todo, suelto, sin decir de cuál de las siete cajas está hablando.
+function Campo({ nombre, etiqueta, tipo = 'text', valor, alCambiar, placeholder, accept, error }) {
+  const idCampo = `medicacion-${nombre}`;
+  const idError = `${idCampo}-error`;
+  return (
+    <div className="form-field">
+      <label htmlFor={idCampo}>{etiqueta}</label>
+      <input
+        id={idCampo}
+        type={tipo}
+        placeholder={placeholder}
+        accept={accept}
+        // El campo de archivo no lleva valor escrito: lo maneja el navegador.
+        value={tipo === 'file' ? undefined : valor}
+        onChange={alCambiar}
+        aria-invalid={error ? 'true' : undefined}
+        aria-describedby={error ? idError : undefined}
+      />
+      {error && <span className="form-error" id={idError}>{error}</span>}
+    </div>
+  );
+}
+
 export default function Medicacion() {
   const { id } = useParams();
   const { t } = useLocale();
@@ -32,6 +62,9 @@ export default function Medicacion() {
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const [archivo, setArchivo] = useState(null);
+  // Cuáles quedaron sin completar, no solo que quedó alguno: es lo que permite colgar el
+  // aviso del campo vacío en vez de dejarlo suelto arriba.
+  const [faltantes, setFaltantes] = useState([]);
 
   const soloLectura = rolCirculo === 'solo_lectura';
 
@@ -54,11 +87,17 @@ export default function Medicacion() {
       .catch(() => {});
   }, []);
 
+  // Qué aviso le toca a este campo: el mismo texto para todos, colgado de cada uno.
+  const faltaEn = (campo) => (faltantes.includes(campo) ? t.comun.campo_obligatorio : undefined);
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
     setExito(false);
-    if (!medicamento || !dosis || !frecuencia || !via || !fechaDesde) {
+    const valores = { medicamento, dosis, frecuencia, via, fecha_desde: fechaDesde };
+    const sinCompletar = CAMPOS_OBLIGATORIOS.filter((campo) => !valores[campo]);
+    setFaltantes(sinCompletar);
+    if (sinCompletar.length > 0) {
       setError(t.medicacion.error_campos_obligatorios);
       return;
     }
@@ -80,6 +119,7 @@ export default function Medicacion() {
       setFechaDesde('');
       setFechaHasta('');
       setArchivo(null);
+      setFaltantes([]);
       setExito(true);
       cargar();
     } catch (fallo) {
@@ -131,26 +171,57 @@ export default function Medicacion() {
 
           {!soloLectura && (
             <form onSubmit={handleSubmit}>
-              <label>{t.medicacion.campo_medicamento}</label>
-              <input type="text" value={medicamento} onChange={(e) => setMedicamento(e.target.value)} />
-
-              <label>{t.medicacion.campo_dosis}</label>
-              <input type="text" value={dosis} onChange={(e) => setDosis(e.target.value)} />
-
-              <label>{t.medicacion.campo_frecuencia}</label>
-              <input type="text" value={frecuencia} onChange={(e) => setFrecuencia(e.target.value)} />
-
-              <label>{t.medicacion.campo_via}</label>
-              <input type="text" placeholder={t.medicacion.campo_via_placeholder} value={via} onChange={(e) => setVia(e.target.value)} />
-
-              <label>{t.medicacion.campo_fecha_desde}</label>
-              <input type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} />
-
-              <label>{t.medicacion.campo_fecha_hasta}</label>
-              <input type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} />
-
-              <label>{t.medicacion.campo_prescripcion}</label>
-              <input type="file" accept="application/pdf,image/jpeg,image/png" onChange={(e) => setArchivo(e.target.files?.[0] || null)} />
+              <Campo
+                nombre="medicamento"
+                etiqueta={t.medicacion.campo_medicamento}
+                valor={medicamento}
+                alCambiar={(e) => setMedicamento(e.target.value)}
+                error={faltaEn('medicamento')}
+              />
+              <Campo
+                nombre="dosis"
+                etiqueta={t.medicacion.campo_dosis}
+                valor={dosis}
+                alCambiar={(e) => setDosis(e.target.value)}
+                error={faltaEn('dosis')}
+              />
+              <Campo
+                nombre="frecuencia"
+                etiqueta={t.medicacion.campo_frecuencia}
+                valor={frecuencia}
+                alCambiar={(e) => setFrecuencia(e.target.value)}
+                error={faltaEn('frecuencia')}
+              />
+              <Campo
+                nombre="via"
+                etiqueta={t.medicacion.campo_via}
+                placeholder={t.medicacion.campo_via_placeholder}
+                valor={via}
+                alCambiar={(e) => setVia(e.target.value)}
+                error={faltaEn('via')}
+              />
+              <Campo
+                nombre="fecha_desde"
+                etiqueta={t.medicacion.campo_fecha_desde}
+                tipo="date"
+                valor={fechaDesde}
+                alCambiar={(e) => setFechaDesde(e.target.value)}
+                error={faltaEn('fecha_desde')}
+              />
+              <Campo
+                nombre="fecha_hasta"
+                etiqueta={t.medicacion.campo_fecha_hasta}
+                tipo="date"
+                valor={fechaHasta}
+                alCambiar={(e) => setFechaHasta(e.target.value)}
+              />
+              <Campo
+                nombre="prescripcion"
+                etiqueta={t.medicacion.campo_prescripcion}
+                tipo="file"
+                accept="application/pdf,image/jpeg,image/png"
+                alCambiar={(e) => setArchivo(e.target.files?.[0] || null)}
+              />
 
               {exito && <div className="alert alert-success" role="status">{t.medicacion.enviada_exito}</div>}
 

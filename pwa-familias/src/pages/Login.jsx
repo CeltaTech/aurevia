@@ -26,7 +26,11 @@ export default function Login() {
       <div className="login-card">
         <h1>{t.auth.titulo}</h1>
         <p className="login-subtitulo">{t.auth.subtitulo}</p>
-        {error && <div className="alert alert-error" role="alert">{error}</div>}
+        {/* El error es de los dos campos a la vez: el motor contesta que la combinación no
+            sirve, no cuál de los dos está mal. Por eso el aviso queda arriba, y los dos campos
+            lo señalan con `aria-describedby` — así se escucha también al pararse en cualquiera
+            de los dos. Marcar uno solo como equivocado sería adivinar. */}
+        {error && <div className="alert alert-error" role="alert" id="login-error">{error}</div>}
         <form onSubmit={alEnviar}>
           <div className="form-field">
             <label htmlFor="email">{t.auth.email}</label>
@@ -37,6 +41,7 @@ export default function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              aria-describedby={error ? 'login-error' : undefined}
             />
           </div>
           <div className="form-field">
@@ -48,6 +53,7 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              aria-describedby={error ? 'login-error' : undefined}
             />
           </div>
           <button type="submit" className="btn btn-primary btn-full" disabled={enviando}>

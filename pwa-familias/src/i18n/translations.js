@@ -34,11 +34,20 @@ export const T = {
       error_generico: 'Ocurrió un error. Se puede volver a intentar.',
       vacio: 'No hay resultados.',
       volver: 'Volver',
+      // El puntaje dicho en palabras. Las estrellas dibujadas no se leen: un lector de
+      // pantalla las nombraría una por una, o las saltearía. Es el mismo texto que en el Panel.
+      puntaje_estrellas: '{n} de 5 estrellas',
+      // El aviso que se cuelga del campo que quedó vacío. El cartel de arriba dice cuáles
+      // faltan; este dice, parado en el campo, que ese es uno de ellos.
+      campo_obligatorio: 'Hace falta completar este campo.',
     },
     nav: {
       pacientes: 'Mis Pacientes',
       perfil: 'Mi Perfil',
       cerrar_sesion: 'Cerrar sesión',
+      // El nombre de la zona de navegación de abajo. Sin él un lector de pantalla anuncia
+      // "navegación" a secas y la lista de enlaces queda suelta.
+      menu_principal: 'Menú principal',
     },
     marca: {
       con_tecnologia_de: 'con la tecnología de {{producto}}',
@@ -173,6 +182,9 @@ export const T = {
       evaluaciones_titulo: 'Evaluaciones anteriores',
       sin_evaluaciones: 'Todavía no hay evaluaciones de este Asistente.',
       calificar_titulo: 'Calificar esta guardia',
+      // El nombre del grupo de cinco botones de estrella. Sin él se escuchan cinco botones
+      // sueltos, sin saber que son las cinco opciones de un mismo puntaje.
+      calificar_estrellas_grupo: 'Puntaje en estrellas',
       calificar_solo_lectura: 'Este acceso es de solo lectura — no permite calificar guardias.',
       comentario_placeholder: 'Comentario (opcional)',
       enviar_calificacion: 'Enviar calificación',
@@ -285,11 +297,14 @@ export const T = {
       error_generico: 'Something went wrong. Please try again.',
       vacio: 'No results.',
       volver: 'Back',
+      puntaje_estrellas: '{n} out of 5 stars',
+      campo_obligatorio: 'This field needs to be filled in.',
     },
     nav: {
       pacientes: 'My Patients',
       perfil: 'My Profile',
       cerrar_sesion: 'Log out',
+      menu_principal: 'Main menu',
     },
     marca: {
       con_tecnologia_de: 'powered by {{producto}}',
@@ -414,6 +429,7 @@ export const T = {
       evaluaciones_titulo: 'Previous ratings',
       sin_evaluaciones: 'No ratings yet for this Assistant.',
       calificar_titulo: 'Rate this shift',
+      calificar_estrellas_grupo: 'Star rating',
       calificar_solo_lectura: 'Your access is read-only — you can\'t rate shifts.',
       comentario_placeholder: 'Comment (optional)',
       enviar_calificacion: 'Send rating',
@@ -526,11 +542,14 @@ export const T = {
       error_generico: 'Ocorreu um erro. É possível tentar novamente.',
       vacio: 'Nenhum resultado.',
       volver: 'Voltar',
+      puntaje_estrellas: '{n} de 5 estrelas',
+      campo_obligatorio: 'É necessário preencher este campo.',
     },
     nav: {
       pacientes: 'Meus Pacientes',
       perfil: 'Meu Perfil',
       cerrar_sesion: 'Sair',
+      menu_principal: 'Menu principal',
     },
     marca: {
       con_tecnologia_de: 'com a tecnologia de {{producto}}',
@@ -655,6 +674,7 @@ export const T = {
       evaluaciones_titulo: 'Avaliações anteriores',
       sin_evaluaciones: 'Ainda não há avaliações deste Assistente.',
       calificar_titulo: 'Avaliar este plantão',
+      calificar_estrellas_grupo: 'Pontuação em estrelas',
       calificar_solo_lectura: 'Este acesso é somente leitura — não permite avaliar plantões.',
       comentario_placeholder: 'Comentário (opcional)',
       enviar_calificacion: 'Enviar avaliação',

@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { T, DEFAULT_LOCALE, LOCALES } from './translations';
 import { sustituirIdentidadProfundo } from '../config/identidadProducto.js';
 
@@ -23,6 +23,13 @@ export function LocaleProvider({ children }) {
   // como objeto plano (t.auth.titulo), no como función t('auth.titulo'): así ningún punto
   // de consumo cambia por esto. Ver src/config/identidadProducto.js.
   const t = useMemo(() => sustituirIdentidadProfundo(T[locale]), [locale]);
+
+  // En qué idioma está la página. El `index.html` la declara en castellano y ahí se quedaba
+  // aunque se eligiera inglés o portugués: un lector de pantalla seguía leyendo con la
+  // pronunciación castellana, que vuelve incomprensible el texto en otro idioma.
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   return (
     <LocaleContext.Provider value={{ locale, setLocale, t }}>

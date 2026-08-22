@@ -128,7 +128,13 @@ export default function AsistenteAsignado() {
           ) : (
             evaluaciones.map((e) => (
               <div key={e.id} className="guardia-card">
-                <div className="guardia-card-paciente">{'★'.repeat(e.estrellas)}{'☆'.repeat(5 - e.estrellas)}</div>
+                {/* Las estrellas dibujadas no se leen: un lector de pantalla las nombraría una
+                    por una, o directamente las saltearía. Al lado va el mismo dato escrito,
+                    que no se ve pero sí se escucha. */}
+                <div className="guardia-card-paciente">
+                  <span aria-hidden="true">{'★'.repeat(e.estrellas)}{'☆'.repeat(Math.max(0, 5 - e.estrellas))}</span>
+                  <span className="solo-lectores-pantalla">{t.comun.puntaje_estrellas.replace('{n}', e.estrellas)}</span>
+                </div>
                 {e.comentario && <div className="guardia-card-detalle">{e.comentario}</div>}
               </div>
             ))
@@ -142,18 +148,32 @@ export default function AsistenteAsignado() {
           {guardiaId && !enviado && rolCirculo !== 'solo_lectura' && (
             <div style={{ marginTop: '1.5rem' }}>
               <h2>{t.asistente.calificar_titulo}</h2>
-              <div className="estrellas">
+              {/* Los cinco botones son un grupo con nombre, y cada uno dice en palabras cuánto
+                  pone: "3 de 5 estrellas". El que quedó elegido se anuncia como apretado, así
+                  que quien no ve la pantalla sabe qué está por poner y con cuál se quedó. Son
+                  botones de verdad, con lo cual el teclado ya los recorre y los activa. */}
+              <div className="estrellas" role="group" aria-label={t.asistente.calificar_estrellas_grupo}>
                 {[1, 2, 3, 4, 5].map((n) => (
-                  <button key={n} type="button" className={n <= estrellas ? 'activa' : ''} onClick={() => setEstrellas(n)}>
-                    ★
+                  <button
+                    key={n}
+                    type="button"
+                    className={n <= estrellas ? 'activa' : ''}
+                    aria-label={t.comun.puntaje_estrellas.replace('{n}', n)}
+                    aria-pressed={n === estrellas}
+                    onClick={() => setEstrellas(n)}
+                  >
+                    <span aria-hidden="true">★</span>
                   </button>
                 ))}
               </div>
               <div className="form-field">
+                {/* La caja de comentario se entiende sola mirando la pantalla, pero sin nombre
+                    un lector de pantalla anuncia "cuadro de texto" y nada más. */}
                 <textarea
                   value={comentario}
                   onChange={(e) => setComentario(e.target.value)}
                   placeholder={t.asistente.comentario_placeholder}
+                  aria-label={t.asistente.comentario_placeholder}
                 />
               </div>
               <button className="btn btn-primary btn-full" disabled={enviando || estrellas < 1} onClick={enviarCalificacion}>

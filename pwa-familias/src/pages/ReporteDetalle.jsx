@@ -64,7 +64,7 @@ export default function ReporteDetalle() {
       </p>
 
       <div className="reporte-preview-campo">
-        <label>{t.reporte_detalle.campo_alimentacion}</label>
+        <div className="reporte-preview-titulo">{t.reporte_detalle.campo_alimentacion}</div>
         <div>{reporte.alimentacion?.descripcion || t.reporte_detalle.sin_datos}</div>
       </div>
 
@@ -74,7 +74,7 @@ export default function ReporteDetalle() {
           día no se le dio nada. */}
       {seVe('familia_medicacion_del_paciente') && (
         <div className="reporte-preview-campo">
-          <label>{t.reporte_detalle.campo_medicacion}</label>
+          <div className="reporte-preview-titulo">{t.reporte_detalle.campo_medicacion}</div>
           {Array.isArray(reporte.medicacion) && reporte.medicacion.length > 0 ? (
             reporte.medicacion.map((m, i) => (
               <div key={i}>
@@ -92,7 +92,7 @@ export default function ReporteDetalle() {
           hace creer que alguien los está controlando y ese día no los cargó. */}
       {seVe('familia_signos_vitales') && (
         <div className="reporte-preview-campo">
-          <label>{t.reporte_detalle.campo_signos_vitales}</label>
+          <div className="reporte-preview-titulo">{t.reporte_detalle.campo_signos_vitales}</div>
           {reporte.signos_vitales && CLAVES_SIGNOS_VITALES.some((clave) => reporte.signos_vitales[clave]) ? (
             CLAVES_SIGNOS_VITALES.filter((clave) => reporte.signos_vitales[clave]).map((clave) => {
               const color = colorSigno(reporte.signos_vitales[clave], rangosVitales[clave]);
@@ -117,7 +117,7 @@ export default function ReporteDetalle() {
       )}
 
       <div className="reporte-preview-campo">
-        <label>{t.reporte_detalle.campo_estado_animo}</label>
+        <div className="reporte-preview-titulo">{t.reporte_detalle.campo_estado_animo}</div>
         {reporte.estado_animo && CARAS_ANIMO[reporte.estado_animo] ? (
           <div className="escala-animo-lectura">
             <span aria-hidden="true">{CARAS_ANIMO[reporte.estado_animo]}</span>
@@ -130,7 +130,7 @@ export default function ReporteDetalle() {
 
       {CAMPOS_TEXTO.map((campo) => (
         <div key={campo} className="reporte-preview-campo">
-          <label>{t.reporte_detalle[`campo_${campo}`]}</label>
+          <div className="reporte-preview-titulo">{t.reporte_detalle[`campo_${campo}`]}</div>
           <div>{reporte[campo] || t.reporte_detalle.sin_datos}</div>
         </div>
       ))}

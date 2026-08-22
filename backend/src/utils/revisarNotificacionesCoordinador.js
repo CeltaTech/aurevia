@@ -3,8 +3,9 @@ import { notificarCoordinador, enviarWhatsApp } from './whatsapp.js';
 import { enviarPushFamilia } from './push.js';
 import { configuracionEvento } from './email.js';
 import { necesitaNotificar } from './insistencia.js';
-import { pacientesDeGuardia } from './pacientesDeGuardia.js';
+import { pacientesDeGuardia, pacientesDeGuardias } from './pacientesDeGuardia.js';
 import { intervaloParaPremura } from './umbralesPremura.js';
+import { horasEntre } from './horasDeGuardia.js';
 
 // Punto 5 de docs/PRD_06_WhatsApp_IA.md: insistencia al Coordinador según premura, con
 // coordinador de respaldo si no hay reacción, parametrizado por prestadora
@@ -31,7 +32,163 @@ export async function revisarNotificacionesCoordinador() {
   for (const config of configuraciones) {
     await revisarAlertas(config, ahora);
     await revisarIncidentes(config, ahora);
+    await revisarGuardiasSinCerrar(config, ahora);
   }
+}
+
+// Aviso de guardia que terminó y nadie cerró (pendiente #117).
+//
+// Decisión del Desarrollador: «Nunca puede quedar una guardia sin cerrar, la coordinadora o
+// coordinador debe tomar cartas en el asunto de inmediato (15 minutos máximo de la hora
+// indicada para el cierre). Una guardia sin cerrar suele ser señal de problemas.»
+//
+// Los minutos de espera no están escritos acá (regla 1 de CLAUDE.md §7): salen de
+// `minutos_gracia_cierre_guardia`, que cada Prestadora edita desde el Panel. Quince es con lo
+// que arranca la columna en la base, no una regla del producto.
+//
+// Va adentro de este archivo y no en uno propio porque es el mismo recorrido: una vuelta por
+// Prestadora, con la misma configuración de premura, la misma insistencia y el mismo
+// Coordinador de respaldo que las alertas tempranas y los incidentes de relevo. Un proceso
+// aparte tendría que volver a leer la misma tabla para hacer exactamente lo mismo.
+const DIAS_HACIA_ATRAS_SIN_CERRAR = 7;
+const MS_POR_MINUTO = 60 * 1000;
+const MS_POR_HORA = 60 * MS_POR_MINUTO;
+
+async function revisarGuardiasSinCerrar(config, ahora) {
+  const {
+    prestadora_id: prestadoraId,
+    umbrales_premura: umbrales,
+    minutos_antes_backup: minutosAntesBackup,
+    coordinador_backup_id: backupId,
+    minutos_gracia_cierre_guardia: minutosDeGracia,
+  } = config;
+
+  // Sin margen configurado no se avisa nada. La columna tiene valor por defecto, así que esto
+  // solo pasa si alguien lo puso en nulo a mano: mejor callarse que inventar un número.
+  if (!minutosDeGracia) return;
+
+  // El filtro por `fecha` es solo para no traerse la agenda entera; la cuenta fina se hace
+  // después contra la hora de fin, que la base guarda en otra columna.
+  const { data: guardias, error } = await supabase
+    .from('guardias')
+    .select('id, fecha, hora_inicio, hora_fin, paciente_id, checkout_at, aviso_sin_cerrar_at, aviso_sin_cerrar_veces, aviso_sin_cerrar_backup_at, asistentes(nombre)')
+    .eq('prestadora_id', prestadoraId)
+    .eq('estado', 'activa')
+    .is('cerrada_at', null)
+    .gte('fecha', fechaISO(new Date(ahora.getTime() - DIAS_HACIA_ATRAS_SIN_CERRAR * 24 * MS_POR_HORA)))
+    .lte('fecha', fechaISO(ahora));
+
+  if (error) {
+    console.error(`Error consultando guardias sin cerrar (prestadora ${prestadoraId}):`, error.message);
+    return;
+  }
+  if (!guardias?.length) return;
+
+  // A quiénes atendía la guardia. Mismo criterio que el aviso de guardia sin cubrir: un turno
+  // puede cubrir a más de un Paciente y nombrar a uno solo le esconde al Coordinador la mitad
+  // de lo que quedó sin confirmar.
+  let pacientesPorGuardia;
+  try {
+    pacientesPorGuardia = await pacientesDeGuardias(guardias, 'id, nombre');
+  } catch (e) {
+    console.error(`Error leyendo los Pacientes de las guardias sin cerrar (prestadora ${prestadoraId}):`, e.message);
+    return;
+  }
+
+  for (const guardia of guardias) {
+    const fin = finDeLaGuardia(guardia);
+    if (!fin) continue;
+
+    // El plazo que la Prestadora eligió todavía no venció: la guardia recién terminó y el
+    // Asistente puede estar cerrándola en este momento.
+    const vencimiento = fin.getTime() + minutosDeGracia * MS_POR_MINUTO;
+    if (ahora.getTime() < vencimiento) continue;
+
+    const minutosPremura = (ahora.getTime() - vencimiento) / MS_POR_MINUTO;
+    const intervalo = intervaloParaPremura(umbrales, minutosPremura);
+
+    if (necesitaNotificar({ ultimaNotificacionAt: guardia.aviso_sin_cerrar_at, intervaloMinutos: intervalo, ahora })) {
+      const veces = (guardia.aviso_sin_cerrar_veces ?? 0) + 1;
+
+      await notificarCoordinador({
+        evento: 'guardia_sin_cerrar',
+        prestadoraId,
+        asunto: 'Guardia terminada y todavía sin cerrar',
+        texto: textoGuardiaSinCerrar({
+          guardia,
+          pacientes: pacientesPorGuardia.get(guardia.id) ?? [],
+          fin,
+          ahora,
+          veces,
+        }),
+      });
+
+      const { error: errorUpdate } = await supabase
+        .from('guardias')
+        .update({ aviso_sin_cerrar_at: ahora.toISOString(), aviso_sin_cerrar_veces: veces })
+        .eq('id', guardia.id);
+      if (errorUpdate) {
+        console.error(`Error marcando el aviso de guardia sin cerrar (${guardia.id}):`, errorUpdate.message);
+      }
+    }
+
+    if (backupId && !guardia.aviso_sin_cerrar_backup_at && minutosPremura >= minutosAntesBackup) {
+      await notificarCoordinadorBackup({
+        backupId,
+        prestadoraId,
+        texto: `La guardia del ${guardia.fecha}, de ${guardia.hora_inicio} a ${guardia.hora_fin}, sigue sin cerrarse ${Math.round(minutosPremura)} minutos después del plazo.`,
+      });
+      await supabase.from('guardias').update({ aviso_sin_cerrar_backup_at: ahora.toISOString() }).eq('id', guardia.id);
+    }
+  }
+}
+
+// Cuándo terminaba la guardia. La duración sale de `horasEntre()` y no de restar las dos horas
+// acá, porque esa resta tiene un caso que no se ve a simple vista: una guardia de 08:00 a 08:00
+// dura veinticuatro horas, no cero, y una de 20:00 a 06:00 cruza la medianoche. Esa regla vive
+// en un solo lugar (utils/horasDeGuardia.js, regla 12 de CLAUDE.md §7).
+function finDeLaGuardia(guardia) {
+  if (!guardia.fecha || !guardia.hora_inicio || !guardia.hora_fin) return null;
+  const inicio = new Date(`${guardia.fecha}T${guardia.hora_inicio}`);
+  if (Number.isNaN(inicio.getTime())) return null;
+  return new Date(inicio.getTime() + horasEntre(guardia.hora_inicio, guardia.hora_fin) * MS_POR_HORA);
+}
+
+// El aviso tiene que dejar al Coordinador en condiciones de actuar sin entrar al Panel a
+// averiguar nada. Por eso dice a quién se atendía, a qué hora terminaba, cuánto hace que
+// venció el plazo y —lo que decide qué hacer— si el Asistente marcó su salida: si la marcó,
+// se fue y lo que falta es la confirmación; si no la marcó, puede seguir en el domicilio y
+// eso es otra conversación.
+function textoGuardiaSinCerrar({ guardia, pacientes, fin, ahora, veces }) {
+  const nombres = pacientes.map((p) => p.nombre).filter(Boolean);
+  const paciente =
+    nombres.length === 0
+      ? 'Paciente sin nombre cargado'
+      : [nombres.slice(0, -1).join(', '), nombres.at(-1)].filter(Boolean).join(' y ');
+
+  const asistente = guardia.asistentes?.nombre ?? 'Asistente sin asignar';
+  const minutos = Math.round((ahora.getTime() - fin.getTime()) / MS_POR_MINUTO);
+  const atraso = minutos < 120 ? `${minutos} minutos` : `${Math.round(minutos / 60)} horas`;
+
+  const lineas = [
+    `Guardia del ${guardia.fecha}, de ${guardia.hora_inicio} a ${guardia.hora_fin}, para ${paciente}.`,
+    `A cargo de ${asistente}. Terminaba hace ${atraso} y sigue abierta.`,
+    guardia.checkout_at
+      ? 'El Asistente ya marcó su salida: falta confirmar que quedó todo hecho.'
+      : 'El Asistente todavía no marcó su salida.',
+  ];
+
+  if (veces > 1) lineas.push(`Es el aviso número ${veces} de esta misma guardia.`);
+
+  return lineas.join('\n');
+}
+
+// La fecha de un momento tal como la guarda la base (`2026-08-22`), en hora local.
+// `toISOString()` a secas daría la fecha en UTC, que en horario argentino cambia de día tres
+// horas antes de tiempo.
+function fechaISO(momento) {
+  const corrida = new Date(momento.getTime() - momento.getTimezoneOffset() * 60000);
+  return corrida.toISOString().slice(0, 10);
 }
 
 async function revisarAlertas(config, ahora) {

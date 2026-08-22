@@ -867,6 +867,19 @@ function NuevaPlantillaWhatsapp({ onClose, onCreada }) {
   );
 }
 
+/* El tope de la espera del aviso de guardia sin cerrar: un día entero, escrito como lo que es.
+   Más allá de un día el aviso deja de avisar —la guardia ya lleva una jornada abierta y nadie
+   se enteró—, y la base rechaza igual cualquier número que se pase. Se comprueba también acá
+   para que quien administra la Prestadora lea qué se esperaba en vez de una falla del sistema.
+   El valor con el que arranca la espera no está escrito en ninguna parte del Panel: llega de
+   la base con el resto de la configuración (`CLAUDE.md` §7, regla 1). */
+const MINUTOS_DE_UN_DIA = 24 * 60;
+
+const esperaGuardiaSinCerrarValida = (valor) => {
+  const minutos = Number(valor);
+  return Number.isInteger(minutos) && minutos > 0 && minutos <= MINUTOS_DE_UN_DIA;
+};
+
 function TabWhatsappEscaladaCoordinador() {
   const { t } = useLocale();
   const [form, setForm] = useState(null);
@@ -904,6 +917,13 @@ function TabWhatsappEscaladaCoordinador() {
   }
 
   async function guardar() {
+    // Nada se manda con una espera imposible: sin ella el aviso de guardia sin cerrar no
+    // llegaría nunca, que es justo lo que no puede pasar.
+    if (!esperaGuardiaSinCerrarValida(form.minutos_gracia_cierre_guardia)) {
+      setGuardado(false);
+      setError(con(t.configuracion.whatsapp_escalada_minutos_guardia_sin_cerrar_invalido, { maximo: MINUTOS_DE_UN_DIA }));
+      return;
+    }
     setGuardando(true);
     setError(null);
     // Se ordenan antes de mandarlos: el motor lee la lista de arriba hacia abajo y se
@@ -919,6 +939,7 @@ function TabWhatsappEscaladaCoordinador() {
           umbrales_premura: ordenados,
           fase_automatica_activa: form.fase_automatica_activa,
           minutos_antes_fase_automatica: Number(form.minutos_antes_fase_automatica),
+          minutos_gracia_cierre_guardia: Number(form.minutos_gracia_cierre_guardia),
         }),
       });
       // La pantalla se queda con la lista tal como quedó guardada, no como se tipeó: si
@@ -974,6 +995,13 @@ function TabWhatsappEscaladaCoordinador() {
               type="number"
               value={form.minutos_antes_fase_automatica ?? ''}
               onChange={(e) => set('minutos_antes_fase_automatica', e.target.value)}
+            />
+            <FormField
+              label={t.configuracion.whatsapp_escalada_minutos_guardia_sin_cerrar}
+              name="minutos_gracia_cierre_guardia"
+              type="number"
+              value={form.minutos_gracia_cierre_guardia ?? ''}
+              onChange={(e) => set('minutos_gracia_cierre_guardia', e.target.value)}
             />
             <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
           </div>

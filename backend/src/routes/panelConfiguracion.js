@@ -888,6 +888,14 @@ panelConfiguracionRouter.patch('/modalidades/:modalidad', async (req, res) => {
 
 // --- Escalada a Coordinador: respaldo + intervalos de insistencia según premura
 //     (punto 5 de docs/PRD_06_WhatsApp_IA.md) ---
+
+// Lo que vale mientras la Prestadora todavía no guardó su propia configuración. No es una
+// decisión que se tome acá: es el mismo valor con el que la base crea la columna (migración
+// 20260822200000). Si se cambia allá, se cambia acá — es el precio de que el formulario pueda
+// mostrar algo antes de que exista la fila.
+const MINUTOS_GRACIA_CIERRE_POR_DEFECTO = 15;
+const MINUTOS_DE_UN_DIA = 24 * 60;
+
 panelConfiguracionRouter.get('/escalada-coordinador', async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
   const { data, error } = await supabase
@@ -908,6 +916,7 @@ panelConfiguracionRouter.get('/escalada-coordinador', async (req, res) => {
       ],
       fase_automatica_activa: false,
       minutos_antes_fase_automatica: 120,
+      minutos_gracia_cierre_guardia: MINUTOS_GRACIA_CIERRE_POR_DEFECTO,
     },
   });
 });
@@ -916,6 +925,7 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
   const {
     coordinador_backup_id, minutos_antes_backup, umbrales_premura,
     fase_automatica_activa, minutos_antes_fase_automatica,
+    minutos_gracia_cierre_guardia,
   } = req.body;
 
   // Los tramos deciden cada cuánto se le vuelve a insistir al Coordinador. Antes se guardaban
@@ -924,6 +934,19 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
   // termina avisando cada una hora a alguien que había pedido que le avisen cada diez minutos.
   const problema = validarUmbralesPremura(umbrales_premura);
   if (problema) return res.status(400).json({ error: problema });
+
+  // El Panel ya lo revisa antes de mandarlo, pero la revisión de allá es para que la
+  // Coordinadora se entere sin esperar la respuesta del servidor — no es la que protege el
+  // dato. Esta es la que protege: la base rechazaría un valor fuera de rango con un error
+  // suyo, ilegible, y cualquiera puede llamar a esta dirección sin pasar por la pantalla.
+  if (minutos_gracia_cierre_guardia !== undefined) {
+    const minutos = Number(minutos_gracia_cierre_guardia);
+    if (!Number.isInteger(minutos) || minutos <= 0 || minutos > MINUTOS_DE_UN_DIA) {
+      return res.status(400).json({
+        error: `Los minutos de espera para avisar que una guardia quedó sin cerrar tienen que ser un número entero entre 1 y ${MINUTOS_DE_UN_DIA}`,
+      });
+    }
+  }
 
   const { error } = await supabase
     .from('configuracion_escalada_coordinador')
@@ -934,6 +957,7 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
       umbrales_premura,
       fase_automatica_activa,
       minutos_antes_fase_automatica,
+      minutos_gracia_cierre_guardia: minutos_gracia_cierre_guardia ?? MINUTOS_GRACIA_CIERRE_POR_DEFECTO,
       updated_at: new Date().toISOString(),
     });
   if (error) return res.status(500).json({ error: error.message });

@@ -26,6 +26,7 @@
 //
 // Verificado contra el código que los emite (2026-08-11):
 //   guardia_sin_cubrir             → utils/revisarGuardiasSinCubrir.js:100 (notificarCoordinador)
+//   guardia_sin_cerrar             → utils/revisarNotificacionesCoordinador.js (notificarCoordinador)
 //   alerta_temprana_guardia        → utils/revisarNotificacionesCoordinador.js:65 (notificarCoordinador)
 //   incidente_relevo_sin_resolver  → utils/revisarNotificacionesCoordinador.js:113, 143, 213
 //                                    (notificarCoordinador) + :160 aviso a la Familia
@@ -43,6 +44,16 @@ export const CATALOGO_AVISOS = [
     evento: 'guardia_sin_cubrir',
     descripcion: 'Una guardia próxima sigue sin Asistente asignado',
     admite_whatsapp: true,
+    admite_familia: false,
+  },
+  {
+    evento: 'guardia_sin_cerrar',
+    descripcion: 'Una guardia en curso pasó su hora de cierre y nadie la cerró',
+    admite_whatsapp: true,
+    // No le llega a la Familia a propósito. Que nadie haya cerrado la guardia es un problema
+    // de la operación de la Prestadora, no del cuidado: el Asistente puede haber estado las
+    // ocho horas y haberse ido a horario. Avisarle a la Familia sería alarmarla por algo que
+    // no le pasó a su Paciente.
     admite_familia: false,
   },
   {

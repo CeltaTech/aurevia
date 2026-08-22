@@ -67,13 +67,13 @@ falta, para no empezar de cero en el peor momento posible.
 
 | Opción | A favor | En contra |
 |---|---|---|
-| **Auth0** | Proveedor maduro, migración de usuarios asistida, soporta multi-tenant nativo (relevante para el modelo PLM/prestadoras) | Costo por usuario activo, otro proveedor externo del cual depender |
+| **Auth0** | Proveedor maduro, migración de usuarios asistida, soporta multi-tenant nativo (relevante para el modelo de CeltaTech, una Organización por Prestadora) | Costo por usuario activo, otro proveedor externo del cual depender |
 | **Clerk** | Más simple de integrar, buena UI de gestión lista para usar | Más joven que Auth0, menos historial en volumen alto |
 | **JWT propio (backend Node/Express)** | Cero dependencia externa nueva, control total | Hay que construir y mantener: hashing de contraseñas, rotación de tokens, rate limiting de intentos fallidos, recuperación de contraseña — todo lo que hoy resuelve Supabase Auth gratis (ver `docs/SECURITY.md` líneas 16-21, que ya evaluó y descartó esto por redundante mientras Supabase funcione) |
 
 No se recomienda decidir esto ahora — la decisión correcta depende de por qué se está
 migrando (¿solo Auth, o toda la base también?) y de la escala del proyecto en ese momento
-(cuántas prestadoras licenciatarias hay para entonces, bajo el modelo PLM). Este documento
+(cuántas Prestadoras licenciatarias hay para entonces). Este documento
 existe para que, llegado el caso, no haya que investigar las opciones desde cero bajo
 presión.
 

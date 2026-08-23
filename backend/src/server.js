@@ -92,8 +92,14 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', version: versionEnElAire, ia: Boolean(process.env.ANTHROPIC_API_KEY) });
 });
 
-app.use('/api/solicitud-servicio', solicitudServicioRouter);
-app.use('/api/postulacion-asistente', postulacionAsistenteRouter);
+// Los tres caminos que se atienden sin sesión llevan a la Prestadora en la propia dirección:
+// los dos formularios del sitio público de una Prestadora y los datos de contacto que ese sitio
+// muestra. `:prestadora` es el dominio configurado de ese sitio; antes se deducía de un
+// encabezado, que quien manda el pedido escribe a mano. El porqué completo está en
+// backend/src/middleware/resolverPrestadoraPublica.js.
+app.use('/api/publico/:prestadora/solicitud-servicio', solicitudServicioRouter);
+app.use('/api/publico/:prestadora/postulacion-asistente', postulacionAsistenteRouter);
+app.use('/api/publico/:prestadora/configuracion', configuracionPublicaRouter);
 app.use('/api/panel/notificar', panelNotificacionesRouter);
 app.use('/api/panel/cuentas', panelCuentasRouter);
 app.use('/api/panel/usuarios', panelUsuariosRouter);
@@ -110,7 +116,6 @@ app.use('/api/panel/cobros', panelCobrosRouter);
 app.use('/api/panel/vitales-autorizacion', panelVitalesAutorizacionRouter);
 app.use('/api/panel/configuracion-plataforma', panelConfiguracionPlataformaRouter);
 app.use('/api/panel/mfa-recuperacion', panelMfaRecuperacionRouter);
-app.use('/api/configuracion-publica', configuracionPublicaRouter);
 app.use('/api/activar-cuenta', activarCuentaRouter);
 app.use('/api/whatsapp-webhook', whatsappWebhookRouter);
 app.use('/api/app-asistentes', appAsistentesRouter);

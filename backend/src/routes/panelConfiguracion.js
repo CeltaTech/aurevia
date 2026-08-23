@@ -40,11 +40,17 @@ panelConfiguracionRouter.get('/empresa', async (req, res) => {
 
 panelConfiguracionRouter.patch('/empresa', async (req, res) => {
   const { nombre, telefono, whatsapp_numero, email, dominio, zona_cobertura_texto } = req.body;
-  const { error } = await supabase
+  // A diferencia de los datos que viven en `prestadoras`, esta fila puede no existir: se crea
+  // en el alta y una Prestadora dada de alta a mano puede quedarse sin ella. Sin esta
+  // comprobación, la pantalla de Configuración guarda, dice que guardó, y al recargar está todo
+  // como antes.
+  const { data, error } = await supabase
     .from('configuracion_prestadora')
     .update({ nombre, telefono, whatsapp_numero, email, dominio, zona_cobertura_texto, updated_at: new Date().toISOString() })
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId);
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .select('prestadora_id');
   if (error) return res.status(500).json({ error: error.message });
+  if (!data?.length) return res.status(404).json({ error: 'Esta Prestadora todavía no tiene configuración cargada' });
   res.json({ ok: true });
 });
 
@@ -76,16 +82,18 @@ panelConfiguracionRouter.patch('/zonas/:id', async (req, res) => {
     .update({ nombre, categoria, activa, orden })
     .eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
-  const { error } = await query;
+  const { data, error } = await query.select('id');
   if (error) return res.status(500).json({ error: error.message });
+  if (!data?.length) return res.status(404).json({ error: 'No se encontró esa zona de cobertura' });
   res.json({ ok: true });
 });
 
 panelConfiguracionRouter.delete('/zonas/:id', async (req, res) => {
   let query = supabase.from('zonas_cobertura').delete().eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
-  const { error } = await query;
+  const { data, error } = await query.select('id');
   if (error) return res.status(500).json({ error: error.message });
+  if (!data?.length) return res.status(404).json({ error: 'No se encontró esa zona de cobertura' });
   res.json({ ok: true });
 });
 
@@ -117,16 +125,18 @@ panelConfiguracionRouter.patch('/escalada-relevo/:id', async (req, res) => {
     .update({ nivel, minutos_demora, orden_prioridad, plantilla_mensaje })
     .eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
-  const { error } = await query;
+  const { data, error } = await query.select('id');
   if (error) return res.status(500).json({ error: error.message });
+  if (!data?.length) return res.status(404).json({ error: 'No se encontró ese nivel de la escalada de relevo' });
   res.json({ ok: true });
 });
 
 panelConfiguracionRouter.delete('/escalada-relevo/:id', async (req, res) => {
   let query = supabase.from('configuracion_escalada_relevo').delete().eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
-  const { error } = await query;
+  const { data, error } = await query.select('id');
   if (error) return res.status(500).json({ error: error.message });
+  if (!data?.length) return res.status(404).json({ error: 'No se encontró ese nivel de la escalada de relevo' });
   res.json({ ok: true });
 });
 
@@ -171,8 +181,9 @@ panelConfiguracionRouter.patch('/etapas-incorporacion/:id', async (req, res) => 
     .update({ nombre, activa })
     .eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
-  const { error } = await query;
+  const { data, error } = await query.select('id');
   if (error) return res.status(500).json({ error: error.message });
+  if (!data?.length) return res.status(404).json({ error: 'No se encontró esa etapa del Proceso de Incorporación de Asistentes' });
   res.json({ ok: true });
 });
 
@@ -234,16 +245,18 @@ panelConfiguracionRouter.patch('/personal-emergencia/:id', async (req, res) => {
   const { activo } = req.body;
   let query = supabase.from('personal_emergencia').update({ activo }).eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
-  const { error } = await query;
+  const { data, error } = await query.select('id');
   if (error) return res.status(500).json({ error: error.message });
+  if (!data?.length) return res.status(404).json({ error: 'No se encontró a esa persona en el personal de emergencia' });
   res.json({ ok: true });
 });
 
 panelConfiguracionRouter.delete('/personal-emergencia/:id', async (req, res) => {
   let query = supabase.from('personal_emergencia').delete().eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
-  const { error } = await query;
+  const { data, error } = await query.select('id');
   if (error) return res.status(500).json({ error: error.message });
+  if (!data?.length) return res.status(404).json({ error: 'No se encontró a esa persona en el personal de emergencia' });
   res.json({ ok: true });
 });
 
@@ -547,16 +560,18 @@ panelConfiguracionRouter.patch('/whatsapp/plantillas/:id', async (req, res) => {
     .update({ cuerpo_texto, estado, meta_template_id, motivo_rechazo, updated_at: new Date().toISOString() })
     .eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
-  const { error } = await query;
+  const { data, error } = await query.select('id');
   if (error) return res.status(500).json({ error: error.message });
+  if (!data?.length) return res.status(404).json({ error: 'No se encontró esa plantilla de WhatsApp' });
   res.json({ ok: true });
 });
 
 panelConfiguracionRouter.delete('/whatsapp/plantillas/:id', async (req, res) => {
   let query = supabase.from('plantillas_whatsapp').delete().eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
-  const { error } = await query;
+  const { data, error } = await query.select('id');
   if (error) return res.status(500).json({ error: error.message });
+  if (!data?.length) return res.status(404).json({ error: 'No se encontró esa plantilla de WhatsApp' });
   res.json({ ok: true });
 });
 
@@ -665,8 +680,9 @@ panelConfiguracionRouter.patch('/motivos-aviso-previo/:id', async (req, res) => 
     .update({ nombre, activo })
     .eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
-  const { error } = await query;
+  const { data, error } = await query.select('id');
   if (error) return res.status(500).json({ error: error.message });
+  if (!data?.length) return res.status(404).json({ error: 'No se encontró ese motivo de aviso previo' });
   res.json({ ok: true });
 });
 
@@ -747,8 +763,9 @@ panelConfiguracionRouter.patch('/documentos-tipo/:id', async (req, res) => {
     .update({ nombre, requiere_vencimiento, activo })
     .eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
-  const { error } = await query;
+  const { data, error } = await query.select('id');
   if (error) return res.status(500).json({ error: error.message });
+  if (!data?.length) return res.status(404).json({ error: 'No se encontró ese tipo de documento' });
   res.json({ ok: true });
 });
 

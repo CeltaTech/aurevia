@@ -17,6 +17,7 @@ import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
 import { visibilidadDelPedido, exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
 import { tipoConSusTareas } from '../utils/tareasDelTipo.js';
+import { guardarSuscripcionPush } from '../utils/suscripcionesPush.js';
 
 export const appAsistentesRouter = Router();
 
@@ -590,7 +591,12 @@ appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, async (
     return res.status(409).json({ error: 'Check-out bloqueado por el protocolo de continuidad de guardia', motivo: 'continuidad' });
   }
 
-  const { error } = await supabase
+  // Se cierra solamente si sigue activa, y se comprueba que se haya cerrado de verdad. Los
+  // controles de arriba se hicieron sobre una lectura anterior: si en el medio entró otro
+  // check-out —dos toques seguidos al botón, la aplicación reintentando— acá no queda nada por
+  // cambiar, y contestar que sí sin haber cambiado nada es lo que hace que dos guardias
+  // superpuestas parezcan cerradas cuando solo se cerró una.
+  const { data: cerrada, error } = await supabase
     .from('guardias')
     .update({
       checkout_at: new Date().toISOString(),
@@ -598,9 +604,16 @@ appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, async (
       checkout_lng: lng,
       estado: 'completada',
     })
-    .eq('id', guardia.id);
+    .eq('id', guardia.id)
+    .eq('estado', 'activa')
+    .select('id');
   if (error) {
     return res.status(500).json({ error: error.message });
+  }
+  if (!cerrada?.length) {
+    // Misma respuesta que el control de arriba: para quien está del otro lado es el mismo caso,
+    // y el cliente sin conexión ya sabe qué hacer con `yaRegistrado`.
+    return res.status(400).json({ error: 'Esta guardia ya tiene check-out registrado', yaRegistrado: true });
   }
 
   res.json({ ok: true });
@@ -620,12 +633,19 @@ appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, exige
     return res.status(404).json({ error: 'Guardia activa no encontrada' });
   }
 
-  const { error } = await supabase
+  // Solo mientras la guardia siga activa: si se cerró entre la lectura de arriba y esta línea,
+  // el mapa de la Familia no tiene que seguir moviéndose. Y si no se escribió nada, se dice.
+  const { data: marcada, error } = await supabase
     .from('guardias')
     .update({ ubicacion_actual_lat: lat, ubicacion_actual_lng: lng, ubicacion_actual_at: new Date().toISOString() })
-    .eq('id', guardia.id);
+    .eq('id', guardia.id)
+    .eq('estado', 'activa')
+    .select('id');
   if (error) {
     return res.status(500).json({ error: error.message });
+  }
+  if (!marcada?.length) {
+    return res.status(404).json({ error: 'Guardia activa no encontrada' });
   }
 
   res.json({ ok: true });
@@ -669,19 +689,14 @@ appAsistentesRouter.post('/push/suscribir', requiereRolAsistente, async (req, re
     return res.status(400).json({ error: 'Suscripción push incompleta' });
   }
 
-  const { error } = await supabase
-    .from('push_subscriptions')
-    .upsert(
-      {
-        prestadora_id: req.usuarioAsistente.prestadoraId,
-        asistente_id: req.usuarioAsistente.id,
-        endpoint,
-        p256dh: keys.p256dh,
-        auth: keys.auth,
-        user_agent: req.headers['user-agent'] || null,
-      },
-      { onConflict: 'endpoint' }
-    );
+  const { error } = await guardarSuscripcionPush({
+    prestadoraId: req.usuarioAsistente.prestadoraId,
+    rol: 'asistente',
+    usuarioId: req.usuarioAsistente.id,
+    endpoint,
+    keys,
+    userAgent: req.headers['user-agent'],
+  });
   if (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -745,12 +760,20 @@ appAsistentesRouter.patch('/calificaciones/:id/descargo', requiereRolAsistente, 
     return res.status(409).json({ error: 'Ya hay un descargo cargado para esta calificación, no puede editarse' });
   }
 
-  const { error } = await supabase
+  // Acá se está guardando un texto que escribió una persona sobre una calificación que la
+  // afecta, y que no puede volver a cargar. La base contesta que salió bien aunque no haya
+  // encontrado la fila, así que se pide que devuelva la que tocó: si no volvió ninguna, el
+  // descargo no quedó guardado y hay que decirlo, nunca contestar que sí.
+  const { data: guardada, error } = await supabase
     .from('calificaciones_asistente')
     .update({ descargo_asistente: descargo.trim(), descargo_en: new Date().toISOString() })
     .eq('id', req.params.id)
-    .eq('asistente_id', req.usuarioAsistente.id);
+    .eq('asistente_id', req.usuarioAsistente.id)
+    .select('id');
   if (error) return res.status(500).json({ error: error.message });
+  if (!guardada?.length) {
+    return res.status(404).json({ error: 'No se encontró esa calificación, el descargo no quedó guardado' });
+  }
 
   res.json({ ok: true });
 });

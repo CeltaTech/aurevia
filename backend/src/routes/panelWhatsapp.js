@@ -69,14 +69,22 @@ panelWhatsappRouter.post('/conversaciones/:id/responder', requiereRolPanel, asyn
   const ahora = new Date().toISOString();
   const borrador = await borradorPendiente(conversacion.id);
 
+  // De acá para abajo el mensaje **ya salió** por WhatsApp y no hay forma de traerlo de vuelta.
+  // Por eso lo que falle se anota en el registro del servidor y no se convierte en un error de
+  // pantalla: contestarle "no se pudo" a quien acaba de mandar un mensaje que sí se mandó lo
+  // lleva a mandarlo de nuevo, y quien está del otro lado recibe dos. Lo que se pierde si esto
+  // falla es el hilo, no el mensaje. Se anotan identificadores, nunca el texto (CLAUDE.md §6).
+  let fallo = null;
+
   if (borrador) {
     // El borrador de la IA pasa a ser el mensaje realmente enviado, con el texto final.
-    await supabase
+    const { error } = await supabase
       .from('mensajes_whatsapp')
       .update({ texto, revisado_por_coordinador_at: ahora })
       .eq('id', borrador.id);
+    if (error) fallo = error;
   } else {
-    await supabase.from('mensajes_whatsapp').insert({
+    const { error } = await supabase.from('mensajes_whatsapp').insert({
       prestadora_id: prestadoraId,
       conversacion_id: conversacion.id,
       direccion: 'saliente',
@@ -85,12 +93,22 @@ panelWhatsappRouter.post('/conversaciones/:id/responder', requiereRolPanel, asyn
       enviado_automaticamente: false,
       revisado_por_coordinador_at: ahora,
     });
+    if (error) fallo = error;
   }
 
-  await supabase
+  const { error: errorConversacion } = await supabase
     .from('conversaciones_whatsapp')
     .update({ requiere_atencion_coordinador: false, ultimo_mensaje_at: ahora })
     .eq('id', conversacion.id);
+  if (errorConversacion) fallo = errorConversacion;
+
+  if (fallo) {
+    console.error(
+      'El mensaje de WhatsApp salió pero no quedó registrado en el hilo. Conversación:',
+      conversacion.id,
+      fallo.message,
+    );
+  }
 
   res.json({ ok: true });
 });
@@ -109,17 +127,24 @@ panelWhatsappRouter.post('/conversaciones/:id/descartar', requiereRolPanel, asyn
   const ahora = new Date().toISOString();
   const borrador = await borradorPendiente(conversacion.id);
 
+  // Acá no salió nada hacia afuera, así que lo que falle sí se contesta: si la conversación
+  // sigue pidiendo atención, el Coordinador tiene que saberlo ahora y no descubrirlo mañana con
+  // el mismo aviso todavía prendido.
   if (borrador) {
-    await supabase
+    const { error } = await supabase
       .from('mensajes_whatsapp')
       .update({ revisado_por_coordinador_at: ahora })
       .eq('id', borrador.id);
+    if (error) return res.status(500).json({ error: error.message });
   }
 
-  await supabase
+  const { data: descartada, error } = await supabase
     .from('conversaciones_whatsapp')
     .update({ requiere_atencion_coordinador: false })
-    .eq('id', conversacion.id);
+    .eq('id', conversacion.id)
+    .select('id');
+  if (error) return res.status(500).json({ error: error.message });
+  if (!descartada?.length) return res.status(404).json({ error: 'Conversación inexistente' });
 
   res.json({ ok: true });
 });

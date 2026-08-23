@@ -45,9 +45,20 @@ async function checkLecturaSimple(admin, headers, prestadoraId) {
   const bodyZonas = await resZonas.json();
   console.log('GET /panel/configuracion/zonas ->', resZonas.status, `(${bodyZonas.zonas?.length ?? 0} filas)`);
 
-  const resPublica = await fetch(`${BACKEND_URL}/api/configuracion-publica`);
-  const bodyPublica = await resPublica.json();
-  console.log('GET /configuracion-publica ->', resPublica.status, `(${bodyPublica.zonas?.length ?? 0} zonas)`);
+  // El camino público lleva a la Prestadora en la dirección (su dominio configurado), no en un
+  // encabezado — ver backend/src/middleware/resolverPrestadoraPublica.js.
+  const { data: configPublica } = await admin
+    .from('configuracion_prestadora')
+    .select('dominio')
+    .eq('prestadora_id', prestadoraId)
+    .maybeSingle();
+  if (configPublica?.dominio) {
+    const resPublica = await fetch(`${BACKEND_URL}/api/publico/${configPublica.dominio}/configuracion`);
+    const bodyPublica = await resPublica.json();
+    console.log('GET /publico/:prestadora/configuracion ->', resPublica.status, `(${bodyPublica.zonas?.length ?? 0} zonas)`);
+  } else {
+    console.log('GET /publico/:prestadora/configuracion -> omitido (esta Prestadora no tiene dominio público configurado)');
+  }
 
   const { count: countUsuariosGT } = await admin
     .from('usuarios')

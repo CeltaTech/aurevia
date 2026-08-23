@@ -96,22 +96,35 @@ panelCostosIARouter.post('/cambios-precio-ia/:id/confirmar', async (req, res) =>
   }, { onConflict: 'proveedor,modelo,vigente_desde' });
   if (errorInsert) return res.status(500).json({ error: errorInsert.message });
 
-  const { error: errorUpdate } = await supabase
+  // Mismo criterio que la ruta de descartar de más abajo: se cierra solo si seguía pendiente, y
+  // se comprueba que se haya cerrado. La lectura de arriba pasó hace un instante, pero dos
+  // personas mirando la misma bandeja pueden resolver el mismo aviso a la vez.
+  const { data: confirmado, error: errorUpdate } = await supabase
     .from('cambios_precio_ia_pendientes')
     .update({ estado: 'confirmado', resuelto_at: new Date().toISOString(), resuelto_por: req.usuarioPanel.id })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('estado', 'pendiente')
+    .select('id');
   if (errorUpdate) return res.status(500).json({ error: errorUpdate.message });
+  if (!confirmado?.length) return res.status(404).json({ error: 'Cambio no encontrado o ya resuelto' });
 
   res.json({ ok: true });
 });
 
 panelCostosIARouter.post('/cambios-precio-ia/:id/descartar', async (req, res) => {
   const { id } = req.params;
-  const { error } = await supabase
+  // La escritura devuelve la fila descartada. Sin eso, un aviso que no existe o que ya se había
+  // resuelto contesta igual que uno descartado recién, y el cambio de precio sigue esperando
+  // sin que nadie se entere. Es el mismo aviso que ya devuelve la ruta de confirmar de arriba.
+  const { data: descartado, error } = await supabase
     .from('cambios_precio_ia_pendientes')
     .update({ estado: 'descartado', resuelto_at: new Date().toISOString(), resuelto_por: req.usuarioPanel.id })
     .eq('id', id)
-    .eq('estado', 'pendiente');
+    .eq('estado', 'pendiente')
+    .select('id');
   if (error) return res.status(500).json({ error: error.message });
+  if (!descartado?.length) {
+    return res.status(404).json({ error: 'Cambio no encontrado o ya resuelto' });
+  }
   res.json({ ok: true });
 });

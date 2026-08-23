@@ -84,12 +84,19 @@ panelAusenciasRouter.post(
       console.error('Error al espejar certificado médico a R2:', errorMirror.message);
     }
 
-    const { error: errorUpdate } = await supabase
+    // El archivo ya está subido: lo único que falta es que la ausencia lo apunte. Si esa fila ya
+    // no está, el certificado queda arriba sin dueño y nadie lo va a encontrar nunca — así que
+    // eso se dice, no se contesta que salió todo bien.
+    const { data: apuntada, error: errorUpdate } = await supabase
       .from('ausencias')
       .update({ certificado_url: ruta })
-      .eq('id', ausencia.id);
+      .eq('id', ausencia.id)
+      .select('id');
     if (errorUpdate) {
       return res.status(500).json({ error: errorUpdate.message });
+    }
+    if (!apuntada?.length) {
+      return res.status(404).json({ error: 'No se encontró esa ausencia' });
     }
 
     res.json({ ok: true });

@@ -98,9 +98,16 @@ panelUsuariosRouter.patch('/:id', requiereRolPanel, requiereAdminOSuperior, asyn
 
   query = acotarAUsuariosDelPanel(query, req.usuarioPanel);
 
-  const { error } = await query;
+  // Sin el .select('id') la base contesta que salió bien aunque no haya tocado ninguna fila, y
+  // entonces se le avisa "guardado" a alguien que no guardó nada. Si no volvió ninguna fila, la
+  // cuenta no existe o es de otra Prestadora: desde afuera es el mismo caso y se contesta igual,
+  // para que la respuesta no permita averiguar qué cuentas tienen las demás Prestadoras.
+  const { data: modificada, error } = await query.select('id');
 
   if (error) return res.status(500).json({ error: error.message });
+  if (!modificada?.length) {
+    return res.status(404).json({ error: 'No se encontró esa cuenta' });
+  }
   res.json({ ok: true });
 });
 

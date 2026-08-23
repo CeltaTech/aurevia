@@ -9,6 +9,7 @@ import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
 import { tipoDelAsistente, tipoConSusTareas } from '../utils/tareasDelTipo.js';
 import { esFechaISO, semanaQueContiene } from '../utils/fechas.js';
 import { pacientesConDomicilioDeHoy } from '../utils/domicilioDelDia.js';
+import { guardarSuscripcionPush } from '../utils/suscripcionesPush.js';
 
 export const appFamiliasRouter = Router();
 
@@ -654,19 +655,14 @@ appFamiliasRouter.post('/push/suscribir', requiereRolFamilia, async (req, res) =
     return res.status(400).json({ error: 'Suscripción push incompleta' });
   }
 
-  const { error } = await supabase
-    .from('push_subscriptions')
-    .upsert(
-      {
-        prestadora_id: req.usuarioFamilia.prestadoraId,
-        familia_id: req.usuarioFamilia.id,
-        endpoint,
-        p256dh: keys.p256dh,
-        auth: keys.auth,
-        user_agent: req.headers['user-agent'] || null,
-      },
-      { onConflict: 'endpoint' }
-    );
+  const { error } = await guardarSuscripcionPush({
+    prestadoraId: req.usuarioFamilia.prestadoraId,
+    rol: 'familia',
+    usuarioId: req.usuarioFamilia.id,
+    endpoint,
+    keys,
+    userAgent: req.headers['user-agent'],
+  });
   if (error) {
     return res.status(500).json({ error: error.message });
   }

@@ -70,11 +70,18 @@ panelMedicacionRouter.post('/:id/aceptar', requiereRolPanel, async (req, res) =>
     .maybeSingle();
   if (!indicacion) return res.status(404).json({ error: 'Indicación no encontrada o ya revisada' });
 
-  const { error } = await supabase
+  // La condición de la lectura se repite en la escritura, y se comprueba que haya escrito. Dos
+  // Coordinadores mirando la misma bandeja pueden aceptar y rechazar la misma indicación al
+  // mismo tiempo: sin esto, los dos ven que salió bien y solo una de las dos decisiones quedó.
+  // En medicación eso no es un detalle de pantalla.
+  const { data: aceptada, error } = await supabase
     .from('indicaciones_medicacion')
     .update({ estado: 'aceptada', revisado_por: req.usuarioPanel.id, revisado_en: new Date().toISOString() })
-    .eq('id', indicacion.id);
+    .eq('id', indicacion.id)
+    .eq('estado', 'pendiente')
+    .select('id');
   if (error) return res.status(500).json({ error: error.message });
+  if (!aceptada?.length) return res.status(404).json({ error: 'Indicación no encontrada o ya revisada' });
 
   res.json({ ok: true });
 });
@@ -92,7 +99,8 @@ panelMedicacionRouter.post('/:id/rechazar', requiereRolPanel, async (req, res) =
     .maybeSingle();
   if (!indicacion) return res.status(404).json({ error: 'Indicación no encontrada o ya revisada' });
 
-  const { error } = await supabase
+  // Mismo criterio que en /aceptar de más arriba.
+  const { data: rechazada, error } = await supabase
     .from('indicaciones_medicacion')
     .update({
       estado: 'rechazada',
@@ -100,8 +108,11 @@ panelMedicacionRouter.post('/:id/rechazar', requiereRolPanel, async (req, res) =
       revisado_por: req.usuarioPanel.id,
       revisado_en: new Date().toISOString(),
     })
-    .eq('id', indicacion.id);
+    .eq('id', indicacion.id)
+    .eq('estado', 'pendiente')
+    .select('id');
   if (error) return res.status(500).json({ error: error.message });
+  if (!rechazada?.length) return res.status(404).json({ error: 'Indicación no encontrada o ya revisada' });
 
   res.json({ ok: true });
 });

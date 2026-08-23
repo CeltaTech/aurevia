@@ -3,7 +3,9 @@ import { supabase } from '../db/connection.js';
 import { resolverPrestadoraPublica } from '../middleware/resolverPrestadoraPublica.js';
 import { enviarEmailCoordinador } from '../utils/email.js';
 
-export const solicitudServicioRouter = Router();
+// `mergeParams` para que llegue el `:prestadora` de la dirección donde se monta este router
+// (server.js) — de ahí sale la Prestadora, no de un encabezado (resolverPrestadoraPublica.js).
+export const solicitudServicioRouter = Router({ mergeParams: true });
 
 solicitudServicioRouter.post('/', resolverPrestadoraPublica, async (req, res) => {
   const {

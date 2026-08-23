@@ -236,6 +236,33 @@ export async function borrarCuenta(userId, { prestadoraId, esSuperadmin = false 
 export async function deshacerAlta(userId, { prestadoraId, filas = [] } = {}) {
   let limpioTodo = true;
 
+  // La red propia de esta función, por la misma razón que la de `borrarCuenta`: el borrado de
+  // abajo recibe el nombre de la tabla y la columna desde afuera y no puede defenderse solo, así
+  // que la pertenencia se comprueba una vez acá, antes de tocar nada. Se comprueba sobre la
+  // cuenta y no tabla por tabla porque dos de las tablas de la lista no tienen columna de
+  // Prestadora (`verificaciones_asistente`, `miembros_familia`) y cuelgan de esta misma
+  // cuenta — filtrar solo las que sí la tienen dejaría a las otras sin red y, encima, se
+  // borran primero. Si la cuenta no es de esta Prestadora, no se limpia nada.
+  if (userId && prestadoraId) {
+    const { data: duena, error: errorDuena } = await supabase
+      .from('usuarios')
+      .select('prestadora_id')
+      .eq('id', userId)
+      .maybeSingle();
+    if (errorDuena || !duena) {
+      // Sin fila de la que colgar no hay nada que limpiar y tampoco forma de comprobar de quién
+      // es. Puede quedar una cuenta de acceso sin nadie detrás; el próximo intento con ese mismo
+      // correo la va a reconocer como sobrante y la va a borrar sola (`limpiarCuentaSobrante`).
+      // Se anota el id, nunca el correo (CLAUDE.md §6).
+      console.error('deshacerAlta: no existe la cuenta a limpiar', userId);
+      return false;
+    }
+    if (duena.prestadora_id !== prestadoraId) {
+      console.error('deshacerAlta: la cuenta no es de esta Prestadora, no se limpió nada', userId);
+      return false;
+    }
+  }
+
   for (const fila of filas) {
     const valor = fila.valor ?? userId;
     if (!valor) continue;

@@ -687,11 +687,20 @@ panelLiquidacionesRouter.delete('/:id', requiereRolPanel, requierePermiso(PERMIS
     return res.status(400).json({ error: 'Una liquidación ya pagada no se puede borrar' });
   }
 
-  const { error: errorBorrado } = await supabase
+  // La condición de más arriba se repite acá adentro. La lectura pasó hace un instante, y en ese
+  // instante otra persona puede haber marcado la liquidación como pagada: comprobarlo solo antes
+  // deja abierto justo el caso que el control existe para impedir. Y se comprueba que haya
+  // borrado algo, porque "borré" sin haber borrado nada es la peor respuesta posible acá.
+  const { data: borrada, error: errorBorrado } = await supabase
     .from('liquidaciones_asistente')
     .delete()
     .eq('id', liquidacion.id)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId);
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .neq('estado', 'pagada')
+    .select('id');
   if (errorBorrado) return res.status(500).json({ error: errorBorrado.message });
+  if (!borrada?.length) {
+    return res.status(409).json({ error: 'La liquidación ya no está, o quedó pagada mientras tanto' });
+  }
   res.json({ ok: true });
 });

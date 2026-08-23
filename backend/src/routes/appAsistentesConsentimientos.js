@@ -234,16 +234,25 @@ appAsistentesConsentimientosRouter.post('/retirar', requiereRolAsistente, async 
     return res.status(409).json({ error: 'No hay un consentimiento vigente para retirar' });
   }
 
-  const { error } = await supabase
+  // Se comprueba que la fila se haya escrito de verdad. La lectura de arriba pasó hace un
+  // instante, pero acá se contesta "listo, retirado" y eso es lo que la persona se lleva: si no
+  // quedó escrito, no se le puede decir que sí. Un consentimiento que alguien cree retirado y
+  // sigue vigente es exactamente lo que la ley no perdona.
+  const { data: retirado, error } = await supabase
     .from('consentimientos_asistente')
     .update({
       retirado_at: new Date().toISOString(),
       motivo_retiro: typeof motivo === 'string' && motivo.trim() ? motivo.trim().slice(0, 500) : null,
     })
-    .eq('id', viva.id);
+    .eq('id', viva.id)
+    .is('retirado_at', null)
+    .select('id');
 
   if (error) {
     return res.status(500).json({ error: 'No se pudo retirar el consentimiento' });
+  }
+  if (!retirado?.length) {
+    return res.status(409).json({ error: 'No hay un consentimiento vigente para retirar' });
   }
 
   res.json({ ok: true });

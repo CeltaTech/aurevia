@@ -3,7 +3,9 @@ import { supabase } from '../db/connection.js';
 import { resolverPrestadoraPublica } from '../middleware/resolverPrestadoraPublica.js';
 import { enviarEmailCoordinador } from '../utils/email.js';
 
-export const postulacionAsistenteRouter = Router();
+// `mergeParams` para que llegue el `:prestadora` de la dirección donde se monta este router
+// (server.js) — de ahí sale la Prestadora, no de un encabezado (resolverPrestadoraPublica.js).
+export const postulacionAsistenteRouter = Router({ mergeParams: true });
 
 const IDIOMAS_SOPORTADOS = ['es-AR', 'en', 'pt-BR'];
 

@@ -322,12 +322,19 @@ panelMarketplaceRouter.patch('/calificaciones/:id/visibilidad', async (req, res)
   if (typeof visiblePublica !== 'boolean') {
     return res.status(400).json({ error: 'Falta visible_publica (booleano)' });
   }
-  const { error } = await supabase
+  // La escritura devuelve la fila tocada: sin esto la base contesta que salió bien aunque no
+  // haya encontrado ninguna, y la pantalla muestra un cambio de visibilidad que no ocurrió.
+  const { data: modificada, error } = await supabase
     .from('calificaciones_asistente')
     .update({ visible_publica: visiblePublica })
     .eq('id', req.params.id)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId);
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .select('id');
   if (error) return res.status(500).json({ error: error.message });
+  if (!modificada?.length) {
+    // No existe, o es de otra Prestadora. Se contesta lo mismo en los dos casos.
+    return res.status(404).json({ error: 'No se encontró esa calificación' });
+  }
   res.json({ ok: true });
 });
 

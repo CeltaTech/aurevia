@@ -326,7 +326,7 @@ panelCuentasRouter.post('/familia/:familiaId/circulo', requiereRolPanel, exigirO
   }
 });
 
-panelCuentasRouter.delete('/familia/:familiaId/circulo/:usuarioId', requiereRolPanel, requierePermiso('editar_datos_familia'), async (req, res) => {
+panelCuentasRouter.delete('/familia/:familiaId/circulo/:usuarioId', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_familia'), async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
 
   let queryFamilia = supabase.from('familias').select('id').eq('id', req.params.familiaId);

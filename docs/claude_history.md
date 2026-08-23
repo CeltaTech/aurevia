@@ -2,6 +2,15 @@
 
 > Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§10) — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
 
+## Regla 8: la RLS de la tabla no sirve de nada si la función que la saltea le contesta a cualquiera (2026-08-22)
+
+- **Decía antes:** la regla 8 del §7 pedía RLS estricta en cada tabla nueva, con Organización asociada cuando correspondiera, y ahí terminaba. De los permisos de las funciones no decía una palabra.
+- **Dice ahora:** además exige que ninguna función `SECURITY DEFINER` del esquema `public` quede al alcance de `anon`. Toda función nueva de ese tipo revoca `PUBLIC` y `anon` en la misma migración que la crea.
+- **Motivo:** se comprobó en vivo, con la clave pública y sin sesión, que tres funciones internas contestaban HTTP 200 con datos de una Prestadora ajena. La RLS de las tablas estaba bien —la misma tabla pedida por la vía normal devolvía cero filas—: la puerta abierta era la función, que por diseño se saltea la RLS. Una función del esquema `public` es además una dirección web, porque PostgREST publica ese esquema, así que el permiso de `anon` la vuelve alcanzable desde internet sin iniciar sesión.
+- **De dónde salió la cláusula sobre conservar el permiso de la sesión autenticada:** de un tropiezo real, no de la teoría. La primera prueba se hizo contra una tabla cuya política no llamaba a esa función, dio un falso positivo, y revocar de más habría dejado al Panel sin poder leer sus propias tablas. Por eso la regla pide verificar cuál de los dos casos es **antes** de revocar, y probar contra una tabla cuya política sí llame a esa función.
+- **Dónde está el patrón:** `supabase/migrations/20260823010000_las_funciones_internas_de_la_base_no_se_llaman_desde_afuera.sql` — cierra lo que estaba abierto y arregla el permiso con que nace cada función nueva.
+- **No reintroducir:** una función nueva del esquema `public` creada sin revocar el permiso, confiando en que la RLS de las tablas la cubre. No la cubre, justamente porque esa función corre salteándola. Y no revocar el permiso de la sesión autenticada sin haber comprobado que ninguna política llama a esa función.
+
 ## La regla del trato también rige lo que escribe la IA (2026-08-18)
 
 - **Decía antes:** la regla 1 del §7 nombraba las pantallas, los correos automáticos, los avisos al celular y los mensajes de error. Las instrucciones que se le dan a la IA no decían una palabra sobre el trato, y una de ellas —`backend/src/utils/iaWhatsapp.js`— le pedía escribir "en español rioplatense", que es pedirle voseo. El control automático las tenía en su lista de excepciones con una nota que reconocía el agujero.

@@ -780,7 +780,96 @@ VALUES
 
 
 -- ----------------------------------------------------------------------------
--- 7. Limpieza y aviso final
+-- 7. La segunda Prestadora: Cuidar del Sur
+--
+--    POR QUÉ EXISTE. La promesa central del producto es que una Prestadora
+--    nunca ve datos de otra (§2 de `CLAUDE.md`). Con una sola Prestadora
+--    sembrada, esa promesa no se puede probar: toda consulta devuelve lo
+--    propio y no hay con qué comparar. Una pantalla vacía y una pantalla
+--    correctamente aislada se ven igual.
+--
+--    Con dos, la prueba existe y es concluyente: cada usuario tiene que ver
+--    lo suyo y nada de la otra, y hay que poder intentar romperlo a propósito
+--    —pedirle al motor el identificador de una guardia ajena, por ejemplo— y
+--    que rebote. Esa prueba la corre `scripts/probar_aislamiento.mjs`.
+--
+--    LA VENTANA SE CIERRA SOLA. Intentar romper el aislamiento a propósito
+--    solo se puede hacer mientras todos los datos son inventados. El día que
+--    exista la primera Prestadora real, cada prueba de este tipo se hace con
+--    datos de personas adentro, y deja de ser gratis.
+--
+--    ES CHICA A PROPÓSITO. No necesita una operación completa: alcanza con un
+--    usuario de cada rol y una fila en las tablas que las pantallas leen. Lo
+--    que se prueba es el aislamiento, no el volumen.
+-- ----------------------------------------------------------------------------
+INSERT INTO public.prestadoras (id, razon_social, nombre_fantasia, identificacion_fiscal, pais, estado, zonas_operacion, fecha_alta, moneda)
+VALUES ('22222222-2222-4222-8222-222222222222', 'Cuidados del Sur S.R.L.', 'Cuidar del Sur',
+        '30-99999999-7', 'AR', 'certificada', ARRAY['la_plata'], current_date, 'ARS');
+
+INSERT INTO public.zonas_cobertura (prestadora_id, codigo, nombre, categoria, orden) VALUES
+  ('22222222-2222-4222-8222-222222222222', 'la_plata', 'La Plata', 'ciudad', 10);
+
+-- Las cuatro cuentas de la segunda Prestadora, con la misma mecánica de tres
+-- tablas que explica el punto 2. Entran con la misma contraseña que el resto.
+WITH personas (id, email, nombre, rol, telefono) AS (
+  VALUES
+    ('50000000-0000-4000-8000-000000000001'::uuid, 'admin@sur.local'::text,   'Alicia Administradora Sur'::text, 'admin_prestadora'::text, '+54 221 400-0001'::text),
+    ('50000000-0000-4000-8000-000000000002',       'coordinadora@sur.local',  'Cecilia Coordinadora Sur',        'coordinador',            '+54 221 400-0002'),
+    ('50000000-0000-4000-8000-000000000003',       'asistente.sur@sur.local', 'Elena Escobar',                   'asistente',              '+54 221 400-0003'),
+    ('50000000-0000-4000-8000-000000000004',       'familia.rios@sur.local',  'Familia Ríos',                    'familia',                '+54 221 400-0004')
+),
+cuentas_de_ingreso AS (
+  INSERT INTO auth.users (
+    instance_id, id, aud, role, email, encrypted_password,
+    email_confirmed_at, created_at, updated_at,
+    raw_app_meta_data, raw_user_meta_data,
+    confirmation_token, recovery_token, email_change_token_new, email_change
+  )
+  SELECT
+    '00000000-0000-0000-0000-000000000000', p.id, 'authenticated', 'authenticated', p.email,
+    extensions.crypt('local-sandbox-2026', extensions.gen_salt('bf')),
+    now(), now(), now(),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    jsonb_build_object('nombre', p.nombre),
+    '', '', '', ''
+  FROM personas p
+  RETURNING id
+),
+medios_de_ingreso AS (
+  INSERT INTO auth.identities (
+    provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at
+  )
+  SELECT
+    p.id::text, p.id,
+    jsonb_build_object('sub', p.id::text, 'email', p.email, 'email_verified', true),
+    'email', now(), now(), now()
+  FROM personas p
+  RETURNING user_id
+)
+INSERT INTO public.usuarios (id, rol, nombre, telefono, prestadora_id)
+SELECT p.id, p.rol, p.nombre, p.telefono, '22222222-2222-4222-8222-222222222222'
+FROM personas p;
+
+INSERT INTO public.asistentes (id, nombre, prestadora_id)
+VALUES ('50000000-0000-4000-8000-000000000003', 'Elena Escobar', '22222222-2222-4222-8222-222222222222');
+
+INSERT INTO public.familias (id, prestadora_id)
+VALUES ('50000000-0000-4000-8000-000000000004', '22222222-2222-4222-8222-222222222222');
+
+INSERT INTO public.pacientes (id, nombre, prestadora_id)
+VALUES ('60000000-0000-4000-8000-000000000001', 'Rosa Ríos', '22222222-2222-4222-8222-222222222222');
+
+INSERT INTO public.servicios (id, prestadora_id, familia_id, etiqueta)
+VALUES ('70000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222',
+        '50000000-0000-4000-8000-000000000004', 'Cuidado diurno Ríos');
+
+INSERT INTO public.guardias (id, prestadora_id, paciente_id, fecha, hora_inicio, hora_fin, modalidad)
+VALUES ('80000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222',
+        '60000000-0000-4000-8000-000000000001', current_date + 1, '08:00', '16:00', 'presencial');
+
+
+-- ----------------------------------------------------------------------------
+-- 8. Limpieza y aviso final
 -- ----------------------------------------------------------------------------
 -- Sin esto, la capa que sirve los datos puede seguir contestando 404 en tablas
 -- que sí existen (§8 de `CLAUDE.md`).
@@ -789,11 +878,13 @@ NOTIFY pgrst, 'reload schema';
 DO $$
 BEGIN
   RAISE NOTICE '';
-  RAISE NOTICE 'Base local sembrada. Prestadora: Sandbox.';
+  RAISE NOTICE 'Base local sembrada. Dos Prestadoras: Sandbox y Cuidar del Sur.';
   RAISE NOTICE 'Contraseña de todas las cuentas: local-sandbox-2026';
-  RAISE NOTICE '  Panel  -> superadmin@sandbox.local / admin@sandbox.local / coordinadora@sandbox.local';
-  RAISE NOTICE '  Asistentes -> ana.asistente@sandbox.local (y bruno, clara, delia)';
-  RAISE NOTICE '  Familias   -> familia.gomez@sandbox.local (y lopez, morales)';
+  RAISE NOTICE '  Sandbox, Panel  -> superadmin@sandbox.local / admin@sandbox.local / coordinadora@sandbox.local';
+  RAISE NOTICE '  Sandbox, Asistentes -> ana.asistente@sandbox.local (y bruno, clara, delia)';
+  RAISE NOTICE '  Sandbox, Familias   -> familia.gomez@sandbox.local (y lopez, morales)';
+  RAISE NOTICE '  Cuidar del Sur  -> admin@sur.local / coordinadora@sur.local / asistente.sur@sur.local / familia.rios@sur.local';
   RAISE NOTICE 'Los correos que manda el backend quedan en http://127.0.0.1:54424';
+  RAISE NOTICE 'Para comprobar que ninguna ve datos de la otra: node scripts/probar_aislamiento.mjs';
   RAISE NOTICE '';
 END $$;

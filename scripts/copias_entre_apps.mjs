@@ -89,7 +89,58 @@ export const GRUPOS = [
     original: 'pwa-asistentes/src/components/DomicilioTemporal.jsx',
     copias: ['pwa-familias/src/components/DomicilioTemporal.jsx'],
   },
+  {
+    que: 'el arranque de cada aplicación',
+    original: 'panel/src/main.jsx',
+    copias: ['pwa-asistentes/src/main.jsx', 'pwa-familias/src/main.jsx'],
+  },
+  {
+    que: 'la conexión con la base desde el navegador',
+    original: 'panel/src/lib/supabaseClient.js',
+    copias: ['pwa-asistentes/src/lib/supabaseClient.js', 'pwa-familias/src/lib/supabaseClient.js'],
+  },
+  {
+    que: 'de dónde saca un componente la identidad del producto',
+    original: 'panel/src/config/useIdentidad.js',
+    copias: ['pwa-asistentes/src/config/useIdentidad.js', 'pwa-familias/src/config/useIdentidad.js'],
+  },
+  {
+    que: 'cómo se muestra un valor guardado en la base cuando falta su traducción',
+    original: 'panel/src/i18n/valores.js',
+    copias: ['pwa-asistentes/src/i18n/valores.js', 'pwa-familias/src/i18n/valores.js'],
+  },
+  {
+    que: 'la marca de la Prestadora guardada para cuando la aplicación no está abierta',
+    original: 'pwa-familias/src/lib/marcaGuardada.js',
+    copias: ['pwa-asistentes/src/lib/marcaGuardada.js'],
+  },
+  {
+    que: 'cómo se rellenan los huecos de un texto traducido',
+    original: 'panel/src/lib/textos.js',
+    copias: ['pwa-asistentes/src/lib/textos.js'],
+  },
+  {
+    que: 'la sesión de quien entró a la aplicación',
+    original: 'pwa-familias/src/context/AuthContext.jsx',
+    copias: ['pwa-asistentes/src/context/AuthContext.jsx'],
+  },
+  {
+    que: 'el permiso y el alta para recibir avisos en el celular',
+    original: 'pwa-familias/src/lib/push.js',
+    copias: ['pwa-asistentes/src/lib/push.js'],
+  },
+  {
+    que: 'los colores y medidas del sistema de diseño de las dos aplicaciones',
+    original: 'pwa-familias/src/styles/variables.css',
+    copias: ['pwa-asistentes/src/styles/variables.css'],
+  },
 ];
+
+// OJO CON ESTO, para no volver a averiguarlo:
+//
+//   - panel/src/styles/variables.css NO es copia del de las dos aplicaciones: el archivo del
+//     Panel es distinto y tiene que seguir siéndolo. Solo las dos aplicaciones comparten el
+//     suyo, y ese es el grupo declarado arriba. Mismo nombre, tres archivos, dos verdades.
 
 // Todas las rutas de todos los grupos, original incluido. La usan los chequeos
 // que necesitan saber qué archivos son copias.

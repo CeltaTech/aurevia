@@ -48,13 +48,9 @@ en su propio panel.
 
 **Superadmin** — rol técnico de CeltaTech. No representa una Prestadora ni la opera
 comercialmente.
-- **Fuera de una sesión de soporte, sólo tiene acceso a Sandbox.** Vedado el acceso a datos de
-  cualquier Prestadora real por la vía ordinaria, sin excepción.
-- Login propio; MFA por TOTP activable desde Configuración.
-- **Sesión de soporte técnico** — la única puerta hacia una Prestadora real, una por vez y sin
-  visibilidad de otras: banner visible con la Prestadora activa, advertencia extra antes de
-  operaciones destructivas, registro en `auditoria_soporte_tecnico`, corte por inactividad a los
-  5 minutos, tope absoluto de 60 y aviso a los 50.
+- Entrada propia; segundo factor por código temporal, activable desde Configuración.
+- **Acá la Organización ficticia es Sandbox**, y la sesión de soporte se registra en
+  `auditoria_soporte_tecnico`. La forma de esa sesión es la de la empresa y no se toca.
 - La precedencia —sesión de soporte primero, Organización propia después— la define la función
   SQL `current_tenant()`, y el middleware `requiereRolPanel.js` la refleja, no la reinventa.
 

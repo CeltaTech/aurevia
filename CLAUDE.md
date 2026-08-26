@@ -150,15 +150,11 @@ carpeta nueva con material de una sola Prestadora se nombra igual y queda bajo e
 Lo general está en `..\..\CLAUDE.md` §12. Acá, lo de este producto.
 
 **Al iniciar:** leer este archivo, `..\..\CLAUDE.md`,
-`..\..\docs\REGLAS_PRODUCTOS_CAREONYS.md`, `docs/CONTEXT.md`, `docs/BUILD_ORDER.md` —la tabla de
+`..\..\docs\REGLAS_PRODUCTOS_CAREONYS.md`,
+`..\..\docs\GLOSARIO_PRODUCTOS_CAREONYS.md`, `docs/CONTEXT.md`, `docs/BUILD_ORDER.md` —la tabla de
 etapas con el estado de cada una— y el PRD de la etapa actual. Confirmar en una línea: *«Leí los
 documentos correspondientes. Etapa actual: [X]. Última tarea completada: [Y]. Tarea de esta
 sesión: [Z].»*
-
-**Control de características.** Ante un pedido con más de una funcionalidad, antes de programar va
-una lista explícita por característica: ✅ incluida tal cual / ⚠️ incluida con cambio, y por qué /
-❌ excluida, y por qué. Nada desaparece adentro de un resumen general. Al terminar se repite la
-misma lista contra lo prometido, no una narración.
 
 **Cómo se escribe la ruta de un documento.** Hay dos carpetas `docs/`: la del producto y la de la
 empresa. Un documento del producto se cita desde la raíz del producto —`docs/CONTEXT.md`—; uno de

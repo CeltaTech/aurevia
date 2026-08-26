@@ -5,8 +5,8 @@
 >
 > **Y hay dos archivos más que mandan sobre éste.** `F:\proyectos\celtatech\CLAUDE.md`
 > —las reglas de la empresa— **se lee solo**, porque la línea de comandos junta los `CLAUDE.md`
-> desde la carpeta de trabajo hacia arriba. `F:\proyectos\celtatech\docs\FAMILIA_CAREONYS.md`
-> —lo que vale para Careonys y el Marketplace, y para nadie más— **no se lee solo**: los dos
+> desde la carpeta de trabajo hacia arriba. `F:\proyectos\celtatech\docs\REGLAS_PRODUCTOS_CAREONYS.md`
+> —lo que vale para Careonys y el Marketplace, y para ningún otro producto— **no se lee solo**: los dos
 > productos son carpetas hermanas y ninguna carpeta los contiene sólo a ellos. **Hay que
 > abrirlo a mano al empezar.**
 

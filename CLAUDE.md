@@ -110,9 +110,19 @@ fiscales y no está previsto que lo haga.** No hay tipo de comprobante, ni punto
 numeración autorizada, ni impuestos discriminados. Pide la moneda y nada más. Si algún día un
 importe se convierte, ahí sí se guarda la cotización usada con su fecha.
 
-**El reparto de permisos de las funciones internas** —cuáles pierden el alcance anónimo y cuáles
-conservan `authenticated`— está resuelto en
-`supabase/migrations/20260823010000_las_funciones_internas_de_la_base_no_se_llaman_desde_afuera.sql`.
+**Las funciones internas de la base no viven en un esquema publicado.** Las que usan las políticas
+de RLS están en el esquema `interno`, que queda afuera de la lista `schemas` de
+`supabase/config.toml` a propósito: así no son direcciones web. Las políticas las siguen
+encontrando porque guardan el identificador interno de la función, no su nombre. **Una función se
+queda en `public` solamente si el navegador la llama a propósito, y entonces no puede recibir un
+identificador que la apunte a otra Prestadora** — hoy la única es `ausencias_que_tapan`, que recibe
+dos fechas y resuelve la Prestadora adentro con `current_tenant()`. Toda función nueva de política
+nace en `interno`, y cualquiera que se quede en `public` y llame a una de ahí lleva `interno` en su
+`search_path`. El reparto de permisos —cuáles pierden el alcance anónimo y cuáles conservan
+`authenticated`— está en
+`supabase/migrations/20260823010000_las_funciones_internas_de_la_base_no_se_llaman_desde_afuera.sql`,
+y la mudanza en
+`supabase/migrations/20260904090000_las_funciones_internas_salen_del_esquema_publicado.sql`.
 
 **Ninguna palabra de Careonys entra en un módulo** —Prestadora, Guardia, Paciente, Servicio— si el
 otro producto no la tiene. Todavía no hay ningún módulo; sacar una pieza de acá para convertirla

@@ -856,20 +856,150 @@ VALUES ('50000000-0000-4000-8000-000000000003', 'Elena Escobar', '22222222-2222-
 INSERT INTO public.familias (id, prestadora_id)
 VALUES ('50000000-0000-4000-8000-000000000004', '22222222-2222-4222-8222-222222222222');
 
-INSERT INTO public.pacientes (id, nombre, prestadora_id)
-VALUES ('60000000-0000-4000-8000-000000000001', 'Rosa Ríos', '22222222-2222-4222-8222-222222222222');
+-- Con familia, porque sin ella la aplicación de Familia de esta Prestadora no tiene
+-- nada que leer y la prueba de aislamiento de ese lado no puede fallar.
+INSERT INTO public.pacientes (id, nombre, prestadora_id, familia_id)
+VALUES ('60000000-0000-4000-8000-000000000001', 'Rosa Ríos', '22222222-2222-4222-8222-222222222222',
+        '50000000-0000-4000-8000-000000000004');
 
 INSERT INTO public.servicios (id, prestadora_id, familia_id, etiqueta)
 VALUES ('70000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222',
         '50000000-0000-4000-8000-000000000004', 'Cuidado diurno Ríos');
 
-INSERT INTO public.guardias (id, prestadora_id, paciente_id, fecha, hora_inicio, hora_fin, modalidad)
+-- Con Asistente asignado, por el mismo motivo que el Paciente lleva Familia: un
+-- Asistente sin Guardias no ve nada, y una prueba contra la nada no prueba nada.
+INSERT INTO public.guardias (id, prestadora_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, modalidad)
 VALUES ('80000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222',
+        '50000000-0000-4000-8000-000000000003',
         '60000000-0000-4000-8000-000000000001', current_date + 1, '08:00', '16:00', 'presencial');
+
+-- La fila de `guardia_pacientes` no se siembra: la escribe sola la base al
+-- insertar la Guardia.
+
+-- ----------------------------------------------------------------------------
+-- 8. Lo que leen las dos aplicaciones de teléfono, en las dos Prestadoras
+--
+--    POR QUÉ ESTÁ ACÁ. Las políticas que separan una Prestadora de otra en las
+--    tablas de la aplicación del Asistente y la de la Familia sólo se pueden
+--    comprobar si las dos Prestadoras tienen filas cargadas en ellas. Sobre una
+--    tabla vacía toda consulta devuelve cero, y cero es exactamente lo que
+--    devolvería una política rota que niega todo: la prueba no puede fallar, y
+--    una prueba que no puede fallar no prueba nada.
+--
+--    Es una fila por tabla y por Prestadora. No hace falta más: lo que se
+--    prueba es quién alcanza qué, no el volumen.
+--
+--    Todos los datos son inventados, como manda `CLAUDE.md`.
+-- ----------------------------------------------------------------------------
+
+-- Certificados del Asistente. Los lee él en su aplicación, y la Familia ve el
+-- del Asistente que atiende a su Paciente.
+INSERT INTO public.certificados (id, asistente_id, prestadora_id, fecha_emision, fecha_vencimiento)
+VALUES ('9a000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001',
+        '11111111-1111-4111-8111-111111111111', current_date - 200, current_date + 500),
+       ('9a000000-0000-4000-8000-000000000002', '50000000-0000-4000-8000-000000000003',
+        '22222222-2222-4222-8222-222222222222', current_date - 100, current_date + 600);
+
+-- Matrículas. Esta tabla no tiene columna de Prestadora: queda acotada por el
+-- Asistente, que sí la tiene. Por eso es la que más vale probar.
+INSERT INTO public.matriculas_asistente (id, asistente_id, tipo, numero_matricula, vigente_desde, registrado_por)
+VALUES ('9b000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001',
+        'enfermeria', 'MP-10001', current_date - 400, '20000000-0000-4000-8000-000000000003'),
+       ('9b000000-0000-4000-8000-000000000002', '50000000-0000-4000-8000-000000000003',
+        'enfermeria', 'MP-20002', current_date - 300, '50000000-0000-4000-8000-000000000002');
+
+-- Mensajes entre el Asistente y la Prestadora.
+INSERT INTO public.mensajes_asistente (id, prestadora_id, asistente_id, usuario_id, mensaje)
+VALUES ('9c000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+        '30000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000003',
+        'Recordatorio de la reunión de equipo del viernes.'),
+       ('9c000000-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222',
+        '50000000-0000-4000-8000-000000000003', '50000000-0000-4000-8000-000000000002',
+        'Se actualizó el instructivo de ingreso al domicilio.');
+
+-- Consentimiento de seguimiento de ubicación, otorgado por cada Asistente.
+INSERT INTO public.consentimientos_asistente
+  (id, prestadora_id, asistente_id, clave, texto_consentimiento_id, version_mostrada,
+   idioma_mostrado, texto_mostrado, decision)
+VALUES ('9d000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+        '30000000-0000-4000-8000-000000000001', 'seguimiento_ubicacion',
+        (SELECT id FROM public.textos_consentimiento
+          WHERE clave = 'seguimiento_ubicacion' AND idioma = 'es-AR' ORDER BY version DESC LIMIT 1),
+        1, 'es-AR', 'Texto de prueba del consentimiento de seguimiento de ubicación.', 'otorgado'),
+       ('9d000000-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222',
+        '50000000-0000-4000-8000-000000000003', 'seguimiento_ubicacion',
+        (SELECT id FROM public.textos_consentimiento
+          WHERE clave = 'seguimiento_ubicacion' AND idioma = 'es-AR' ORDER BY version DESC LIMIT 1),
+        1, 'es-AR', 'Texto de prueba del consentimiento de seguimiento de ubicación.', 'otorgado');
+
+-- Calificación de la Familia al Asistente. El Asistente la lee y puede
+-- contestarla; la Familia lee la que escribió.
+INSERT INTO public.calificaciones_asistente
+  (id, asistente_id, paciente_id, familia_id, guardia_id, prestadora_id, estrellas, comentario)
+VALUES ('9e000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001',
+        '50000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001',
+        '70000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+        5, 'Muy puntual y atenta.'),
+       ('9e000000-0000-4000-8000-000000000002', '50000000-0000-4000-8000-000000000003',
+        '60000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000004',
+        '80000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222',
+        4, 'Buen trato, llegó unos minutos tarde.');
+
+-- Indicación de medicación cargada por la Familia. La lee también el Asistente
+-- que atiende a ese Paciente.
+INSERT INTO public.indicaciones_medicacion
+  (id, prestadora_id, paciente_id, familia_id, medicamento, dosis, frecuencia,
+   via_administracion, fecha_desde, estado, solicitado_por)
+VALUES ('9f000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+        '50000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001',
+        'Enalapril', '10 mg', 'cada 12 horas', 'oral', current_date - 30, 'aceptada',
+        '40000000-0000-4000-8000-000000000001'),
+       ('9f000000-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222',
+        '60000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000004',
+        'Metformina', '850 mg', 'cada 24 horas', 'oral', current_date - 15, 'aceptada',
+        '50000000-0000-4000-8000-000000000004');
+
+-- Rangos de referencia de los signos vitales, por Paciente.
+INSERT INTO public.rangos_referencia_vitales
+  (id, prestadora_id, paciente_id, signo, valor_min, valor_max, unidad, fuente)
+VALUES ('a1000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+        '50000000-0000-4000-8000-000000000001', 'temperatura', 36.0, 37.5, '°C',
+        'Valor de referencia general'),
+       ('a1000000-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222',
+        '60000000-0000-4000-8000-000000000001', 'temperatura', 36.0, 37.5, '°C',
+        'Valor de referencia general');
+
+-- Autorización para monitorear los signos vitales de un Paciente.
+INSERT INTO public.autorizaciones_monitoreo_paciente
+  (id, prestadora_id, paciente_id, nombre_avala, rol_avala, tipo_firma, archivo_url,
+   fecha_autorizacion, registrado_por)
+VALUES ('a2000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+        '50000000-0000-4000-8000-000000000001', 'Dra. Inés Falcón', 'profesional', 'digital',
+        '11111111-1111-4111-8111-111111111111/autorizaciones/prueba-a.pdf',
+        current_date - 60, '20000000-0000-4000-8000-000000000003'),
+       ('a2000000-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222',
+        '60000000-0000-4000-8000-000000000001', 'Dr. Omar Vega', 'profesional', 'digital',
+        '22222222-2222-4222-8222-222222222222/autorizaciones/prueba-b.pdf',
+        current_date - 45, '50000000-0000-4000-8000-000000000002');
+
+-- Una perilla de visibilidad tocada por cada Prestadora. La lista de perillas
+-- posibles no se siembra: vive en `backend/src/utils/catalogoVisibilidad.js` y
+-- la fila nace la primera vez que la Prestadora la cambia.
+INSERT INTO public.configuracion_visibilidad_app (prestadora_id, clave, visible)
+VALUES ('11111111-1111-4111-8111-111111111111', 'familia_ubicacion_en_vivo', true),
+       ('22222222-2222-4222-8222-222222222222', 'familia_ubicacion_en_vivo', false);
+
+-- Qué matrícula exige cada vía de administración.
+INSERT INTO public.configuracion_matricula_via_medicacion
+  (id, prestadora_id, via_administracion, tipo_matricula_requerida)
+VALUES ('a3000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+        'intravenosa', 'enfermeria'),
+       ('a3000000-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222',
+        'intravenosa', 'enfermeria');
 
 
 -- ----------------------------------------------------------------------------
--- 8. Limpieza y aviso final
+-- 9. Limpieza y aviso final
 -- ----------------------------------------------------------------------------
 -- Sin esto, la capa que sirve los datos puede seguir contestando 404 en tablas
 -- que sí existen (§8 de `CLAUDE.md`).

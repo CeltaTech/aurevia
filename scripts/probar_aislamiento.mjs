@@ -181,6 +181,210 @@ async function probarLaBase({ base, llavePublica }, idA, idB, sesiones) {
 }
 
 // ---------------------------------------------------------------------------
+// Primera puerta, segundo tramo: las dos aplicaciones de teléfono
+//
+// El tramo de arriba entra como administradora y recorre las tablas que tienen
+// columna de Prestadora. Alcanza para el Panel, donde el aislamiento es entre
+// Organizaciones y nada más. No alcanza para las dos aplicaciones de teléfono,
+// donde hay dos líneas que cruzar y no una: la Prestadora ajena, y la persona
+// de al lado adentro de la propia Prestadora. Un Asistente que ve las
+// matrículas de su compañero no cruzó ninguna Prestadora y está mal igual.
+//
+// CÓMO SE COMPRUEBA. Para cada persona y cada tabla se calcula aparte, con una
+// consulta a la base que no pasa por ninguna política, el conjunto exacto de
+// filas que esa persona tiene que ver. Después se consulta con su propio pase y
+// se comparan los dos conjuntos:
+//
+//   - una fila de más es una filtración;
+//   - una fila de menos es una política de más, que rompe la aplicación.
+//
+// Comparar conjuntos y no contar filas es lo que hace que la prueba sirva: un
+// recuento igual con las filas cambiadas pasaría desapercibido.
+//
+// POR QUÉ NO PUEDE DAR VERDE POR CASUALIDAD. Cada tabla se prueba con alguien
+// que sí tiene que ver filas y con alguien que no tiene que ver ninguna. Si
+// todas las políticas de una tabla negaran todo, el primero fallaría; si todas
+// dejaran pasar todo, fallaría el segundo. Y si la tabla estuviera vacía en la
+// base, la prueba lo avisa en vez de darse por aprobada.
+// ---------------------------------------------------------------------------
+
+// Qué tiene que ver cada persona en cada tabla. Está escrito acá y no leído de
+// las políticas a propósito: si saliera de la misma fuente que lo que prueba,
+// no probaría nada.
+//
+// `{p}` es el identificador de la persona que consulta.
+const PACIENTES_DEL_ASISTENTE = `
+  SELECT gp.paciente_id
+    FROM guardia_pacientes gp
+    JOIN guardias g ON g.id = gp.guardia_id
+   WHERE g.asistente_id = '{p}'`;
+
+// `NOT pendiente_conformidad` aparece en las dos consultas de Pacientes y en la
+// de Asistentes porque hay una política restrictiva que esconde a quien todavía
+// no dio su conformidad. Hoy no hay ninguno en ese estado; la condición está
+// para que la prueba siga siendo cierta el día que lo haya.
+const PACIENTES_DE_LA_FAMILIA = `
+  SELECT p.id FROM pacientes p WHERE p.familia_id = '{p}' AND NOT p.pendiente_conformidad`;
+
+const ASISTENTES_DE_LA_FAMILIA = `
+  SELECT DISTINCT g.asistente_id
+    FROM guardia_pacientes gp
+    JOIN guardias g ON g.id = gp.guardia_id
+    JOIN pacientes p ON p.id = gp.paciente_id
+   WHERE p.familia_id = '{p}' AND g.asistente_id IS NOT NULL`;
+
+const SU_PRESTADORA = (tabla) => `
+  SELECT id FROM ${tabla} WHERE id = (SELECT prestadora_id FROM usuarios WHERE id = '{p}')`;
+
+const DE_SU_PRESTADORA = (tabla) => `
+  SELECT id FROM ${tabla}
+   WHERE prestadora_id = (SELECT prestadora_id FROM usuarios WHERE id = '{p}')`;
+
+const NADA = 'SELECT NULL::uuid WHERE false';
+
+// La clave de cada fila. Casi todas se identifican por `id`; las que no, lo
+// dicen acá, y la consulta de arriba tiene que devolver la misma forma.
+const CLAVES = {
+  // El separador no puede ser `|`: es el que usa `consultarBase` para partir
+  // las columnas de cada renglón, y la clave quedaría cortada en dos.
+  configuracion_visibilidad_app: (f) => `${f.prestadora_id}~${f.clave}`,
+  configuracion_alertas_ia: (f) => f.prestadora_id,
+  configuracion_ausencia_automatica: (f) => f.prestadora_id,
+};
+
+// Las dos tablas de configuración que tienen una sola fila por Prestadora no
+// llevan columna `id`: la Prestadora es la clave.
+const POR_PRESTADORA = (tabla) => `
+  SELECT prestadora_id FROM ${tabla}
+   WHERE prestadora_id = (SELECT prestadora_id FROM usuarios WHERE id = '{p}')`;
+
+const LO_QUE_VE_CADA_UNO = [
+  ['asistentes', `SELECT id FROM asistentes WHERE id = '{p}' AND NOT pendiente_conformidad`,
+    `SELECT id FROM asistentes
+      WHERE id IN (${ASISTENTES_DE_LA_FAMILIA}) AND NOT pendiente_conformidad`],
+
+  ['pacientes',
+    `SELECT id FROM pacientes
+      WHERE id IN (${PACIENTES_DEL_ASISTENTE}) AND NOT pendiente_conformidad`,
+    PACIENTES_DE_LA_FAMILIA],
+
+  ['prestadoras', SU_PRESTADORA('prestadoras'), SU_PRESTADORA('prestadoras')],
+
+  ['certificados', `SELECT id FROM certificados WHERE asistente_id = '{p}'`,
+    `SELECT id FROM certificados WHERE asistente_id IN (${ASISTENTES_DE_LA_FAMILIA})`],
+
+  ['matriculas_asistente', `SELECT id FROM matriculas_asistente WHERE asistente_id = '{p}'`, NADA],
+
+  ['mensajes_asistente', `SELECT id FROM mensajes_asistente WHERE asistente_id = '{p}'`, NADA],
+
+  ['consentimientos_asistente', `SELECT id FROM consentimientos_asistente WHERE asistente_id = '{p}'`, NADA],
+
+  ['calificaciones_asistente', `SELECT id FROM calificaciones_asistente WHERE asistente_id = '{p}'`,
+    `SELECT id FROM calificaciones_asistente
+      WHERE familia_id = '{p}' OR paciente_id IN (${PACIENTES_DE_LA_FAMILIA})`],
+
+  ['autorizaciones_monitoreo_paciente',
+    `SELECT id FROM autorizaciones_monitoreo_paciente WHERE paciente_id IN (${PACIENTES_DEL_ASISTENTE})`,
+    `SELECT id FROM autorizaciones_monitoreo_paciente WHERE paciente_id IN (${PACIENTES_DE_LA_FAMILIA})`],
+
+  ['rangos_referencia_vitales',
+    `SELECT id FROM rangos_referencia_vitales WHERE paciente_id IN (${PACIENTES_DEL_ASISTENTE})`,
+    `SELECT id FROM rangos_referencia_vitales WHERE paciente_id IN (${PACIENTES_DE_LA_FAMILIA})`],
+
+  ['indicaciones_medicacion',
+    `SELECT id FROM indicaciones_medicacion WHERE paciente_id IN (${PACIENTES_DEL_ASISTENTE})`,
+    `SELECT id FROM indicaciones_medicacion WHERE paciente_id IN (${PACIENTES_DE_LA_FAMILIA})`],
+
+  ['configuracion_alertas_ia', POR_PRESTADORA('configuracion_alertas_ia'), NADA],
+
+  ['configuracion_ausencia_automatica', POR_PRESTADORA('configuracion_ausencia_automatica'), NADA],
+
+  ['configuracion_matricula_via_medicacion',
+    DE_SU_PRESTADORA('configuracion_matricula_via_medicacion'),
+    DE_SU_PRESTADORA('configuracion_matricula_via_medicacion')],
+
+  ['configuracion_visibilidad_app',
+    `SELECT prestadora_id || '~' || clave FROM configuracion_visibilidad_app
+      WHERE prestadora_id = (SELECT prestadora_id FROM usuarios WHERE id = '{p}')`,
+    `SELECT prestadora_id || '~' || clave FROM configuracion_visibilidad_app
+      WHERE prestadora_id = (SELECT prestadora_id FROM usuarios WHERE id = '{p}')`],
+];
+
+async function probarLasDosAplicaciones({ base, llavePublica }, sesiones, personas) {
+  console.log('\n== Las dos aplicaciones: cada persona con su propio pase ==\n');
+
+  const problemas = [];
+  const sinDatos = [];
+
+  for (const [tabla, esperadoAsistente, esperadoFamilia] of LO_QUE_VE_CADA_UNO) {
+    const clave = CLAVES[tabla] || ((f) => f.id);
+    const filasEnLaBase = Number(consultarBase(`SELECT count(*) FROM public.${tabla};`)[0][0]);
+    let algunoVeAlgo = false;
+    const detalle = [];
+
+    for (const persona of personas) {
+      const plantilla = persona.tipo === 'asistente' ? esperadoAsistente : esperadoFamilia;
+      const esperadas = new Set(
+        consultarBase(`${plantilla.replaceAll('{p}', persona.id)};`).map((f) => f[0]).filter(Boolean),
+      );
+
+      const r = await fetch(`${base}/rest/v1/${tabla}?select=*&limit=1000`, {
+        headers: { apikey: llavePublica, Authorization: `Bearer ${persona.token}` },
+      });
+      const cuerpo = r.ok ? await r.json().catch(() => []) : [];
+      const vistas = new Set(Array.isArray(cuerpo) ? cuerpo.map(clave) : []);
+
+      const deMas = [...vistas].filter((k) => !esperadas.has(k));
+      const deMenos = [...esperadas].filter((k) => !vistas.has(k));
+      if (esperadas.size) algunoVeAlgo = true;
+
+      if (deMas.length) {
+        problemas.push(`${tabla}: ${persona.nombre} ve ${deMas.length} fila(s) que no le corresponden`);
+      }
+      if (deMenos.length) {
+        problemas.push(
+          `${tabla}: ${persona.nombre} no alcanza ${deMenos.length} fila(s) que sí le corresponden` +
+          `${r.ok ? '' : ` (la consulta devolvió ${r.status})`}`,
+        );
+      }
+      detalle.push(
+        deMas.length || deMenos.length
+          ? rojo(`${persona.corto} ${vistas.size}/${esperadas.size}`)
+          : gris(`${persona.corto} ${vistas.size}/${esperadas.size}`),
+      );
+    }
+
+    const etiqueta = tabla.padEnd(38);
+    if (!filasEnLaBase) {
+      sinDatos.push(tabla);
+      console.log(`  ${etiqueta} ${gris('sin filas en la base: no se probó nada')}`);
+    } else if (!algunoVeAlgo) {
+      sinDatos.push(tabla);
+      console.log(`  ${etiqueta} ${gris('nadie tenía que ver nada: no se probó nada')}`);
+    } else {
+      console.log(`  ${etiqueta} ${detalle.join('  ')}`);
+    }
+  }
+
+  console.log(gris('\n  Cada par es filas vistas / filas que le corresponden.'));
+
+  if (sinDatos.length) {
+    // No hace fallar la prueba, pero se dice: una tabla vacía pasa siempre.
+    problemas.push(
+      `${sinDatos.length} tabla(s) sin datos con los que probar nada: ${sinDatos.join(', ')}. ` +
+      `Sembralas en supabase/seed.sql o la prueba no puede fallar ahí.`,
+    );
+  }
+  if (problemas.length) {
+    console.log(rojo(`\n  ${problemas.length} problema(s):`));
+    for (const p of problemas) console.log(rojo(`    - ${p}`));
+  } else {
+    console.log(verde('\n  Cada persona vio exactamente lo suyo, en las dos Prestadoras.'));
+  }
+  return problemas;
+}
+
+// ---------------------------------------------------------------------------
 // Segunda puerta: el motor
 // ---------------------------------------------------------------------------
 
@@ -318,7 +522,24 @@ async function principal() {
     })(),
   ]);
 
+  // Las cuatro personas de teléfono: un Asistente y una Familia de cada
+  // Prestadora. El identificador sale de la base por el correo, no escrito acá.
+  const porCorreo = (correo) =>
+    (consultarBase(`SELECT id FROM auth.users WHERE email = '${correo}';`)[0] || [null])[0];
+
+  const personas = [
+    { nombre: `el Asistente de ${PRESTADORA_A.nombre}`, corto: 'asis A', tipo: 'asistente',
+      id: porCorreo(`ana.asistente${PRESTADORA_A.sufijo}`), token: sesiones.asistenteA },
+    { nombre: `la Familia de ${PRESTADORA_A.nombre}`,   corto: 'fam A',  tipo: 'familia',
+      id: porCorreo(`familia.gomez${PRESTADORA_A.sufijo}`), token: sesiones.familiaA },
+    { nombre: `el Asistente de ${PRESTADORA_B.nombre}`, corto: 'asis B', tipo: 'asistente',
+      id: porCorreo(`asistente.sur${PRESTADORA_B.sufijo}`), token: sesiones.asistenteB },
+    { nombre: `la Familia de ${PRESTADORA_B.nombre}`,   corto: 'fam B',  tipo: 'familia',
+      id: porCorreo(`familia.rios${PRESTADORA_B.sufijo}`), token: sesiones.familiaB },
+  ];
+
   const problemas = await probarLaBase(entorno, idA, idB, sesiones);
+  problemas.push(...(await probarLasDosAplicaciones(entorno, sesiones, personas)));
   let respuestasVacias = [];
 
   if (await motorLevantado(entorno.motor)) {

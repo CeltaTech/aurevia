@@ -20,6 +20,11 @@
  * (regla 12 de CLAUDE.md §7).
  */
 
+import { horasDeGuardia } from './horarios.js';
+
+/** Un día cualquiera: sólo hace falta para poder preguntar cuándo termina el turno. */
+const UN_DIA_CUALQUIERA = '2000-01-01';
+
 /**
  * Cuántas horas dura un turno, en número (2.5 son dos horas y media).
  * Si la hora de fin es menor o igual a la de inicio, el turno cruza la medianoche.
@@ -29,15 +34,15 @@
  * resultado imposible: nadie programa un turno que dura nada. Hasta el 2026-08-21 esta
  * cuenta devolvía cero en ese caso y la del Panel devolvía veinticuatro, así que la misma
  * guardia valía dos cosas distintas según quién la mirara — y la que pagaba era la de acá.
- * La regla quedó escrita igual en los dos lados (`panel/src/lib/horarios.js`, función
- * `finDeGuardia`): fin menor o igual a inicio significa día siguiente.
+ *
+ * La regla estuvo escrita igual en los dos lados hasta el 2026-09-05, que es una copia esperando
+ * separarse. Hoy la cuenta la hace `utils/horarios.js` —copia máquina de
+ * `panel/src/lib/horarios.js`, donde la regla de la medianoche vive una sola vez para todo el
+ * producto—, y lo único propio de acá es que estas dos horas no vienen con fecha: se les presta
+ * un día cualquiera, porque cuánto dura un turno no depende de qué día sea.
  */
 export function horasEntre(horaInicio, horaFin) {
-  const [hi, mi] = horaInicio.split(':').map(Number);
-  const [hf, mf] = horaFin.split(':').map(Number);
-  let minutos = hf * 60 + mf - (hi * 60 + mi);
-  if (minutos <= 0) minutos += 24 * 60; // guardia que cruza medianoche, o de 24 horas
-  return minutos / 60;
+  return horasDeGuardia({ fecha: UN_DIA_CUALQUIERA, hora_inicio: horaInicio, hora_fin: horaFin });
 }
 
 /**

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { supabase } from '../../lib/supabaseClient';
+import { llamarApiPanel } from '../../lib/apiPanel';
 import { obtenerUbicacion } from '../../lib/ubicacion';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
@@ -91,41 +92,25 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
     actualizar({ estado: 'cancelada', cancelacion_origen: cancelacionOrigen, cancelacion_alcance: cancelacionAlcance });
   }
 
+  /* Marcar la ausencia se lo pide al motor, y no se hace acá.
+     La decisión completa —dejar la guardia en `ausente` y abrir el incidente diciendo quién se
+     quedó esperando el relevo— vive en `backend/src/utils/marcarAusente.js`, que es la misma que
+     usa la detección automática. Hasta el 2026-09-05 esta pantalla tenía su propia versión, y las
+     dos daban distinto: acá se buscaba por un solo Paciente —así que un turno que cubría a un
+     matrimonio perdía la guardia anterior del otro y se anotaba como «Ausente sin relevo previo»,
+     la alerta más grave del sistema— y las dos leían `hora_fin <= hora_inicio` como si las dos
+     horas fueran del mismo día, que es falso en la guardia de noche. El detalle está en el
+     comentario de aquel archivo. */
   async function handleMarcarAusente() {
     if (!(await confirmarDestructivo(t.guardias.detalle.confirmar_ausente))) return;
     setError(null);
     setProcesando(true);
 
-    const { error: errorUpdate } = await supabase.from('guardias').update({ estado: 'ausente' }).eq('id', guardia.id);
-    if (errorUpdate) {
+    try {
+      await llamarApiPanel(`/guardias/${guardia.id}/ausente`, { method: 'POST' });
+    } catch (e) {
       setProcesando(false);
-      setError(mensajeDeError(errorUpdate, t));
-      return;
-    }
-
-    // Busca si había un Asistente de la prestadora cubriendo justo antes, el mismo día, para
-    // este Paciente — si no hay ninguna, es el caso "Ausente sin relevo previo" del
-    // glosario de CLAUDE.md (ej. primera guardia del día) y guardia_saliente_id queda NULL.
-    const { data: candidatas } = await supabase
-      .from('guardias')
-      .select('id, hora_fin')
-      .eq('paciente_id', guardia.paciente_id)
-      .eq('fecha', guardia.fecha)
-      .neq('estado', 'cancelada')
-      .neq('id', guardia.id)
-      .lte('hora_fin', guardia.hora_inicio)
-      .order('hora_fin', { ascending: false })
-      .limit(1);
-
-    const { error: errorIncidente } = await supabase.from('incidentes_relevo').insert({
-      prestadora_id: prestadoraId,
-      guardia_saliente_id: candidatas?.[0]?.id ?? null,
-      guardia_entrante_id: guardia.id,
-      nivel_actual: 1,
-    });
-    if (errorIncidente) {
-      setProcesando(false);
-      setError(mensajeDeError(errorIncidente, t));
+      setError(mensajeDeError(e, t));
       return;
     }
 

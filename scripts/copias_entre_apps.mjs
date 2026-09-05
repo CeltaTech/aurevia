@@ -67,7 +67,11 @@ export const GRUPOS = [
   {
     que: 'las cuentas de fecha y hora de una guardia',
     original: 'panel/src/lib/horarios.js',
-    copias: ['pwa-familias/src/lib/horarios.js', 'pwa-asistentes/src/lib/horarios.js'],
+    copias: [
+      'pwa-familias/src/lib/horarios.js',
+      'pwa-asistentes/src/lib/horarios.js',
+      'backend/src/utils/horarios.js',
+    ],
   },
   {
     que: 'cuándo una guardia quedó sin cerrar',

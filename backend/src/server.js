@@ -44,6 +44,7 @@ import { appAsistentesOfertasRouter } from './routes/appAsistentesOfertas.js';
 import { panelMedicacionRouter } from './routes/panelMedicacion.js';
 import { panelMarketplaceRouter } from './routes/panelMarketplace.js';
 import { panelWhatsappRouter } from './routes/panelWhatsapp.js';
+import { panelGuardiasRouter } from './routes/panelGuardias.js';
 import { webhooksPasarelasRouter } from './routes/webhooksPasarelas.js';
 import { revisarAlertasIA } from './utils/revisarAlertasIA.js';
 import { revisarAvisosAutomaticosCese } from './utils/avisoAutomaticoCese.js';
@@ -128,6 +129,7 @@ app.use('/api/app-familias/medicacion', appFamiliasMedicacionRouter);
 app.use('/api/panel/medicacion', panelMedicacionRouter);
 app.use('/api/panel/marketplace', panelMarketplaceRouter);
 app.use('/api/panel/whatsapp', panelWhatsappRouter);
+app.use('/api/panel/guardias', panelGuardiasRouter);
 // `/api/webhooks/pasarelas` no está en esta lista a propósito: se monta más arriba, antes del
 // lector de JSON, por el motivo que explica el comentario de allá.
 

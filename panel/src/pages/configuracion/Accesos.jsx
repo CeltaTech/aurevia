@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
-import { supabase } from '../../lib/supabaseClient';
 import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion';
+import { llamarApiPanel } from '../../lib/apiPanel';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
@@ -209,12 +209,12 @@ function TabSeguridad() {
     setEstado('cargando');
     setError(null);
     try {
-      const { data } = await supabase.auth.getSession();
-      const respuesta = await fetch(`${API_URL}/api/panel/configuracion-plataforma/mfa`, {
-        headers: { Authorization: `Bearer ${data.session?.access_token}` },
-      });
-      const resultado = await respuesta.json();
-      if (!respuesta.ok) throw new Error(resultado.error);
+      // Esta pantalla llamaba a `fetch` con una constante `API_URL` que en este archivo nunca
+      // se declaró. La excepción caía en el `catch` de acá abajo y se mostraba como un error
+      // cualquiera, así que la solapa de Seguridad no cargaba ni guardaba nunca — y desde
+      // afuera parecía un problema del motor. Ahora va por el único camino del Panel hacia el
+      // motor (`lib/apiPanel.js`), que es también el que trae la dirección.
+      const resultado = await llamarApiPanel('/configuracion-plataforma/mfa');
       setMfaObligatorio(resultado.configuracion.mfa_admin_obligatorio);
       setEstado('listo');
     } catch (err) {
@@ -230,17 +230,10 @@ function TabSeguridad() {
   async function aplicarCambio(nuevoValor) {
     setGuardando(true);
     try {
-      const { data } = await supabase.auth.getSession();
-      const respuesta = await fetch(`${API_URL}/api/panel/configuracion-plataforma/mfa`, {
+      await llamarApiPanel('/configuracion-plataforma/mfa', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${data.session?.access_token}`,
-        },
         body: JSON.stringify({ mfa_admin_obligatorio: nuevoValor }),
       });
-      const resultado = await respuesta.json();
-      if (!respuesta.ok) throw new Error(resultado.error);
       setMfaObligatorio(nuevoValor);
     } catch (err) {
       setError(mensajeDeError(err, t));

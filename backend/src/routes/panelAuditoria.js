@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
+import { esAdminOSuperior } from '../utils/roles.js';
 
 // Ítem G del pendiente #30 — lectura del log de auditoría de las sesiones de soporte técnico
 // (tabla auditoria_soporte_tecnico). El backend usa service role, así que el filtro por rol se
@@ -12,7 +13,7 @@ export const panelAuditoriaRouter = Router();
 panelAuditoriaRouter.get('/', requiereRolPanel, async (req, res) => {
   const { rol, prestadoraId } = req.usuarioPanel;
 
-  if (!['superadmin', 'admin_prestadora'].includes(rol)) {
+  if (!esAdminOSuperior(rol)) {
     return res.status(403).json({ error: 'Sin permiso para ver el log de auditoría' });
   }
 

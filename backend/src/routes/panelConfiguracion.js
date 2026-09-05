@@ -3,6 +3,7 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { supabase } from '../db/connection.js';
 import { accionesDePermisos } from '../utils/permisos.js';
+import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { avisoDelCatalogo, mezclarAvisosConCatalogo, VALORES_POR_DEFECTO_AVISO } from '../utils/catalogoAvisos.js';
 import { cosaDelCatalogo, mezclarVisibilidadConCatalogo } from '../utils/catalogoVisibilidad.js';
 import { LIMITES_ALERTAS_IA, VALORES_POR_DEFECTO_ALERTAS_IA } from '../utils/revisarAlertasIA.js';
@@ -14,16 +15,11 @@ export const panelConfiguracionRouter = Router();
 
 // Módulo 8 (Configuración) es a nivel de toda la empresa — Coordinador no entra acá,
 // solo Admin/Superadmin (misma restricción que precios y escalas legales).
-function requiereAdminOSuperior(req, res, next) {
-  if (!['admin_prestadora', 'superadmin'].includes(req.usuarioPanel?.rol)) {
-    return res.status(403).json({ error: 'Solo Admin o Superadmin puede editar la configuración' });
-  }
-  next();
-}
+const soloAdministracion = exigirAdministracion('Solo Admin o Superadmin puede editar la configuración');
 
 // El corte por "no hay Organización activa" lo pone exigirOrganizacionActiva, compartido con el
 // resto de los routers (CLAUDE.md §7.12) — antes esta misma condición estaba escrita acá a mano.
-panelConfiguracionRouter.use(requiereRolPanel, requiereAdminOSuperior, exigirOrganizacionActiva);
+panelConfiguracionRouter.use(requiereRolPanel, soloAdministracion, exigirOrganizacionActiva);
 
 // --- Datos de la prestadora (configuracion_prestadora, ver schema_multitenant_04.sql —
 //     reemplaza el singleton configuracion_empresa: cada prestadora tiene su propia fila) ---
@@ -859,7 +855,7 @@ panelConfiguracionRouter.patch('/politica-verificacion', async (req, res) => {
 
 // --- Modalidades de negocio activas (PRD_08_Dashboard_Modalidades.md, aprobado 2026-07-24,
 //     primer corte "Base: tabla + menú + onboarding"). Activar/desactivar es exclusivo de
-//     admin_prestadora (este router ya lo exige vía requiereAdminOSuperior más arriba); la
+//     admin_prestadora (este router ya lo exige vía soloAdministracion más arriba); la
 //     lectura para armar el menú de cualquier rol vive en panelCuentas.js /modalidades-activas
 //     (misma tabla, misma fuente única de verdad — CLAUDE.md §7 regla 12).
 //     'subcontratacion' todavía no se ofrece acá: no tiene menú ni pantallas (PRD_08 §3.8),

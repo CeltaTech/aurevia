@@ -4,6 +4,7 @@ import { supabase } from '../db/connection.js';
 import { requierePermiso } from '../utils/permisos.js';
 import { horasEntre } from '../utils/horasDeGuardia.js';
 import { resolverEscalasVigentes } from '../utils/escalasLegales.js';
+import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 
 /* Lo que se le liquida a cada Asistente en un mes, guardado.
    ==========================================================================
@@ -42,7 +43,6 @@ const ESTADO_HECHA = 'completada';
 // del Asistente; escribir, además, ser de la administración. Es la misma pareja de
 // condiciones que las reglas de acceso de la base aplican a estas tres tablas.
 const PERMISO_LECTURA = 'ver_pagos_asistente';
-const ROLES_ADMINISTRACION = ['admin_prestadora', 'superadmin'];
 
 const SIGNOS = ['suma', 'resta'];
 const UNIDADES_CONCEPTO = ['monto_fijo_mensual', 'porcentaje', 'monto_por_hora'];
@@ -67,12 +67,7 @@ async function traerPaginado(armarConsulta) {
 // Tocar la plata de una persona es de la administración de la Prestadora, no de cualquiera
 // que pueda mirarla. Se contesta con el mismo texto que el permiso, porque desde afuera es
 // la misma respuesta: esta acción no está habilitada.
-function soloAdministracion(req, res, next) {
-  if (!ROLES_ADMINISTRACION.includes(req.usuarioPanel?.rol)) {
-    return res.status(403).json({ error: 'La Prestadora no habilitó esta acción' });
-  }
-  next();
-}
+const soloAdministracion = exigirAdministracion('La Prestadora no habilitó esta acción');
 
 // ---------------------------------------------------------------------------------------
 // Las cuentas, aparte de las rutas

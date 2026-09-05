@@ -1,5 +1,6 @@
 import { supabase } from '../db/connection.js';
 import { elRolUsaSegundoFactor, elSegundoFactorEsObligatorio } from '../utils/reglaMfaObligatorio.js';
+import { ROLES_PANEL } from '../utils/roles.js';
 
 // Ítem D del pendiente #30: tope de 5 min de
 // inactividad dentro de la sesión de soporte técnico — se corta en silencio, sin aviso previo,
@@ -54,7 +55,7 @@ export async function requiereRolPanel(req, res, next) {
     .eq('id', userData.user.id)
     .single();
 
-  if (errorPerfil || !perfil || !['admin_prestadora', 'coordinador', 'superadmin'].includes(perfil.rol)) {
+  if (errorPerfil || !perfil || !ROLES_PANEL.includes(perfil.rol)) {
     return res.status(403).json({ error: 'Rol sin permiso' });
   }
 

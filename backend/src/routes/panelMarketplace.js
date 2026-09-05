@@ -8,22 +8,35 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 import { proveedoresDisponibles, obtenerAdaptador, requiereSecretoFirma } from '../pasarelas/index.js';
 import { tokenQrCobroValido } from '../utils/qrCobroEfectivo.js';
+import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 
 export const panelMarketplaceRouter = Router();
 
 panelMarketplaceRouter.use(requiereRolPanel);
 
-function requiereAdminOSuperior(req, res, next) {
-  if (!['admin_prestadora', 'coordinador', 'superadmin'].includes(req.usuarioPanel?.rol)) {
-    return res.status(403).json({ error: 'Rol sin permiso' });
-  }
+// Todo lo de marketplace pasa adentro de una Prestadora. Superadmin sin sesión de soporte
+// abierta no está parado en ninguna, y entonces no hay sobre qué operar.
+function exigirPrestadoraActiva(req, res, next) {
   if (!req.usuarioPanel.prestadoraId) {
     return res.status(400).json({ error: 'Hace falta entrar a una prestadora antes de operar sobre marketplace' });
   }
   next();
 }
 
-panelMarketplaceRouter.use(requiereAdminOSuperior);
+panelMarketplaceRouter.use(exigirPrestadoraActiva);
+
+// La plata del Marketplace es de la administración de la Prestadora, no del Coordinador
+// (Desarrollador, 2026-09-04: «absolutamente no puede ni debe»). Alcanza a las dos mitades:
+// conectar y desconectar pasarelas de pago —que es cargar credenciales de cobro—, y todo lo
+// que sea un cobro: la lista de suscripciones con sus importes, el historial de cobros, la
+// carga de efectivo en mano y el canje del QR. Lo que sí queda para el Coordinador es lo que
+// no es plata: las calificaciones y la auditoría de advertencias legales.
+//
+// Hasta el 2026-09-04 este archivo tenía una función llamada `requiereAdminOSuperior` que
+// dejaba pasar al Coordinador; las otras dos del motor, con el mismo nombre, no. Ahora el
+// control se escribe una sola vez (middleware/exigirAdministracion.js) y lo único que se
+// decide acá es a qué rutas se le pide.
+const soloAdministracion = exigirAdministracion('Rol sin permiso');
 
 // ============================================================================
 // Pasarela de pago — la Prestadora activa uno o varios de los 6 rieles, cada uno con su
@@ -31,7 +44,7 @@ panelMarketplaceRouter.use(requiereAdminOSuperior);
 // nunca se vuelve a mostrar una vez guardado, mismo criterio que WhatsApp.
 // ============================================================================
 
-panelMarketplaceRouter.get('/pasarela', async (req, res) => {
+panelMarketplaceRouter.get('/pasarela', soloAdministracion, async (req, res) => {
   const { data, error } = await supabase
     .from('prestadora_pasarela_pago')
     .select('proveedor, estado_conexion, conectada_en, updated_at')
@@ -71,7 +84,7 @@ panelMarketplaceRouter.get('/pasarela', async (req, res) => {
 // queda para el caso que sí es aparte: cambiar el secreto de una pasarela ya conectada,
 // porque se rota cada tanto sin tocar la credencial. Se guarda en la misma caja fuerte que
 // la credencial y no se vuelve a mostrar.
-panelMarketplaceRouter.put('/pasarela/:proveedor/secreto-firma', async (req, res) => {
+panelMarketplaceRouter.put('/pasarela/:proveedor/secreto-firma', soloAdministracion, async (req, res) => {
   const { proveedor } = req.params;
   const { secretoFirma } = req.body || {};
 
@@ -92,7 +105,7 @@ panelMarketplaceRouter.put('/pasarela/:proveedor/secreto-firma', async (req, res
   res.json({ ok: true });
 });
 
-panelMarketplaceRouter.patch('/pasarela/:proveedor', async (req, res) => {
+panelMarketplaceRouter.patch('/pasarela/:proveedor', soloAdministracion, async (req, res) => {
   const { proveedor } = req.params;
   const { activo, credencial, secretoFirma } = req.body || {};
 
@@ -157,7 +170,7 @@ panelMarketplaceRouter.patch('/pasarela/:proveedor', async (req, res) => {
 // embebido): familia_id apunta a familias.id, que a su vez comparte id con usuarios.id, así
 // que el nombre real vive en usuarios — resolverlo acá evita mostrar UUID crudo en el Panel
 // (CLAUDE.md §7 regla 7, "sin datos crudos").
-panelMarketplaceRouter.get('/suscripciones', async (req, res) => {
+panelMarketplaceRouter.get('/suscripciones', soloAdministracion, async (req, res) => {
   const { data, error } = await supabase
     .from('suscripciones_marketplace')
     .select('id, familia_id, paciente_id, asistente_id, estado, monto_mensual, trial_fin, proximo_cobro, cancelada_en, created_at')
@@ -189,7 +202,7 @@ panelMarketplaceRouter.get('/suscripciones', async (req, res) => {
   res.json({ suscripciones });
 });
 
-panelMarketplaceRouter.get('/suscripciones/:id/cobros', async (req, res) => {
+panelMarketplaceRouter.get('/suscripciones/:id/cobros', soloAdministracion, async (req, res) => {
   const { data, error } = await supabase
     .from('cobros_marketplace')
     .select('id, medio, monto, periodo, estado_cobro, referencia_externa, fecha_cobro, registrado_por, created_at')
@@ -203,7 +216,7 @@ panelMarketplaceRouter.get('/suscripciones/:id/cobros', async (req, res) => {
 // Carga manual de efectivo en mano — mitigante central del riesgo de suspensión indebida
 // por cobro no reflejado a tiempo en el sistema (docs/PENDIENTES.md #85). fecha_cobro es la
 // fecha real del hecho, nunca la de carga (CLAUDE.md §3).
-panelMarketplaceRouter.post('/cobros/efectivo-manual', async (req, res) => {
+panelMarketplaceRouter.post('/cobros/efectivo-manual', soloAdministracion, async (req, res) => {
   const { suscripcion_id: suscripcionId, monto, periodo, fecha_cobro: fechaCobro } = req.body || {};
   if (!suscripcionId || !monto || !periodo || !fechaCobro) {
     return res.status(400).json({ error: 'Faltan suscripcion_id, monto, periodo o fecha_cobro' });
@@ -236,7 +249,7 @@ panelMarketplaceRouter.post('/cobros/efectivo-manual', async (req, res) => {
 
 // Canje del QR de cobro en efectivo escaneado por el cobrador — validación de firma/
 // vencimiento/uso único acá, nunca como UPDATE directo desde la PWA (CLAUDE.md §6).
-panelMarketplaceRouter.post('/qr-cobro/canjear', async (req, res) => {
+panelMarketplaceRouter.post('/qr-cobro/canjear', soloAdministracion, async (req, res) => {
   const { token } = req.body || {};
   if (!token || !tokenQrCobroValido(token)) {
     return res.status(400).json({ error: 'QR inválido o vencido' });

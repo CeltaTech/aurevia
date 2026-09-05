@@ -3,35 +3,33 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { acotarAUsuariosDelPanel } from '../middleware/alcancePrestadora.js';
 import { supabase } from '../db/connection.js';
 import { crearCuentaConPerfil, borrarCuenta } from '../utils/cuentasPanel.js';
+import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
+import { ROLES_PANEL } from '../utils/roles.js';
 
 export const panelUsuariosRouter = Router();
 
 // Ver y gestionar otros usuarios del panel es sensible (alta/baja de acceso). Admin gestiona
 // Coordinadores. Superadmin además gestiona cuentas de Admin y de otros Superadmin (acceso
 // técnico del Módulo 8) — ver CLAUDE.md glosario y docs/CONTEXT.md.
-function requiereAdminOSuperior(req, res, next) {
-  if (!['admin_prestadora', 'superadmin'].includes(req.usuarioPanel?.rol)) {
-    return res.status(403).json({ error: 'Solo Admin o Superadmin puede gestionar usuarios del panel' });
-  }
-  // Ojo: acá no se exige prestadoraId, y es a propósito. Un Superadmin sin Organización activa
-  // igual tiene algo que gestionar: las cuentas de su propio equipo técnico, que no pertenecen a
-  // ninguna Prestadora. De eso se ocupa acotarAUsuariosDelPanel(). Lo que ya NO pasa (pendiente
-  // #98, cerrado el 2026-07-28) es que Superadmin vea las cuentas de Prestadoras en las que no
-  // entró: para eso hay que abrir una sesión de soporte técnico, y entonces queda auditado.
-  next();
-}
+//
+// Ojo: acá no se exige prestadoraId, y es a propósito. Un Superadmin sin Organización activa
+// igual tiene algo que gestionar: las cuentas de su propio equipo técnico, que no pertenecen a
+// ninguna Prestadora. De eso se ocupa acotarAUsuariosDelPanel(). Lo que ya NO pasa (pendiente
+// #98, cerrado el 2026-07-28) es que Superadmin vea las cuentas de Prestadoras en las que no
+// entró: para eso hay que abrir una sesión de soporte técnico, y entonces queda auditado.
+const soloAdministracion = exigirAdministracion('Solo Admin o Superadmin puede gestionar usuarios del panel');
 
 // Roles que el solicitante tiene permitido crear/editar/borrar.
 function rolesGestionables(rolSolicitante) {
-  if (rolSolicitante === 'superadmin') return ['admin_prestadora', 'coordinador', 'superadmin'];
+  if (rolSolicitante === 'superadmin') return ROLES_PANEL;
   return ['coordinador'];
 }
 
-panelUsuariosRouter.get('/', requiereRolPanel, requiereAdminOSuperior, async (req, res) => {
+panelUsuariosRouter.get('/', requiereRolPanel, soloAdministracion, async (req, res) => {
   let query = supabase
     .from('usuarios')
     .select('id, rol, nombre, telefono, zonas, created_at')
-    .in('rol', ['admin_prestadora', 'coordinador', 'superadmin'])
+    .in('rol', ROLES_PANEL)
     .order('created_at', { ascending: false });
 
   query = acotarAUsuariosDelPanel(query, req.usuarioPanel);
@@ -42,7 +40,7 @@ panelUsuariosRouter.get('/', requiereRolPanel, requiereAdminOSuperior, async (re
   res.json({ usuarios: data });
 });
 
-panelUsuariosRouter.post('/', requiereRolPanel, requiereAdminOSuperior, async (req, res) => {
+panelUsuariosRouter.post('/', requiereRolPanel, soloAdministracion, async (req, res) => {
   const { email, nombre, telefono, zonas, rol } = req.body;
   if (!email || !nombre) {
     return res.status(400).json({ error: 'Faltan email o nombre' });
@@ -88,7 +86,7 @@ panelUsuariosRouter.post('/', requiereRolPanel, requiereAdminOSuperior, async (r
   }
 });
 
-panelUsuariosRouter.patch('/:id', requiereRolPanel, requiereAdminOSuperior, async (req, res) => {
+panelUsuariosRouter.patch('/:id', requiereRolPanel, soloAdministracion, async (req, res) => {
   const { nombre, telefono, zonas } = req.body;
   let query = supabase
     .from('usuarios')
@@ -111,7 +109,7 @@ panelUsuariosRouter.patch('/:id', requiereRolPanel, requiereAdminOSuperior, asyn
   res.json({ ok: true });
 });
 
-panelUsuariosRouter.delete('/:id', requiereRolPanel, requiereAdminOSuperior, async (req, res) => {
+panelUsuariosRouter.delete('/:id', requiereRolPanel, soloAdministracion, async (req, res) => {
   if (req.params.id === req.usuarioPanel.id) {
     return res.status(400).json({ error: 'La cuenta propia no se da de baja desde acá' });
   }

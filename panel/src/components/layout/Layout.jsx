@@ -113,7 +113,10 @@ export function Layout() {
       titulo: t.nav.grupo_clientes,
       enlaces: [
         { a: '/familias', texto: t.nav.familias, ver: directa },
-        { a: '/marketplace/familias', texto: t.nav.marketplace_familias, ver: marketplace },
+        // Esta pantalla es la plata del Marketplace —suscripciones, importes, cobros en
+        // efectivo y canje del QR—, así que lleva el mismo candado que las de dinero de la
+        // modalidad directa y no lo ve el Coordinador (Desarrollador, 2026-09-04).
+        { a: '/marketplace/familias', texto: t.nav.marketplace_familias, ver: marketplace && esAdmin },
         { a: '/servicios', texto: t.nav.servicios, ver: true },
         { a: '/solicitudes', texto: t.nav.solicitudes, ver: hayPlantel },
       ],
@@ -162,7 +165,7 @@ export function Layout() {
       enlaces: [
         { a: '/configuracion', texto: t.nav.configuracion, ver: esAdmin },
         { a: '/usuarios-panel', texto: t.nav.usuarios_panel, ver: esAdmin },
-        { a: '/auditoria', texto: t.nav.auditoria, ver: ['admin_prestadora', 'superadmin'].includes(usuario?.rol) },
+        { a: '/auditoria', texto: t.nav.auditoria, ver: esAdmin },
         { a: '/marketplace/auditoria-legal', texto: t.nav.marketplace_auditoria_legal, ver: marketplace },
         { a: '/importacion', texto: t.nav.importacion, ver: esAdmin || puede('importar_datos_masivos') },
         { a: '/prestadoras', texto: t.nav.prestadoras, ver: esSuperadmin },

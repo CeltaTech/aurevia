@@ -17,17 +17,13 @@ import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { coordenadasDeDomicilio } from '../geocodificacion/index.js';
 import { reenviarActivacionCuenta } from '../utils/activacionCuenta.js';
 import { requierePermiso, permisosEfectivos } from '../utils/permisos.js';
+import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 
 export const panelCuentasRouter = Router();
 
 // Crear una cuenta real (Auth + perfil) es una acción sensible y difícil de revertir —
 // se restringe a Admin/Superadmin, a diferencia del resto del panel que también admite Coordinador.
-function requiereAdmin(req, res, next) {
-  if (!['admin_prestadora', 'superadmin'].includes(req.usuarioPanel?.rol)) {
-    return res.status(403).json({ error: 'Solo Admin puede crear cuentas' });
-  }
-  next();
-}
+const soloAdministracion = exigirAdministracion('Solo Admin puede crear cuentas');
 
 // Alta desde Postulación/Solicitud (rutas /familia y /asistente, más abajo) se queda
 // admin-only sin cambios — el motor de permisos de la Fase 2 (docs/PENDIENTES.md, plan
@@ -63,7 +59,7 @@ panelCuentasRouter.get('/modalidades-activas', requiereRolPanel, async (req, res
   res.json({ modalidades: (data || []).map((f) => f.modalidad) });
 });
 
-panelCuentasRouter.post('/familia', requiereRolPanel, exigirOrganizacionActiva, requiereAdmin, async (req, res) => {
+panelCuentasRouter.post('/familia', requiereRolPanel, exigirOrganizacionActiva, soloAdministracion, async (req, res) => {
   const { solicitudId } = req.body;
   if (!solicitudId) {
     return res.status(400).json({ error: 'Falta solicitudId' });
@@ -162,7 +158,7 @@ panelCuentasRouter.post('/familia-directa', requiereRolPanel, exigirOrganizacion
 // de incorporación en etapas_incorporacion_asistente, ya no hay 5 etapas fijas para todas).
 // La primera etapa (menor "orden") queda aprobada de entrada porque ya se cumplió: es la
 // postulación misma, que ya pasó.
-panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva, requiereAdmin, async (req, res) => {
+panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva, soloAdministracion, async (req, res) => {
   // `tipo_asistente_id` es obligatorio: el tipo decide si a esta persona se le va a exigir
   // Matrícula vigente para poder atender. Lo elige quien aprueba, mirando la postulación —
   // no se adivina a partir del texto que la persona escribió en el formulario público.
@@ -348,7 +344,7 @@ panelCuentasRouter.delete('/familia/:familiaId/circulo/:usuarioId', requiereRolP
 // simplemente extraviado. Solo para Familia/Asistente/Círculo (mismo alcance que el envío
 // automático de crearCuentaConPerfil); Coordinador/Admin/Superadmin siguen con el flujo
 // manual de panelUsuarios.js y no tienen esta ruta disponible.
-panelCuentasRouter.post('/:usuarioId/reenviar-activacion', requiereRolPanel, exigirOrganizacionActiva, requiereAdmin, async (req, res) => {
+panelCuentasRouter.post('/:usuarioId/reenviar-activacion', requiereRolPanel, exigirOrganizacionActiva, soloAdministracion, async (req, res) => {
   let queryUsuario = supabase.from('usuarios').select('id, rol, prestadora_id').eq('id', req.params.usuarioId);
   queryUsuario = acotarAPrestadora(queryUsuario, req.usuarioPanel);
   const { data: usuario } = await queryUsuario.maybeSingle();

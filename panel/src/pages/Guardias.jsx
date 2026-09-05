@@ -13,7 +13,7 @@ import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../li
 import { reasignarGuardia } from '../lib/reasignarGuardia';
 import { mensajeDeError } from '../lib/errores';
 
-const ESTADOS = ['programada', 'activa', 'completada', 'cancelada', 'ausente'];
+const ESTADOS = ['programada', 'activa', 'completada', 'cancelada', 'ausente', 'pausada'];
 const HORAS_ALERTA_CHECKIN_SIN_CHECKOUT = 2;
 
 function hoyISO() {

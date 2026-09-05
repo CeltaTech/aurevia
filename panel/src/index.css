@@ -1340,6 +1340,7 @@ h2 {
 .guardia-completada { border-left: 4px solid var(--texto-secundario); }
 .guardia-cancelada  { border-left: 4px solid var(--rojo-peligro); }
 .guardia-ausente    { border-left: 4px solid var(--naranja-alerta); }
+.guardia-pausada    { border-left: 4px solid var(--naranja-alerta); }
 
 .panel-guardia-alerta {
   color: var(--tono-critico-texto);

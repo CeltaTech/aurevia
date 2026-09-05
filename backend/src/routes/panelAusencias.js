@@ -4,6 +4,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { supabase } from '../db/connection.js';
+import { extensionDeArchivo } from '../utils/archivosSubidos.js';
 
 export const panelAusenciasRouter = Router();
 
@@ -60,7 +61,7 @@ panelAusenciasRouter.post(
       return res.status(404).json({ error: 'Ausencia no encontrada' });
     }
 
-    const extension = req.file.mimetype === 'application/pdf' ? 'pdf' : req.file.mimetype === 'image/png' ? 'png' : 'jpg';
+    const extension = extensionDeArchivo(req.file.mimetype);
     const ruta = `${ausencia.prestadora_id}/${ausencia.id}/certificado.${extension}`;
 
     const { error: errorSubida } = await supabase.storage

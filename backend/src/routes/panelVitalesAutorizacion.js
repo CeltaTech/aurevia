@@ -3,6 +3,7 @@ import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { supabase } from '../db/connection.js';
+import { extensionDeArchivo } from '../utils/archivosSubidos.js';
 
 export const panelVitalesAutorizacionRouter = Router();
 
@@ -53,7 +54,7 @@ panelVitalesAutorizacionRouter.post(
       return res.status(404).json({ error: 'Paciente no encontrado' });
     }
 
-    const extension = req.file.mimetype === 'application/pdf' ? 'pdf' : req.file.mimetype === 'image/png' ? 'png' : 'jpg';
+    const extension = extensionDeArchivo(req.file.mimetype);
     const ruta = `${paciente.prestadora_id}/${paciente.id}/autorizacion-${Date.now()}.${extension}`;
 
     const { error } = await supabase.storage

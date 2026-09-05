@@ -3,6 +3,7 @@ import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 import { tipoMatriculaRequerida, hayAsistenteAsignadoConMatricula } from '../utils/medicacionIndicaciones.js';
+import { extensionDeArchivo, rutaDeMatriculaNueva } from '../utils/archivosSubidos.js';
 
 // Cierra pendiente #62 (docs/PENDIENTES.md): cola de revisión de indicaciones de
 // medicación solicitadas por la Familia (appFamiliasMedicacion.js). Aceptar/rechazar nunca
@@ -135,8 +136,7 @@ panelMedicacionRouter.post(
       .maybeSingle();
     if (!asistente) return res.status(404).json({ error: 'Asistente no encontrado' });
 
-    const extension = req.file.mimetype === 'application/pdf' ? 'pdf' : req.file.mimetype === 'image/png' ? 'png' : 'jpg';
-    const ruta = `${asistente.prestadora_id}/matriculas/${asistente.id}/matricula-${Date.now()}.${extension}`;
+    const ruta = rutaDeMatriculaNueva(asistente.prestadora_id, asistente.id, extensionDeArchivo(req.file.mimetype));
 
     const { error } = await supabase.storage
       .from(BUCKET)

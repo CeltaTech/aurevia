@@ -3,6 +3,7 @@ import multer from 'multer';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
 import { supabase } from '../db/connection.js';
 import { exigeVisible } from '../utils/visibilidadPrestadora.js';
+import { esRutaDeMatriculaDe, extensionDeArchivo, rutaDeMatriculaNueva } from '../utils/archivosSubidos.js';
 
 // ============================================================================
 // La Matrícula, vista desde el teléfono del Asistente.
@@ -141,9 +142,7 @@ appAsistentesMatriculaRouter.post(
 
     let archivoUrl = null;
     if (req.file) {
-      const extension =
-        req.file.mimetype === 'application/pdf' ? 'pdf' : req.file.mimetype === 'image/png' ? 'png' : 'jpg';
-      const ruta = `${asistente.prestadora_id}/matriculas/${asistente.id}/matricula-${Date.now()}.${extension}`;
+      const ruta = rutaDeMatriculaNueva(asistente.prestadora_id, asistente.id, extensionDeArchivo(req.file.mimetype));
       const { error: errorSubida } = await supabase.storage
         .from(BUCKET)
         .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
@@ -176,8 +175,11 @@ appAsistentesMatriculaRouter.post(
 // ---------------------------------------------------------------------------
 
 appAsistentesMatriculaRouter.get('/archivo-url', requiereRolAsistente, async (req, res) => {
+  // Quién puede ver qué archivo lo decide `utils/archivosSubidos.js`, que es el mismo archivo
+  // que arma la ruta al subirlo. Separadas, la comprobación y la construcción se despegan sin
+  // que nadie lo note, y lo que queda abierto es un enlace firmado a un archivo ajeno.
   const ruta = req.query.ruta;
-  if (typeof ruta !== 'string' || !ruta.includes(`/matriculas/${req.usuarioAsistente.id}/`)) {
+  if (!esRutaDeMatriculaDe(ruta, req.usuarioAsistente.prestadoraId, req.usuarioAsistente.id)) {
     return res.status(400).json({ error: 'Ruta de archivo inválida' });
   }
 

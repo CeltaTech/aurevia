@@ -47,14 +47,6 @@ export function claveTextoCobertura(guardia) {
 }
 
 /**
- * Clase CSS del sistema de diseño para pintar el estado de cobertura.
- * Los colores viven en index.css; acá solo se elige cuál.
- */
-export function claseCobertura(guardia) {
-  return `panel-cobertura-${coberturaDeGuardia(guardia)}`;
-}
-
-/**
  * Identificador de la fila de la grilla a la que pertenece la guardia.
  *
  * La grilla agrupa por Asistente. Las guardias sin cubrir no tienen a quién agruparse, así

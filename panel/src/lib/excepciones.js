@@ -24,7 +24,7 @@
 // pueden contestar mirando la guardia sola, así que se resuelven con dos conjuntos que la
 // pantalla arma una vez y pasa en `ctx`. La cuenta sigue estando escrita una sola vez.
 
-import { SITUACION, situacionDeGuardia } from './semaforoGuardia';
+import { SITUACION, UMBRALES, situacionDeGuardia } from './semaforoGuardia';
 
 /**
  * Lo que hay que pasarle a `aplica`. Todo es opcional: si falta un dato, la excepción que lo
@@ -62,7 +62,10 @@ const conjunto = (c) => (c instanceof Set ? c : new Set());
  *   id            → la clave técnica; también es lo que viaja en la URL del filtro.
  *   claveEtiqueta → dónde está su nombre en los tres idiomas.
  *   claveAyuda    → dónde está la explicación de una línea.
- *   parametros    → qué valores necesita ese texto (hoy solo "papeles" necesita `{dias}`).
+ *   parametros    → qué valores necesita ese texto. Los números que aparecen en una explicación
+ *                   salen siempre de acá y nunca escritos adentro de la traducción: si el texto
+ *                   dijera "dos horas" por su cuenta, el día que ese umbral cambie la frase
+ *                   seguiría diciendo lo de antes mientras el contador ya cuenta otra cosa.
  *   aplica        → la única definición de "esta guardia cae acá". Cuenta y filtra.
  *   esCritica     → si el contador se pinta rojo. Rojo no es "hay muchas": es "hay una que
  *                   ya se pasó del punto en que se podía resolver con tiempo".
@@ -112,7 +115,10 @@ export const EXCEPCIONES = [
     id: 'sin_cerrar',
     claveEtiqueta: 'exc_sin_cerrar',
     claveAyuda: 'exc_sin_cerrar_ayuda',
-    parametros: () => ({}),
+    // Cuántas horas son "más de" lo dice `semaforoGuardia.js`, no el texto: si el número
+    // viviera escrito en las tres traducciones, el día que una Prestadora lo cambie la
+    // explicación seguiría diciendo dos horas mientras el contador cuenta otra cosa.
+    parametros: (ctx) => ({ horas: { ...UMBRALES, ...(ctx?.umbrales ?? {}) }.horas_para_cerrar }),
     aplica: (g, ctx) => situacionDeGuardia(g, ctx) === SITUACION.SIN_CERRAR,
     // Rojo: una salida sin marcar es una guardia que no se puede liquidar y, muchas veces,
     // alguien que sigue en la casa sin que el sistema lo sepa.

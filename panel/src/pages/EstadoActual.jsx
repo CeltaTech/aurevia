@@ -12,7 +12,7 @@ import { GuardiaAcciones } from './guardias/GuardiaAcciones';
 import { filtrarPorExcepcion } from '../lib/excepciones';
 import { estaSinCubrir } from '../lib/cobertura';
 import { reasignarGuardia } from '../lib/reasignarGuardia';
-import { cambiarPacienteDeGuardia } from '../lib/cambiarPacienteDeGuardia';
+import { moverGuardia } from '../lib/moverGuardia';
 import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../lib/pacientesDeGuardia';
 import { correrHora, hoyISO, sumarDias } from '../lib/horarios';
 import { COLUMNAS_ESTADO_MATRICULA } from '../lib/matricula';
@@ -287,47 +287,18 @@ export function EstadoActual() {
     cargar();
   }
 
-  async function moverGuardia({ guardiaId, fila, filaOrigen, fecha, vista: vistaDelMovimiento, horaInicio, horaFin }) {
+  // Lo que hay que hacer al soltar una guardia en otra celda vive en `lib/moverGuardia.js`, no
+  // acá: la pantalla de Guardias usa la misma grilla y no puede haber dos versiones de esta
+  // operación (regla del punto único de verdad, CeltaTech §8). La vista viaja con el
+  // movimiento y no se lee del estado de esta pantalla, porque la grilla puede estar mostrando
+  // otra cosa de la que esta pantalla cree si nadie la controla.
+  async function alMoverGuardia({ guardiaId, ...movimiento }) {
     const g = guardias.find((x) => x.id === guardiaId);
     if (!g) return;
 
-    // La vista viene con el movimiento, no se lee del estado de esta pantalla: la grilla
-    // puede estar mostrando otra cosa de la que esta pantalla cree si nadie la controla, y
-    // confundir Asistente con Paciente acá guardaría la guardia en la fila equivocada.
-    const porPaciente = (vistaDelMovimiento ?? vista) !== 'asistente';
-
-    /* Mover una guardia entre filas de Pacientes no es escribir una columna. Un turno puede
-       cubrir a varias personas, así que sacarlo de una fila y ponerlo en otra toca la lista de
-       ese turno y deja a los demás donde estaban. Toda esa cuenta vive en un solo lugar
-       (regla 12 de CLAUDE.md §7), y esta pantalla solo la llama. */
-    if (porPaciente) {
-      const { error: falla } = await cambiarPacienteDeGuardia(g, filaOrigen, fila, t);
-      if (falla) {
-        setError(falla);
-        return;
-      }
-    }
-
-    const cambios = { fecha };
-    if (!porPaciente) cambios.asistente_id = fila;
-
-    // Solo la vista de línea de tiempo manda horas: ahí la posición horizontal ES la hora.
-    // En las otras, mover una guardia de una fila a otra no le toca el horario. Las dos
-    // horas vienen ya calculadas por la grilla, que es la única que sabe cuánto duraba.
-    if (horaInicio && horaFin) {
-      cambios.hora_inicio = horaInicio;
-      cambios.hora_fin = horaFin;
-    }
-
-    if (cambios.asistente_id && g.ofrecida_at) {
-      cambios.ofrecida_at = null;
-      cambios.ofrecida_por = null;
-      cambios.oferta_limite_at = null;
-    }
-
-    const { error: falla } = await supabase.from('guardias').update(cambios).eq('id', guardiaId);
+    const { error: falla } = await moverGuardia(g, movimiento, t);
     if (falla) {
-      setError(mensajeDeError(falla, t));
+      setError(falla);
       return;
     }
     cargar();
@@ -431,7 +402,7 @@ export function EstadoActual() {
             seleccionadas={seleccionadas}
             onAlternarSeleccion={alternarSeleccion}
             onAbrir={abrirGuardia}
-            onMover={moverGuardia}
+            onMover={alMoverGuardia}
           />
 
           <BarraAccionesMasivas

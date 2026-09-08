@@ -41,7 +41,7 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
      garantizar que el día que la regla cambie, este desplegable se quede con la vieja. */
   const asistentesAsignables = useMemo(() => asistentes.filter(estaEnElPlantel), [asistentes]);
 
-  // Alternativa por teclado/botón a la reasignación por arrastre de GuardiasGrid.jsx
+  // Alternativa por teclado/botón a la reasignación por arrastre de GrillaGuardias.jsx
   // (WCAG 2.5.7 — el drag-and-drop nunca puede ser la única forma de reasignar).
   async function handleReasignarDesdeModal() {
     setError(null);
@@ -194,7 +194,11 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
           <dt>{t.guardias.detalle.asistente}</dt>
           <dd>{tieneAsistente ? guardia.asistente_nombre : t.guardias[claveTextoCobertura(guardia)]}</dd>
           <dt>{t.guardias.detalle.paciente}</dt>
-          <dd>{guardia.paciente_nombre}</dd>
+          {/* Una guardia sin nadie asignado todavía existe —es un turno que hay que llenar—, y
+              acá el renglón tiene que decir algo: un `<dd>` vacío se lee como si el dato no
+              hubiera cargado. En el chip de la grilla, en cambio, ese guión sobra y por eso las
+              dos pantallas mandan `null`. */}
+          <dd>{guardia.paciente_nombre || '—'}</dd>
           <dt>{t.guardias.detalle.modalidad}</dt>
           <dd>{guardia.modalidad}</dd>
           <dt>{t.guardias.detalle.estado}</dt>

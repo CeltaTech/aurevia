@@ -1316,11 +1316,9 @@ h2 {
 
 /* ---------- Módulo 6: Guardias ---------- */
 
-.panel-guardia-dia-titulo {
-  margin-top: 1.5rem;
-  margin-bottom: 0.5rem;
-  color: var(--texto-titulo);
-}
+/* Lo que queda acá es la tarjeta de una guardia suelta, que hoy usa Continuidad. La grilla —la
+   misma en la pantalla de Guardias y en el Estado actual— se dibuja con las clases `grilla-*`,
+   más abajo en este mismo archivo. */
 
 .panel-guardia-card {
   background: var(--superficie);
@@ -1335,38 +1333,12 @@ h2 {
   cursor: pointer;
 }
 
-.guardia-programada { border-left: 4px solid var(--azul-medio); }
-.guardia-activa     { border-left: 4px solid var(--verde-exito); }
-.guardia-completada { border-left: 4px solid var(--texto-secundario); }
-.guardia-cancelada  { border-left: 4px solid var(--rojo-peligro); }
-.guardia-ausente    { border-left: 4px solid var(--naranja-alerta); }
-.guardia-pausada    { border-left: 4px solid var(--naranja-alerta); }
+.guardia-ausente { border-left: 4px solid var(--naranja-alerta); }
 
 .panel-guardia-alerta {
   color: var(--tono-critico-texto);
   font-weight: 600;
   font-size: 0.85rem;
-}
-
-/* Cobertura de la guardia: ¿hay alguien que la haga? Es una pregunta distinta del estado
-   (en qué momento de su vida está), por eso se pinta con otro recurso visual: el estado usa
-   la barra de color a la izquierda y la cobertura usa el borde punteado, que se lee como
-   "esto todavía no está cerrado". Una guardia cubierta no lleva nada — es lo normal. */
-.panel-cobertura-sin_cubrir,
-.panel-cobertura-ofrecida {
-  border: 1px dashed var(--naranja-alerta);
-  background: var(--fondo-alt);
-}
-
-.panel-guardia-cobertura {
-  color: var(--naranja-alerta);
-  font-weight: 600;
-  font-size: 0.75rem;
-}
-
-/* La fila de los huecos va arriba de todo en la grilla y se distingue del resto. */
-.panel-guardias-fila-sin-cubrir {
-  color: var(--naranja-alerta);
 }
 
 .panel-filtros-tarjeta {
@@ -1387,70 +1359,6 @@ h2 {
   padding: 0.55rem 0.8rem;
   border: 1px solid var(--borde-card);
   border-radius: 8px;
-}
-
-.panel-guardias-grid-tarjeta {
-  background: var(--superficie);
-  border: 1px solid var(--borde-card);
-  border-radius: 12px;
-  padding: 1.25rem;
-}
-
-.panel-guardias-grid-wrap {
-  overflow-x: auto;
-}
-
-.panel-guardias-grid {
-  display: grid;
-  grid-template-columns: 160px repeat(7, minmax(140px, 1fr));
-  gap: 0.5rem;
-  min-width: 900px;
-}
-
-.panel-guardias-grid-header {
-  font-weight: 700;
-  color: var(--texto-titulo);
-  padding: 0.5rem;
-  text-transform: capitalize;
-}
-
-.panel-guardias-grid-esquina {
-  background: transparent;
-}
-
-.panel-guardias-grid-fila-titulo {
-  display: flex;
-  align-items: center;
-  font-weight: 600;
-  padding: 0.5rem;
-}
-
-.panel-guardias-grid-celda {
-  background: var(--fondo-alt);
-  border: 1px solid var(--borde-card);
-  border-radius: 8px;
-  padding: 0.4rem;
-  min-height: 64px;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.panel-guardia-chip {
-  background: var(--superficie);
-  border-radius: 8px;
-  padding: 0.4rem 0.6rem;
-  font-size: 0.8rem;
-  cursor: grab;
-}
-
-.panel-guardia-chip:active {
-  cursor: grabbing;
-}
-
-.panel-guardia-chip:focus-visible {
-  outline: 2px solid var(--azul-medio);
-  outline-offset: 2px;
 }
 
 /* ---------- Informe para Obra Social ---------- */

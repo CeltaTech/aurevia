@@ -6,15 +6,15 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
 import { NuevaGuardiaModal } from './guardias/NuevaGuardiaModal';
 import { GuardiaAcciones } from './guardias/GuardiaAcciones';
-import { GuardiasGrid } from './guardias/GuardiasGrid';
+import { GrillaGuardias } from './guardias/GrillaGuardias';
 import { GuardiasSinCerrar } from './guardias/GuardiasSinCerrar';
 import { COBERTURA, coberturaDeGuardia } from '../lib/cobertura';
 import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../lib/pacientesDeGuardia';
 import { reasignarGuardia } from '../lib/reasignarGuardia';
+import { moverGuardia } from '../lib/moverGuardia';
 import { mensajeDeError } from '../lib/errores';
 
 const ESTADOS = ['programada', 'activa', 'completada', 'cancelada', 'ausente', 'pausada'];
-const HORAS_ALERTA_CHECKIN_SIN_CHECKOUT = 2;
 
 function hoyISO() {
   return new Date().toISOString().slice(0, 10);
@@ -99,7 +99,7 @@ export function Guardias() {
     return filas
       .map((g) => ({
         ...g,
-        paciente_nombre: textoDePacientes(g.pacientes_nombres, t.guardias.pacientes_y_mas),
+        paciente_nombre: textoDePacientes(g.pacientes_nombres, t.guardias.pacientes_y_mas, null),
       }))
       .filter((g) => {
         const coincideEstado = !f.estado || g.estado === f.estado;
@@ -114,12 +114,11 @@ export function Guardias() {
       });
   }, [filas, f, t]);
 
-  function tieneAlertaCheckinSinCheckout(g) {
-    if (g.estado !== 'activa' || !g.checkin_at || g.checkout_at) return false;
-    const finProgramado = new Date(`${g.fecha}T${g.hora_fin}`);
-    const limite = new Date(finProgramado.getTime() + HORAS_ALERTA_CHECKIN_SIN_CHECKOUT * 60 * 60 * 1000);
-    return new Date() > limite;
-  }
+  /* El reloj de la grilla entra una sola vez por carga, igual que en el Estado actual: si cada
+     chip preguntara la hora por su cuenta, dos guardias de la misma pantalla podrían estar
+     mirando momentos distintos. Los umbrales no se pasan —qué es "sin cerrar" y a partir de
+     cuántas horas lo es vive en `lib/semaforoGuardia.js`, y esta pantalla no los repite. */
+  const ctx = useMemo(() => ({ ahora: new Date() }), [filas]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function cerrarYRecargar() {
     setMostrarNueva(false);
@@ -134,6 +133,20 @@ export function Guardias() {
     if (!guardiaActual) return;
 
     const { error: falla } = await reasignarGuardia(guardiaActual, asistenteId, fecha, t);
+    if (falla) {
+      setError(falla);
+      return;
+    }
+    recargar();
+  }
+
+  // Y lo mismo con arrastrar una guardia a otra celda: lo que eso significa está en
+  // `lib/moverGuardia.js`, que es el mismo que usa el Estado actual con esta misma grilla.
+  async function alMoverGuardia({ guardiaId, ...movimiento }) {
+    const guardiaActual = filas.find((g) => g.id === guardiaId);
+    if (!guardiaActual) return;
+
+    const { error: falla } = await moverGuardia(guardiaActual, movimiento, t);
     if (falla) {
       setError(falla);
       return;
@@ -192,16 +205,19 @@ export function Guardias() {
           onLimpiarFiltros={limpiar}
           mensajeVacio={t.guardias.sin_guardias_rango}
         >
-          <div className="panel-guardias-grid-tarjeta">
-            <GuardiasGrid
-              filas={filasFiltradas}
-              desde={f.desde}
-              hasta={f.hasta}
-              tieneAlerta={tieneAlertaCheckinSinCheckout}
-              onSeleccionar={setGuardiaSeleccionada}
-              onReasignar={handleReasignar}
-            />
-          </div>
+          {/* La misma grilla que el Estado actual, y no una versión reducida: por Asistente o
+              por Paciente, por día, por semana o en línea de tiempo, con el semáforo de cada
+              guardia y arrastrar para mover. Vista, acercamiento y día los maneja la grilla
+              sola —acá no hacen falta en la dirección web—, así que solo se le pasan los datos
+              y qué hacer al tocar y al soltar. */}
+          <GrillaGuardias
+            guardias={filasFiltradas}
+            desde={f.desde}
+            hasta={f.hasta}
+            ctx={ctx}
+            onAbrir={setGuardiaSeleccionada}
+            onMover={alMoverGuardia}
+          />
         </EstadoLista>
       </div>
 

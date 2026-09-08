@@ -3,20 +3,11 @@ import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { useSeVe } from '../context/PerfilContext';
+import { SIGNOS_VITALES, SIGNOS_VITALES_LEGADO, colorSigno } from '../lib/signosVitales';
 
 const CAMPOS_TEXTO = ['incidentes', 'observaciones'];
 
-const CLAVES_SIGNOS_VITALES_LEGADO = ['presion', 'temperatura', 'saturacion', 'glucemia'];
-const CLAVES_SIGNOS_VITALES = ['presion_sistolica', 'presion_diastolica', 'temperatura', 'saturacion', 'glucemia'];
-
 const CARAS_ANIMO = { muy_bien: '😄', bien: '🙂', regular: '😐', mal: '🙁', muy_mal: '😣' };
-
-function colorSigno(valor, rango) {
-  if (!rango || valor === null || valor === undefined || valor === '') return null;
-  const numero = Number(valor);
-  if (Number.isNaN(numero)) return null;
-  return numero >= rango.min && numero <= rango.max ? 'normal' : 'alerta';
-}
 
 export default function ReporteDetalle() {
   const { id, reporteId } = useParams();
@@ -93,8 +84,8 @@ export default function ReporteDetalle() {
       {seVe('familia_signos_vitales') && (
         <div className="reporte-preview-campo">
           <div className="reporte-preview-titulo">{t.reporte_detalle.campo_signos_vitales}</div>
-          {reporte.signos_vitales && CLAVES_SIGNOS_VITALES.some((clave) => reporte.signos_vitales[clave]) ? (
-            CLAVES_SIGNOS_VITALES.filter((clave) => reporte.signos_vitales[clave]).map((clave) => {
+          {reporte.signos_vitales && SIGNOS_VITALES.some((clave) => reporte.signos_vitales[clave]) ? (
+            SIGNOS_VITALES.filter((clave) => reporte.signos_vitales[clave]).map((clave) => {
               const color = colorSigno(reporte.signos_vitales[clave], rangosVitales[clave]);
               return (
                 <div key={clave} className={color ? `signo-vital-${color}` : ''}>
@@ -104,8 +95,8 @@ export default function ReporteDetalle() {
                 </div>
               );
             })
-          ) : reporte.signos_vitales && CLAVES_SIGNOS_VITALES_LEGADO.some((clave) => reporte.signos_vitales[clave]) ? (
-            CLAVES_SIGNOS_VITALES_LEGADO.filter((clave) => reporte.signos_vitales[clave]).map((clave) => (
+          ) : reporte.signos_vitales && SIGNOS_VITALES_LEGADO.some((clave) => reporte.signos_vitales[clave]) ? (
+            SIGNOS_VITALES_LEGADO.filter((clave) => reporte.signos_vitales[clave]).map((clave) => (
               <div key={clave}>
                 {t.reporte_detalle[`signo_${clave}`]}: {reporte.signos_vitales[clave]}
               </div>

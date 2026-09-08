@@ -79,6 +79,11 @@ export const GRUPOS = [
     copias: ['pwa-asistentes/src/lib/guardiaSinCerrar.js'],
   },
   {
+    que: 'qué signos vitales se toman y cuándo un valor quedó fuera de rango',
+    original: 'panel/src/lib/signosVitales.js',
+    copias: ['pwa-familias/src/lib/signosVitales.js', 'pwa-asistentes/src/lib/signosVitales.js'],
+  },
+  {
     que: 'quién de los roles del Panel es la administración de la Prestadora',
     original: 'panel/src/lib/roles.js',
     copias: ['backend/src/utils/roles.js'],

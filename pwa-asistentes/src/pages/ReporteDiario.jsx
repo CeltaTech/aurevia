@@ -7,6 +7,9 @@ import { sincronizarCola } from '../lib/sincronizarCola';
 import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
 import { useSeVe } from '../context/PerfilContext';
+// La lista legado no se importa: esta hoja carga un reporte nuevo, y un reporte nuevo se
+// escribe siempre con la presión separada en sistólica y diastólica.
+import { SIGNOS_VITALES, colorSigno } from '../lib/signosVitales';
 
 function esErrorDeRed(error) {
   return error instanceof TypeError;
@@ -14,8 +17,6 @@ function esErrorDeRed(error) {
 
 const ESTADOS_ANIMO = ['muy_bien', 'bien', 'regular', 'mal', 'muy_mal'];
 const CARAS_ANIMO = { muy_bien: '😄', bien: '🙂', regular: '😐', mal: '🙁', muy_mal: '😣' };
-
-const SIGNOS = ['presion_sistolica', 'presion_diastolica', 'temperatura', 'saturacion', 'glucemia'];
 
 function parseNumero(texto) {
   if (texto === null || texto === undefined) return '';
@@ -32,13 +33,6 @@ function signosIniciales(signosIA) {
     saturacion: parseNumero(signosIA?.saturacion),
     glucemia: parseNumero(signosIA?.glucemia),
   };
-}
-
-function colorSigno(valor, rango) {
-  if (!rango || valor === '' || valor === null || valor === undefined) return null;
-  const numero = Number(valor);
-  if (Number.isNaN(numero)) return null;
-  return numero >= rango.min && numero <= rango.max ? 'normal' : 'alerta';
 }
 
 export default function ReporteDiario() {
@@ -272,7 +266,7 @@ export default function ReporteDiario() {
           {veLosSignos && (
             <div className="reporte-preview-campo" role="group" aria-labelledby="grupo-signos-vitales">
               <span className="campo-titulo" id="grupo-signos-vitales">{t.reporte.campo_signos_vitales}</span>
-              {SIGNOS.map((signo) => {
+              {SIGNOS_VITALES.map((signo) => {
                 const rango = rangosVitales[signo];
                 const color = colorSigno(estructurado.signos_vitales?.[signo], rango);
                 return (

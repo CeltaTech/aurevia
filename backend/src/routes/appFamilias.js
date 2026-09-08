@@ -10,6 +10,9 @@ import { tipoDelAsistente, tipoConSusTareas } from '../utils/tareasDelTipo.js';
 import { esFechaISO, semanaQueContiene } from '../utils/fechas.js';
 import { pacientesConDomicilioDeHoy } from '../utils/domicilioDelDia.js';
 import { guardarSuscripcionPush } from '../utils/suscripcionesPush.js';
+import { accesosDelPedido, exigeDelCirculo, soloElTitular, visibilidadDeLaPersona } from '../utils/accesosDelCirculo.js';
+import { instruccionPendiente, pedirCodigo, confirmarConCodigo } from '../utils/instruccionesCirculo.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 export const appFamiliasRouter = Router();
 
@@ -21,17 +24,32 @@ export const appFamiliasRouter = Router();
 // prendidas: lo que no se puede ver, no se manda (tarea 65). `nivel_complejidad` ya no se pide
 // —ninguna pantalla de la Familia lo mostró nunca— y era una etiqueta clínica de más viajando
 // al teléfono.
-async function pacienteDeLaFamilia(pacienteId, usuarioFamilia, visibilidad) {
-  const columnas = columnasSegunVisibilidad([
-    'id',
-    'nombre',
-    'domicilio',
-    ['lat', 'familia_ubicacion_en_vivo'],
-    ['lng', 'familia_ubicacion_en_vivo'],
-    ['patologias', 'familia_patologias_del_paciente'],
-    'familia_id',
-    'prestadora_id',
-  ], visibilidad);
+//
+// RECIBE EL PEDIDO ENTERO Y NO LA VISIBILIDAD SUELTA. Acá hay que saber dos cosas —qué muestra la
+// Prestadora y qué le dieron a esta persona— y las dos ya vienen contestadas y guardadas en el
+// pedido. Pasándolas por parámetro, una ruta nueva que se olvide de una le mandaría a alguien la
+// ficha que el titular le negó, y nadie se enteraría.
+async function pacienteDeLaFamilia(pacienteId, req) {
+  const usuarioFamilia = req.usuarioFamilia;
+  const visibilidad = await visibilidadDeLaPersona(req);
+  const accesos = await accesosDelPedido(req);
+
+  // A quien no le dieron la ficha se le contesta que el Paciente existe y nada más: sin domicilio,
+  // sin patologías y sin coordenadas. No se lo saca de la lista —dejaría esa aplicación vacía y sin
+  // explicación, y quien tenga la agenda o los reportes los sigue necesitando—, y los datos de la
+  // persona cuidada directamente no salen de la base.
+  const columnas = accesos.circulo_ficha_del_paciente
+    ? columnasSegunVisibilidad([
+      'id',
+      'nombre',
+      'domicilio',
+      ['lat', 'familia_ubicacion_en_vivo'],
+      ['lng', 'familia_ubicacion_en_vivo'],
+      ['patologias', 'familia_patologias_del_paciente'],
+      'familia_id',
+      'prestadora_id',
+    ], visibilidad)
+    : 'id, nombre, familia_id, prestadora_id';
 
   const { data } = await supabase
     .from('pacientes')
@@ -78,12 +96,18 @@ appFamiliasRouter.get('/perfil', requiereRolFamilia, async (req, res) => {
   // consulta del motor, que directamente no manda lo apagado.
   const visibilidad = await visibilidadDelPedido(req);
 
+  // Qué le dejaron ver a esta persona, por el mismo motivo que los dos de arriba: la aplicación
+  // lo necesita para dibujar el menú. Igual que la visibilidad, es una lista de qué dibujar y no
+  // un permiso — el candado está en cada ruta, que directamente no contesta lo que no le dieron.
+  const accesos = await accesosDelPedido(req);
+
   // El plan contratado es una condición comercial, no un dato del cuidado: va con el resto de
   // lo que la Prestadora decide mostrar sobre el dinero. Hay Prestadoras que cobran por fuera
   // de la aplicación y no quieren que el plan aparezca en el teléfono de la Familia. Apagado
-  // el interruptor, ni siquiera se le pregunta a la base cuál es.
+  // el interruptor, ni siquiera se le pregunta a la base cuál es. Y lo mismo vale persona por
+  // persona: quien acompaña el cuidado no siempre es quien paga.
   let plan = null;
-  if (visibilidad.familia_pagos_y_suscripcion) {
+  if (visibilidad.familia_pagos_y_suscripcion && accesos.circulo_dinero) {
     const { data: familia } = await supabase
       .from('familias')
       .select('plan')
@@ -92,15 +116,66 @@ appFamiliasRouter.get('/perfil', requiereRolFamilia, async (req, res) => {
     plan = familia?.plan ?? null;
   }
 
+  // Y si hay una instrucción esperando su firma, se la ofrece. Sólo al titular: la instrucción
+  // dice qué se le dio y qué se le negó a cada uno del círculo, y eso es del titular.
+  const pendiente = req.usuarioFamilia.esTitular
+    ? await instruccionPendiente(req.usuarioFamilia.familiaId)
+    : null;
+
   res.json({
     perfil: {
       ...usuario,
       plan,
-      rolCirculo: req.usuarioFamilia.rolCirculo,
+      esTitular: req.usuarioFamilia.esTitular,
     },
     marca,
     visibilidad,
+    accesos,
+    instruccionPendiente: pendiente,
   });
+});
+
+// ============================================================================
+// La instrucción sobre los accesos del círculo, del lado del titular
+//
+// Acá el titular no configura nada: lee lo que pidió y lo confirma. Quién entra al círculo y qué
+// ve cada uno lo carga la Prestadora, como siempre. Esta es la firma, y nada más.
+//
+// Y firma esta hoja y ninguna otra. Careonys no es un sistema para firmar documentos.
+// ============================================================================
+
+appFamiliasRouter.get('/instruccion-pendiente', requiereRolFamilia, soloElTitular, async (req, res) => {
+  res.json({ instruccion: await instruccionPendiente(req.usuarioFamilia.familiaId) });
+});
+
+// Pide el código que llega al teléfono. La persona ya entró con su clave: el código es el segundo
+// paso, no el único — juntos son la firma que se aprobó.
+appFamiliasRouter.post('/instruccion/:instruccionId/codigo', requiereRolFamilia, soloElTitular, async (req, res) => {
+  try {
+    const { enviadoA } = await pedirCodigo({
+      instruccionId: req.params.instruccionId,
+      familiaId: req.usuarioFamilia.familiaId,
+    });
+    res.json({ ok: true, enviadoA });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+appFamiliasRouter.post('/instruccion/:instruccionId/confirmar', requiereRolFamilia, soloElTitular, async (req, res) => {
+  const resultado = await confirmarConCodigo({
+    instruccionId: req.params.instruccionId,
+    familiaId: req.usuarioFamilia.familiaId,
+    codigo: req.body?.codigo,
+    // Con qué aparato firmó, para poder reconstruir el acto. Nunca la dirección de red ni ningún
+    // otro dato que no haga falta para eso (CLAUDE.md §6).
+    desde: req.headers['user-agent']?.slice(0, 300) ?? null,
+  });
+
+  if (!resultado.ok) {
+    return res.status(400).json({ error: 'No se pudo confirmar', motivo: resultado.motivo });
+  }
+  res.json({ ok: true });
 });
 
 // ============================================================================
@@ -132,8 +207,8 @@ appFamiliasRouter.get('/pacientes', requiereRolFamilia, async (req, res) => {
 // ============================================================================
 
 appFamiliasRouter.get('/pacientes/:id', requiereRolFamilia, async (req, res) => {
-  const visibilidad = await visibilidadDelPedido(req);
-  const paciente = await pacienteDeLaFamilia(req.params.id, req.usuarioFamilia, visibilidad);
+  const visibilidad = await visibilidadDeLaPersona(req);
+  const paciente = await pacienteDeLaFamilia(req.params.id, req);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -215,9 +290,9 @@ appFamiliasRouter.get('/pacientes/:id', requiereRolFamilia, async (req, res) => 
 // propio día y el motor devuelve la semana que lo contiene.
 // ============================================================================
 
-appFamiliasRouter.get('/pacientes/:id/guardias', requiereRolFamilia, async (req, res) => {
-  const visibilidad = await visibilidadDelPedido(req);
-  const paciente = await pacienteDeLaFamilia(req.params.id, req.usuarioFamilia, visibilidad);
+appFamiliasRouter.get('/pacientes/:id/guardias', requiereRolFamilia, exigeDelCirculo('circulo_guardias'), async (req, res) => {
+  const visibilidad = await visibilidadDeLaPersona(req);
+  const paciente = await pacienteDeLaFamilia(req.params.id, req);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -321,9 +396,9 @@ function columnasDelReporte(visibilidad) {
   ], visibilidad);
 }
 
-appFamiliasRouter.get('/pacientes/:id/reportes', requiereRolFamilia, async (req, res) => {
-  const visibilidad = await visibilidadDelPedido(req);
-  const paciente = await pacienteDeLaFamilia(req.params.id, req.usuarioFamilia, visibilidad);
+appFamiliasRouter.get('/pacientes/:id/reportes', requiereRolFamilia, exigeDelCirculo('circulo_reportes'), async (req, res) => {
+  const visibilidad = await visibilidadDeLaPersona(req);
+  const paciente = await pacienteDeLaFamilia(req.params.id, req);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -357,9 +432,9 @@ appFamiliasRouter.get('/pacientes/:id/reportes', requiereRolFamilia, async (req,
 // Un reporte suelto. Existe porque la pantalla que muestra un reporte pedía la lista entera —
 // hasta 60 reportes con todo adentro— para quedarse con uno solo: 59 días de información de
 // salud de esa persona viajando al teléfono para descartarse en el acto.
-appFamiliasRouter.get('/pacientes/:id/reportes/:reporteId', requiereRolFamilia, async (req, res) => {
-  const visibilidad = await visibilidadDelPedido(req);
-  const paciente = await pacienteDeLaFamilia(req.params.id, req.usuarioFamilia, visibilidad);
+appFamiliasRouter.get('/pacientes/:id/reportes/:reporteId', requiereRolFamilia, exigeDelCirculo('circulo_reportes'), async (req, res) => {
+  const visibilidad = await visibilidadDeLaPersona(req);
+  const paciente = await pacienteDeLaFamilia(req.params.id, req);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -390,8 +465,8 @@ appFamiliasRouter.get('/pacientes/:id/reportes/:reporteId', requiereRolFamilia, 
 // Alertas del Paciente (activas + historial resuelto — ver AI_PROMPTS.md IA Nivel 2)
 // ============================================================================
 
-appFamiliasRouter.get('/pacientes/:id/alertas', requiereRolFamilia, exigeVisible('familia_alertas_de_la_revision'), async (req, res) => {
-  const paciente = await pacienteDeLaFamilia(req.params.id, req.usuarioFamilia, await visibilidadDelPedido(req));
+appFamiliasRouter.get('/pacientes/:id/alertas', requiereRolFamilia, exigeVisible('familia_alertas_de_la_revision'), exigeDelCirculo('circulo_alertas'), async (req, res) => {
+  const paciente = await pacienteDeLaFamilia(req.params.id, req);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -423,8 +498,8 @@ appFamiliasRouter.get('/pacientes/:id/alertas', requiereRolFamilia, exigeVisible
 // ============================================================================
 
 appFamiliasRouter.get('/pacientes/:id/asistente', requiereRolFamilia, async (req, res) => {
-  const visibilidad = await visibilidadDelPedido(req);
-  const paciente = await pacienteDeLaFamilia(req.params.id, req.usuarioFamilia, visibilidad);
+  const visibilidad = await visibilidadDeLaPersona(req);
+  const paciente = await pacienteDeLaFamilia(req.params.id, req);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -494,8 +569,8 @@ appFamiliasRouter.get('/pacientes/:id/asistente', requiereRolFamilia, async (req
 // ver docs/claude_history.md).
 // ============================================================================
 
-appFamiliasRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRolFamilia, exigeVisible('familia_verifica_con_codigo'), async (req, res) => {
-  const paciente = await pacienteDeLaFamilia(req.params.id, req.usuarioFamilia, await visibilidadDelPedido(req));
+appFamiliasRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRolFamilia, exigeVisible('familia_verifica_con_codigo'), exigeDelCirculo('circulo_verifica_con_codigo'), async (req, res) => {
+  const paciente = await pacienteDeLaFamilia(req.params.id, req);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -591,14 +666,12 @@ appFamiliasRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRol
 // ya existente desde el pendiente #13(b)).
 // ============================================================================
 
-appFamiliasRouter.post('/guardias/:guardiaId/calificar', requiereRolFamilia, exigeVisible('familia_califica_al_asistente'), async (req, res) => {
-  // Un miembro invitado con acceso de solo lectura ve todo lo mismo que el titular, pero no
-  // puede calificar guardias — es la única acción de escritura real hoy expuesta a la
-  // Familia en la PWA (ver docs/claude_history.md, Fase 5).
-  if (req.usuarioFamilia.rolCirculo === 'solo_lectura') {
-    return res.status(403).json({ error: 'Este acceso es de solo lectura' });
-  }
-
+// Calificar es una de las dos acciones de escritura que tiene la Familia, y viene negada de
+// fábrica para todo el círculo: poner estrellas y un comentario sobre el trabajo de alguien es un
+// acto del titular. Antes lo decidía la columna `rol` del miembro —solo lectura o no—, que no
+// distinguía entre las dos acciones ni permitía dar una sin la otra. Ahora lo decide la
+// instrucción que el titular firmó.
+appFamiliasRouter.post('/guardias/:guardiaId/calificar', requiereRolFamilia, exigeVisible('familia_califica_al_asistente'), exigeDelCirculo('circulo_califica_al_asistente'), async (req, res) => {
   const { estrellas, comentario } = req.body || {};
   if (!Number.isInteger(estrellas) || estrellas < 1 || estrellas > 5) {
     return res.status(400).json({ error: 'La calificación debe ser un número entero de 1 a 5' });
@@ -700,7 +773,7 @@ appFamiliasRouter.delete('/push/suscribir', requiereRolFamilia, async (req, res)
 // el Panel vía service_role, nunca como UPDATE directo desde acá.
 // ============================================================================
 
-appFamiliasRouter.get('/suscripcion/:pacienteId', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), async (req, res) => {
+appFamiliasRouter.get('/suscripcion/:pacienteId', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), exigeDelCirculo('circulo_dinero'), async (req, res) => {
   const { data, error } = await supabase
     .from('suscripciones_marketplace')
     .select('id, estado, monto_mensual, trial_fin, proximo_cobro, cancelada_en')
@@ -711,7 +784,7 @@ appFamiliasRouter.get('/suscripcion/:pacienteId', requiereRolFamilia, exigeVisib
   res.json({ suscripcion: data });
 });
 
-appFamiliasRouter.post('/qr-cobro', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), async (req, res) => {
+appFamiliasRouter.post('/qr-cobro', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), exigeDelCirculo('circulo_dinero'), async (req, res) => {
   const { suscripcion_id: suscripcionId } = req.body || {};
   if (!suscripcionId) {
     return res.status(400).json({ error: 'Falta suscripcion_id' });
@@ -745,7 +818,7 @@ appFamiliasRouter.post('/qr-cobro', requiereRolFamilia, exigeVisible('familia_pa
   res.json({ qr: data });
 });
 
-appFamiliasRouter.get('/qr-cobro/:id', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), async (req, res) => {
+appFamiliasRouter.get('/qr-cobro/:id', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), exigeDelCirculo('circulo_dinero'), async (req, res) => {
   const { data, error } = await supabase
     .from('qr_cobro_efectivo')
     .select('id, expira_en, usado_en, cobro_id')

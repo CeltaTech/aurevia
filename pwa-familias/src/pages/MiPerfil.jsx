@@ -1,8 +1,30 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
+import { traducirValor } from '../i18n/valores';
 import { activarPush, desactivarPush, pushSoportado, suscripcionActual } from '../lib/push';
 import { useSeVe } from '../context/PerfilContext';
+import AvisoInstruccionPendiente from '../components/AvisoInstruccionPendiente';
+
+// Una de las dos listas: qué ve esta persona y qué no. La de «qué no ve» pesa lo mismo que la
+// otra a propósito. Quien está anotado en un círculo familiar tiene que poder saber qué le
+// falta sin tener que descubrirlo a los tropezones, buscando un botón que no está.
+function ListaDeAccesos({ titulo, claves, etiquetas, vacio }) {
+  return (
+    <>
+      <h3 style={{ marginTop: '1.25rem' }}>{titulo}</h3>
+      {claves.length === 0 ? (
+        <p className="guardia-card-detalle">{vacio}</p>
+      ) : (
+        <ul className="lista-tareas">
+          {claves.map((clave) => (
+            <li key={clave}>{traducirValor(etiquetas, clave)}</li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
 
 export default function MiPerfil() {
   const { t } = useLocale();
@@ -63,9 +85,17 @@ export default function MiPerfil() {
   if (error) return <div className="alert alert-error" role="alert">{error}</div>;
   if (!perfil) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
 
+  // El orden es el que mandó el motor, que es el del catálogo: dos personas del mismo círculo
+  // leen su lista en el mismo orden y se pueden comparar renglón por renglón.
+  const accesos = perfil.accesos ? Object.entries(perfil.accesos) : null;
+  const loQueVe = accesos ? accesos.filter(([, permitido]) => permitido).map(([clave]) => clave) : [];
+  const loQueNoVe = accesos ? accesos.filter(([, permitido]) => !permitido).map(([clave]) => clave) : [];
+
   return (
     <div>
       <h1>{t.perfil.titulo}</h1>
+
+      <AvisoInstruccionPendiente />
       <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '0.5rem 1.5rem' }}>
         <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.nombre}</div>
         <div>{perfil.nombre}</div>
@@ -80,9 +110,37 @@ export default function MiPerfil() {
             <div>{perfil.plan || '—'}</div>
           </>
         )}
-        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.rol_circulo}</div>
-        <div>{perfil.rolCirculo === 'titular' ? t.perfil.rol_titular : t.perfil.rol_solo_lectura}</div>
       </div>
+
+      {/* Qué ve esta persona y qué no. Al titular se le dice que ve todo y se termina ahí: lo
+          suyo no se configura, no hay instrucción que le pueda quitar nada, ni siquiera una
+          propia. A quien está en el círculo se le muestran las dos listas enteras, y de dónde
+          salieron: acá no hay nada que tocar, y el cambio se lo pide a la Prestadora quien
+          firmó la prestación. Sin esa aclaración, la pantalla parece un formulario roto. */}
+      {(perfil.esTitular || accesos) && (
+        <>
+          <h2 style={{ marginTop: '2rem' }}>{t.perfil.acceso_titulo}</h2>
+          {perfil.esTitular ? (
+            <p>{t.perfil.acceso_titular}</p>
+          ) : (
+            <>
+              <ListaDeAccesos
+                titulo={t.perfil.acceso_ve}
+                claves={loQueVe}
+                etiquetas={t.circulo}
+                vacio={t.perfil.acceso_ve_vacio}
+              />
+              <ListaDeAccesos
+                titulo={t.perfil.acceso_no_ve}
+                claves={loQueNoVe}
+                etiquetas={t.circulo}
+                vacio={t.perfil.acceso_no_ve_vacio}
+              />
+              <p className="guardia-card-detalle" style={{ marginTop: '1rem' }}>{t.perfil.acceso_lo_decide_el_titular}</p>
+            </>
+          )}
+        </>
+      )}
 
       <h2 style={{ marginTop: '2rem' }}>{t.perfil.notificaciones_titulo}</h2>
       {!pushSoportado() ? (

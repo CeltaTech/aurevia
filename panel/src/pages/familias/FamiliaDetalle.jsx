@@ -16,9 +16,37 @@ import { NuevoPacienteModal } from './NuevoPacienteModal';
 import { MonitoreoVitalesPaciente } from './MonitoreoVitalesPaciente';
 import { DomiciliosTemporalesPaciente } from './DomiciliosTemporalesPaciente';
 import { InvitarCirculoModal } from './InvitarCirculoModal';
+import {
+  AccesosDelCirculoModal,
+  DocumentoDeLaInstruccion,
+  RegistrarPapelFirmadoModal,
+} from './AccesosDelCirculoModal';
 import { mensajeDeError } from '../../lib/errores';
+import { llamarApiPanel } from '../../lib/apiPanel';
+import { con } from '../../lib/textos';
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+/* Qué ve, en una línea, cada persona del círculo.
+   ==========================================================================
+
+   La tabla no tiene lugar para once casillas por renglón, y tampoco hace falta: lo que la
+   Prestadora necesita de un vistazo es si esa persona ve todo, no ve nada, o ve una parte. El
+   detalle está a un clic, en la ventana de accesos.
+
+   Se cuenta sobre lo que manda el motor y no sobre una lista escrita acá, así que una casilla
+   nueva del catálogo cambia sola el «7 de 11» sin tocar esta pantalla. */
+function resumenDeAccesos(accesos, t) {
+  const total = accesos?.length ?? 0;
+  // Todavía no llegó el detalle: mejor un guion que un «0 de 0», que se leería como «no ve
+  // nada» justo cuando lo que pasa es que no se sabe.
+  if (!total) return '—';
+
+  const permitidos = accesos.filter((acceso) => acceso.permitido).length;
+  if (permitidos === total) return t.familias.circulo.accesos_todo;
+  if (permitidos === 0) return t.familias.circulo.accesos_ninguno;
+  return con(t.familias.circulo.accesos_parcial, { n: permitidos, total });
+}
 
 export function FamiliaDetalle() {
   const { t } = useLocale();
@@ -45,7 +73,14 @@ export function FamiliaDetalle() {
   const [circulo, setCirculo] = useState(null);
   const [estadoCirculo, setEstadoCirculo] = useState('cargando');
   const [errorCirculo, setErrorCirculo] = useState(null);
+  const [instruccionPendiente, setInstruccionPendiente] = useState(null);
+  const [ultimaInstruccion, setUltimaInstruccion] = useState(null);
   const [mostrarInvitarCirculo, setMostrarInvitarCirculo] = useState(false);
+  // Guarda a quién se estaba mirando al abrir la ventana de accesos, para que esa persona
+  // quede a la vista. `null` es la ventana cerrada.
+  const [accesosDe, setAccesosDe] = useState(null);
+  const [documentoAVer, setDocumentoAVer] = useState(null);
+  const [papelAConfirmar, setPapelAConfirmar] = useState(null);
   const [quitandoUsuarioId, setQuitandoUsuarioId] = useState(null);
   const [reenviandoUsuarioId, setReenviandoUsuarioId] = useState(null);
   const [mensajeReenvio, setMensajeReenvio] = useState(null);
@@ -80,18 +115,17 @@ export function FamiliaDetalle() {
     setEstadoCirculo('cargando');
     setErrorCirculo(null);
     try {
-      const { data } = await supabase.auth.getSession();
-      const respuesta = await fetch(`${API_URL}/api/panel/cuentas/familia/${id}/circulo`, {
-        headers: { Authorization: `Bearer ${data.session?.access_token}` },
-      });
-      const resultado = await respuesta.json();
-      if (!respuesta.ok) {
-        throw new Error(resultado.error);
-      }
-      setCirculo(resultado.miembros);
-      setEstadoCirculo(resultado.miembros.length ? 'listo' : 'vacio');
-    } catch {
-      setErrorCirculo(t.comun.error_generico);
+      // Por el único camino del Panel hacia el motor: es el que hace viajar el número de la
+      // respuesta adentro del error, y sin ese número todo falla igual —una sesión vencida se
+      // vería como «ocurrió un error»—.
+      const resultado = await llamarApiPanel(`/cuentas/familia/${id}/circulo`);
+      const miembros = resultado.miembros ?? [];
+      setCirculo(miembros);
+      setInstruccionPendiente(resultado.instruccionPendiente ?? null);
+      setUltimaInstruccion(resultado.ultimaInstruccion ?? null);
+      setEstadoCirculo(miembros.length ? 'listo' : 'vacio');
+    } catch (err) {
+      setErrorCirculo(mensajeDeError(err, t));
       setEstadoCirculo('error');
     }
   }, [id, t]);
@@ -261,6 +295,38 @@ export function FamiliaDetalle() {
 
       <h2>{t.familias.circulo.titulo}</h2>
       <p className="panel-explicacion">{t.familias.circulo.descripcion}</p>
+
+      {/* La instrucción cargada y todavía sin firmar es lo primero que hay que ver: mientras
+          no esté firmada, lo que hay es un pedido anotado, no una autorización. Los dos
+          caminos de cierre están acá al lado —imprimir el papel, o registrar que ya volvió
+          firmado—, porque son lo único que queda por hacer. */}
+      {instruccionPendiente && (
+        <Alert variant="warning">
+          {con(t.familias.circulo.instruccion_pendiente, {
+            fecha: new Date(instruccionPendiente.created_at).toLocaleDateString(),
+          })}{' '}
+          <Button variant="secondary" onClick={() => setDocumentoAVer(instruccionPendiente)}>
+            {t.familias.circulo.ver_documento}
+          </Button>{' '}
+          {puedeEditarFamilia && (
+            <Button variant="secondary" onClick={() => setPapelAConfirmar(instruccionPendiente)}>
+              {t.familias.circulo.registrar_papel}
+            </Button>
+          )}
+        </Alert>
+      )}
+      {!instruccionPendiente && ultimaInstruccion && (
+        <p className="panel-explicacion">
+          {con(t.familias.circulo.ultima_instruccion, {
+            fecha: new Date(ultimaInstruccion.cerrada_en || ultimaInstruccion.created_at).toLocaleDateString(),
+            como: t.familias.circulo[`cerrada_${ultimaInstruccion.cerrada_como}`] || '',
+          })}
+        </p>
+      )}
+      {!instruccionPendiente && !ultimaInstruccion && estadoCirculo === 'listo' && (
+        <p className="panel-explicacion">{t.familias.circulo.sin_instruccion}</p>
+      )}
+
       {estadoCirculo === 'cargando' && <p className="estado-cargando">{t.comun.cargando}</p>}
       {estadoCirculo === 'error' && <p className="estado-vacio">{errorCirculo || t.comun.error_generico}</p>}
       {estadoCirculo === 'vacio' && <p className="estado-vacio">{t.familias.circulo.sin_miembros}</p>}
@@ -270,30 +336,40 @@ export function FamiliaDetalle() {
             <tr>
               <th>{t.familias.circulo.col_nombre}</th>
               <th>{t.familias.circulo.col_email}</th>
-              <th>{t.familias.circulo.col_rol}</th>
+              <th>{t.familias.circulo.col_que_ve}</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {circulo.map((m) => (
-              <tr key={m.usuario_id}>
-                <td>{m.usuarios?.nombre || '—'}</td>
+              <tr key={m.usuarioId}>
+                <td>{m.nombre || '—'}</td>
                 <td>{m.email || '—'}</td>
-                <td>{t.familias.circulo.rol_solo_lectura}</td>
+                <td>{resumenDeAccesos(m.accesos, t)}</td>
                 <td>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setAccesosDe(m.usuarioId)}
+                    aria-label={con(t.comun.campo_de_fila, {
+                      campo: t.familias.circulo.accesos_boton,
+                      nombre: m.nombre || m.email || '',
+                    })}
+                  >
+                    {t.familias.circulo.accesos_boton}
+                  </Button>{' '}
                   {puedeEditarFamilia && (
                     <>
                       <Button
                         variant="secondary"
-                        onClick={() => reenviarInvitacion(m.usuario_id)}
-                        disabled={reenviandoUsuarioId === m.usuario_id}
+                        onClick={() => reenviarInvitacion(m.usuarioId)}
+                        disabled={reenviandoUsuarioId === m.usuarioId}
                       >
-                        {reenviandoUsuarioId === m.usuario_id ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
+                        {reenviandoUsuarioId === m.usuarioId ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
                       </Button>{' '}
                       <Button
                         variant="secondary"
-                        onClick={() => quitarMiembroCirculo(m.usuario_id)}
-                        disabled={quitandoUsuarioId === m.usuario_id}
+                        onClick={() => quitarMiembroCirculo(m.usuarioId)}
+                        disabled={quitandoUsuarioId === m.usuarioId}
                       >
                         {t.familias.circulo.quitar}
                       </Button>
@@ -365,6 +441,40 @@ export function FamiliaDetalle() {
           onClose={() => setMostrarInvitarCirculo(false)}
           onInvitado={() => {
             setMostrarInvitarCirculo(false);
+            recargarCirculo();
+          }}
+        />
+      )}
+
+      {accesosDe && (
+        <AccesosDelCirculoModal
+          familiaId={familia.id}
+          miembros={circulo}
+          puedeEditar={puedeEditarFamilia}
+          usuarioIdInicial={accesosDe}
+          onClose={() => setAccesosDe(null)}
+          onGuardado={() => {
+            setAccesosDe(null);
+            recargarCirculo();
+          }}
+        />
+      )}
+
+      {documentoAVer && (
+        <DocumentoDeLaInstruccion
+          texto={documentoAVer.documento_texto}
+          fecha={documentoAVer.created_at}
+          onCerrar={() => setDocumentoAVer(null)}
+        />
+      )}
+
+      {papelAConfirmar && (
+        <RegistrarPapelFirmadoModal
+          familiaId={familia.id}
+          instruccionId={papelAConfirmar.id}
+          onClose={() => setPapelAConfirmar(null)}
+          onRegistrado={() => {
+            setPapelAConfirmar(null);
             recargarCirculo();
           }}
         />

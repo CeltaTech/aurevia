@@ -35,7 +35,11 @@ export async function llamarApiPanel(path, opciones = {}) {
   const respuesta = await fetch(`${API_URL}/api/panel${path}`, {
     ...opciones,
     headers: {
-      'Content-Type': 'application/json',
+      // Un envío con archivo va en varias partes, y ahí el tipo de contenido lo tiene que
+      // escribir el navegador: lleva adentro el separador que marca dónde termina cada parte,
+      // que se inventa en el momento. Escribirlo a mano deja el pedido sin ese separador y el
+      // servidor no encuentra el archivo. Todo lo demás sigue viajando como JSON.
+      ...(opciones.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
       Authorization: `Bearer ${data.session?.access_token}`,
       ...opciones.headers,
     },

@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { useSeVe } from '../context/PerfilContext';
+import { useCirculo } from '../context/CirculoContext';
 import { mensajeDeError } from '../lib/errores';
 
 const ESTADO_CLASE = {
@@ -46,11 +47,14 @@ export default function Medicacion() {
   const { id } = useParams();
   const { t } = useLocale();
   const seVe = useSeVe();
+  const { puedeVer } = useCirculo();
   // Ver la medicación y pedir una son dos decisiones distintas de la Prestadora: hay quien
   // muestra la lista pero no deja que la Familia cargue nada. Que se vea la lista ya lo
   // decidió la ruta antes de llegar acá.
   const puedePedirMedicacion = seVe('familia_pide_medicacion');
-  const [rolCirculo, setRolCirculo] = useState(null);
+  // Y la misma división del lado del titular: hay quien deja que un hermano lea la medicación y
+  // no que pida ninguna. Las dos preguntas son distintas y las dos se hacen.
+  const puedePedirla = puedeVer('circulo_pide_medicacion');
   const [indicaciones, setIndicaciones] = useState(undefined);
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -66,8 +70,6 @@ export default function Medicacion() {
   // aviso del campo vacío en vez de dejarlo suelto arriba.
   const [faltantes, setFaltantes] = useState([]);
 
-  const soloLectura = rolCirculo === 'solo_lectura';
-
   const cargar = useCallback(() => {
     api
       .indicacionesMedicacion(id)
@@ -79,13 +81,6 @@ export default function Medicacion() {
     setIndicaciones(undefined);
     cargar();
   }, [cargar]);
-
-  useEffect(() => {
-    api
-      .perfil()
-      .then(({ perfil }) => setRolCirculo(perfil.rolCirculo))
-      .catch(() => {});
-  }, []);
 
   // Qué aviso le toca a este campo: el mismo texto para todos, colgado de cada uno.
   const faltaEn = (campo) => (faltantes.includes(campo) ? t.comun.campo_obligatorio : undefined);
@@ -167,9 +162,11 @@ export default function Medicacion() {
         <>
           <h2 style={{ marginTop: '1.5rem' }}>{t.medicacion.nueva_titulo}</h2>
 
-          {soloLectura && <div className="alert alert-error" role="alert">{t.medicacion.solo_lectura}</div>}
+          {/* No es un error: nada falló y no hay nada que reintentar. Es un aviso de por qué el
+              formulario no está, y con el dato que hace falta para conseguirlo. */}
+          {!puedePedirla && <div className="alert" role="status">{t.medicacion.sin_acceso_pedir}</div>}
 
-          {!soloLectura && (
+          {puedePedirla && (
             <form onSubmit={handleSubmit}>
               <Campo
                 nombre="medicamento"

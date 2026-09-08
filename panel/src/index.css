@@ -1438,6 +1438,62 @@ h2 {
   .informe-obra-social-acciones-no-imprimir {
     display: none;
   }
+  /* Lo mismo que el renglón de arriba, pero sin apellido: cualquier pantalla que imprima algo
+     marca así lo que no va al papel —botones, explicaciones, avisos—. La regla de arriba se
+     queda como está porque esa clase ya está escrita en el informe para la Obra Social. */
+  .no-imprimir {
+    display: none;
+  }
+  /* En pantalla el documento es un recuadro para distinguirlo de la explicación de al lado.
+     En el papel ese recuadro sobra: lo que se firma es el texto. */
+  .documento-instruccion {
+    background: none;
+    border: none;
+    padding: 0;
+  }
+}
+
+/* ---------- Los accesos del círculo de cuidado ---------- */
+
+/* Once casillas por persona no entran cómodas en el ancho de un modal común, y son de leer:
+   cada una tiene su explicación abajo. */
+.panel-modal-ancho {
+  max-width: 720px;
+}
+
+/* Cada persona del círculo es un bloque cerrado. Sin la línea que las separa, treinta y tres
+   casillas seguidas se leen como una sola lista y se pierde de quién es cada tramo. */
+.circulo-persona {
+  border-top: 1px solid var(--borde-card);
+  padding-top: 1rem;
+  margin-top: 1.5rem;
+}
+
+.circulo-persona h3 {
+  margin: 0;
+}
+
+.circulo-persona .panel-explicacion {
+  margin-top: 0.15rem;
+}
+
+.circulo-atajos {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* El documento que firma el titular llega del motor como un texto con sus renglones ya
+   puestos: se respetan tal cual, porque son los del papel que alguien va a firmar. */
+.documento-instruccion {
+  white-space: pre-wrap;
+  background: var(--superficie-hundida);
+  border: 1px solid var(--borde-card);
+  border-radius: 8px;
+  padding: 1.5rem;
+  color: var(--texto-principal);
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
 
 /* ---------- Etapa 4: el Estado actual, la grilla nueva y el panel de cobertura ----------

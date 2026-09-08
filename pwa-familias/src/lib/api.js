@@ -47,4 +47,11 @@ export const api = {
   estadoQrCobro: (id) => pedido(`/qr-cobro/${id}`),
   indicacionesMedicacion: (pacienteId) => pedido(`/medicacion/${pacienteId}`),
   crearIndicacionMedicacion: (pacienteId, formData) => pedido(`/medicacion/${pacienteId}`, { method: 'POST', body: formData }),
+  // La instrucción del círculo familiar que el titular todavía no firmó. El perfil ya avisa que
+  // hay una; esto trae el texto entero, que es lo único que no conviene mandar en cada pedido.
+  instruccionPendiente: () => pedido('/instruccion-pendiente'),
+  // Firmar es entrar con la clave —eso ya pasó— y confirmar con un código que se manda aparte.
+  // Son dos pedidos porque son dos momentos: el código se pide cuando la persona ya leyó.
+  pedirCodigoDeInstruccion: (id) => pedido(`/instruccion/${id}/codigo`, { method: 'POST' }),
+  confirmarInstruccion: (id, codigo) => pedido(`/instruccion/${id}/confirmar`, { method: 'POST', body: JSON.stringify({ codigo }) }),
 };

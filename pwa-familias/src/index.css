@@ -42,6 +42,16 @@ h2 {
   margin: 0 0 0.75rem;
 }
 
+/* Faltaba, y las listas de "qué ve" y "qué no ve" de Mi Perfil cuelgan de un título de tercer
+   nivel. Sin esta regla salían con la tipografía y el tamaño que trae el navegador, más grandes
+   que el título de la sección que las contiene. */
+h3 {
+  font-family: var(--font-display);
+  color: var(--azul-oscuro);
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -526,4 +536,35 @@ h2 {
   outline: 2px solid var(--azul-medio);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* ---------- La instrucción del círculo familiar ---------- */
+
+/* El documento que firma el titular, tal cual lo armó el motor: renglones cortados donde los
+   cortó él y separaciones hechas con guiones. `pre-wrap` respeta esos cortes y además parte los
+   renglones largos al ancho del teléfono; con el `pre` de fábrica habría que leerlo corriendo la
+   pantalla de costado, y un documento que se firma no se lee así. La tipografía de ancho fijo es
+   la que mantiene alineado lo que el motor alineó contando caracteres. */
+.documento-instruccion {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #FFFFFF;
+  border: 1px solid var(--borde-card);
+  border-radius: 12px;
+  padding: 1rem;
+  margin: 0 0 1rem;
+  color: var(--azul-oscuro);
+}
+
+/* El aviso de instrucción pendiente lleva adentro un botón, y en un teléfono el texto y el botón
+   no entran en el mismo renglón: se apilan, y el botón queda alineado a la izquierda con el
+   texto en vez de estirarse de punta a punta como si fuera lo principal de la pantalla. */
+.aviso-instruccion {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
 }

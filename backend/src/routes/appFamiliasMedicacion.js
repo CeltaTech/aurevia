@@ -3,6 +3,7 @@ import multer from 'multer';
 import { requiereRolFamilia } from '../middleware/requiereRolFamilia.js';
 import { supabase } from '../db/connection.js';
 import { exigeVisible } from '../utils/visibilidadPrestadora.js';
+import { exigeDelCirculo } from '../utils/accesosDelCirculo.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
 
 // Cierra pendiente #62 (docs/PENDIENTES.md): la Familia solicita la indicación de
@@ -43,8 +44,10 @@ async function pacienteDeLaFamilia(pacienteId, usuarioFamilia) {
 }
 
 // Ver la medicación y pedir una son dos decisiones distintas de la Prestadora: hay quien
-// muestra la lista pero no deja que la Familia cargue nada.
-appFamiliasMedicacionRouter.get('/:pacienteId', requiereRolFamilia, exigeVisible('familia_medicacion_del_paciente'), async (req, res) => {
+// muestra la lista pero no deja que la Familia cargue nada. Y adentro de cada una hay una segunda
+// decisión, la del titular sobre cada persona de su círculo. Van en este orden: primero si la
+// función existe en esta aplicación, después si a esta persona se la dieron.
+appFamiliasMedicacionRouter.get('/:pacienteId', requiereRolFamilia, exigeVisible('familia_medicacion_del_paciente'), exigeDelCirculo('circulo_medicacion'), async (req, res) => {
   const paciente = await pacienteDeLaFamilia(req.params.pacienteId, req.usuarioFamilia);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
@@ -64,15 +67,14 @@ appFamiliasMedicacionRouter.post(
   '/:pacienteId',
   requiereRolFamilia,
   exigeVisible('familia_pide_medicacion'),
+  // Mismo criterio que calificar una guardia (appFamilias.js): cargar una indicación de
+  // medicación viene negada de fábrica para el círculo, y sólo la habilita una instrucción
+  // firmada por el titular. El corte va antes de recibir el archivo: no tiene sentido subir una
+  // prescripción para después contestar que no.
+  exigeDelCirculo('circulo_pide_medicacion'),
   upload.single('prescripcion'),
   manejarErrorMulter,
   async (req, res) => {
-    // Mismo criterio que calificar una guardia (appFamilias.js): un miembro invitado de solo
-    // lectura no puede generar una solicitud que compromete la administración de medicación.
-    if (req.usuarioFamilia.rolCirculo === 'solo_lectura') {
-      return res.status(403).json({ error: 'Este acceso es de solo lectura' });
-    }
-
     const paciente = await pacienteDeLaFamilia(req.params.pacienteId, req.usuarioFamilia);
     if (!paciente) {
       return res.status(404).json({ error: 'Paciente no encontrado' });

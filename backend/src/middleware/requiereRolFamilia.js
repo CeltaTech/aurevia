@@ -35,27 +35,29 @@ export async function requiereRolFamilia(req, res, next) {
     .maybeSingle();
 
   let familiaId = titular?.id ?? null;
-  let rolCirculo = titular ? 'titular' : null;
 
   if (!familiaId) {
     const { data: miembro } = await supabase
       .from('miembros_familia')
-      .select('familia_id, rol')
+      .select('familia_id')
       .eq('usuario_id', userData.user.id)
       .maybeSingle();
 
     familiaId = miembro?.familia_id ?? null;
-    rolCirculo = miembro?.rol ?? null;
   }
 
   if (!familiaId) {
     return res.status(403).json({ error: 'Rol sin permiso' });
   }
 
+  // Acá se deja solamente si es el titular o no, que es un hecho —tiene fila propia en
+  // `familias`— y no una decisión. Qué ve cada persona del círculo ya no es un rol con nombre:
+  // son once accesos que el titular pidió por escrito, y los resuelve `accesosDelPedido` en las
+  // rutas que los necesitan, para no consultarlos en los pedidos que no los miran.
   req.usuarioFamilia = {
     id: userData.user.id,
     familiaId,
-    rolCirculo,
+    esTitular: Boolean(titular),
     prestadoraId: perfil.prestadora_id,
   };
   next();

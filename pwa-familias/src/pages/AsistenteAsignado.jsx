@@ -4,7 +4,8 @@ import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { nombreTipo } from '../lib/tipoDeAsistente';
 import { useSeVe } from '../context/PerfilContext';
-import { INTERRUPTOR_DE_LA_PANTALLA } from '../lib/interruptorDeCadaPantalla';
+import { useCirculo } from '../context/CirculoContext';
+import { pantallaPermitida } from '../lib/interruptorDeCadaPantalla';
 import { mensajeDeError } from '../lib/errores';
 
 // Una de las dos listas. La de "qué no hace" pesa lo mismo que la otra a
@@ -30,12 +31,16 @@ export default function AsistenteAsignado() {
   const { id } = useParams();
   const { t } = useLocale();
   const seVe = useSeVe();
+  const { puedeVer } = useCirculo();
   // Poner estrellas y leer las que otros pusieron son la misma decisión de la Prestadora:
   // donde no se califica, mostrar las calificaciones viejas sería seguir puntuando a un
   // trabajador por la ventana.
   const califica = seVe('familia_califica_al_asistente');
+  // La instrucción del titular no tapa las calificaciones ya escritas: sólo decide si esta
+  // persona puede agregar la suya. Apagar el bloque entero con esta clave le sacaría, a quien
+  // hoy las lee, algo que nadie le quitó.
+  const puedeCalificar = puedeVer('circulo_califica_al_asistente');
   const [datos, setDatos] = useState(null);
-  const [rolCirculo, setRolCirculo] = useState(null);
   const [error, setError] = useState('');
   const [estrellas, setEstrellas] = useState(0);
   const [comentario, setComentario] = useState('');
@@ -52,12 +57,6 @@ export default function AsistenteAsignado() {
       .catch((e) => {
         if (activo) setError(mensajeDeError(e, t, 'Asistente asignado'));
       });
-    api
-      .perfil()
-      .then(({ perfil }) => {
-        if (activo) setRolCirculo(perfil.rolCirculo);
-      })
-      .catch(() => {});
     return () => {
       activo = false;
     };
@@ -114,7 +113,7 @@ export default function AsistenteAsignado() {
         </>
       )}
 
-      {seVe(INTERRUPTOR_DE_LA_PANTALLA.escanearAsistente) && (
+      {pantallaPermitida('escanearAsistente', seVe, puedeVer) && (
         <Link to={`/pacientes/${id}/escanear-asistente`} className="btn btn-primary btn-full" style={{ marginTop: '1rem' }}>
           {t.asistente.escanear_boton}
         </Link>
@@ -140,12 +139,12 @@ export default function AsistenteAsignado() {
             ))
           )}
 
-          {guardiaId && !enviado && rolCirculo === 'solo_lectura' && (
+          {guardiaId && !enviado && !puedeCalificar && (
             <div style={{ marginTop: '1.5rem' }} className="alert">
-              {t.asistente.calificar_solo_lectura}
+              {t.asistente.calificar_sin_acceso}
             </div>
           )}
-          {guardiaId && !enviado && rolCirculo !== 'solo_lectura' && (
+          {guardiaId && !enviado && puedeCalificar && (
             <div style={{ marginTop: '1.5rem' }}>
               <h2>{t.asistente.calificar_titulo}</h2>
               {/* Los cinco botones son un grupo con nombre, y cada uno dice en palabras cuánto

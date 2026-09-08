@@ -1,8 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PerfilProvider, useSeVe } from './context/PerfilContext';
+import { CirculoProvider, useCirculo } from './context/CirculoContext';
 import { LocaleProvider, useLocale } from './i18n/LocaleContext';
-import { INTERRUPTOR_DE_LA_PANTALLA } from './lib/interruptorDeCadaPantalla';
+import { pantallaPermitida } from './lib/interruptorDeCadaPantalla';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import ActivarCuenta from './pages/ActivarCuenta';
@@ -17,6 +18,7 @@ import EscanearAsistente from './pages/EscanearAsistente';
 import SuscripcionMarketplace from './pages/SuscripcionMarketplace';
 import Medicacion from './pages/Medicacion';
 import MiPerfil from './pages/MiPerfil';
+import FirmarInstruccion from './pages/FirmarInstruccion';
 
 function RutaPrivada({ children }) {
   const { session, cargando } = useAuth();
@@ -26,13 +28,21 @@ function RutaPrivada({ children }) {
   return children;
 }
 
-// Una pantalla que la Prestadora apagó no alcanza con sacarla del menú: quien escriba la
-// dirección a mano tiene que terminar en el mismo lugar que quien no encuentra el botón.
-// Mientras la respuesta del perfil no llegó, `seVe` contesta que sí a todo, así que nadie
-// queda expulsado de una pantalla por un dato que todavía está viajando.
-function PantallaSegunInterruptor({ pantalla, children }) {
+// Una pantalla apagada no alcanza con sacarla del menú: quien escriba la dirección a mano
+// tiene que terminar en el mismo lugar que quien no encuentra el botón.
+//
+// Son dos decisiones distintas y las dos tienen que decir que sí: qué ofrece la Prestadora en
+// toda su aplicación, y qué instruyó el titular de la cuenta para cada persona de su círculo.
+// Una pantalla puede no tener ninguna de las dos, o tener una sola; lo que no está declarado no
+// restringe nada, y las dos claves salen del mismo archivo.
+//
+// Mientras la respuesta del perfil no llegó, las dos preguntas contestan que sí a todo, así que
+// nadie queda expulsado de una pantalla por un dato que todavía está viajando.
+function PantallaPermitida({ pantalla, children }) {
   const seVe = useSeVe();
-  if (!seVe(INTERRUPTOR_DE_LA_PANTALLA[pantalla])) return <Navigate to="/pacientes" replace />;
+  const { puedeVer } = useCirculo();
+
+  if (!pantallaPermitida(pantalla, seVe, puedeVer)) return <Navigate to="/pacientes" replace />;
   return children;
 }
 
@@ -58,46 +68,74 @@ function Rutas() {
         <Route index element={<Navigate to="/pacientes" replace />} />
         <Route path="pacientes" element={<MisPacientes />} />
         <Route path="pacientes/:id" element={<PacienteDetalle />} />
-        {/* La semana de guardias no va detrás de un interruptor: saber quién viene y cuándo es
-            para qué existe la aplicación de la Familia, no una función que una Prestadora
-            elija ofrecer o no. */}
-        <Route path="pacientes/:id/guardias" element={<Guardias />} />
-        <Route path="pacientes/:id/reportes" element={<Reportes />} />
-        <Route path="pacientes/:id/reportes/:reporteId" element={<ReporteDetalle />} />
+        {/* La semana de guardias no va detrás de un interruptor de la Prestadora: saber quién
+            viene y cuándo es para qué existe la aplicación de la Familia, no una función que una
+            Prestadora elija ofrecer o no. El titular sí le puede negar la agenda a alguien de su
+            círculo, que es otra decisión y de otro. */}
+        <Route
+          path="pacientes/:id/guardias"
+          element={
+            <PantallaPermitida pantalla="guardias">
+              <Guardias />
+            </PantallaPermitida>
+          }
+        />
+        <Route
+          path="pacientes/:id/reportes"
+          element={
+            <PantallaPermitida pantalla="reportes">
+              <Reportes />
+            </PantallaPermitida>
+          }
+        />
+        {/* El detalle va detrás del mismo acceso que la lista: sin esto, quien no tiene los
+            reportes no ve la lista pero abre uno escribiendo la dirección. */}
+        <Route
+          path="pacientes/:id/reportes/:reporteId"
+          element={
+            <PantallaPermitida pantalla="reportes">
+              <ReporteDetalle />
+            </PantallaPermitida>
+          }
+        />
         <Route
           path="pacientes/:id/alertas"
           element={
-            <PantallaSegunInterruptor pantalla="alertas">
+            <PantallaPermitida pantalla="alertas">
               <Alertas />
-            </PantallaSegunInterruptor>
+            </PantallaPermitida>
           }
         />
         <Route path="pacientes/:id/asistente" element={<AsistenteAsignado />} />
         <Route
           path="pacientes/:id/escanear-asistente"
           element={
-            <PantallaSegunInterruptor pantalla="escanearAsistente">
+            <PantallaPermitida pantalla="escanearAsistente">
               <EscanearAsistente />
-            </PantallaSegunInterruptor>
+            </PantallaPermitida>
           }
         />
         <Route
           path="pacientes/:id/suscripcion"
           element={
-            <PantallaSegunInterruptor pantalla="suscripcion">
+            <PantallaPermitida pantalla="suscripcion">
               <SuscripcionMarketplace />
-            </PantallaSegunInterruptor>
+            </PantallaPermitida>
           }
         />
         <Route
           path="pacientes/:id/medicacion"
           element={
-            <PantallaSegunInterruptor pantalla="medicacion">
+            <PantallaPermitida pantalla="medicacion">
               <Medicacion />
-            </PantallaSegunInterruptor>
+            </PantallaPermitida>
           }
         />
         <Route path="perfil" element={<MiPerfil />} />
+        {/* No lleva guardián: quién tiene una instrucción para firmar lo contesta el motor, y
+            quien no tiene ninguna ve que no hay ninguna. Adivinarlo acá dejaría al titular
+            afuera de su propia pantalla mientras el perfil todavía viaja. */}
+        <Route path="instruccion" element={<FirmarInstruccion />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
@@ -109,9 +147,11 @@ export default function App() {
     <LocaleProvider>
       <AuthProvider>
         <PerfilProvider>
-          <BrowserRouter>
-            <Rutas />
-          </BrowserRouter>
+          <CirculoProvider>
+            <BrowserRouter>
+              <Rutas />
+            </BrowserRouter>
+          </CirculoProvider>
         </PerfilProvider>
       </AuthProvider>
     </LocaleProvider>

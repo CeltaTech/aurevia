@@ -3,6 +3,7 @@ import { supabase } from '../db/connection.js';
 import { invitarActivacionCuenta } from './activacionCuenta.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import { coordenadasDeDomicilio } from '../geocodificacion/index.js';
+import { CATALOGO_CIRCULO_FAMILIAR } from './catalogoCirculoFamiliar.js';
 
 const ETAPAS_INCORPORACION = [
   'postulacion',
@@ -305,6 +306,7 @@ export const FILAS_DE_UNA_FAMILIA = [
 ];
 
 const FILAS_DE_UN_MIEMBRO_CIRCULO = [
+  { tabla: 'permisos_circulo_familiar', columna: 'usuario_id' },
   { tabla: 'miembros_familia', columna: 'usuario_id' },
 ];
 
@@ -442,11 +444,15 @@ export function revertirFamiliaImportada(familiaId, prestadoraId) {
   return deshacerAlta(familiaId, { prestadoraId, filas: FILAS_DE_UNA_FAMILIA });
 }
 
-// Invita a una persona al círculo de cuidado de una Familia ya existente (Fase 5): crea su
-// cuenta con `crearCuentaConPerfil` igual que cualquier otro rol de login propio, y en vez
-// de una fila en `familias` (eso es solo para el titular) crea la fila en `miembros_familia`
-// que la vincula. Rol fijo `solo_lectura` — es el único que existe hoy (ver
-// schema_circulo_cuidado.sql).
+// Invita a una persona al círculo de cuidado de una Familia ya existente: crea su cuenta con
+// `crearCuentaConPerfil` igual que cualquier otro rol de login propio, y en vez de una fila en
+// `familias` (eso es solo para el titular) crea la fila en `miembros_familia` que la vincula.
+//
+// Y le deja escritos los once accesos en su valor de fábrica, que es lo mismo que veía el
+// círculo antes de que esto existiera: todo menos calificar al Asistente y pedir medicación.
+// No es un adorno — la función de la base niega cuando no encuentra fila, así que una persona
+// recién anotada y sin filas no vería absolutamente nada y nadie sabría por qué. Después, si el
+// titular quiere darle menos, lo pide por escrito y se carga la instrucción.
 export async function invitarMiembroCirculo({ email, nombre, telefono, familiaId, prestadoraId, invitadoPor }) {
   if (!nombre || !email || !familiaId) {
     throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombre, email, familiaId)');
@@ -460,8 +466,18 @@ export async function invitarMiembroCirculo({ email, nombre, telefono, familiaId
 
     const { error: errorMiembro } = await supabase
       .from('miembros_familia')
-      .insert({ usuario_id: miembroId, familia_id: familiaId, email, rol: 'solo_lectura', creado_por: invitadoPor });
+      .insert({ usuario_id: miembroId, familia_id: familiaId, email, creado_por: invitadoPor });
     if (errorMiembro) throw new Error(errorMiembro.message);
+
+    const { error: errorAccesos } = await supabase
+      .from('permisos_circulo_familiar')
+      .insert(CATALOGO_CIRCULO_FAMILIAR.map((cosa) => ({
+        familia_id: familiaId,
+        usuario_id: miembroId,
+        clave: cosa.clave,
+        permitido: cosa.de_fabrica,
+      })));
+    if (errorAccesos) throw new Error(errorAccesos.message);
 
     return { miembroId };
   } catch (error) {
@@ -484,6 +500,7 @@ export async function revocarMiembroCirculo(usuarioId, { prestadoraId, familiaId
     throw new Error('Esta persona no pertenece al círculo de cuidado de esta Familia');
   }
 
+  await supabase.from('permisos_circulo_familiar').delete().eq('usuario_id', usuarioId);
   await supabase.from('miembros_familia').delete().eq('usuario_id', usuarioId);
   await borrarCuenta(usuarioId, { prestadoraId });
 }

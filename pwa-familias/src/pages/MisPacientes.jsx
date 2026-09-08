@@ -3,6 +3,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import DomicilioTemporal from '../components/DomicilioTemporal';
+import AvisoInstruccionPendiente from '../components/AvisoInstruccionPendiente';
 
 export default function MisPacientes() {
   const { t } = useLocale();
@@ -26,12 +27,22 @@ export default function MisPacientes() {
 
   if (error) return <div className="alert alert-error" role="alert">{error}</div>;
   if (pacientes === null) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
-  if (pacientes.length === 0) return <div className="estado-vacio" role="status">{t.pacientes.sin_pacientes}</div>;
+  // El aviso de instrucción pendiente va también acá: sin Pacientes cargados no hay ninguna otra
+  // pantalla adonde ir, y el titular igual tiene algo que firmar.
+  if (pacientes.length === 0) {
+    return (
+      <div>
+        <AvisoInstruccionPendiente />
+        <div className="estado-vacio" role="status">{t.pacientes.sin_pacientes}</div>
+      </div>
+    );
+  }
   if (pacientes.length === 1) return <Navigate to={`/pacientes/${pacientes[0].id}`} replace />;
 
   return (
     <div>
       <h1>{t.pacientes.titulo}</h1>
+      <AvisoInstruccionPendiente />
       {pacientes.map((p) => (
         <Link key={p.id} to={`/pacientes/${p.id}`} className="guardia-card" style={{ display: 'block', textDecoration: 'none' }}>
           <div className="guardia-card-paciente">{p.nombre}</div>

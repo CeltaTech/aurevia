@@ -5,8 +5,10 @@ import { supabase } from '../lib/supabaseClient';
 import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
 import { useSeVe } from '../context/PerfilContext';
-import { INTERRUPTOR_DE_LA_PANTALLA } from '../lib/interruptorDeCadaPantalla';
+import { useCirculo } from '../context/CirculoContext';
+import { pantallaPermitida } from '../lib/interruptorDeCadaPantalla';
 import DomicilioTemporal from '../components/DomicilioTemporal';
+import AvisoInstruccionPendiente from '../components/AvisoInstruccionPendiente';
 
 function segundosDesde(fecha) {
   return Math.max(0, Math.floor((Date.now() - new Date(fecha).getTime()) / 1000));
@@ -16,13 +18,21 @@ export default function PacienteDetalle() {
   const { id } = useParams();
   const { t } = useLocale();
   const seVe = useSeVe();
+  const { puedeVer } = useCirculo();
+  // Cada botón de abajo pregunta lo mismo que pregunta la ruta que abre, con la misma función:
+  // si contestaran distinto quedaría un botón que rebota, o una pantalla sin puerta de entrada.
+  const seEntraA = (pantalla) => pantallaPermitida(pantalla, seVe, puedeVer);
   // Se resuelve acá, como un sí o un no, porque además de decidir si se dibuja el mapa
   // decide si conviene abrir la escucha en vivo de la guardia: sin mapa no hay nada que
   // hacer con esas posiciones.
-  const veUbicacionEnVivo = seVe('familia_ubicacion_en_vivo');
+  //
+  // Son las dos decisiones de siempre, y acá no pasan por el mapa de pantallas porque esto no
+  // es una pantalla: es un bloque adentro de ésta. La Prestadora puede no ofrecer el
+  // seguimiento en vivo, y el titular puede habérselo negado a alguien de su círculo.
+  const veUbicacionEnVivo = seVe('familia_ubicacion_en_vivo') && puedeVer('circulo_ubicacion_en_vivo');
   // Las alertas se preguntan una sola vez porque mandan sobre dos cosas de esta pantalla: el
   // resumen de arriba y el botón que lleva a la lista completa.
-  const veAlertas = seVe(INTERRUPTOR_DE_LA_PANTALLA.alertas);
+  const veAlertas = seEntraA('alertas');
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState('');
   const [ubicacion, setUbicacion] = useState(null);
@@ -92,6 +102,9 @@ export default function PacienteDetalle() {
   return (
     <div>
       <h1>{paciente.nombre}</h1>
+      {/* Con un solo Paciente la lista se saltea sola y ésta es la primera pantalla que ve la
+          Familia, así que el aviso de la instrucción sin firmar tiene que estar acá también. */}
+      <AvisoInstruccionPendiente />
       <p className="guardia-card-detalle">
         {t.paciente.domicilio}: {paciente.domicilio || '—'}
       </p>
@@ -151,12 +164,16 @@ export default function PacienteDetalle() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '1.5rem' }}>
         {/* Primero de la lista a propósito: arriba se ve una sola guardia, y la pregunta que
             sigue siempre es qué pasa el resto de la semana. */}
-        <Link to={`/pacientes/${id}/guardias`} className="btn btn-secondary btn-full">
-          {t.paciente.ver_guardias_de_la_semana}
-        </Link>
-        <Link to={`/pacientes/${id}/reportes`} className="btn btn-secondary btn-full">
-          {t.paciente.ver_reportes}
-        </Link>
+        {seEntraA('guardias') && (
+          <Link to={`/pacientes/${id}/guardias`} className="btn btn-secondary btn-full">
+            {t.paciente.ver_guardias_de_la_semana}
+          </Link>
+        )}
+        {seEntraA('reportes') && (
+          <Link to={`/pacientes/${id}/reportes`} className="btn btn-secondary btn-full">
+            {t.paciente.ver_reportes}
+          </Link>
+        )}
         {veAlertas && (
           <Link to={`/pacientes/${id}/alertas`} className="btn btn-secondary btn-full">
             {t.paciente.ver_alertas}
@@ -165,12 +182,12 @@ export default function PacienteDetalle() {
         <Link to={`/pacientes/${id}/asistente`} className="btn btn-secondary btn-full">
           {t.paciente.ver_asistente}
         </Link>
-        {seVe(INTERRUPTOR_DE_LA_PANTALLA.suscripcion) && (
+        {seEntraA('suscripcion') && (
           <Link to={`/pacientes/${id}/suscripcion`} className="btn btn-secondary btn-full">
             {t.paciente.ver_suscripcion}
           </Link>
         )}
-        {seVe(INTERRUPTOR_DE_LA_PANTALLA.medicacion) && (
+        {seEntraA('medicacion') && (
           <Link to={`/pacientes/${id}/medicacion`} className="btn btn-secondary btn-full">
             {t.paciente.ver_medicacion}
           </Link>

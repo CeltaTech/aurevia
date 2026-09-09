@@ -4,6 +4,7 @@ import { invitarActivacionCuenta } from './activacionCuenta.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import { coordenadasDeDomicilio } from '../geocodificacion/index.js';
 import { CATALOGO_CIRCULO_FAMILIAR } from './catalogoCirculoFamiliar.js';
+import { laCuentaDelPanelEstaAlAlcance } from '../middleware/alcancePrestadora.js';
 
 const ETAPAS_INCORPORACION = [
   'postulacion',
@@ -198,21 +199,31 @@ export async function crearCuentaConPerfil({ email, nombre, telefono, rol, zonas
   return { userId, passwordTemporal };
 }
 
-// `prestadoraId`/`esSuperadmin` son la misma verificación de tenant que ya hacen los
-// callers antes de invocar esta función (panelUsuarios.js valida con un SELECT previo;
-// panelCuentas.js borra un id recién creado en el mismo request) — se repite acá adentro
-// para que la función no dependa por completo de la disciplina de cada llamador presente
-// y futuro (mismo tipo de hueco que tenía panelUsuarios.js antes de este bloque).
+// Da de baja una cuenta: su fila de `usuarios` y su cuenta de acceso.
+//
+// La comprobación de Prestadora es la de `middleware/alcancePrestadora.js`, escrita una sola vez
+// y compartida con la ruta que llama a esta función (pendiente #157, cerrado el 2026-09-09).
+// Hasta ese día acá había una segunda copia de la misma regla, más floja por dos motivos: se
+// salteaba entera cuando quien pedía era Superadmin —un llamador que se olvidara de acotar antes
+// borraba cualquier cuenta de cualquier Prestadora—, y comparaba las dos Organizaciones sin
+// exigir que existieran, así que dos vacíos daban permiso.
+//
+// `esSuperadmin` dejó de ser un pase libre: habilita únicamente la excepción que ya existe del
+// otro lado, las cuentas del equipo técnico de CeltaTech, que no pertenecen a ninguna
+// Organización. Una cuenta de otra Prestadora se niega igual, la pida quien la pida.
 export async function borrarCuenta(userId, { prestadoraId, esSuperadmin = false } = {}) {
-  if (!esSuperadmin) {
-    const { data: objetivo, error: errorObjetivo } = await supabase
-      .from('usuarios')
-      .select('prestadora_id')
-      .eq('id', userId)
-      .single();
-    if (errorObjetivo || !objetivo || objetivo.prestadora_id !== prestadoraId) {
-      throw new Error('No hay permiso para dar de baja esa cuenta');
-    }
+  // Sin identificador no hay a quién comprobar, y `.eq('id', undefined)` no filtra nada: se
+  // corta antes de llegar a la base (CLAUDE.md §5, todo control de acceso falla cerrado).
+  if (!userId) throw new Error('No hay permiso para dar de baja esa cuenta');
+
+  const { data: objetivo, error: errorObjetivo } = await supabase
+    .from('usuarios')
+    .select('rol, prestadora_id')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (errorObjetivo || !laCuentaDelPanelEstaAlAlcance(objetivo, { prestadoraId, esSuperadmin })) {
+    throw new Error('No hay permiso para dar de baja esa cuenta');
   }
 
   const { error: errorPerfil } = await supabase.from('usuarios').delete().eq('id', userId);
@@ -247,7 +258,7 @@ export async function deshacerAlta(userId, { prestadoraId, filas = [] } = {}) {
   if (userId && prestadoraId) {
     const { data: duena, error: errorDuena } = await supabase
       .from('usuarios')
-      .select('prestadora_id')
+      .select('rol, prestadora_id')
       .eq('id', userId)
       .maybeSingle();
     if (errorDuena || !duena) {
@@ -258,7 +269,10 @@ export async function deshacerAlta(userId, { prestadoraId, filas = [] } = {}) {
       console.error('deshacerAlta: no existe la cuenta a limpiar', userId);
       return false;
     }
-    if (duena.prestadora_id !== prestadoraId) {
+    // La misma regla de siempre, preguntada donde se escribió una sola vez. Sin `esSuperadmin`,
+    // así que una cuenta del equipo técnico de CeltaTech tampoco se limpia por acá: lo que se
+    // deshace son altas de Familia, Asistente o círculo de cuidado, nunca cuentas de Panel.
+    if (!laCuentaDelPanelEstaAlAlcance(duena, { prestadoraId })) {
       console.error('deshacerAlta: la cuenta no es de esta Prestadora, no se limpió nada', userId);
       return false;
     }

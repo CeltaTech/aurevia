@@ -1,6 +1,10 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { acotarAUsuariosDelPanel } from '../middleware/alcancePrestadora.js';
+import {
+  acotarAUsuariosDelPanel,
+  alcanceDelPanel,
+  laCuentaDelPanelEstaAlAlcance,
+} from '../middleware/alcancePrestadora.js';
 import { supabase } from '../db/connection.js';
 import { crearCuentaConPerfil, borrarCuenta } from '../utils/cuentasPanel.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
@@ -114,16 +118,25 @@ panelUsuariosRouter.delete('/:id', requiereRolPanel, soloAdministracion, async (
     return res.status(400).json({ error: 'La cuenta propia no se da de baja desde acá' });
   }
 
-  let queryUsuario = supabase.from('usuarios').select('rol, prestadora_id').eq('id', req.params.id);
-  queryUsuario = acotarAUsuariosDelPanel(queryUsuario, req.usuarioPanel);
-  const { data: usuario } = await queryUsuario.maybeSingle();
-  if (!usuario || !rolesGestionables(req.usuarioPanel.rol).includes(usuario.rol)) {
+  // Sobre qué Organización se está trabajando y si se alcanza además al equipo técnico. Se arma
+  // una vez y viaja tal cual hasta `borrarCuenta`, que vuelve a comprobar lo mismo con la misma
+  // función: la ruta y la función no pueden quedar mirando reglas distintas (pendiente #157).
+  const alcance = alcanceDelPanel(req.usuarioPanel);
+
+  const { data: usuario } = await supabase
+    .from('usuarios')
+    .select('rol, prestadora_id')
+    .eq('id', req.params.id)
+    .maybeSingle();
+
+  // Cuenta que no existe, de otra Prestadora, o de un rol que este solicitante no gestiona:
+  // desde afuera son el mismo caso y se contestan igual, para que la respuesta no permita
+  // averiguar qué cuentas tienen las demás Prestadoras.
+  if (!laCuentaDelPanelEstaAlAlcance(usuario, alcance)
+    || !rolesGestionables(req.usuarioPanel.rol).includes(usuario.rol)) {
     return res.status(400).json({ error: 'No hay permiso para dar de baja esa cuenta' });
   }
 
-  await borrarCuenta(req.params.id, {
-    prestadoraId: req.usuarioPanel.prestadoraId,
-    esSuperadmin: req.usuarioPanel.rol === 'superadmin',
-  });
+  await borrarCuenta(req.params.id, alcance);
   res.json({ ok: true });
 });

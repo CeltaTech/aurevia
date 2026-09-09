@@ -52,6 +52,21 @@ export function exigirOrganizacionActiva(req, res, next) {
 }
 
 /**
+ * Las dos únicas cosas de las que depende el alcance sobre la tabla `usuarios`: sobre qué
+ * Organización se está trabajando ahora, y si además se alcanza al equipo técnico de CeltaTech.
+ *
+ * Se derivan acá una sola vez, y no en cada lugar que las necesita, para que la consulta
+ * filtrada de abajo y la comprobación en memoria que le sigue no puedan discrepar sobre quién
+ * es Superadmin ni sobre cuál es la Organización activa.
+ */
+export function alcanceDelPanel(usuarioPanel) {
+  return {
+    prestadoraId: usuarioPanel?.prestadoraId ?? null,
+    esSuperadmin: usuarioPanel?.rol === 'superadmin',
+  };
+}
+
+/**
  * Caso aparte, y el único: las cuentas de Panel con rol superadmin no pertenecen a ninguna
  * Organización (su prestadora_id es nulo — lo exige la restricción
  * usuarios_prestadora_id_solo_superadmin_null). No son datos de una Prestadora sino del equipo
@@ -63,13 +78,47 @@ export function exigirOrganizacionActiva(req, res, next) {
  * que ser superadmin (lo verifica la ruta antes de llamar).
  */
 export function acotarAUsuariosDelPanel(query, usuarioPanel) {
-  if (usuarioPanel?.rol !== 'superadmin') {
+  const { prestadoraId, esSuperadmin } = alcanceDelPanel(usuarioPanel);
+  if (!esSuperadmin) {
     return acotarAPrestadora(query, usuarioPanel);
   }
-  const prestadoraId = usuarioPanel.prestadoraId;
   if (!prestadoraId) {
     // Superadmin sin Organización activa: solo su propio equipo, ninguna Prestadora.
     return query.eq('rol', 'superadmin');
   }
   return query.or(`prestadora_id.eq.${prestadoraId},rol.eq.superadmin`);
+}
+
+/**
+ * La misma regla que `acotarAUsuariosDelPanel` le pone a una consulta, preguntada sobre una fila
+ * que ya se leyó. Contesta si esa cuenta del Panel está al alcance de quien pide.
+ *
+ * Por qué hace falta la segunda forma (pendiente #157): un filtro no protege a quien no consulta
+ * filtrando. `borrarCuenta` (`utils/cuentasPanel.js`) recibe un identificador y borra, así que
+ * necesita preguntar, no filtrar — y hasta el 2026-09-09 tenía su propia copia de esta regla,
+ * más floja: se salteaba entera cuando quien pedía era Superadmin. Ahora la ruta y la función
+ * preguntan las dos acá, y las dos formas de la regla viven juntas a propósito, para que nadie
+ * pueda cambiar una sin ver la otra.
+ *
+ * `cuenta` es la fila de `usuarios` como sale de la base (`{ rol, prestadora_id }`) y tiene que
+ * traer las dos columnas: sin `rol` no se puede reconocer al equipo técnico. `alcance` es lo que
+ * devuelve `alcanceDelPanel`.
+ *
+ * Falla cerrado: sin fila, sin alcance, sin rol conocido o sin Organización con la cual comparar,
+ * se niega. En particular, dos cuentas sin Organización **no** son de la misma Organización: la
+ * comparación exige que los dos valores existan, porque un permiso resuelto comparando dos
+ * vacíos deja pasar justamente el caso que no se entendió.
+ */
+export function laCuentaDelPanelEstaAlAlcance(cuenta, alcance) {
+  if (!cuenta || !alcance) return false;
+
+  // La misma excepción que explica el `.or()` de arriba, y ninguna otra: las cuentas superadmin
+  // son del equipo técnico de CeltaTech y no cuelgan de ninguna Organización, así que ningún
+  // filtro por Organización las encuentra. Sólo las alcanza otro Superadmin.
+  if (cuenta.rol === 'superadmin') return alcance.esSuperadmin === true;
+
+  const organizacionDeLaCuenta = cuenta.prestadora_id ?? null;
+  const organizacionActiva = alcance.prestadoraId ?? null;
+  if (!organizacionDeLaCuenta || !organizacionActiva) return false;
+  return organizacionDeLaCuenta === organizacionActiva;
 }

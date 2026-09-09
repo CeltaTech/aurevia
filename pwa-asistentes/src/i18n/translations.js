@@ -154,6 +154,10 @@ export const T = {
       cerrar_falta_reporte: 'Antes de cerrar la guardia hace falta cargar el Reporte Diario.',
       cerrar_faltan_reportes: 'Antes de cerrar la guardia falta el Reporte Diario de: {nombres}.',
       fuera_de_rango: 'El check-in se hizo lejos del domicilio del Paciente — se registró igual, con un aviso automático para el Coordinador.',
+      // Pendiente #113 — el pase de guardia por QR. Misma idea que fuera_de_rango: el
+      // escaneo nunca traba el check-in ni el check-out, así que esto es un aviso, no un
+      // error. Se muestra cuando el código leído no es el del domicilio de esta guardia.
+      qr_no_coincide: 'El código leído no corresponde al cartel de este domicilio — se registró igual, con un aviso automático para el Coordinador.',
       geo_no_disponible: 'No se pudo obtener la ubicación. Hace falta activar el GPS y volver a intentar.',
       cargar_reporte: 'Cargar Reporte Diario',
       cargar_reporte_de: 'Cargar el Reporte Diario de {nombre}',
@@ -173,6 +177,25 @@ export const T = {
       tareas_corresponde: 'Qué hace',
       tareas_no_corresponde: 'Qué no hace',
       tareas_vacio: 'La Prestadora todavía no cargó esta lista.',
+    },
+    // El escaneo del cartel del domicilio, al marcar el check-in y al cerrar la guardia
+    // (pendiente #113). Nunca traba: si no se puede leer, se selecciona el motivo y se
+    // continúa igual. Los cuatro motivos son un código técnico fijo, en el mismo espíritu
+    // que errores.motivos — no un catálogo de la Prestadora.
+    escaneo: {
+      instrucciones: 'Apunte la cámara al cartel con el código QR que está en el domicilio.',
+      pidiendo_permiso: 'Solicitando acceso a la cámara…',
+      leido: 'Código leído.',
+      no_puedo_escanear: 'No puedo escanear el cartel',
+      excepcion_titulo: '¿Por qué no se puede escanear?',
+      excepcion_motivo_sin_camara: 'Este teléfono no tiene cámara',
+      excepcion_motivo_permiso_denegado: 'No se pudo dar permiso para usar la cámara',
+      excepcion_motivo_no_legible: 'El cartel no se puede leer (roto, sin luz, etc.)',
+      excepcion_motivo_otro: 'Otro motivo',
+      excepcion_continuar: 'Continuar sin escanear',
+      excepcion_aviso: 'Queda registrado como una excepción. Esto no impide continuar con la guardia.',
+      volver_a_intentar: 'Volver a intentar con la cámara',
+      cancelar: 'Cancelar',
     },
     medicacion: {
       ver_ordenes: 'Ver órdenes de medicación',
@@ -425,6 +448,7 @@ export const T = {
       cerrar_falta_reporte: 'You need to file the Daily Report before closing the shift.',
       cerrar_faltan_reportes: 'Before closing the shift, the Daily Report is still missing for: {nombres}.',
       fuera_de_rango: 'You are far from the Patient\'s address — check-in was recorded anyway, with an automatic note for the Coordinator.',
+      qr_no_coincide: 'The scanned code does not match this address — it was recorded anyway, with an automatic note for the Coordinator.',
       geo_no_disponible: 'Could not get your location. Turn on GPS and try again.',
       cargar_reporte: 'Fill Daily Report',
       cargar_reporte_de: "Fill {nombre}'s Daily Report",
@@ -441,6 +465,21 @@ export const T = {
       tareas_corresponde: 'What you do',
       tareas_no_corresponde: 'What you do not do',
       tareas_vacio: 'The Provider hasn\'t filled in this list yet.',
+    },
+    escaneo: {
+      instrucciones: 'Point the camera at the QR code posted at the address.',
+      pidiendo_permiso: 'Requesting camera access…',
+      leido: 'Code read.',
+      no_puedo_escanear: 'Unable to scan the code',
+      excepcion_titulo: 'Why can\'t the code be scanned?',
+      excepcion_motivo_sin_camara: 'This phone has no camera',
+      excepcion_motivo_permiso_denegado: 'Camera permission could not be granted',
+      excepcion_motivo_no_legible: 'The sign cannot be read (damaged, no light, etc.)',
+      excepcion_motivo_otro: 'Other reason',
+      excepcion_continuar: 'Continue without scanning',
+      excepcion_aviso: 'This is recorded as an exception. It does not stop the shift from continuing.',
+      volver_a_intentar: 'Try the camera again',
+      cancelar: 'Cancel',
     },
     medicacion: {
       ver_ordenes: 'View medication orders',
@@ -688,6 +727,7 @@ export const T = {
       cerrar_falta_reporte: 'Antes de encerrar o plantão é preciso preencher o Relatório Diário.',
       cerrar_faltan_reportes: 'Antes de encerrar o plantão ainda falta o Relatório Diário de: {nombres}.',
       fuera_de_rango: 'O check-in foi feito longe do endereço do Paciente — foi registrado mesmo assim, com um aviso automático para o Coordenador.',
+      qr_no_coincide: 'O código lido não corresponde a este domicílio — foi registrado mesmo assim, com um aviso automático para o Coordenador.',
       geo_no_disponible: 'Não foi possível obter a localização. É preciso ativar o GPS e tentar novamente.',
       cargar_reporte: 'Preencher Relatório Diário',
       cargar_reporte_de: 'Preencher o Relatório Diário de {nombre}',
@@ -704,6 +744,21 @@ export const T = {
       tareas_corresponde: 'O que faz',
       tareas_no_corresponde: 'O que não faz',
       tareas_vacio: 'A Prestadora ainda não preencheu esta lista.',
+    },
+    escaneo: {
+      instrucciones: 'Aponte a câmera para o código QR fixado no domicílio.',
+      pidiendo_permiso: 'Solicitando acesso à câmera…',
+      leido: 'Código lido.',
+      no_puedo_escanear: 'Não é possível escanear o código',
+      excepcion_titulo: 'Por que não foi possível escanear?',
+      excepcion_motivo_sin_camara: 'Este telefone não tem câmera',
+      excepcion_motivo_permiso_denegado: 'Não foi possível conceder permissão para usar a câmera',
+      excepcion_motivo_no_legible: 'O cartaz não pode ser lido (danificado, sem luz, etc.)',
+      excepcion_motivo_otro: 'Outro motivo',
+      excepcion_continuar: 'Continuar sem escanear',
+      excepcion_aviso: 'Isso fica registrado como uma exceção. Não impede a continuidade do plantão.',
+      volver_a_intentar: 'Tentar novamente com a câmera',
+      cancelar: 'Cancelar',
     },
     medicacion: {
       ver_ordenes: 'Ver ordens de medicação',

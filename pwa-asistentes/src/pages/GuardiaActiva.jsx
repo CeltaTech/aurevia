@@ -9,6 +9,7 @@ import { mensajeDeError } from '../lib/errores';
 import { nombreTipo } from '../lib/tipoDeAsistente';
 import { useSeVe } from '../context/PerfilContext';
 import DomicilioTemporal from '../components/DomicilioTemporal';
+import EscaneoQR from '../components/EscaneoQR';
 
 // Una de las dos listas del tipo de Asistente. La de "qué no hace" se muestra igual de
 // grande que la otra a propósito: es la que evita la discusión en la puerta. Se dibuja
@@ -217,6 +218,12 @@ export default function GuardiaActiva() {
   const [confirmandoCierre, setConfirmandoCierre] = useState(false);
   const [cerrando, setCerrando] = useState(false);
   const [cerradoPendiente, setCerradoPendiente] = useState(false);
+  // El pase de guardia por QR (pendiente #113): mientras estos dos están en true se muestra
+  // el escaneo del cartel en vez del botón. Uno por acto porque el check-in y el check-out
+  // son actos independientes — igual que el resto del ciclo de vida de la guardia, que esta
+  // función no toca.
+  const [escaneandoCheckin, setEscaneandoCheckin] = useState(false);
+  const [escaneandoCheckout, setEscaneandoCheckout] = useState(false);
 
   function cargar() {
     api
@@ -264,23 +271,29 @@ export default function GuardiaActiva() {
     return () => clearInterval(intervalo);
   }, [guardia, checkinPendiente, cerradoPendiente]);
 
-  async function alHacerCheckin() {
+  // escaneo es { qrLeido: true, qrToken } o { qrLeido: false, qrExcepcionMotivo }, resuelto
+  // por <EscaneoQR/>. QR y ubicación van siempre juntos (decisión del Desarrollador): nunca
+  // se marca un check-in con uno y no el otro, y ninguno de los dos traba la guardia si
+  // falla — cada falla queda anotada como excepción y el check-in se marca igual.
+  async function alHacerCheckin(escaneo) {
     setError('');
     setAviso('');
+    setEscaneandoCheckin(false);
     setHaciendoCheckin(true);
     try {
       const { lat, lng } = await obtenerUbicacion();
       const clienteUuid = nuevoId();
       try {
-        const resultado = await api.checkin(id, { lat, lng, clienteUuid });
-        if (!resultado.dentroDeRango) {
-          setAviso(t.guardia_activa.fuera_de_rango);
-        }
+        const resultado = await api.checkin(id, { lat, lng, clienteUuid, ...escaneo });
+        const avisos = [];
+        if (!resultado.dentroDeRango) avisos.push(t.guardia_activa.fuera_de_rango);
+        if (resultado.qrCoincide === false) avisos.push(t.guardia_activa.qr_no_coincide);
+        if (avisos.length > 0) setAviso(avisos.join(' '));
         cargar();
       } catch (e) {
         if (!esErrorDeRed(e)) throw e;
         // Sin señal: se guarda local y se reintenta solo al volver la conexión.
-        await agregarACola({ id: clienteUuid, tipo: 'checkin', guardiaId: id, payload: { lat, lng, clienteUuid } });
+        await agregarACola({ id: clienteUuid, tipo: 'checkin', guardiaId: id, payload: { lat, lng, clienteUuid, ...escaneo } });
         setCheckinPendiente({ desde: Date.now() });
         sincronizarCola();
       }
@@ -291,22 +304,26 @@ export default function GuardiaActiva() {
     }
   }
 
-  async function alCerrarGuardia() {
+  // Mismo contrato que alHacerCheckin: escaneo llega resuelto por <EscaneoQR/>, nunca traba
+  // el cierre, y viaja junto con la ubicación en el mismo pedido.
+  async function alCerrarGuardia(escaneo) {
     setError('');
     setAviso('');
+    setEscaneandoCheckout(false);
     setCerrando(true);
     try {
       const { lat, lng } = await obtenerUbicacion();
       const clienteUuid = nuevoId();
       try {
-        await api.checkout(id, { lat, lng, clienteUuid });
+        const resultado = await api.checkout(id, { lat, lng, clienteUuid, ...escaneo });
+        if (resultado.qrCoincide === false) setAviso(t.guardia_activa.qr_no_coincide);
         setConfirmandoCierre(false);
         cargar();
       } catch (e) {
         if (!esErrorDeRed(e)) throw e;
         // Sin señal: se guarda local y se reintenta solo al volver la conexión, igual que
         // el check-in. El Asistente puede irse; el cierre viaja cuando haya red.
-        await agregarACola({ id: clienteUuid, tipo: 'checkout', guardiaId: id, payload: { lat, lng, clienteUuid } });
+        await agregarACola({ id: clienteUuid, tipo: 'checkout', guardiaId: id, payload: { lat, lng, clienteUuid, ...escaneo } });
         setCerradoPendiente(true);
         setConfirmandoCierre(false);
         sincronizarCola();
@@ -398,10 +415,17 @@ export default function GuardiaActiva() {
         </div>
       )}
 
-      {!guardia.checkin_at && !checkinPendiente && (
-        <button className="btn btn-primary btn-full" onClick={alHacerCheckin} disabled={haciendoCheckin}>
+      {!guardia.checkin_at && !checkinPendiente && !escaneandoCheckin && (
+        <button className="btn btn-primary btn-full" onClick={() => setEscaneandoCheckin(true)} disabled={haciendoCheckin}>
           {haciendoCheckin ? t.guardia_activa.haciendo_checkin : t.guardia_activa.hacer_checkin}
         </button>
+      )}
+
+      {/* El pase de guardia por QR (pendiente #113): antes de marcar el check-in se escanea
+          el cartel del domicilio. Si no se puede leer, <EscaneoQR/> deja elegir un motivo y
+          igual llama a alHacerCheckin — el escaneo nunca traba la guardia. */}
+      {!guardia.checkin_at && !checkinPendiente && escaneandoCheckin && !haciendoCheckin && (
+        <EscaneoQR t={t} onListo={alHacerCheckin} onCancelar={() => setEscaneandoCheckin(false)} />
       )}
 
       {(guardia.checkin_at || checkinPendiente) && !guardia.checkout_at && (
@@ -433,7 +457,8 @@ export default function GuardiaActiva() {
           )}
 
           {/* El cierre es un acto propio, no un efecto secundario de mandar el reporte
-              (tarea 66a). Es también el lugar donde va a enchufarse el pase por QR. */}
+              (tarea 66a). El pase por QR (pendiente #113) quedó enchufado más abajo, entre
+              la pregunta de cierre y el cierre en sí. */}
           {reportesCompletos && cerradoPendiente && (
             <div className="alert alert-info" role="status" style={{ marginTop: '1rem' }}>
               <span aria-hidden="true">⏳</span> {t.comun.pendiente_de_enviar}
@@ -455,17 +480,29 @@ export default function GuardiaActiva() {
           {reportesCompletos && !cerradoPendiente && !guardia.checkout_bloqueado && confirmandoCierre && (
             <div style={{ marginTop: '1rem' }}>
               <p className="guardia-card-detalle">{t.guardia_activa.cerrar_pregunta}</p>
-              <button className="btn btn-primary btn-full" onClick={alCerrarGuardia} disabled={cerrando}>
-                {cerrando ? t.guardia_activa.haciendo_checkout : t.guardia_activa.cerrar_si}
-              </button>
-              <button
-                className="btn btn-secondary btn-full"
-                onClick={() => setConfirmandoCierre(false)}
-                disabled={cerrando}
-                style={{ marginTop: '0.5rem' }}
-              >
-                {t.comun.cancelar}
-              </button>
+
+              {!escaneandoCheckout && (
+                <>
+                  <button className="btn btn-primary btn-full" onClick={() => setEscaneandoCheckout(true)} disabled={cerrando}>
+                    {cerrando ? t.guardia_activa.haciendo_checkout : t.guardia_activa.cerrar_si}
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-full"
+                    onClick={() => setConfirmandoCierre(false)}
+                    disabled={cerrando}
+                    style={{ marginTop: '0.5rem' }}
+                  >
+                    {t.comun.cancelar}
+                  </button>
+                </>
+              )}
+
+              {/* El pase de guardia por QR (pendiente #113): antes de cerrar la guardia se
+                  escanea el cartel del domicilio, con el mismo criterio de nunca trabar que
+                  el check-in. Es el lugar que ya estaba marcado para esto (tarea 66a). */}
+              {escaneandoCheckout && !cerrando && (
+                <EscaneoQR t={t} onListo={alCerrarGuardia} onCancelar={() => setEscaneandoCheckout(false)} />
+              )}
             </div>
           )}
         </>

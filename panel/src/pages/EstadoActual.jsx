@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
+import { useAuth } from '../context/AuthContext';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
+import { esAdminOSuperior } from '../lib/roles';
 import { supabase } from '../lib/supabaseClient';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { FranjaExcepciones } from '../components/estado-actual/FranjaExcepciones';
+import { GuiaPrimerosPasos } from '../components/estado-actual/GuiaPrimerosPasos';
 import { GrillaGuardias } from './guardias/GrillaGuardias';
 import { BarraAccionesMasivas } from './guardias/BarraAccionesMasivas';
 import { PanelCobertura } from './guardias/PanelCobertura';
@@ -59,7 +62,13 @@ const DIAS_HACIA_ATRAS = 2;
 
 export function EstadoActual() {
   const { t } = useLocale();
+  const { usuario } = useAuth();
   const prestadoraId = usePrestadoraActual();
+  // La guía de primeros pasos (pendiente #139) es solo para quien puede completar sus pasos:
+  // Admin_prestadora o Superadmin, igual que el candado de Configuración. El Coordinador no
+  // la ve, porque ninguno de los cinco pasos es cosa suya. Sin Prestadora resuelta —el
+  // usuario todavía está cargando— tampoco hay nada que mostrar.
+  const mostrarGuia = esAdminOSuperior(usuario?.rol) && Boolean(prestadoraId);
 
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -365,6 +374,8 @@ export function EstadoActual() {
     <div>
       <h1>{t.estado_actual.titulo}</h1>
       <p className="panel-lateral-subtitulo">{t.estado_actual.subtitulo}</p>
+
+      {mostrarGuia && <GuiaPrimerosPasos />}
 
       {error && <Alert variant="error">{error}</Alert>}
 

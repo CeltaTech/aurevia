@@ -10,9 +10,8 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 /* Qué ve cada persona del círculo de cuidado.
    ==========================================================================
 
-   POR QUÉ EXISTE ESTA PANTALLA. Hasta acá, cualquiera que la Prestadora anotara en el círculo
-   familiar veía exactamente lo mismo que el titular, y no había forma de darle menos a uno que
-   a otro. Ahora el titular dice qué puede ver cada uno.
+   POR QUÉ EXISTE ESTA PANTALLA. Cada persona anotada en el círculo familiar ve lo suyo, y no
+   todos lo mismo que el titular: acá es donde la Prestadora carga qué puede ver cada una.
 
    QUIÉN DECIDE, QUE NO ES UN DETALLE. El titular no configura nada por su cuenta: le dice a la
    Prestadora qué puede ver cada persona de su círculo, la Prestadora lo carga acá, y al guardar

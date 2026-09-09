@@ -26,8 +26,8 @@
 // La cercanía: cuándo se dice y cuándo se calla
 // ----------------------------------------------------------------------------
 //
-// Desde que el legajo del Asistente guarda su domicilio (`asistentes.domicilio`, `lat`, `lng`),
-// la distancia hasta la casa del Paciente entra como un criterio más. Pero **solo cuando los
+// El legajo del Asistente guarda su domicilio (`asistentes.domicilio`, `lat`, `lng`), así que la
+// distancia hasta la casa del Paciente entra como un criterio más. Pero **solo cuando los
 // dos puntos existen de verdad**: si a cualquiera de los dos le falta la ubicación, este
 // archivo no dice nada sobre cercanía, ni a favor ni en contra. Un candidato ordenado por una
 // distancia inventada es peor que un candidato sin ese criterio, porque parece confiable.
@@ -235,8 +235,7 @@ export const MOTIVO = {
  * La subcontratación tiene el suyo porque ninguna persona nuestra puede estar en esa modalidad
  * —la regla de la columna solo admite las otras dos—, así que una guardia subcontratada bloquea a
  * todo el plantel. Decirlo con las palabras del caso evita que quien mira crea que se trata de
- * un error de carga: esa guardia la cubre la otra empresa, y su gente no está en esta base
- * (decisión del Desarrollador, 2026-08-19).
+ * un error de carga: esa guardia la cubre la otra empresa, y su gente no está en esta base.
  */
 const MOTIVO_POR_MODALIDAD = {
   directa: MOTIVO.MODALIDAD_DIRECTA,
@@ -686,9 +685,9 @@ function evaluarAsistente(asistente, ctx) {
   //        quien tiene una ausencia que cubre esa fecha no está ese día, y eso no se arregla
   //        con un descuento de puntaje.
   //
-  //        Es la única comprobación de este archivo que empezó siendo un error a favor: sin
-  //        ella, quien estaba de licencia no solo aparecía, aparecía **arriba**, porque no
-  //        tenía ninguna guardia encima y se llevaba los puntos de "ese día lo tiene libre".
+  //        Sin esta comprobación, quien está de licencia no solo aparece: aparece **arriba**,
+  //        porque no tiene ninguna guardia encima y se lleva los puntos de "ese día lo tiene
+  //        libre".
   //
   //        El motivo que se muestra no dice de qué ausencia se trata, y el tipo ni siquiera
   //        llega hasta acá: la razón está escrita en `ausenciaQueTapa` (CLAUDE.md §6).

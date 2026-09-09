@@ -178,7 +178,7 @@ export default function FirmarInstruccion() {
                   maxLength={LARGO_DEL_CODIGO}
                   value={codigo}
                   // Se deja entrar sólo dígitos: pegar el código con un espacio o un guion
-                  // adelante terminaba en un rechazo que no explicaba nada.
+                  // adelante termina en un rechazo que no explica nada.
                   onChange={(e) => setCodigo(e.target.value.replace(/\D/g, '').slice(0, LARGO_DEL_CODIGO))}
                   aria-describedby={errorDelCodigo ? 'codigo-instruccion-error' : undefined}
                   aria-invalid={errorDelCodigo ? 'true' : undefined}

@@ -7,12 +7,10 @@ const EmpresaContext = createContext(null);
 //
 // Sin sesión —la pantalla de ingreso— no se carga nada, y es a propósito: el Panel es uno solo
 // para todas las Prestadoras, así que antes de entrar no hay forma de saber de cuál se trata.
-// Hasta el 2026-08-23 se le preguntaba al camino público del motor, que sin dominio que
-// coincidiera contestaba con la única Prestadora que hubiera cargada: mostraba un nombre acertado
-// por descarte, y con dos Prestadoras habría mostrado el equivocado. Ese camino público ahora
-// exige que la Prestadora venga en la dirección y no adivina ninguna. Que la
-// pantalla de ingreso sepa a qué Prestadora pertenece quien está por entrar es el pendiente #141;
-// mientras tanto el subtítulo queda vacío, que es lo que ya hace `Login.jsx` cuando no hay dato.
+// Tampoco se le pregunta al camino público del motor: ese camino exige que la Prestadora venga en
+// la dirección y no adivina ninguna, porque adivinar con una sola Prestadora cargada acierta por
+// descarte y con dos muestra la equivocada. El subtítulo queda vacío, que es lo que hace
+// `Login.jsx` cuando no hay dato.
 async function cargarConfiguracionPropia() {
   const { data } = await supabase
     .from('configuracion_prestadora')

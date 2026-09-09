@@ -31,10 +31,10 @@ import { useModalAccesible } from '../hooks/useModalAccesible';
 /* Lo que la Prestadora le paga al Asistente, guardado.
    ==========================================================================
 
-   QUÉ CAMBIÓ. Hasta acá esta pantalla hacía la cuenta en el momento, cada vez que se abría,
-   con el valor hora que la ficha tuviera ESE día. O sea que corregir hoy el valor hora de
-   alguien reescribía lo que se le pagó en marzo, y no había dónde anotar "este mes ya se
-   pagó". Ahora la cuenta se hace una vez, queda escrita, y esta pantalla la lee.
+   LA CUENTA YA ESTÁ HECHA. La liquidación se calcula una sola vez, con el valor hora que la
+   ficha tenga ESE día, queda escrita, y esta pantalla la lee. Hacer la cuenta en el momento,
+   cada vez que se abre la pantalla, haría que corregir hoy el valor hora de alguien reescribiera
+   lo que se le pagó en marzo, y no dejaría dónde anotar "este mes ya se pagó".
 
    POR QUÉ NO SE CALCULA NADA ACÁ. La liquidación es una foto: se saca con los valores del día
    y no se vuelve a calcular. Si el navegador rehiciera la cuenta para mostrarla, la foto

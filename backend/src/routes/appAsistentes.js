@@ -26,6 +26,7 @@ import {
   registrarComprobacion,
 } from '../utils/comprobacionDePresencia.js';
 import { responderError } from '../utils/errorConMotivo.js';
+import { puedeRegistrarUbicacion } from '../utils/consentimientoUbicacion.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { MOTIVOS_DEMORA } from '../utils/motivosDemora.js';
 import { FUENTE_AVISO_DEMORA_ASISTENTE } from '../utils/fuentesAlertaTemprana.js';
@@ -415,9 +416,19 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
     return responderError(res, e);
   }
 
+  // La llegada se marca siempre; la coordenada, sólo si el consentimiento de seguimiento está
+  // vigente. Quien lo retiró sigue pudiendo trabajar con normalidad — lo único que no queda
+  // guardado es dónde estaba.
+  const registraUbicacion = await puedeRegistrarUbicacion(guardia.asistente_id);
+
   const { error } = await supabase
     .from('guardias')
-    .update({ checkin_at: new Date().toISOString(), checkin_lat: lat, checkin_lng: lng, estado: 'activa' })
+    .update({
+      checkin_at: new Date().toISOString(),
+      checkin_lat: registraUbicacion ? lat : null,
+      checkin_lng: registraUbicacion ? lng : null,
+      estado: 'activa',
+    })
     .eq('id', guardia.id);
   if (error) {
     return res.status(500).json({ error: error.message });
@@ -889,12 +900,16 @@ appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, topeDeP
   // check-out —dos toques seguidos al botón, la aplicación reintentando— acá no queda nada por
   // cambiar, y contestar que sí sin haber cambiado nada es lo que hace que dos guardias
   // superpuestas parezcan cerradas cuando solo se cerró una.
+  // Misma regla que en el check-in: la salida se marca siempre, la coordenada solamente con el
+  // consentimiento de seguimiento vigente.
+  const registraUbicacion = await puedeRegistrarUbicacion(guardia.asistente_id);
+
   const { data: cerrada, error } = await supabase
     .from('guardias')
     .update({
       checkout_at: new Date().toISOString(),
-      checkout_lat: lat,
-      checkout_lng: lng,
+      checkout_lat: registraUbicacion ? lat : null,
+      checkout_lng: registraUbicacion ? lng : null,
       estado: 'completada',
     })
     .eq('id', guardia.id)
@@ -987,6 +1002,13 @@ appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, exige
     return res.status(404).json({ error: 'Guardia activa no encontrada' });
   }
 
+  // El mapa en vivo es, literalmente, la ubicación de una persona: sin consentimiento vigente no
+  // se guarda nada. No es un error —la guardia sigue su curso y la aplicación no se traba—, así
+  // que se contesta que sí y se avisa que la posición no quedó registrada.
+  if (!(await puedeRegistrarUbicacion(guardia.asistente_id))) {
+    return res.json({ ok: true, ubicacion_registrada: false });
+  }
+
   // Solo mientras la guardia siga activa: si se cerró entre la lectura de arriba y esta línea,
   // el mapa de la Familia no tiene que seguir moviéndose. Y si no se escribió nada, se dice.
   const { data: marcada, error } = await supabase
@@ -1002,7 +1024,7 @@ appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, exige
     return res.status(404).json({ error: 'Guardia activa no encontrada' });
   }
 
-  res.json({ ok: true });
+  res.json({ ok: true, ubicacion_registrada: true });
 });
 
 // Reportes anteriores del mismo Paciente (botón "Ver reportes anteriores" en Guardia Activa).

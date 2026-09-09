@@ -19,14 +19,12 @@ import { llegadaEstimadaDeGuardia } from '../utils/estimarLlegadaDeGuardia.js';
 
 export const appFamiliasRouter = Router();
 
-// pacientes.medicacion_habitual queda deprecado (pendiente #62, docs/PENDIENTES.md): la
-// medicación vigente se deriva de indicaciones_medicacion (estado='aceptada'), nunca de
-// este JSONB suelto.
+// pacientes.medicacion_habitual queda deprecado: la medicación vigente se deriva de
+// indicaciones_medicacion (estado='aceptada'), nunca de este JSONB suelto.
 //
 // Las patologías y las coordenadas del domicilio solo se piden si la Prestadora las tiene
-// prendidas: lo que no se puede ver, no se manda (tarea 65). `nivel_complejidad` ya no se pide
-// —ninguna pantalla de la Familia lo mostró nunca— y era una etiqueta clínica de más viajando
-// al teléfono.
+// prendidas: lo que no se puede ver, no se manda. `nivel_complejidad` no se pide —ninguna
+// pantalla de la Familia lo muestra— y sería una etiqueta clínica de más viajando al teléfono.
 //
 // RECIBE EL PEDIDO ENTERO Y NO LA VISIBILIDAD SUELTA. Acá hay que saber dos cosas —qué muestra la
 // Prestadora y qué le dieron a esta persona— y las dos ya vienen contestadas y guardadas en el
@@ -154,9 +152,9 @@ appFamiliasRouter.get('/instruccion-pendiente', requiereRolFamilia, soloElTitula
 // Pide el código que llega al teléfono. La persona ya entró con su clave: el código es el segundo
 // paso, no el único — juntos son la firma que se aprobó.
 //
-// LAS DOS RUTAS LLEVAN TOPE DE PEDIDOS POR MINUTO (pendiente #177). Acá quien prueba los códigos
-// es la misma persona que los pide, así que sin tope se pedían y se probaban sin freno. Cada una
-// cuenta por separado: gastar los pedidos de una no tiene que dejar sin la otra.
+// LAS DOS RUTAS LLEVAN TOPE DE PEDIDOS POR MINUTO. Acá quien prueba los códigos es la misma
+// persona que los pide, así que sin tope se piden y se prueban sin freno. Cada una cuenta por
+// separado: gastar los pedidos de una no tiene que dejar sin la otra.
 appFamiliasRouter.post('/instruccion/:instruccionId/codigo', requiereRolFamilia, soloElTitular, topeDePedidos({ nombre: 'instruccion_pedir_codigo' }), async (req, res) => {
   try {
     const { enviadoA } = await pedirCodigo({
@@ -257,7 +255,7 @@ appFamiliasRouter.get('/pacientes/:id', requiereRolFamilia, async (req, res) => 
     guardiaProxima = data || null;
   }
 
-  // A qué hora se estima que llega quien ya salió (pendiente #101).
+  // A qué hora se estima que llega quien ya salió.
   //
   // LO QUE VIAJA ES UNA HORA Y NADA MÁS. La Familia lee «llega alrededor de las 14:45». Nunca ve
   // por dónde va: el punto del que salió el Asistente es casi siempre su casa, y mandarlo al
@@ -293,8 +291,8 @@ appFamiliasRouter.get('/pacientes/:id', requiereRolFamilia, async (req, res) => 
     alertasActivas = data || [];
   }
 
-  // Acá viajaba también la medicación vigente del Paciente. No la mostraba ninguna pantalla de
-  // la Familia: la lista de indicaciones tiene su propia dirección, con su propio candado. Era
+  // Acá no viaja la medicación vigente del Paciente. No la muestra ninguna pantalla de la
+  // Familia: la lista de indicaciones tiene su propia dirección, con su propio candado. Sería
   // dato de salud saliendo al teléfono para que nadie lo leyera.
   res.json({
     paciente,
@@ -307,10 +305,10 @@ appFamiliasRouter.get('/pacientes/:id', requiereRolFamilia, async (req, res) => 
 // ============================================================================
 // Las guardias de la semana — la pregunta "¿quién viene el jueves?"
 //
-// Hasta acá la Familia solo podía ver la guardia de ahora o la que sigue. Todo lo demás
-// —el resto de la semana, y lo que pasó con las que ya fueron— había que preguntarlo por
-// teléfono, y esa llamada la atiende la Coordinadora. Esta dirección devuelve la semana
-// entera: los siete días, con quién viene en cada uno y cómo terminó cada guardia.
+// Esta dirección devuelve la semana entera: los siete días, con quién viene en cada uno y cómo
+// terminó cada guardia. Con la guardia de ahora y la que sigue no alcanza: todo lo demás —el
+// resto de la semana, y lo que pasó con las que ya fueron— termina preguntándose por teléfono,
+// y esa llamada la atiende la Coordinadora.
 //
 // EL DÍA LO PONE EL TELÉFONO, NO EL SERVIDOR. El motor puede estar corriendo en otro huso
 // horario que la Familia; a las diez de la noche en Buenos Aires, el reloj del servidor ya
@@ -409,8 +407,8 @@ appFamiliasRouter.get('/pacientes/:id/guardias', requiereRolFamilia, exigeDelCir
 // reporte suelto: si se escribiera dos veces, con el tiempo una de las dos mandaría de más.
 //
 // `texto_libre` no se pide: es el relato crudo que dictó el Asistente antes de ordenarlo en
-// campos, ninguna pantalla de la Familia lo mostró nunca, y era el dato más delicado del
-// reporte viajando al teléfono sin que nadie lo leyera.
+// campos, ninguna pantalla de la Familia lo muestra, y sería el dato más delicado del reporte
+// viajando al teléfono sin que nadie lo leyera.
 //
 // `medicacion` es lo que se le dio en ese turno, y va bajo el mismo interruptor que la lista de
 // indicaciones: si la Prestadora decidió que la medicación no se muestra, no alcanza con
@@ -432,10 +430,10 @@ appFamiliasRouter.get('/pacientes/:id/reportes', requiereRolFamilia, exigeDelCir
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
 
-  // El reporte dice de quién habla, así que se piden directo. Antes se los buscaba por los
-  // turnos que cubrieron a esta persona, y eso traía también los reportes de los otros
-  // Pacientes del mismo turno: la Familia veía en la historia de su padre lo que se escribió
-  // sobre el vecino de cuarto.
+  // El reporte dice de quién habla, así que se piden directo. Buscarlos por los turnos que
+  // cubrieron a esta persona traería también los reportes de los otros Pacientes del mismo
+  // turno: la Familia vería en la historia de su padre lo que se escribió sobre el vecino de
+  // cuarto.
   const columnas = columnasDelReporte(visibilidad);
 
   const { data, error } = await supabase
@@ -458,9 +456,9 @@ appFamiliasRouter.get('/pacientes/:id/reportes', requiereRolFamilia, exigeDelCir
   res.json({ reportes: data, rangosVitales: vitales.rangos });
 });
 
-// Un reporte suelto. Existe porque la pantalla que muestra un reporte pedía la lista entera —
-// hasta 60 reportes con todo adentro— para quedarse con uno solo: 59 días de información de
-// salud de esa persona viajando al teléfono para descartarse en el acto.
+// Un reporte suelto. Existe para que la pantalla que muestra un reporte no tenga que pedir la
+// lista entera —hasta 60 reportes con todo adentro— para quedarse con uno solo: serían 59 días
+// de información de salud de esa persona viajando al teléfono para descartarse en el acto.
 appFamiliasRouter.get('/pacientes/:id/reportes/:reporteId', requiereRolFamilia, exigeDelCirculo('circulo_reportes'), async (req, res) => {
   const visibilidad = await visibilidadDeLaPersona(req);
   const paciente = await pacienteDeLaFamilia(req.params.id, req);
@@ -594,8 +592,7 @@ appFamiliasRouter.get('/pacientes/:id/asistente', requiereRolFamilia, async (req
 
 // ============================================================================
 // Escanear Asistente: verifica que el qr_token escaneado corresponda al Asistente
-// asignado a la guardia de HOY de ese Paciente (Etapa 6, rediseñada 2026-07-22,
-// ver docs/claude_history.md).
+// asignado a la guardia de HOY de ese Paciente.
 // ============================================================================
 
 appFamiliasRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRolFamilia, exigeVisible('familia_verifica_con_codigo'), exigeDelCirculo('circulo_verifica_con_codigo'), async (req, res) => {
@@ -691,15 +688,14 @@ appFamiliasRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRol
 });
 
 // ============================================================================
-// Calificación del Asistente al cierre de una guardia (tabla calificaciones_asistente,
-// ya existente desde el pendiente #13(b)).
+// Calificación del Asistente al cierre de una guardia (tabla calificaciones_asistente).
 // ============================================================================
 
 // Calificar es una de las dos acciones de escritura que tiene la Familia, y viene negada de
 // fábrica para todo el círculo: poner estrellas y un comentario sobre el trabajo de alguien es un
-// acto del titular. Antes lo decidía la columna `rol` del miembro —solo lectura o no—, que no
-// distinguía entre las dos acciones ni permitía dar una sin la otra. Ahora lo decide la
-// instrucción que el titular firmó.
+// acto del titular. Lo decide la instrucción que el titular firmó, y no la columna `rol` del
+// miembro: «solo lectura o no» no distingue entre las dos acciones de escritura ni permite dar
+// una sin la otra.
 appFamiliasRouter.post('/guardias/:guardiaId/calificar', requiereRolFamilia, exigeVisible('familia_califica_al_asistente'), exigeDelCirculo('circulo_califica_al_asistente'), async (req, res) => {
   const { estrellas, comentario } = req.body || {};
   if (!Number.isInteger(estrellas) || estrellas < 1 || estrellas > 5) {
@@ -796,7 +792,7 @@ appFamiliasRouter.delete('/push/suscribir', requiereRolFamilia, async (req, res)
 });
 
 // ============================================================================
-// Suscripción marketplace + cobro en efectivo por QR (pendiente #85). El QR es la
+// Suscripción marketplace + cobro en efectivo por QR. El QR es la
 // alternativa a la carga manual del cobrador: la Familia lo genera desde su propio
 // dispositivo, de un solo uso y con vencimiento corto (10 min) — el canje ocurre siempre en
 // el Panel vía service_role, nunca como UPDATE directo desde acá.
@@ -860,12 +856,12 @@ appFamiliasRouter.get('/qr-cobro/:id', requiereRolFamilia, exigeVisible('familia
 });
 
 // ============================================================================
-// El pase de guardia (pendiente #113) — el código que la Familia muestra en pantalla
+// El pase de guardia — el código que la Familia muestra en pantalla
 //
 // Cuando llega el Asistente, quien está en la casa abre esto y le muestra el código. Se renueva
 // solo cada pocos segundos —los que configuró la Prestadora—, así que una foto de la pantalla no
-// sirve un minuto después. Es lo que reemplaza al cartel impreso, que era un secreto permanente
-// pegado en la puerta.
+// sirve un minuto después. No se usa un cartel impreso: pegado en la puerta sería un secreto
+// permanente a la vista de cualquiera que pase.
 //
 // Lo muestra cualquiera del círculo familiar, sin acceso especial: no revela ningún dato del
 // Paciente ni de la Prestadora, y su único efecto es dejar entrar a quien ya tenía la guardia

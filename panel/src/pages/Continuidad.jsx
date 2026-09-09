@@ -19,9 +19,9 @@ import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 const TIPOS_RESOLUCION = ['suplente', 'franquero', 'emergencia', 'familiar'];
 
 /* Los avisos de cierre se leen de la vista y no de la tabla: es la misma tabla con una columna
-   más, la del nombre de quien cerró. Antes se pedía ese nombre consultando `usuarios`, y esa
-   tabla deja que cada persona lea su propia fila y ninguna otra, así que la consulta volvía
-   vacía y acá se dibujaba un guión. La vista lo resuelve adentro de la base sin abrir nada de
+   más, la del nombre de quien cerró. Ese nombre no se puede pedir consultando `usuarios`: esa
+   tabla deja que cada persona lea su propia fila y ninguna otra, así que la consulta vuelve
+   vacía y acá se dibuja un guión. La vista lo resuelve adentro de la base sin abrir nada de
    `usuarios` — ver
    `supabase/migrations/20260909120000_la_pantalla_de_continuidad_dice_quien_cerro_el_servicio.sql`.
    Para marcar un aviso como visto se sigue escribiendo en la tabla, que es lo único que se
@@ -258,12 +258,11 @@ export function Continuidad() {
             <div>
               <strong>{a.fecha} · {a.horario}</strong> · {t.continuidad.col_paciente}: {a.paciente_nombre}
               <div>{t.continuidad.col_ausente}: {a.asistente_nombre}</div>
-              {/* DE DÓNDE SALIÓ ESTA ALERTA, dicho en cada fila. Hasta acá la pantalla decía
-                  «Aviso telefónico previo» en todas, viniera de donde viniera, y desde el
-                  pendiente #101 hay cuatro orígenes posibles: el aviso que el Coordinador
-                  levantó por teléfono, el que dio el Asistente desde su teléfono, la cuenta de
-                  la hora estimada de llegada, y la hora de inicio alcanzada sin que nadie
-                  apretara nada.
+              {/* DE DÓNDE SALIÓ ESTA ALERTA, dicho en cada fila. Hay cuatro orígenes posibles:
+                  el aviso que el Coordinador levantó por teléfono, el que dio el Asistente desde
+                  su teléfono, la cuenta de la hora estimada de llegada, y la hora de inicio
+                  alcanzada sin que nadie apretara nada. Decir «Aviso telefónico previo» en todas,
+                  viniera de donde viniera, sería contar cuatro cosas distintas como una sola.
 
                   No se pueden mezclar. Apretar «voy demorado» es un acto de una persona y la
                   protege; que la cuenta diga que no llega es un hecho y no es mérito de nadie.

@@ -1,12 +1,11 @@
 // Catálogo único de los avisos que emite Careonys.
 //
-// ESTE ES EL ÚNICO LUGAR DONDE SE AGREGA UN AVISO NUEVO. Antes, un aviso existía solamente
-// si alguien se había acordado de sembrarle una fila en `configuracion_notificaciones`: si la
-// fila faltaba, la pantalla de Avisos del Panel no lo mostraba y la Prestadora no lo podía
-// apagar ni redirigir a otro correo — aunque el aviso se siguiera mandando igual. Así quedó
-// `alerta_ia_nivel2`, que nunca se sembró en ningún esquema y por eso no se pudo configurar
-// nunca (tarea 64b). La lista de acá abajo es la fuente de verdad (CLAUDE.md §7 regla 12): la
-// pantalla la muestra completa y las filas guardadas solo aportan lo que la Prestadora eligió.
+// ESTE ES EL ÚNICO LUGAR DONDE SE AGREGA UN AVISO NUEVO. La lista de acá abajo es la fuente de
+// verdad (CLAUDE.md §7 regla 12): la pantalla la muestra completa y las filas guardadas solo
+// aportan lo que la Prestadora eligió. Ningún aviso depende de que alguien se acuerde de
+// sembrarle una fila en `configuracion_notificaciones`: si eso hiciera falta, la fila que
+// faltara dejaría al aviso fuera de la pantalla de Avisos del Panel —sin poder apagarlo ni
+// redirigirlo a otro correo— aunque el aviso se siguiera mandando igual.
 //
 // Para agregar un aviso: se suma una entrada acá y nada más. No hace falta ninguna migración
 // ni ninguna siembra — la fila se crea sola la primera vez que la Prestadora guarda ese aviso
@@ -24,7 +23,7 @@
 //                     que dibujarles la casilla sería ofrecer algo que no ocurre.
 //   admite_familia  — si el aviso, además de al Coordinador, le puede llegar a la Familia.
 //
-// Verificado contra el código que los emite (2026-08-11):
+// Dónde se emite cada uno:
 //   guardia_sin_cubrir             → utils/revisarGuardiasSinCubrir.js:100 (notificarCoordinador)
 //   guardia_sin_cerrar             → utils/revisarNotificacionesCoordinador.js (notificarCoordinador)
 //   guardia_sin_cerrar_grave       → utils/revisarNotificacionesCoordinador.js (notificarCoordinador)
@@ -36,9 +35,9 @@
 //   aviso_rutina_asistente         → utils/revisarRecordatoriosPush.js:24 (push, con respaldo WhatsApp)
 //   nueva_postulacion_asistente    → routes/postulacionAsistente.js:40 (enviarEmailCoordinador)
 //   nueva_solicitud_servicio       → routes/solicitudServicio.js:32 (enviarEmailCoordinador)
-// No hay ningún otro evento emitido, y los tres de vencimiento viejos (`vencimiento_monotributo`,
-// `vencimiento_art`, `vencimiento_seguro`) ya no se emiten: los reemplazó el genérico
-// `vencimiento_documento_asistente` cuando el catálogo de documentos pasó a ser por Prestadora.
+// No hay ningún otro evento emitido. El vencimiento de documentos tiene un solo evento genérico,
+// `vencimiento_documento_asistente`, y no uno por tipo de documento, porque qué documentos se le
+// piden a un Asistente lo define el catálogo de cada Prestadora.
 
 export const CATALOGO_AVISOS = [
   {

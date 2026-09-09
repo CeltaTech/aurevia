@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 
-// Pendiente #30, ítem H — toggle de MFA obligatorio para superadmin.
+// Interruptor de MFA obligatorio para superadmin.
 // Es configuración de plataforma, no de una prestadora puntual — por eso va en su propio
 // router, separado de panelConfiguracion.js (que es admin_prestadora-scoped). Solo
 // superadmin puede tocarlo, que es justamente el rol que este toggle protege
@@ -40,12 +40,9 @@ panelConfiguracionPlataformaRouter.patch('/mfa', requiereSuperadmin, async (req,
   res.json({ ok: true });
 });
 
-// Acá vivían GET y PATCH /umbral-prestadoras: contaban cuántas Prestadoras había contratadas,
-// que es un dato del negocio de CeltaTech y no del producto. Se fueron en la Etapa 2 de la
-// separación CeltaTech / Careonys (2026-07-28) junto con la columna
-// configuracion_plataforma.umbral_alerta_prestadoras. Ninguna pantalla del Panel los consumía.
+// Acá no se cuenta cuántas Prestadoras hay contratadas ni se avisa por un umbral de contrataciones:
+// eso es dato del negocio de CeltaTech y no del producto.
 //
-// El envío de correo ya está decidido y no se vuelve a discutir: API de Gmail por OAuth2,
-// reutilizando la casilla notificaciones.aurevia@gmail.com. Decisión del Desarrollador del
-// 2026-07-26, en pausa hasta después del MVP. El único punto de integración es
-// backend/src/utils/email.js.
+// El envío de correo está decidido y no se vuelve a discutir: API de Gmail por OAuth2,
+// reutilizando la casilla notificaciones.aurevia@gmail.com, en pausa hasta después del MVP. El
+// único punto de integración es backend/src/utils/email.js.

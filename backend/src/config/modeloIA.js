@@ -3,11 +3,10 @@
 //
 // La regla de la empresa lo pide con estas palabras: «El nombre del modelo de IA vive en un solo
 // lugar, sobreescribible por variable de entorno. Nunca escrito a mano en cada archivo que lo
-// usa» (`celtatech/CLAUDE.md` §8). Hasta acá estaba escrito a mano cinco veces —en `alertasIA.js`,
-// `iaWhatsapp.js`, `importacionIA.js`, `reporteIA.js` y `verificarPreciosIA.js`—, con el mismo
-// valor en las cinco por casualidad, no por construcción: cambiarlo era acordarse de cinco
-// archivos, y olvidarse de uno dejaba a una parte del motor hablando con otro modelo sin que nada
-// avisara.
+// usa» (`celtatech/CLAUDE.md` §8). Todo lo que habla con el modelo —`alertasIA.js`,
+// `iaWhatsapp.js`, `importacionIA.js`, `reporteIA.js` y `verificarPreciosIA.js`— lo toma de acá y
+// no lo escribe a mano: escrito en cada uno, cambiarlo sería acordarse de cinco archivos, y
+// olvidarse de uno dejaría a una parte del motor hablando con otro modelo sin que nada avisara.
 //
 // ----------------------------------------------------------------------------
 // Por qué se puede cambiar desde afuera

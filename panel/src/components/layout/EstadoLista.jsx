@@ -7,14 +7,14 @@ import { Button } from '../ui/Button';
    que las veinte pantallas que muestran listas no los resuelvan cada una a su manera
    (regla 12).
 
-   EL VACÍO SON DOS SITUACIONES, NO UNA. Es el cambio de la Etapa 3:
+   EL VACÍO SON DOS SITUACIONES, NO UNA:
 
      · No hay ni un dato cargado todavía  → lo que corresponde es crear el primero.
      · Hay datos, pero el filtro los tapó → lo que corresponde es sacar el filtro.
 
-   Hasta acá el Panel mostraba el mismo cartel en los dos casos, y eso hace que alguien con
-   un filtro puesto crea que perdió los datos. Ahora la pantalla le pasa `filtrado` y el
-   cartel cambia, incluida la salida que ofrece.
+   El mismo cartel para los dos casos hace que alguien con un filtro puesto crea que perdió
+   los datos. Por eso la pantalla le pasa `filtrado` y el cartel cambia, incluida la salida
+   que ofrece.
 
    Cómo se usa desde una pantalla:
 
@@ -30,8 +30,8 @@ import { Button } from '../ui/Button';
        …la tabla…
      </EstadoLista>
 
-   `filtrado` y `onLimpiarFiltros` son opcionales: una pantalla que todavía no los pasa se
-   sigue comportando como antes, mostrando el cartel de "todavía no hay nada".
+   `filtrado` y `onLimpiarFiltros` son opcionales: una pantalla que no los pasa muestra el
+   cartel de "todavía no hay nada".
 
    `ayudaVacio` también es opcional, y es el segundo renglón del cartel: el que dice qué hacer.
    Por defecto es el genérico —"cuando se cargue el primer registro va a aparecer acá"—, pero

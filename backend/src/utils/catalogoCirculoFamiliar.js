@@ -1,10 +1,6 @@
 // Catálogo único de qué se le puede dar, y qué se le puede negar, a cada persona anotada en el
 // círculo familiar de una Familia.
 //
-// QUÉ CAMBIA ESTO. Hasta acá, quien la Prestadora anotaba en el círculo veía exactamente lo mismo
-// que el titular. Las dos únicas diferencias eran que no podía calificar al Asistente ni pedir
-// medicación, y no había forma de darle menos a uno que a otro. Ahora cada persona tiene lo suyo.
-//
 // CÓMO SE DECIDE, QUE NO ES UN DETALLE. El titular no configura nada por su cuenta: le dice a la
 // Prestadora quién entra a su círculo y qué puede ver cada uno, la Prestadora lo carga, el sistema
 // arma el documento con eso escrito en castellano y el titular lo firma. Así, el día que alguien
@@ -30,16 +26,15 @@
 // LA CLAVE NO SE RENOMBRA NUNCA. Queda escrita adentro de filas que ya existen y adentro del texto
 // de documentos que alguien firmó: cambiarla es perder la instrucción que el titular ya dio.
 //
-// EL VALOR DE FÁBRICA ES LO QUE PASA HOY. El círculo sigue viendo todo, y las dos acciones de
-// escritura —calificar y pedir medicación— siguen apagadas, que es exactamente el comportamiento
-// anterior. La Familia que no pida ningún cambio no nota ninguno.
+// EL VALOR DE FÁBRICA. El círculo ve todo, y las dos acciones de escritura —calificar y pedir
+// medicación— vienen apagadas. La Familia que no pida ningún cambio no nota ninguno.
 //
 // EL TITULAR NO ENTRA EN ESTA CUENTA. Firmó la prestación y ve todo, siempre. No hay instrucción
 // que le pueda quitar nada, ni siquiera una suya. Por eso `accesosDelTitular()` no consulta filas.
 //
 // QUÉ NO ESTÁ ACÁ, A PROPÓSITO:
-//   - Invitar o sacar gente del círculo. Eso lo sigue haciendo la Prestadora desde el Panel, como
-//     hasta ahora. Estos accesos dicen qué ve quien ya está anotado, no quién está anotado.
+//   - Invitar o sacar gente del círculo. Eso lo hace la Prestadora desde el Panel. Estos accesos
+//     dicen qué ve quien ya está anotado, no quién está anotado.
 //   - Los avisos al teléfono. A quién le llega cada aviso se decide en Configuración › Avisos
 //     (`catalogoAvisos.js`), y poner acá otra casilla dejaría la misma regla en dos lugares.
 //   - Cualquier cosa que la Prestadora tenga apagada para toda su aplicación. Ver abajo.
@@ -133,7 +128,7 @@ export function cosaDelCatalogo(clave) {
 }
 
 // Lo que rige mientras nadie haya pedido ningún cambio: el círculo ve todo, y las dos acciones de
-// escritura siguen apagadas. Es exactamente el comportamiento anterior a esta función.
+// escritura vienen apagadas.
 export function accesosDeFabrica() {
   return Object.fromEntries(CATALOGO_CIRCULO_FAMILIAR.map((cosa) => [cosa.clave, cosa.de_fabrica]));
 }

@@ -1,10 +1,10 @@
 // Qué le toca ver a quien está usando esta aplicación, y si el titular tiene una instrucción
 // sin firmar.
 //
-// QUÉ CAMBIÓ. Hasta acá, cualquier persona anotada en el círculo familiar de una Familia veía
-// exactamente lo mismo que el titular. Ahora el titular le dice a la Prestadora qué puede ver
-// cada una, la Prestadora lo carga, el sistema arma el documento en castellano y el titular lo
-// firma. La aplicación recibe eso resuelto: un objeto plano clave → verdadero o falso.
+// CADA PERSONA DEL CÍRCULO VE LO SUYO. El titular le dice a la Prestadora qué puede ver cada
+// persona anotada en el círculo familiar de una Familia, la Prestadora lo carga, el sistema arma
+// el documento en castellano y el titular lo firma. La aplicación recibe eso resuelto: un objeto
+// plano clave → verdadero o falso.
 //
 // POR QUÉ ESTÁ ACÁ Y NO EN `PerfilContext.jsx`, QUE PIDE EL MISMO `/perfil`. Aquel archivo es
 // idéntico en las dos aplicaciones —está declarado como copia en `scripts/copias_entre_apps.mjs`
@@ -12,9 +12,9 @@
 // familiar no existe del lado del Asistente. Meterlo ahí obligaría a llevarle a esa aplicación
 // una idea que no es suya.
 //
-// POR QUÉ UN CONTEXTO Y NO UN PEDIDO POR PANTALLA. Antes de esto, tres pantallas pedían `/perfil`
-// por su cuenta nada más que para saber el rol de quien miraba. Acá se pregunta una vez y lo
-// consumen todas, que es lo que pide la regla del punto único de verdad.
+// POR QUÉ UN CONTEXTO Y NO UN PEDIDO POR PANTALLA. Varias pantallas necesitan `/perfil` nada más
+// que para saber el rol de quien mira. Acá se pregunta una vez y lo consumen todas, que es lo que
+// pide la regla del punto único de verdad.
 //
 // EL CANDADO DE VERDAD NO ESTÁ ACÁ. Está en el motor, que directamente no manda lo que esa
 // persona no tiene, y en las políticas de la base. Esto es para que no quede un botón que lleva
@@ -57,9 +57,9 @@ export function CirculoProvider({ children }) {
         instruccionPendiente: respuesta?.instruccionPendiente ?? null,
       });
     } catch {
-      // Sin esta respuesta la aplicación igual abre: se ve todo hasta el próximo intento, que es
-      // lo mismo que hacía antes de que existieran los accesos. Lo apagado no viene igual desde
-      // el motor, así que en el peor caso se ve un botón de más, nunca un dato de más.
+      // Sin esta respuesta la aplicación igual abre: se ve todo hasta el próximo intento. Lo
+      // apagado no viene igual desde el motor, así que en el peor caso se ve un botón de más,
+      // nunca un dato de más.
     }
   }, []);
 

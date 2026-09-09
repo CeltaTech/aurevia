@@ -1,12 +1,11 @@
 // Punto único de verdad del COLOR DE SEÑAL en el Panel (regla 12 de CLAUDE.md §7).
 // ============================================================================
 //
-// El problema que resuelve. Hasta acá, cada pantalla escribía su propia clase de color:
+// El problema que resuelve. Sin esto cada pantalla escribe su propia clase de color:
 // `badge-aprobado` en una, `badge-vigente` en otra, `badge-certificada` en otra — todas del
-// mismo verde, todas definidas por separado en `index.css`. Eran veinte reglas de CSS que
-// decían lo mismo. Y no era gratis: la pantalla de Matrículas pedía una clase
-// `badge-verde` que directamente no existía en el CSS, así que ese cartel se veía gris.
-// Nadie lo notó porque no rompe nada: simplemente se ve mal.
+// mismo verde, todas definidas por separado en `index.css`. Son veinte reglas de CSS que
+// dicen lo mismo. Y no sale gratis: una pantalla que pide una clase que no existe en el CSS
+// muestra ese cartel en gris, y nadie lo nota porque no rompe nada: simplemente se ve mal.
 //
 // La idea. Hay solo CINCO significados posibles para un cartel de estado, y no más:
 //
@@ -39,8 +38,8 @@ export const TONO = {
 };
 
 // Qué estado del negocio corresponde a qué tono.
-// Los nombres son los que realmente usa la base de datos (comprobados el 2026-07-31 contra
-// las restricciones CHECK de la base viva), más los pocos que solo existen en pantalla.
+// Los nombres son los que realmente usa la base de datos —los de sus restricciones CHECK—, más
+// los pocos que solo existen en pantalla.
 const TONO_POR_ESTADO = {
   // --- Está bien ---
   activo: TONO.EXITO,

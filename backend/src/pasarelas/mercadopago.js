@@ -17,8 +17,8 @@ export const REQUIERE_SECRETO_FIRMA = true;
 /** El aviso de Mercado Pago dice que algo pasó con un cobro, no que la plata entró: el estado
  *  no viaja adentro de lo que se firma, solo el identificador. Así que después de comprobar la
  *  firma hay que volver a preguntarle a Mercado Pago por ese identificador, y recién ahí se
- *  sabe. Decisión del Desarrollador del 2026-08-22 (pendiente #159): preguntar siempre, porque
- *  es una consulta por cobro y es la diferencia entre creerle a un mensaje y ver la plata.
+ *  sabe. Se pregunta siempre: es una consulta por cobro, y es la diferencia entre creerle a un
+ *  mensaje y ver la plata.
  *  La marca vive acá y no en la ruta porque quién necesita re-preguntar depende de cómo avisa
  *  cada proveedor, y eso lo sabe su adaptador (regla 12 del §7). */
 export const CONFIRMA_CONSULTANDO = true;
@@ -77,7 +77,7 @@ export async function cancelarSuscripcion({ credencial, referenciaExterna }) {
 }
 
 /**
- * Comprueba que el aviso vino de Mercado Pago y recién ahí lo interpreta (pendiente #159).
+ * Comprueba que el aviso vino de Mercado Pago y recién ahí lo interpreta.
  *
  * Mercado Pago manda dos cabeceras: `x-signature`, con la forma `ts=<instante>,v1=<firma>`, y
  * `x-request-id`, que identifica ese envío. Lo que se firma no es el cuerpo sino una

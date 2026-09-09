@@ -3,10 +3,10 @@
 // POR QUÉ EXISTE. El Paciente tiene una sola dirección, la de su ficha, y hay temporadas en que
 // no está ahí: el verano en la casa de un hijo, una internación, una mudanza mientras arreglan
 // el departamento. Esas temporadas se cargan desde el Panel en
-// `domicilios_temporales_paciente`, pero hasta acá nadie las preguntaba, así que todo el
-// producto seguía mandando gente a la casa de siempre. Lo que se rompía con eso no era
-// prolijidad: el check-in medía la distancia contra la casa de siempre, la daba por fuera de
-// rango y le mandaba al Coordinador un aviso automático que era un falso positivo.
+// `domicilios_temporales_paciente`, y acá es donde se las pregunta. Sin esto el producto mandaría
+// gente a la casa de siempre, y no sería un problema de prolijidad: el check-in mediría la
+// distancia contra la casa de siempre, la daría por fuera de rango y le mandaría al Coordinador
+// un aviso automático que sería un falso positivo.
 //
 // LA REGLA NO VIVE ACÁ, Y ES A PROPÓSITO (regla 12 de CLAUDE.md §7). Cuál dirección gana un día
 // dado —la temporal vigente, o la de la ficha si no hay ninguna— lo decide una sola vez la
@@ -23,7 +23,7 @@
 //
 // LO QUE NO SE PIDIÓ, NO SE COMPLETA. La Prestadora puede tener apagado el interruptor
 // `asistente_domicilio_del_paciente`, y entonces la consulta que trajo a los Pacientes ni
-// siquiera pidió la dirección: el dato no viaja al teléfono de nadie (tarea 65). Acá se mira
+// siquiera pidió la dirección: el dato no viaja al teléfono de nadie. Acá se mira
 // qué campos trae cada Paciente y se pisan solamente esos — a un Paciente que vino sin
 // dirección no se le inventa una, ni temporal ni de la ficha.
 

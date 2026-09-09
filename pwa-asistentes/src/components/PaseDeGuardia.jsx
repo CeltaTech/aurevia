@@ -13,7 +13,7 @@ const LECTOR_ID = 'lector-codigo-de-presencia';
 const SONDEO_MS = 4000;
 
 /**
- * El pase de guardia, al marcar la llegada y al cerrar (pendiente #113).
+ * El pase de guardia, al marcar la llegada y al cerrar.
  *
  * NO SE ESCANEA NINGÚN CARTEL. Un cartel pegado en el domicilio es un secreto permanente a la
  * vista de cualquiera que pase por la puerta: se fotografía una vez y sirve desde cualquier lado.

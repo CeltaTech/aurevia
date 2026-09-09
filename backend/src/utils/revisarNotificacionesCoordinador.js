@@ -8,8 +8,8 @@ import { intervaloParaPremura } from './umbralesPremura.js';
 import { horasEntre } from './horasDeGuardia.js';
 import { describirFuente } from './textoAlertaTemprana.js';
 
-// Punto 5 de docs/PRD_06_WhatsApp_IA.md: insistencia al Coordinador según premura, con
-// coordinador de respaldo si no hay reacción, parametrizado por prestadora
+// Insistencia al Coordinador según premura, con coordinador de respaldo si no hay
+// reacción, parametrizado por prestadora
 // (configuracion_escalada_coordinador). Corre cada pocos minutos, mismo patrón que
 // ausenciaAutomatica.js — recorre TODAS las prestadoras licenciatarias por igual.
 //
@@ -37,11 +37,10 @@ export async function revisarNotificacionesCoordinador() {
   }
 }
 
-// Aviso de guardia que terminó y nadie cerró (pendiente #117).
+// Aviso de guardia que terminó y nadie cerró.
 //
-// Decisión del Desarrollador: «Nunca puede quedar una guardia sin cerrar, la coordinadora o
-// coordinador debe tomar cartas en el asunto de inmediato (15 minutos máximo de la hora
-// indicada para el cierre). Una guardia sin cerrar suele ser señal de problemas.»
+// Una guardia sin cerrar suele ser señal de problemas, así que nunca puede quedar así: quien
+// coordina tiene que tomar cartas en el asunto apenas pasa la hora de cierre.
 //
 // Los minutos de espera no están escritos acá (regla 1 de CLAUDE.md §7): salen de
 // `minutos_gracia_cierre_guardia`, que cada Prestadora edita desde el Panel. Quince es con lo
@@ -146,8 +145,7 @@ async function revisarGuardiasSinCerrar(config, ahora) {
     // El tercer escalón. A esta altura la insistencia al Coordinador y el aviso a su respaldo
     // ya salieron y no alcanzaron: la guardia lleva horas abierta. Deja de ser un aviso de
     // operación y pasa a ser una emergencia, que sale una sola vez por su propio evento y a
-    // sus propios destinatarios. Ver la migración
-    // 20260822210000_una_guardia_sin_cerrar_que_no_se_resuelve_escala_a_la_direccion.sql.
+    // sus propios destinatarios.
     if (
       horasAntesDeEscalar &&
       !guardia.aviso_sin_cerrar_grave_at &&
@@ -274,9 +272,9 @@ async function revisarAlertas(config, ahora) {
         evento: 'alerta_temprana_guardia',
         prestadoraId,
         asunto: 'Alerta temprana de posible ausencia sin resolver',
-        // El origen va adelante del motivo a propósito (pendiente #101): quien lee tiene que
-        // poder distinguir de un vistazo un aviso que dio una persona de una cuenta que sacó el
-        // sistema. Sin eso, las dos cosas llegaban con el mismo texto.
+        // El origen va adelante del motivo a propósito: quien lee tiene que poder distinguir de
+        // un vistazo un aviso que dio una persona de una cuenta que sacó el sistema. Sin eso,
+        // las dos cosas llegan con el mismo texto.
         texto: `Guardia ${alerta.guardia_id}. Origen: ${describirFuente(alerta.fuente)}. Motivo: ${alerta.motivo ?? '—'}. Sin resolver hace ${Math.round(minutosPremura)} minutos.`,
       });
 
@@ -362,9 +360,9 @@ async function revisarIncidentes(config, ahora) {
   }
 }
 
-// Fase 11: "Ausente sin relevo previo" es la alerta crítica que el Desarrollador señaló
-// explícitamente — a diferencia del respaldo de avisos de rutina (revisarRecordatoriosPush.js),
-// acá va push + WhatsApp a la vez, nunca uno de respaldo del otro. Apagado por defecto: cada
+// "Ausente sin relevo previo" es una alerta crítica: a diferencia del respaldo de avisos de
+// rutina (revisarRecordatoriosPush.js), acá va push + WhatsApp a la vez, nunca uno de respaldo
+// del otro. Apagado por defecto: cada
 // Prestadora decide si su política es avisarle a la Familia o no (algunas prefieren no
 // alarmarla si el incidente se resuelve internamente sin que llegue a necesitar su
 // intervención) — CLAUDE.md §2, "configuración sobre programación".

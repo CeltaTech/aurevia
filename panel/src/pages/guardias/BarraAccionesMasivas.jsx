@@ -11,10 +11,10 @@ import { con } from '../../lib/textos';
 // La barra de acciones de a muchas.
 // ============================================================================
 //
-// El problema que resuelve. Hasta acá, cambiarle el Asistente a las guardias de una semana
-// era abrir el detalle de cada una, elegir, guardar, cerrar, y repetir. Diez guardias eran
-// cuarenta clics y la primera oportunidad de equivocarse aparecía en el clic tres. Acá se
-// elige una vez y cae sobre todas las guardias marcadas en la grilla.
+// El problema que resuelve. Acá se elige una vez y cae sobre todas las guardias marcadas en
+// la grilla. Sin esto, cambiarle el Asistente a las guardias de una semana es abrir el detalle
+// de cada una, elegir, guardar, cerrar, y repetir: diez guardias son cuarenta clics, y la
+// primera oportunidad de equivocarse aparece en el clic tres.
 //
 // Qué NO hace este archivo: hablar con la base. No importa `supabaseClient` a propósito. Este
 // componente solo junta dos cosas —qué acción eligió el usuario y con qué parámetro— y se las

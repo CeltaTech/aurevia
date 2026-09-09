@@ -9,13 +9,10 @@ import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
 // ============================================================================
 // Las guardias que se le ofrecieron al Asistente, y su respuesta.
 //
-// Hasta acá el producto tenía construida una sola mitad: el Panel sabía ofrecerle una misma
-// guardia a varios Asistentes con fecha límite, y la base guardaba esos ofrecimientos. Del
-// otro lado no había nada. La oferta se avisaba por teléfono o por mensaje y lo que el
-// Asistente contestaba no quedaba registrado en ninguna parte.
-//
-// Esta es la otra mitad: el Asistente ve lo que le ofrecieron, hasta cuándo tiene para
-// contestar, y acepta o rechaza desde su teléfono.
+// El Panel le ofrece una misma guardia a varios Asistentes con fecha límite y la base guarda
+// esos ofrecimientos. Acá está el otro lado: el Asistente ve lo que le ofrecieron, hasta cuándo
+// tiene para contestar, y acepta o rechaza desde su teléfono. Así la respuesta queda registrada,
+// que es lo que no pasa cuando la oferta se avisa por teléfono o por mensaje.
 //
 // ----------------------------------------------------------------------------
 // El corte por Prestadora se escribe a mano, siempre

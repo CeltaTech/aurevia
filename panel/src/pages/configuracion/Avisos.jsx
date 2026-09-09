@@ -3,6 +3,7 @@ import { useLocale } from '../../i18n/LocaleContext';
 import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
 import { supabase } from '../../lib/supabaseClient';
 import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion';
+import { DIRECCION_DEL_MOTOR } from '../../lib/apiPanel';
 import { ordenarTramosPremura } from '../../lib/tramosPremura';
 import { traducirValor } from '../../i18n/valores';
 import { Button } from '../../components/ui/Button';
@@ -623,10 +624,25 @@ function TabWhatsapp() {
   );
 }
 
+/* Las credenciales de la cuenta de Meta de esta Prestadora.
+   ==========================================================================
+
+   Son cinco datos y no tres (pendiente #165). A los que identifican la cuenta —número, WABA,
+   identificador del número— y al token con el que el motor manda mensajes, se les suman los dos
+   con los que el motor **le cree a un mensaje que entra**: el secreto de la aplicación, con el
+   que Meta firma cada aviso, y el token de verificación del saludo inicial. Ese último era
+   antes una sola variable de entorno para todo el producto: el mismo texto para todas las
+   Prestadoras, así que quien lo supiera de una lo sabía de todas. Ahora es de cada una y se
+   carga acá.
+
+   Los tres secretos se guardan cifrados y no vuelven a mostrarse: de cada uno la pantalla sabe
+   solamente si está cargado o no, y el campo dice si va a crearlo o a reemplazarlo. */
 function TabWhatsappCredenciales() {
   const { t } = useLocale();
   const [form, setForm] = useState(null);
   const [token, setToken] = useState('');
+  const [appSecret, setAppSecret] = useState('');
+  const [verifyToken, setVerifyToken] = useState('');
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
@@ -666,9 +682,13 @@ function TabWhatsappCredenciales() {
           waba_id: form.waba_id,
           phone_number_id: form.phone_number_id,
           token: token || undefined,
+          app_secret: appSecret || undefined,
+          verify_token: verifyToken || undefined,
         }),
       });
       setToken('');
+      setAppSecret('');
+      setVerifyToken('');
       setGuardado(true);
       recargar();
     } catch (err) {
@@ -704,6 +724,39 @@ function TabWhatsappCredenciales() {
               value={token}
               onChange={(e) => setToken(e.target.value)}
             />
+            <FormField
+              label={form.app_secret_cargado ? t.configuracion.whatsapp_app_secret_reemplazar : t.configuracion.whatsapp_app_secret_cargar}
+              name="app_secret"
+              type="password"
+              value={appSecret}
+              onChange={(e) => setAppSecret(e.target.value)}
+              ayuda={t.configuracion.whatsapp_app_secret_ayuda}
+            />
+            <FormField
+              label={form.verify_token_cargado ? t.configuracion.whatsapp_verify_token_reemplazar : t.configuracion.whatsapp_verify_token_cargar}
+              name="verify_token"
+              type="password"
+              value={verifyToken}
+              onChange={(e) => setVerifyToken(e.target.value)}
+              ayuda={t.configuracion.whatsapp_verify_token_ayuda}
+            />
+            {/* La dirección que hay que pegar en el panel de Meta. Es distinta para cada
+                Prestadora —el identificador va adentro—, y esa es justamente la razón por la
+                que un aviso de una no puede entrar por la puerta de otra. Se muestra sola, sin
+                poder editarse: no es un dato que se cargue, es uno que se copia. */}
+            <FormField
+              label={t.configuracion.whatsapp_direccion_webhook}
+              name="direccion_webhook"
+              value={`${DIRECCION_DEL_MOTOR}/api/whatsapp-webhook/${form.prestadora_id}`}
+              readOnly
+              ayuda={t.configuracion.whatsapp_direccion_webhook_ayuda}
+            />
+            {/* Sin los dos secretos cargados, el motor rechaza todo lo que entre por esa
+                dirección. Es el comportamiento correcto, pero desde afuera se ve como que
+                WhatsApp no anda, así que se dice acá antes de que alguien lo averigüe. */}
+            {form.activo && !(form.app_secret_cargado && form.verify_token_cargado) && (
+              <Alert variant="error">{t.configuracion.whatsapp_entrada_sin_secretos}</Alert>
+            )}
             <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
           </div>
         )}

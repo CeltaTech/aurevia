@@ -53,14 +53,15 @@ import { verificarPreciosIA } from './utils/verificarPreciosIA.js';
 const app = express();
 app.use(cors());
 
-/* Los avisos de cobro de las pasarelas van montados ANTES del lector de JSON general, y el
-   orden no es un detalle de estilo (pendiente #159): esa ruta comprueba la firma del aviso, y
-   una firma se calcula sobre los bytes exactos que llegaron. El primer middleware que lee el
-   pedido se queda con él, así que si `express.json()` va antes, la ruta recibe un objeto ya
-   armado y nunca vuelve a ver los bytes originales — la firma no coincidiría jamás y la
-   comprobación quedaría rota en silencio. El router trae su propio lector de cuerpo crudo
-   adentro; acá lo único que hace falta es que se monte primero. */
+/* Las dos entradas que se firman van montadas ANTES del lector de JSON general, y el orden no
+   es un detalle de estilo (pendientes #159 y #165): las dos comprueban la firma de lo que
+   llegó, y una firma se calcula sobre los bytes exactos que llegaron. El primer middleware que
+   lee el pedido se queda con él, así que si `express.json()` va antes, la ruta recibe un objeto
+   ya armado y nunca vuelve a ver los bytes originales — la firma no coincidiría jamás y la
+   comprobación quedaría rota en silencio. Cada router trae su propio lector de cuerpo crudo
+   adentro; acá lo único que hace falta es que se monten primero. */
 app.use('/api/webhooks/pasarelas', webhooksPasarelasRouter);
+app.use('/api/whatsapp-webhook', whatsappWebhookRouter);
 
 app.use(express.json());
 
@@ -118,7 +119,6 @@ app.use('/api/panel/vitales-autorizacion', panelVitalesAutorizacionRouter);
 app.use('/api/panel/configuracion-plataforma', panelConfiguracionPlataformaRouter);
 app.use('/api/panel/mfa-recuperacion', panelMfaRecuperacionRouter);
 app.use('/api/activar-cuenta', activarCuentaRouter);
-app.use('/api/whatsapp-webhook', whatsappWebhookRouter);
 app.use('/api/app-asistentes', appAsistentesRouter);
 app.use('/api/app-asistentes/medicacion', appAsistentesMedicacionRouter);
 app.use('/api/app-asistentes/consentimientos', appAsistentesConsentimientosRouter);

@@ -18,7 +18,7 @@
 //   3. **Ante cualquier duda, se rechaza.** Falta el secreto, falta la cabecera, la cabecera
 //      no se entiende: se rechaza. Nunca "se sigue igual".
 
-import { createHmac, timingSafeEqual } from 'crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 
 /** Cuánto puede haber viajado un aviso antes de que deje de aceptarse. Cinco minutos es la
  *  tolerancia que recomiendan las dos pasarelas: alcanza para una demora de red o un reloj
@@ -97,6 +97,24 @@ export function firmasIguales(recibida, esperada) {
   // filtra nada: el largo de una firma es público, siempre son 32 bytes.
   if (bytesRecibidos.length !== bytesEsperados.length) return false;
   return timingSafeEqual(bytesRecibidos, bytesEsperados);
+}
+
+/** Compara dos secretos de texto —no dos firmas en hexadecimal— sin filtrar por dónde dejaron
+ *  de parecerse ni cuánto mide el guardado. Lo usa la entrada de WhatsApp para el token de
+ *  verificación del saludo de Meta (pendiente #165), que es un texto que elige la Prestadora y
+ *  no tiene largo fijo.
+ *
+ *  Por qué no se comparan los bytes derechos, como en `firmasIguales`: ahí el largo es público
+ *  —una firma son siempre 32 bytes— y cortar por largo distinto no dice nada. Acá sí diría, y
+ *  con el largo del token guardado se empieza a adivinarlo. Entonces se comparan los resúmenes:
+ *  se calcula el HMAC de los dos con una llave nueva de cada vez —nueva para que el resumen no
+ *  sirva para nada afuera de esta comparación— y los dos resúmenes miden siempre lo mismo. */
+export function secretosIguales(recibido, esperado) {
+  if (!recibido || !esperado) return false;
+  const llave = randomBytes(32);
+  const resumenRecibido = createHmac('sha256', llave).update(String(recibido), 'utf8').digest();
+  const resumenEsperado = createHmac('sha256', llave).update(String(esperado), 'utf8').digest();
+  return timingSafeEqual(resumenRecibido, resumenEsperado);
 }
 
 /**

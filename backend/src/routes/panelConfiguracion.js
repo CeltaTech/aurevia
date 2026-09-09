@@ -438,19 +438,39 @@ panelConfiguracionRouter.get('/whatsapp', async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
   const { data, error } = await supabase
     .from('configuracion_whatsapp_prestadora')
-    .select('prestadora_id, activo, numero_telefono, waba_id, phone_number_id, verificado_at, updated_at')
+    .select('prestadora_id, activo, numero_telefono, waba_id, phone_number_id, verificado_at, updated_at, app_secret_secret_id, verify_token_secret_id')
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
+  // De los tres secretos sale de acá si están cargados o no, nunca su contenido: la referencia
+  // a la caja fuerte tampoco viaja al navegador, porque no le sirve para nada y sí sirve para
+  // aparecer en un registro donde no tendría que estar.
   res.json({
     whatsapp: data
-      ? { ...data, token_cargado: true }
-      : { prestadora_id: prestadoraId, activo: false, numero_telefono: null, waba_id: null, phone_number_id: null, verificado_at: null, token_cargado: false },
+      ? {
+          ...data,
+          token_cargado: true,
+          app_secret_cargado: !!data.app_secret_secret_id,
+          verify_token_cargado: !!data.verify_token_secret_id,
+          app_secret_secret_id: undefined,
+          verify_token_secret_id: undefined,
+        }
+      : {
+          prestadora_id: prestadoraId,
+          activo: false,
+          numero_telefono: null,
+          waba_id: null,
+          phone_number_id: null,
+          verificado_at: null,
+          token_cargado: false,
+          app_secret_cargado: false,
+          verify_token_cargado: false,
+        },
   });
 });
 
 panelConfiguracionRouter.patch('/whatsapp', async (req, res) => {
-  const { activo, numero_telefono, waba_id, phone_number_id, token } = req.body;
+  const { activo, numero_telefono, waba_id, phone_number_id, token, app_secret, verify_token } = req.body;
   const prestadoraId = req.usuarioPanel.prestadoraId;
 
   const { error } = await supabase
@@ -471,6 +491,26 @@ panelConfiguracionRouter.patch('/whatsapp', async (req, res) => {
       p_token: token,
     });
     if (errorToken) return res.status(500).json({ error: errorToken.message });
+  }
+
+  // Los dos secretos con los que el motor le cree a un aviso entrante de Meta (pendiente #165):
+  // el de la aplicación, con el que se comprueba la firma de cada mensaje, y el token del
+  // saludo inicial, que ahora es de esta Prestadora y no uno solo para todo el producto. Los
+  // dos van a la caja fuerte y no vuelven a mostrarse acá, igual que el token de acceso.
+  if (app_secret) {
+    const { error: errorAppSecret } = await supabase.rpc('guardar_app_secret_whatsapp', {
+      p_prestadora_id: prestadoraId,
+      p_secreto: app_secret,
+    });
+    if (errorAppSecret) return res.status(500).json({ error: errorAppSecret.message });
+  }
+
+  if (verify_token) {
+    const { error: errorVerifyToken } = await supabase.rpc('guardar_verify_token_whatsapp', {
+      p_prestadora_id: prestadoraId,
+      p_token: verify_token,
+    });
+    if (errorVerifyToken) return res.status(500).json({ error: errorVerifyToken.message });
   }
 
   res.json({ ok: true });

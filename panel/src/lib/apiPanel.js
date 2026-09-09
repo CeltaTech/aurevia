@@ -24,6 +24,12 @@ import { errorDeLaRespuesta } from './errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+/** Dónde está el motor, para las pocas pantallas que no lo llaman sino que tienen que **mostrar**
+ *  una de sus direcciones para que alguien la copie afuera —hoy la de la entrada de WhatsApp,
+ *  que la Prestadora pega en su panel de Meta—. Sale del mismo lugar que usa el `fetch` de acá
+ *  arriba: una dirección escrita a mano en una pantalla se despega el día que cambia el motor. */
+export const DIRECCION_DEL_MOTOR = API_URL;
+
 /**
  * @param {string} path  Lo que va después de `/api/panel`, empezando con `/`.
  * @param {object} opciones  Lo mismo que acepta `fetch`.

@@ -31,13 +31,21 @@ import { Button } from '../ui/Button';
      </EstadoLista>
 
    `filtrado` y `onLimpiarFiltros` son opcionales: una pantalla que todavía no los pasa se
-   sigue comportando como antes, mostrando el cartel de "todavía no hay nada". */
+   sigue comportando como antes, mostrando el cartel de "todavía no hay nada".
+
+   `ayudaVacio` también es opcional, y es el segundo renglón del cartel: el que dice qué hacer.
+   Por defecto es el genérico —"cuando se cargue el primer registro va a aparecer acá"—, pero
+   hay listas donde el vacío no significa que falte cargar algo sino que falta abrir algo. La
+   pantalla de Auditoría es una: fuera de una sesión de soporte, el Superadmin no está mirando
+   una lista incompleta sino la Organización de pruebas, y el cartel tiene que decirlo. Como
+   siempre, el texto sale de las traducciones, no de acá. */
 export function EstadoLista({
   estado,
   error,
   vacio,
   recargar,
   mensajeVacio,
+  ayudaVacio,
   accionVacio,
   filtrado = false,
   onLimpiarFiltros,
@@ -82,7 +90,7 @@ export function EstadoLista({
     return (
       <div className="estado-vacio-bloque" role="status">
         <p className="estado-vacio-titulo">{mensajeVacio || t.comun.sin_datos_titulo}</p>
-        <p className="estado-vacio">{t.comun.sin_datos_ayuda}</p>
+        <p className="estado-vacio">{ayudaVacio || t.comun.sin_datos_ayuda}</p>
         {accionVacio}
       </div>
     );

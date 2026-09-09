@@ -959,13 +959,14 @@ function TabWhatsappEscaladaCoordinador() {
     setEstado('cargando');
     setError(null);
     try {
-      const [{ escalada }, { data: usuariosData, error: errorUsuarios }] = await Promise.all([
-        llamarApi('/escalada-coordinador'),
-        supabase.from('usuarios').select('id, nombre').eq('rol', 'coordinador').order('nombre'),
-      ]);
-      if (errorUsuarios) throw errorUsuarios;
+      /* La lista de Coordinadores llega con la configuración, del motor. Antes se pedía acá
+         mismo a la tabla `usuarios`, y esa tabla deja que cada persona lea su propia fila y
+         ninguna otra: la lista volvía vacía y el desplegable del Coordinador de respaldo
+         aparecía sin nadie adentro, así que no se podía elegir a nadie. Es el mismo reparto
+         que ya usaba Configuración › Permisos. */
+      const { escalada, coordinadores: coordinadoresData } = await llamarApi('/escalada-coordinador');
       setForm(escalada);
-      setCoordinadores(usuariosData ?? []);
+      setCoordinadores(coordinadoresData ?? []);
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));

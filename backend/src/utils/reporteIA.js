@@ -2,12 +2,11 @@ import Anthropic from '@anthropic-ai/sdk';
 import { registrarUsoIA } from './registrarUsoIA.js';
 import { TRATO_IA } from './tratoIA.js';
 import { jsonDeRespuestaIA } from './respuestaIA.js';
+import { MODELO_IA } from '../config/modeloIA.js';
 
 // IA Nivel 1 (Reporte inteligente) — prompt exacto de docs/AI_PROMPTS.md, no reformular acá
 // sin actualizar ese archivo primero (el contrato JSON está acoplado a las columnas de
 // `reportes`, ver DATA_MODEL.md). Mismo patrón de cliente perezoso que importacionIA.js.
-
-const MODELO = 'claude-sonnet-5';
 
 const SYSTEM_PROMPT = `Este asistente estructura reportes de cuidado domiciliario.
 El Asistente envía un texto libre describiendo la guardia.
@@ -52,13 +51,13 @@ export async function estructurarReporteIA(textoLibre, prestadoraId) {
   }
 
   const respuesta = await anthropic.messages.create({
-    model: MODELO,
+    model: MODELO_IA,
     max_tokens: 1000,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: textoLibre }],
   });
 
-  registrarUsoIA({ prestadoraId, modulo: 'reporte', modelo: MODELO, respuestaAnthropic: respuesta });
+  registrarUsoIA({ prestadoraId, modulo: 'reporte', modelo: MODELO_IA, respuestaAnthropic: respuesta });
 
   const parseado = jsonDeRespuestaIA(respuesta);
   if (!parseado) {

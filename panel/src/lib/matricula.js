@@ -73,6 +73,29 @@ export const MOTIVOS_DE_BLOQUEO = [
   BLOQUEO.SIN_VERIFICAR,
 ];
 
+/**
+ * Qué tan estricta es una Prestadora con la verificación de la Matrícula.
+ *
+ * Son los dos únicos valores que acepta la columna `prestadoras.modo_control_matricula`, y los
+ * mismos dos que valida el motor antes de guardarlos. El orden es el de la pantalla: primero el
+ * permisivo, después el estricto.
+ */
+export const MODOS_DE_CONTROL_MATRICULA = ['flexible', 'estricto'];
+
+/**
+ * El valor que se supone cuando el modo no se pudo leer.
+ *
+ * Es el estricto, y no es una preferencia: es la regla de la casa de que todo control de acceso
+ * falla cerrado (`CLAUDE.md` §5). Ante un dato que no se pudo resolver se exige más, nunca menos.
+ * Suponer el flexible dejaría trabajar a alguien con la Matrícula sin comprobar por el solo hecho
+ * de que se cayó una consulta.
+ *
+ * **Suponerlo es el último recurso, no el primero.** Donde la pantalla puede esperar o pedir de
+ * nuevo el dato —una pantalla de configuración, por ejemplo—, lo que corresponde es no mostrar
+ * ninguna política y ofrecer reintentar, no mostrar ésta.
+ */
+export const MODO_CONTROL_MATRICULA_SUPUESTO = 'estricto';
+
 const lista = (x) => (Array.isArray(x) ? x : []);
 
 /**
@@ -147,7 +170,7 @@ export function motivoDeBloqueo(asistenteId, estado, matriculas, dia) {
   // podría escribir un número inventado y quedar habilitado solo. El permiso de trabajar con
   // papeles a medias es de la Prestadora sobre su propia carga administrativa, no del
   // interesado sobre su propia Matrícula.
-  const modo = estado.modo_control_matricula ?? 'estricto';
+  const modo = estado.modo_control_matricula ?? MODO_CONTROL_MATRICULA_SUPUESTO;
   const hayQueVerificarla = modo === 'estricto' || vigente.cargada_por_el_asistente === true;
   if (hayQueVerificarla && !vigente.verificada_at) return BLOQUEO.SIN_VERIFICAR;
 

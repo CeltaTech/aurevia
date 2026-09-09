@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { registrarUsoIA } from './registrarUsoIA.js';
 import { TRATO_IA } from './tratoIA.js';
 import { jsonDeRespuestaIA } from './respuestaIA.js';
+import { MODELO_IA } from '../config/modeloIA.js';
 
 // Primera integración real del SDK de Claude en este backend (docs/CONTEXT.md ya lo
 // documentaba como motor de IA por defecto del proyecto). Se usa acá para el punto 6 de
@@ -13,8 +14,6 @@ import { jsonDeRespuestaIA } from './respuestaIA.js';
 // "Nunca un mensaje puede quedar sin respuesta, siempre el coordinador debe saber lo que la
 // IA responde" — por eso esta función siempre devuelve tanto la respuesta sugerida como una
 // bandera explícita de si necesita revisión, nunca decide en silencio.
-
-const MODELO = 'claude-sonnet-5';
 
 const SYSTEM_PROMPT = `Este asistente ayuda a un Coordinador de cuidado domiciliario a responder
 mensajes de WhatsApp de Asistentes. La tarea es sugerir una respuesta breve y clara en
@@ -62,13 +61,13 @@ export async function generarRespuestaIA({ mensajeEntrante, historial = [], pres
   ];
 
   const respuesta = await anthropic.messages.create({
-    model: MODELO,
+    model: MODELO_IA,
     max_tokens: 500,
     system: SYSTEM_PROMPT,
     messages: mensajes,
   });
 
-  registrarUsoIA({ prestadoraId, modulo: 'whatsapp', modelo: MODELO, respuestaAnthropic: respuesta });
+  registrarUsoIA({ prestadoraId, modulo: 'whatsapp', modelo: MODELO_IA, respuestaAnthropic: respuesta });
 
   const parseado = jsonDeRespuestaIA(respuesta);
   if (!parseado) {

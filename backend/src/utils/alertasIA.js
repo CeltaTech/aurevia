@@ -2,13 +2,12 @@ import Anthropic from '@anthropic-ai/sdk';
 import { registrarUsoIA } from './registrarUsoIA.js';
 import { TRATO_IA } from './tratoIA.js';
 import { jsonDeRespuestaIA } from './respuestaIA.js';
+import { MODELO_IA } from '../config/modeloIA.js';
 
 // IA Nivel 2 (Alertas por patrones) — prompt exacto de docs/AI_PROMPTS.md:47-71, no
 // reformular acá sin actualizar ese archivo primero (el contrato JSON está acoplado a las
 // columnas de `alertas`, ver DATA_MODEL.md). Mismo patrón de cliente perezoso que
 // reporteIA.js/importacionIA.js.
-
-const MODELO = 'claude-sonnet-5';
 
 const SYSTEM_PROMPT = `Este es un sistema de monitoreo clínico para pacientes con cuidado domiciliario.
 Se analizan los últimos N reportes diarios de un paciente y se detectan patrones preocupantes.
@@ -57,7 +56,7 @@ export async function analizarAlertaIA({ patologias, medicacionHabitual }, repor
   });
 
   const respuesta = await anthropic.messages.create({
-    model: MODELO,
+    model: MODELO_IA,
     // 1500 y no 600: con 600 la respuesta se cortaba por la mitad y no se podía interpretar,
     // así que nunca se generaba la alerta (comprobado contra la API real el 2026-08-18).
     // "detalle_coordinador" es el campo largo — describe la tendencia de varios reportes.
@@ -66,7 +65,7 @@ export async function analizarAlertaIA({ patologias, medicacionHabitual }, repor
     messages: [{ role: 'user', content: mensaje }],
   });
 
-  registrarUsoIA({ prestadoraId, modulo: 'alertas', modelo: MODELO, respuestaAnthropic: respuesta });
+  registrarUsoIA({ prestadoraId, modulo: 'alertas', modelo: MODELO_IA, respuestaAnthropic: respuesta });
 
   const parseado = jsonDeRespuestaIA(respuesta);
   if (!parseado) return null;

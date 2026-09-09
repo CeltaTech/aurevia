@@ -4,6 +4,7 @@ import { registrarUsoIA } from './registrarUsoIA.js';
 import { TRATO_IA } from './tratoIA.js';
 import { jsonDeRespuestaIA } from './respuestaIA.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
+import { MODELO_IA } from '../config/modeloIA.js';
 
 // Fase 3 del plan "Terminar la Etapa 2 (Panel)" (importación masiva de datos con IA).
 // Sigue el mismo patrón que backend/src/utils/iaWhatsapp.js: cliente de Anthropic con
@@ -11,8 +12,6 @@ import { IDENTIDAD } from '../config/identidadProducto.js';
 // solo JSON, y un fallback seguro si la respuesta no es JSON válido o si falta la key
 // (acá el fallback es proponer un mapeo vacío para que el Admin_prestadora lo arme a mano,
 // nunca bloquear la importación por falta de IA).
-
-const MODELO = 'claude-sonnet-5';
 
 // Campos destino disponibles para el mapeo, por tipo — reflejan exactamente lo que
 // panel/src/pages/familias/NuevoPacienteModal.jsx, EditarPacienteModal.jsx y
@@ -124,13 +123,13 @@ Contenido del archivo (puede estar truncado a los primeros 8000 caracteres):
 ${muestraTexto}`;
 
   const respuesta = await anthropic.messages.create({
-    model: MODELO,
+    model: MODELO_IA,
     max_tokens: 4000,
     system: SYSTEM_PROMPT_VIABILIDAD,
     messages: [{ role: 'user', content: mensaje }],
   });
 
-  registrarUsoIA({ prestadoraId, modulo: 'importacion_viabilidad', modelo: MODELO, respuestaAnthropic: respuesta });
+  registrarUsoIA({ prestadoraId, modulo: 'importacion_viabilidad', modelo: MODELO_IA, respuestaAnthropic: respuesta });
 
   const parseado = jsonDeRespuestaIA(respuesta);
   if (!parseado) {
@@ -182,13 +181,13 @@ Columnas del archivo: ${headers.join(', ')}
 Primeras filas de muestra (JSON): ${JSON.stringify(filasMuestra.slice(0, 5))}`;
 
   const respuesta = await anthropic.messages.create({
-    model: MODELO,
+    model: MODELO_IA,
     max_tokens: 1000,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: mensaje }],
   });
 
-  registrarUsoIA({ prestadoraId, modulo: 'importacion', modelo: MODELO, respuestaAnthropic: respuesta });
+  registrarUsoIA({ prestadoraId, modulo: 'importacion', modelo: MODELO_IA, respuestaAnthropic: respuesta });
 
   const parseado = jsonDeRespuestaIA(respuesta);
   if (!parseado) {

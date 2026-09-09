@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { supabase } from '../db/connection.js';
 import { jsonDeRespuestaIA } from './respuestaIA.js';
+import { MODELO_IA } from '../config/modeloIA.js';
 
 // Rutina mensual del pendiente #84 (docs/PENDIENTES.md): el día 1 de cada mes, revisa si
 // el precio oficial publicado por cada proveedor de IA sigue coincidiendo con lo cargado
@@ -13,7 +14,6 @@ import { jsonDeRespuestaIA } from './respuestaIA.js';
 // misma rutina lo empieza a chequear sin tocar este archivo.
 
 const DIA_DEL_MES_VERIFICACION = 1;
-const MODELO_VERIFICADOR = 'claude-sonnet-5';
 
 const PAGINAS_PRECIOS = {
   anthropic: 'https://platform.claude.com/docs/en/about-claude/pricing',
@@ -78,7 +78,10 @@ export async function verificarPreciosIA() {
     let extraido;
     try {
       const respuestaIA = await anthropic.messages.create({
-        model: MODELO_VERIFICADOR,
+        // El que lee las páginas de precios es el mismo modelo con el que trabaja el resto del
+        // motor: no hay razón para que acá sea otro, y tenerlo escrito aparte era justamente lo
+        // que dejaba cinco nombres sueltos que podían separarse sin que nadie se enterara.
+        model: MODELO_IA,
         max_tokens: 1000,
         system: `Este asistente lee la página de precios oficial de un proveedor de IA y
 extrae el precio actual por millón de tokens de entrada y de salida, para los modelos que se

@@ -5,6 +5,13 @@
 > porque el contrato JSON de salida está acoplado a los campos de `reportes` y `alertas`
 > en `DATA_MODEL.md`.
 
+**Con qué modelo se habla no se decide en estos prompts.** El nombre del modelo vive en un solo
+lugar, `backend/src/config/modeloIA.js`, y se puede cambiar desde afuera con la variable de entorno
+`MODELO_IA` sin tocar código. Los cinco archivos que llaman a la IA lo importan de ahí; ninguno lo
+escribe. Al apuntar a un modelo distinto hay que cargarle el precio en `precios_ia_modelo`, porque
+el costo de cada llamada se busca por nombre de modelo (`backend/src/utils/registrarUsoIA.js`) y
+sin precio cargado esas llamadas quedan sin contabilizar.
+
 ## Nivel 1 — Reporte inteligente
 
 Se dispara al hacer CHECK-OUT en la PWA de Asistentes. El Asistente dicta o escribe en

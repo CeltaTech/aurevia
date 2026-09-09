@@ -8,6 +8,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { esTipoGeneral, nombreTipo, nombreMatricula, viasVedadasPorMatricula } from '../../lib/tiposAsistente';
+import { MODOS_DE_CONTROL_MATRICULA } from '../../lib/matricula';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
@@ -34,19 +35,57 @@ export function TiposAsistenteTab() {
   const [creando, setCreando] = useState(false);
   const [ocupadoId, setOcupadoId] = useState(null);
   const [tipoAbierto, setTipoAbierto] = useState(null);
-  const [modoControl, setModoControl] = useState('flexible');
+  const [modoControl, setModoControl] = useState(null);
+  const [estadoModo, setEstadoModo] = useState('cargando');
+  const [errorModo, setErrorModo] = useState(null);
   const [guardandoModo, setGuardandoModo] = useState(false);
+
+  /* Qué tan estricta es la Prestadora se lee aparte del resto de la pantalla, y tiene sus propios
+     cuatro estados, porque es lo único de acá que se puede contestar mal sin que se note.
+
+     Antes, si esta lectura fallaba, la pantalla mostraba "flexible" —el primer valor de la
+     lista— como si eso fuera lo configurado. Una Prestadora estricta veía la política equivocada,
+     y con sólo tocar cualquier otra cosa del selector se guardaba esa mentira encima de la
+     verdadera. El motor, con el mismo dato ausente, supone lo contrario
+     (`lib/matricula.js`, MODO_CONTROL_MATRICULA_SUPUESTO): ante la duda exige más, que es lo que
+     manda la regla de que todo control de acceso falla cerrado.
+
+     Acá no hace falta suponer nada, y por eso no se supone: esta pantalla puede volver a
+     preguntar. Si no se pudo leer, no se muestra ninguna política, no se deja guardar ninguna, se
+     dice qué pasó y se ofrece reintentar. Mostrar la estricta sin haberla leído sería igual de
+     falso que mostrar la flexible; lo único honesto es no mostrar ninguna. */
+  const cargarModo = useCallback(async () => {
+    setEstadoModo('cargando');
+    setErrorModo(null);
+    try {
+      const respuesta = await llamarApiConfiguracion('/modo-control-matricula');
+      // Una respuesta que llegó pero no trae un modo conocido es una lectura fallida igual que
+      // una caída: sin este control, un cuerpo vacío volvería a dejar el selector en cualquier
+      // valor sin que nadie se entere.
+      if (!MODOS_DE_CONTROL_MATRICULA.includes(respuesta?.modo)) {
+        throw new Error('modo_control_matricula_desconocido');
+      }
+      setModoControl(respuesta.modo);
+      setEstadoModo('listo');
+    } catch (fallo) {
+      setModoControl(null);
+      setErrorModo(mensajeDeError(fallo, t));
+      setEstadoModo('error');
+    }
+  }, [t]);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
-    const [resTipos, resVias, resModo] = await Promise.all([
+    // El modo va en el mismo viaje que las dos consultas, pero no en el mismo resultado: se
+    // resuelve solo y no arrastra a la lista si falla, ni la lista lo arrastra a él.
+    const [resTipos, resVias] = await Promise.all([
       supabase.from('tipos_asistente').select('*').order('orden'),
       supabase
         .from('configuracion_matricula_via_medicacion')
         .select('via_administracion, tipo_matricula_requerida')
         .eq('prestadora_id', prestadoraId),
-      llamarApiConfiguracion('/modo-control-matricula').catch(() => null),
+      cargarModo(),
     ]);
     if (resTipos.error || resVias.error) {
       setError(mensajeDeError(resTipos.error || resVias.error, t));
@@ -55,9 +94,8 @@ export function TiposAsistenteTab() {
     }
     setTipos(resTipos.data ?? []);
     setVias(resVias.data ?? []);
-    setModoControl(resModo?.modo ?? 'flexible');
     setEstado('listo');
-  }, [prestadoraId, t]);
+  }, [prestadoraId, t, cargarModo]);
 
   useEffect(() => {
     recargar();
@@ -67,6 +105,10 @@ export function TiposAsistenteTab() {
      tipo de Asistente, y esto es lo que decide qué tan estricta es esa exigencia. Separarlas
      obligaría a ir y volver entre dos pantallas para entender una sola regla. */
   async function cambiarModo(nuevo) {
+    // Sin haber leído la política actual no se guarda ninguna. El selector ni siquiera se dibuja
+    // fuera del estado "listo", así que esto no debería alcanzarse nunca; está igual porque el
+    // día que alguien mueva el dibujo, la regla tiene que seguir puesta.
+    if (estadoModo !== 'listo') return;
     setGuardandoModo(true);
     setError(null);
     try {
@@ -117,10 +159,26 @@ export function TiposAsistenteTab() {
       <p className="panel-explicacion">{t.configuracion.tipos_explicacion}</p>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
 
-      {estado === 'listo' && (
-        <div className="panel-detalle">
-          <h3>{t.matricula.modo_titulo}</h3>
-          <p className="panel-explicacion">{t.matricula.modo_explicacion}</p>
+      <div className="panel-detalle">
+        <h3>{t.matricula.modo_titulo}</h3>
+        <p className="panel-explicacion">{t.matricula.modo_explicacion}</p>
+
+        {estadoModo === 'cargando' && (
+          <p className="estado-cargando" role="status">
+            {t.comun.cargando}
+          </p>
+        )}
+
+        {estadoModo === 'error' && (
+          <Alert variant="error">
+            {t.matricula.modo_no_se_pudo_leer} {errorModo}{' '}
+            <Button variant="secondary" onClick={cargarModo} disabled={guardandoModo}>
+              {t.comun.reintentar}
+            </Button>
+          </Alert>
+        )}
+
+        {estadoModo === 'listo' && (
           <select
             id="modo_control_matricula"
             aria-label={t.matricula.modo_titulo}
@@ -128,14 +186,14 @@ export function TiposAsistenteTab() {
             disabled={guardandoModo}
             onChange={(e) => cambiarModo(e.target.value)}
           >
-            {['flexible', 'estricto'].map((opcion) => (
+            {MODOS_DE_CONTROL_MATRICULA.map((opcion) => (
               <option key={opcion} value={opcion}>
                 {t.matricula[`modo_${opcion}`]}
               </option>
             ))}
           </select>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="panel-filtros">
         <Button onClick={() => setCreando(true)}>{t.configuracion.tipos_nuevo}</Button>

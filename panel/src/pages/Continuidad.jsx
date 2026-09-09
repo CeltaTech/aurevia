@@ -15,6 +15,16 @@ import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 
 const TIPOS_RESOLUCION = ['suplente', 'franquero', 'emergencia', 'familiar'];
 
+/* Los avisos de cierre se leen de la vista y no de la tabla: es la misma tabla con una columna
+   más, la del nombre de quien cerró. Antes se pedía ese nombre consultando `usuarios`, y esa
+   tabla deja que cada persona lea su propia fila y ninguna otra, así que la consulta volvía
+   vacía y acá se dibujaba un guión. La vista lo resuelve adentro de la base sin abrir nada de
+   `usuarios` — ver
+   `supabase/migrations/20260909120000_la_pantalla_de_continuidad_dice_quien_cerro_el_servicio.sql`.
+   Para marcar un aviso como visto se sigue escribiendo en la tabla, que es lo único que se
+   puede escribir. */
+const VISTA_AVISOS_DE_CIERRE = 'notificaciones_cierre_servicio_quien_cerro';
+
 export function Continuidad() {
   const { t } = useLocale();
   const { usuario } = useAuth();
@@ -39,7 +49,7 @@ export function Continuidad() {
       ] = await Promise.all([
         supabase.from('incidentes_relevo').select('*').is('resuelto_at', null).order('iniciado_at', { ascending: true }),
         supabase.from('alertas_tempranas_guardia').select('*').is('resuelto_at', null).order('detectado_at', { ascending: true }),
-        supabase.from('notificaciones_cierre_servicio').select('*').is('visto_at', null).order('created_at', { ascending: true }),
+        supabase.from(VISTA_AVISOS_DE_CIERRE).select('*').is('visto_at', null).order('created_at', { ascending: true }),
       ]);
       if (errorIncidentes) throw errorIncidentes;
       if (errorAlertas) throw errorAlertas;
@@ -66,16 +76,14 @@ export function Continuidad() {
       const idsPacientesGuardias = (guardiasData ?? []).flatMap((g) => pacientesDeGuardia(g, pacientesPorGuardia));
       const idsPacientesNotificaciones = (notificacionesData ?? []).map((n) => n.paciente_id);
       const idsPacientes = Array.from(new Set([...idsPacientesGuardias, ...idsPacientesNotificaciones]));
-      const idsCoordinadores = Array.from(new Set((notificacionesData ?? []).map((n) => n.cerrado_por)));
 
-      const [{ data: pacientesData }, { data: asistentesData }, { data: coordinadoresData }] = await Promise.all([
+      const [{ data: pacientesData }, { data: asistentesData }] = await Promise.all([
         idsPacientes.length ? supabase.from('pacientes').select('id, nombre').in('id', idsPacientes) : Promise.resolve({ data: [] }),
         // El plantel entero, con su estado. Sin filtrar acá porque esta misma lista le pone el
         // nombre al Asistente que faltó en cada incidente y en cada alerta, y quien después se
         // fue de la Prestadora tiene que seguir teniendo nombre en un incidente de la semana
         // pasada. Quién puede tomar el reemplazo lo decide `ResolverIncidente`, más abajo.
         supabase.from('asistentes').select('id, nombre, estado').order('nombre'),
-        idsCoordinadores.length ? supabase.from('usuarios').select('id, nombre').in('id', idsCoordinadores) : Promise.resolve({ data: [] }),
       ]);
 
       const pacientesPorId = Object.fromEntries((pacientesData ?? []).map((p) => [p.id, p.nombre]));
@@ -84,14 +92,13 @@ export function Continuidad() {
       );
       const nombresDelTurno = (g) => (g ? textoDePacientes(g.pacientes_nombres, t.guardias.pacientes_y_mas) : '—');
       const asistentesPorId = Object.fromEntries((asistentesData ?? []).map((a) => [a.id, a.nombre]));
-      const coordinadoresPorId = Object.fromEntries((coordinadoresData ?? []).map((c) => [c.id, c.nombre]));
       const nivelesPorNumero = Object.fromEntries((nivelesData ?? []).map((n) => [n.nivel, n]));
 
       const filasNotificaciones = (notificacionesData ?? []).map((n) => ({
         ...n,
         paciente_nombre: pacientesPorId[n.paciente_id] || '—',
         asistente_nombre: asistentesPorId[n.asistente_id] || '—',
-        cerrado_por_nombre: coordinadoresPorId[n.cerrado_por] || '—',
+        cerrado_por_nombre: n.cerrado_por_nombre || '—',
       }));
 
       const filas = (incidentesData ?? []).map((i) => {

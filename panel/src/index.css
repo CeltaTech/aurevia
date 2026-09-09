@@ -773,6 +773,16 @@ h2 {
   cursor: pointer;
 }
 
+/* Las líneas de abajo de la celda de verificación de una Matrícula: quién la verificó, por qué
+   medio y la nota que haya dejado. Van más chicas y más apagadas que la fecha para que lo
+   primero que se lea siga siendo si está verificada o no, sin esconder lo demás. */
+.panel-verificacion-detalle {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.85em;
+  color: var(--texto-secundario);
+}
+
 .panel-permisos-excepciones {
   margin-top: 0.5rem;
   padding-top: 0.5rem;

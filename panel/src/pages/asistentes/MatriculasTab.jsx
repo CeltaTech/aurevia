@@ -50,9 +50,56 @@ async function llamarApi(path, opciones = {}) {
 /** Los tres métodos que la base acepta. El orden es de más a menos directo. */
 const METODOS = ['documento_a_la_vista', 'constancia_del_organismo', 'registro_oficial_en_linea'];
 
+/* De dónde se leen las Matrículas.
+   La vista devuelve las mismas filas que la tabla —se evalúa con los permisos de quien
+   consulta— y agrega una sola columna: el nombre de quien verificó. Hace falta porque
+   `verificada_por` es un identificador, y una verificación sin nombre no sirve para lo que se
+   guarda: saber quién dio por buena cada Matrícula. Para escribir se sigue usando la tabla. */
+const VISTA_MATRICULAS = 'matriculas_asistente_verificacion';
+const TABLA_MATRICULAS = 'matriculas_asistente';
+
 function estaVigente(fila) {
   const hoy = new Date().toISOString().slice(0, 10);
   return !fila.vigente_hasta || fila.vigente_hasta >= hoy;
+}
+
+/* La celda que contesta las tres preguntas: quién verificó, cuándo y por qué medio.
+   ==========================================================================
+
+   Las tres van juntas y no una sola, porque "verificada" a secas no contesta nada el día que
+   alguien tenga que responder por una Matrícula que no era válida.
+
+   EL MEDIO EN BLANCO SE MUESTRA EN BLANCO. Una Matrícula verificada sin medio guardado no se
+   completa con una suposición: la pantalla dice que no quedó registrado cómo se comprobó. Eso
+   es información válida, y es justamente la que hace falta si algún día la ley termina
+   exigiendo la comprobación contra el registro oficial: son las que hay que volver a mirar. */
+function CeldaVerificacion({ fila, tm }) {
+  if (!fila.verificada_at) {
+    return <span className={claseBadge('vencida')}>{tm.sin_verificar}</span>;
+  }
+
+  const metodo = fila.metodo_verificacion
+    ? tm[`metodo_${fila.metodo_verificacion}`]
+    : tm.metodo_sin_registrar;
+
+  return (
+    <>
+      <span className={claseBadge('vigente')}>
+        {con(tm.verificada_el, { fecha: fila.verificada_at.slice(0, 10) })}
+      </span>
+      {fila.verificada_por_nombre && (
+        <small className="panel-verificacion-detalle">
+          {con(tm.verificada_por, { nombre: fila.verificada_por_nombre })}
+        </small>
+      )}
+      {metodo && <small className="panel-verificacion-detalle">{metodo}</small>}
+      {fila.nota_verificacion && (
+        <small className="panel-verificacion-detalle">
+          {con(tm.nota_registrada, { nota: fila.nota_verificacion })}
+        </small>
+      )}
+    </>
+  );
 }
 
 export function MatriculasTab({ asistente }) {
@@ -80,7 +127,7 @@ export function MatriculasTab({ asistente }) {
     // decir nada útil, y pedirlas de a una haría parpadear la pantalla tres veces.
     const [ms, em, tp] = await Promise.all([
       supabase
-        .from('matriculas_asistente')
+        .from(VISTA_MATRICULAS)
         .select('*')
         .eq('asistente_id', asistente.id)
         .order('vigente_desde', { ascending: false }),
@@ -150,7 +197,7 @@ export function MatriculasTab({ asistente }) {
     setRevocandoId(fila.id);
     setError(null);
     const { error: errorUpdate } = await supabase
-      .from('matriculas_asistente')
+      .from(TABLA_MATRICULAS)
       .update({ vigente_hasta: new Date().toISOString().slice(0, 10) })
       .eq('id', fila.id);
     setRevocandoId(null);
@@ -223,13 +270,7 @@ export function MatriculasTab({ asistente }) {
                     </span>
                   </td>
                   <td>
-                    {fila.verificada_at ? (
-                      <span className={claseBadge('vigente')}>
-                        {con(tm.verificada_el, { fecha: fila.verificada_at.slice(0, 10) })}
-                      </span>
-                    ) : (
-                      <span className={claseBadge('vencida')}>{tm.sin_verificar}</span>
-                    )}
+                    <CeldaVerificacion fila={fila} tm={tm} />
                   </td>
                   <td>
                     {fila.archivo_url && (
@@ -311,7 +352,7 @@ function NuevaMatriculaModal({ asistente, usuario, tipos, tipoSugerido, onClose,
         const resultado = await llamarApi(`/matriculas/${asistente.id}/archivo`, { method: 'POST', body: formData });
         archivoUrl = resultado.archivoUrl;
       }
-      const { error: errorInsert } = await supabase.from('matriculas_asistente').insert({
+      const { error: errorInsert } = await supabase.from(TABLA_MATRICULAS).insert({
         asistente_id: asistente.id,
         tipo,
         numero_matricula: numeroMatricula || null,
@@ -384,7 +425,7 @@ function VerificarMatriculaModal({ fila, usuario, onClose, onVerificada }) {
     setGuardando(true);
     setError(null);
     const { error: errorUpdate } = await supabase
-      .from('matriculas_asistente')
+      .from(TABLA_MATRICULAS)
       .update({
         verificada_at: new Date().toISOString(),
         verificada_por: usuario.id,

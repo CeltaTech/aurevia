@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import { supabase } from '../db/connection.js';
 import { accesosParaGuardar, mezclarAccesosConCatalogo } from './catalogoCirculoFamiliar.js';
 import { visibilidadDeLaPrestadora } from './visibilidadPrestadora.js';
@@ -6,6 +5,14 @@ import { textoDeLaInstruccion, huellaDelDocumento, IDIOMA_DEL_DOCUMENTO } from '
 import { enviarWhatsApp } from './whatsapp.js';
 import { enviarEmail } from './email.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
+import {
+  INTENTOS_MAXIMOS,
+  codigoCoincide,
+  codigoNuevo,
+  estaVencido,
+  huellaDelCodigo,
+  vencimientoEnMinutos,
+} from './codigoDeUnSoloUso.js';
 
 // Todo lo que le pasa a una instrucción sobre los accesos del círculo familiar: se carga, se firma
 // —desde la aplicación con un código, o en papel—, o se anula porque llegó otra.
@@ -21,19 +28,10 @@ import { ErrorConMotivo } from './errorConMotivo.js';
 // a la vez dejarían al titular firmando algo que ya no rige. La base lo exige además con un índice
 // único, así que esto no es la única defensa.
 //
-// EL CÓDIGO ES DE UN SOLO USO Y SE GUARDA SU HUELLA, NUNCA EL CÓDIGO. Mismo criterio que la
-// recuperación de acceso (`mfaRecuperacionEmail.js`). Y se cuentan los intentos: sin eso, seis
-// dígitos se prueban de a uno hasta acertar.
+// EL CÓDIGO ES DE UN SOLO USO Y SE GUARDA SU HUELLA, NUNCA EL CÓDIGO. Cómo se arma, cómo se
+// compara y cuántos intentos se toleran está una sola vez, en `codigoDeUnSoloUso.js`: es el mismo
+// mecanismo que usan la recuperación de acceso y el pase de guardia.
 const VIGENCIA_DEL_CODIGO_MINUTOS = 10;
-const INTENTOS_MAXIMOS = 5;
-
-function huellaDelCodigo(codigo) {
-  return crypto.createHash('sha256').update(String(codigo)).digest('hex');
-}
-
-function codigoNuevo() {
-  return String(crypto.randomInt(100000, 1000000));
-}
 
 // Quiénes son las personas del círculo de esta Familia, sin el titular. El titular también tiene
 // fila —apuntando a sí mismo, que es lo que deja resolver de una consulta a qué Familia pertenece
@@ -201,7 +199,7 @@ export async function pedirCodigo({ instruccionId, familiaId }) {
     .from('instrucciones_acceso_circulo')
     .update({
       codigo_huella: huellaDelCodigo(codigo),
-      codigo_expira_en: new Date(Date.now() + VIGENCIA_DEL_CODIGO_MINUTOS * 60 * 1000).toISOString(),
+      codigo_expira_en: vencimientoEnMinutos(VIGENCIA_DEL_CODIGO_MINUTOS),
       codigo_intentos: 0,
     })
     .eq('id', instruccionId);
@@ -262,9 +260,9 @@ export async function confirmarConCodigo({ instruccionId, familiaId, codigo, des
   if (instruccion.estado !== 'pendiente_firma') return { ok: false, motivo: 'ya_cerrada' };
   if (!instruccion.codigo_huella) return { ok: false, motivo: 'sin_codigo' };
   if (instruccion.codigo_intentos >= INTENTOS_MAXIMOS) return { ok: false, motivo: 'demasiados_intentos' };
-  if (new Date(instruccion.codigo_expira_en) < new Date()) return { ok: false, motivo: 'vencido' };
+  if (estaVencido(instruccion.codigo_expira_en)) return { ok: false, motivo: 'vencido' };
 
-  if (huellaDelCodigo(String(codigo ?? '').trim()) !== instruccion.codigo_huella) {
+  if (!codigoCoincide(codigo, instruccion.codigo_huella)) {
     await supabase
       .from('instrucciones_acceso_circulo')
       .update({ codigo_intentos: instruccion.codigo_intentos + 1 })

@@ -7,6 +7,7 @@ import { PermisosProvider } from './context/PermisosContext';
 import { ModalidadesProvider } from './context/ModalidadesContext';
 import { TenantSessionProvider } from './context/TenantSessionContext';
 import { AdvertenciaLegalProvider } from './context/AdvertenciaLegalContext';
+import { PedidosDeCodigoProvider } from './context/PedidosDeCodigoContext';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { ROLES_ADMINISTRACION, ROLES_PANEL } from './lib/roles';
 import { Layout } from './components/layout/Layout';
@@ -29,6 +30,7 @@ import { Reportes } from './pages/Reportes';
 import { Alertas } from './pages/Alertas';
 import { Comunicacion } from './pages/Comunicacion';
 import { Evv } from './pages/Evv';
+import { PaseDeGuardia } from './pages/PaseDeGuardia';
 import { Facturacion } from './pages/Facturacion';
 import { PagosAsistentes } from './pages/PagosAsistentes';
 import { Documentacion } from './pages/Documentacion';
@@ -63,6 +65,11 @@ function App() {
           <PermisosProvider>
           <ModalidadesProvider>
           <TenantSessionProvider>
+            {/* Va adentro de la sesión de soporte porque los pedidos que trae son los de la
+                Prestadora que se está mirando ahora, y esa la decide esa sesión. Y va afuera del
+                enrutador porque el menú lo consulta desde cualquier pantalla: un Asistente parado
+                en una puerta tiene que aparecer aunque nadie esté mirando la lista. */}
+            <PedidosDeCodigoProvider>
             <AdvertenciaLegalProvider>
               <BrowserRouter>
                 <Routes>
@@ -104,6 +111,12 @@ function App() {
                     <Route path="reportes" element={<Reportes />} />
                     <Route path="alertas" element={<Alertas />} />
                     <Route path="comunicacion" element={<Comunicacion />} />
+                    {/* El pase de guardia (pendiente #113) va al lado de la verificación de
+                        guardias y no adentro: aquélla audita hacia atrás con un rango de fechas,
+                        ésta se atiende ahora. Sin candado propio, igual que sus vecinas de
+                        Cumplimiento: quien está de turno cuando entra un pedido es el
+                        Coordinador, y el motor pide exactamente lo mismo. */}
+                    <Route path="pase-de-guardia" element={<PaseDeGuardia />} />
                     <Route path="verificacion-guardias" element={<Evv />} />
                     <Route path="facturacion" element={<Facturacion />} />
                     {/* Lo que se le paga al Asistente es dato sensible (CLAUDE.md §6), así que
@@ -167,6 +180,7 @@ function App() {
                 </Routes>
               </BrowserRouter>
             </AdvertenciaLegalProvider>
+            </PedidosDeCodigoProvider>
           </TenantSessionProvider>
           </ModalidadesProvider>
           </PermisosProvider>

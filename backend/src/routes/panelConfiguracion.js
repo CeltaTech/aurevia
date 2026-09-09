@@ -10,6 +10,14 @@ import { LIMITES_ALERTAS_IA, VALORES_POR_DEFECTO_ALERTAS_IA } from '../utils/rev
 import { validarUmbralesPremura } from '../utils/umbralesPremura.js';
 import { LIMITES_AVISO_PREVIO_GUARDIA } from '../utils/revisarRecordatoriosPush.js';
 import { METROS_TOLERANCIA_POR_OMISION, MINUTOS_TOLERANCIA_POR_OMISION } from '../utils/toleranciaCheckin.js';
+import {
+  SEGUNDOS_EN_PANTALLA_POR_OMISION,
+  SEGUNDOS_EN_PANTALLA_MINIMO,
+  SEGUNDOS_EN_PANTALLA_MAXIMO,
+  MINUTOS_CODIGO_DE_LA_PRESTADORA_POR_OMISION,
+  MINUTOS_CODIGO_DE_LA_PRESTADORA_MINIMO,
+  MINUTOS_CODIGO_DE_LA_PRESTADORA_MAXIMO,
+} from '../utils/comprobacionDePresencia.js';
 
 export const panelConfiguracionRouter = Router();
 
@@ -759,7 +767,10 @@ panelConfiguracionRouter.get('/ausencia-automatica', async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
   const { data, error } = await supabase
     .from('configuracion_ausencia_automatica')
-    .select('activo, minutos_tolerancia_checkin, metros_tolerancia_checkin')
+    .select(
+      'activo, minutos_tolerancia_checkin, metros_tolerancia_checkin, ' +
+      'segundos_codigo_en_pantalla, minutos_codigo_de_la_prestadora',
+    )
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
@@ -768,17 +779,48 @@ panelConfiguracionRouter.get('/ausencia-automatica', async (req, res) => {
       activo: true,
       minutos_tolerancia_checkin: MINUTOS_TOLERANCIA_POR_OMISION,
       metros_tolerancia_checkin: METROS_TOLERANCIA_POR_OMISION,
+      segundos_codigo_en_pantalla: SEGUNDOS_EN_PANTALLA_POR_OMISION,
+      minutos_codigo_de_la_prestadora: MINUTOS_CODIGO_DE_LA_PRESTADORA_POR_OMISION,
     },
   });
 });
 
+/* Las dos decisiones del pase de guardia (pendiente #113) viajan por acá y no por una ruta
+   propia porque viven en la misma fila y describen lo mismo: cada cuánto se renueva el código
+   que alguien muestra en su pantalla, y cuántos minutos vale el que suelta la Prestadora. Los
+   topes son los de las restricciones de la base; se comprueban también acá para que el rechazo
+   llegue con un mensaje que la pantalla pueda explicar y no con el texto crudo de la base. */
 panelConfiguracionRouter.patch('/ausencia-automatica', async (req, res) => {
-  const { activo, minutos_tolerancia_checkin, metros_tolerancia_checkin } = req.body;
+  const {
+    activo,
+    minutos_tolerancia_checkin,
+    metros_tolerancia_checkin,
+    segundos_codigo_en_pantalla,
+    minutos_codigo_de_la_prestadora,
+  } = req.body;
   if (!Number.isInteger(minutos_tolerancia_checkin) || minutos_tolerancia_checkin <= 0) {
     return res.status(400).json({ error: 'minutos_tolerancia_checkin debe ser un entero positivo' });
   }
   if (!Number.isInteger(metros_tolerancia_checkin) || metros_tolerancia_checkin <= 0) {
     return res.status(400).json({ error: 'metros_tolerancia_checkin debe ser un entero positivo' });
+  }
+  if (
+    !Number.isInteger(segundos_codigo_en_pantalla) ||
+    segundos_codigo_en_pantalla < SEGUNDOS_EN_PANTALLA_MINIMO ||
+    segundos_codigo_en_pantalla > SEGUNDOS_EN_PANTALLA_MAXIMO
+  ) {
+    return res.status(400).json({
+      error: `segundos_codigo_en_pantalla debe estar entre ${SEGUNDOS_EN_PANTALLA_MINIMO} y ${SEGUNDOS_EN_PANTALLA_MAXIMO}`,
+    });
+  }
+  if (
+    !Number.isInteger(minutos_codigo_de_la_prestadora) ||
+    minutos_codigo_de_la_prestadora < MINUTOS_CODIGO_DE_LA_PRESTADORA_MINIMO ||
+    minutos_codigo_de_la_prestadora > MINUTOS_CODIGO_DE_LA_PRESTADORA_MAXIMO
+  ) {
+    return res.status(400).json({
+      error: `minutos_codigo_de_la_prestadora debe estar entre ${MINUTOS_CODIGO_DE_LA_PRESTADORA_MINIMO} y ${MINUTOS_CODIGO_DE_LA_PRESTADORA_MAXIMO}`,
+    });
   }
   const { error } = await supabase
     .from('configuracion_ausencia_automatica')
@@ -787,6 +829,8 @@ panelConfiguracionRouter.patch('/ausencia-automatica', async (req, res) => {
       activo: Boolean(activo),
       minutos_tolerancia_checkin,
       metros_tolerancia_checkin,
+      segundos_codigo_en_pantalla,
+      minutos_codigo_de_la_prestadora,
     });
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
@@ -814,13 +858,29 @@ panelConfiguracionRouter.patch('/documentos-tipo/:id', async (req, res) => {
 //     el 2026-08-19 esta pantalla tenía su propia lista de tres acciones y mostraba un estado
 //     que el motor no aplicaba (pendiente #127). Ver backend/src/utils/permisos.js. ---
 
+// Los Coordinadores de una Prestadora, para las pantallas de Configuración que hacen elegir uno
+// de una lista. Sale del motor y no del navegador porque la tabla `usuarios` sólo deja que cada
+// persona lea su propia fila: pedida desde el Panel, la lista vuelve vacía y el desplegable
+// aparece sin nadie adentro. El motor entra con la llave maestra —decisión escrita en
+// `CLAUDE.md` §6— y acota a la Prestadora acá, en la única consulta que hace falta escribir.
+// Todo el router está reservado a Admin y Superadmin de la Organización activa (ver el
+// `use` de arriba), así que esta lista no llega a más gente de la que ya podía verla.
+function coordinadoresDeLaPrestadora(prestadoraId) {
+  return supabase
+    .from('usuarios')
+    .select('id, nombre')
+    .eq('prestadora_id', prestadoraId)
+    .eq('rol', 'coordinador')
+    .order('nombre');
+}
+
 panelConfiguracionRouter.get('/permisos', async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
   try {
     const [acciones, { data: filas, error: errorFilas }, { data: coordinadores, error: errorCoordinadores }] = await Promise.all([
       accionesDePermisos(),
       supabase.from('permisos_prestadora').select('*').eq('prestadora_id', prestadoraId),
-      supabase.from('usuarios').select('id, nombre').eq('prestadora_id', prestadoraId).eq('rol', 'coordinador').order('nombre'),
+      coordinadoresDeLaPrestadora(prestadoraId),
     ]);
     if (errorFilas) return res.status(500).json({ error: errorFilas.message });
     if (errorCoordinadores) return res.status(500).json({ error: errorCoordinadores.message });
@@ -958,13 +1018,21 @@ const HORAS_DE_TRES_DIAS = 72;
 
 panelConfiguracionRouter.get('/escalada-coordinador', async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
-  const { data, error } = await supabase
-    .from('configuracion_escalada_coordinador')
-    .select('*')
-    .eq('prestadora_id', prestadoraId)
-    .maybeSingle();
+  // La lista de Coordinadores viaja con la configuración, y no la pide el navegador por su
+  // cuenta: es el mismo reparto que ya usa `/permisos`, con la misma consulta escrita una sola
+  // vez más arriba.
+  const [{ data, error }, { data: coordinadores, error: errorCoordinadores }] = await Promise.all([
+    supabase
+      .from('configuracion_escalada_coordinador')
+      .select('*')
+      .eq('prestadora_id', prestadoraId)
+      .maybeSingle(),
+    coordinadoresDeLaPrestadora(prestadoraId),
+  ]);
   if (error) return res.status(500).json({ error: error.message });
+  if (errorCoordinadores) return res.status(500).json({ error: errorCoordinadores.message });
   res.json({
+    coordinadores: coordinadores || [],
     escalada: data || {
       prestadora_id: prestadoraId,
       coordinador_backup_id: null,

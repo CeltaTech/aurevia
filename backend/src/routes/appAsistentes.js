@@ -18,6 +18,14 @@ import { visibilidadDelPedido, exigeVisible } from '../utils/visibilidadPrestado
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
 import { tipoConSusTareas } from '../utils/tareasDelTipo.js';
 import { guardarSuscripcionPush } from '../utils/suscripcionesPush.js';
+import {
+  MOTIVOS_SIN_COMPROBAR,
+  codigoParaMostrar,
+  comprobacionDe,
+  pedirCodigoALaPrestadora,
+  registrarComprobacion,
+} from '../utils/comprobacionDePresencia.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 export const appAsistentesRouter = Router();
 
@@ -70,98 +78,80 @@ async function guardiaDelAsistente(guardiaId, usuarioAsistente) {
 }
 
 // ============================================================================
-// El pase de guardia por QR (pendiente #113) — decisiones del Desarrollador que no se
-// vuelven a discutir:
-//   1. El QR viaja siempre junto con el GPS, nunca en lugar de él: por eso esto se valida
+// El pase de guardia (pendiente #113) — decisiones del Desarrollador que no se vuelven a
+// discutir:
+//   1. Nada de escanear carteles. Un cartel impreso pegado en la puerta es un secreto que no
+//      cambia nunca y que se fotografía de paso: el código lo muestra una PERSONA en la pantalla
+//      de su teléfono y se renueva solo cada pocos segundos, o lo suelta la Prestadora de un solo
+//      uso y con vencimiento de minutos. Toda la mecánica está en `utils/comprobacionDePresencia.js`.
+//   2. El código viaja siempre junto con el GPS, nunca en lugar de él: por eso esto se valida
 //      además de lat/lng, no en cambio de lat/lng.
-//   2. El escaneo nunca traba la guardia. Si no se pudo leer, el check-in o el check-out se
-//      marcan igual y lo que cambia es que la fila de guardia_escaneos queda con
-//      excepcion_motivo puesto en vez de un token leído — nunca un 400 ni un 409.
-//   3. Esto no decide si un relevo cierra una guardia y abre la siguiente en un solo acto (esa
-//      pregunta sigue abierta, ver el informe de esta tarea). Cada guardia sigue anotando su
-//      propio escaneo por su cuenta: cuando hay relevo real quedan dos filas, una contra la
-//      guardia que termina y otra contra la que empieza, sin ningún vínculo nuevo entre ellas.
+//   3. La guardia nunca se traba. Si nadie puede mostrar el código y en la Prestadora tampoco
+//      atiende nadie, el Asistente elige un motivo de una lista corta, marca igual y esa llegada
+//      queda como SIN COMPROBAR en la lista que ve el Coordinador. Lo único que sí se rechaza es
+//      un código equivocado —ahí la pantalla ofrece reintentar, pedirle uno a la Prestadora, o
+//      entrar con un motivo—, porque aceptar un código que no es sería no comprobar nada y decir
+//      que sí.
+//   4. Esto no decide si un relevo cierra una guardia y abre la siguiente en un solo acto (esa
+//      pregunta sigue abierta). Cada guardia anota su propia comprobación por su cuenta: cuando
+//      hay relevo real quedan dos filas, una contra la que termina y otra contra la que empieza.
 // ============================================================================
 
-const MOTIVOS_EXCEPCION_ESCANEO_QR = ['sin_camara', 'permiso_denegado', 'no_legible', 'otro'];
-
-// Ordena lo que mandó el cliente sobre el intento de escaneo. Nunca devuelve un estado a medio
-// completar —o hubo lectura (con su token) o hubo excepción (con su motivo), la misma coherencia
-// que exige el CHECK de la base— y nunca devuelve un error, porque un error acá sería un 400 que
-// impide marcar el check-in, y eso es exactamente lo que la decisión 2 de arriba prohíbe.
+// Ordena lo que mandó el teléfono sobre la comprobación. Se acepta el pedido viejo —sin nada—
+// como «no se comprobó, motivo desconocido»: puede ser un teléfono con la versión anterior
+// todavía cargada, o un check-in que quedó en la cola sin conexión y se está reintentando ahora.
+// Ese Asistente está parado en la puerta y tiene que poder marcar.
 //
-// POR QUÉ NO VALIDA RECHAZANDO. Un pedido sin datos de escaneo no es un pedido inválido: es un
-// teléfono con la aplicación anterior todavía cargada, o un check-in que quedó en la cola sin
-// conexión antes de que existiera esta función y se está reintentando ahora. Ese Asistente está
-// parado en la puerta del domicilio y tiene que poder marcar. Se anota como excepción `otro` —la
-// constancia honesta de que en ese acto no se juntó evidencia de QR—, el Coordinador recibe el
-// mismo aviso que ante cualquier otra excepción, y la guardia sigue.
-function datosDeEscaneoQR(body) {
-  const { qrLeido, qrToken, qrExcepcionMotivo } = body || {};
-
-  if (qrLeido === true) {
-    if (typeof qrToken === 'string' && qrToken.trim()) {
-      return { qrLeido: true, qrToken: qrToken.trim(), excepcionMotivo: null };
+// Un motivo que no está en la lista cae en «otro» en vez de rechazar el pedido, por lo mismo: la
+// lista puede haber cambiado y el teléfono todavía tener la anterior, y eso es un desajuste de
+// versiones, no una razón para trabar una guardia. Lo que mandó se guarda en el detalle, así el
+// Coordinador ve qué quiso decir.
+function datosDeComprobacion(body) {
+  const { comprobacion } = body || {};
+  if (comprobacion && typeof comprobacion === 'object') {
+    if (typeof comprobacion.codigo === 'string' && comprobacion.codigo.trim()) {
+      return { codigo: comprobacion.codigo.trim() };
     }
-    // Dice que leyó y no manda qué leyó: es un defecto de programación del cliente, no una
-    // condición del domicilio. Queda en el registro del servidor para poder encontrarlo, y el
-    // acto se anota como excepción en vez de trabarse.
-    console.error('Escaneo QR: el cliente informó una lectura sin mandar el código leído');
-    return { qrLeido: false, qrToken: null, excepcionMotivo: 'otro' };
+    if (typeof comprobacion.motivoSinComprobar === 'string') {
+      const motivo = comprobacion.motivoSinComprobar.trim();
+      if (MOTIVOS_SIN_COMPROBAR.includes(motivo)) {
+        return { motivoSinComprobar: motivo, detalle: comprobacion.detalle };
+      }
+      return { motivoSinComprobar: 'otro', detalle: comprobacion.detalle ?? motivo };
+    }
   }
-
-  if (typeof qrExcepcionMotivo === 'string' && MOTIVOS_EXCEPCION_ESCANEO_QR.includes(qrExcepcionMotivo)) {
-    return { qrLeido: false, qrToken: null, excepcionMotivo: qrExcepcionMotivo };
-  }
-  return { qrLeido: false, qrToken: null, excepcionMotivo: 'otro' };
+  return { motivoSinComprobar: 'otro' };
 }
 
-// Deja la evidencia del escaneo contra ESTA guardia y ESTE acto (checkin o checkout) — nunca
-// contra las dos guardias de un relevo a la vez, porque cada una llama a este mismo código por
-// su cuenta cuando le toca. Nunca lanza: un problema acá no puede tirar abajo un check-in o un
-// check-out que ya se guardó.
-async function registrarEscaneoQR({ guardia, momento, lat, lng, escaneo }) {
-  let qrCoincide = null;
-  if (escaneo.qrLeido) {
-    try {
-      const pacientes = await pacientesDeGuardia(guardia, 'id, qr_token');
-      qrCoincide = pacientes.some((p) => p.qr_token && p.qr_token === escaneo.qrToken);
-    } catch (e) {
-      console.error('Error verificando a qué Paciente corresponde el QR leído:', e.message);
+// Le avisa a la Familia que la guardia quedó cubierta y por quién. Sale cuando la Familia NO
+// participó de la comprobación: cuando el código lo mostró el Asistente que se iba, y cuando lo
+// soltó la Prestadora. Si el código lo mostró la propia Familia, ya se enteró mostrándolo.
+//
+// El texto va en castellano y a mano, como los otros cuatro avisos al celular que ya existen: el
+// motor todavía no tiene catálogo de traducciones (ver el informe de esta tarea).
+async function avisarALaFamiliaDeLaCobertura({ guardia, medio }) {
+  try {
+    const pacientes = await pacientesDeGuardia(guardia, 'id, nombre, familia_id');
+    const { data: asistente } = await supabase
+      .from('asistentes')
+      .select('nombre')
+      .eq('id', guardia.asistente_id)
+      .maybeSingle();
+    const nombreDelAsistente = asistente?.nombre ?? 'el Asistente asignado';
+    const comoSeComprobo = medio === 'codigo_prestadora'
+      ? 'La comprobación la resolvió la Prestadora.'
+      : 'La comprobación la hizo el Asistente que terminaba su guardia.';
+
+    for (const paciente of pacientes.filter((p) => p.familia_id)) {
+      enviarPushFamilia(paciente.familia_id, {
+        titulo: 'La guardia quedó cubierta',
+        cuerpo: `${nombreDelAsistente} está en el domicilio de ${paciente.nombre}. ${comoSeComprobo}`,
+        url: `/pacientes/${paciente.id}`,
+      }).catch((err) => console.error('Error avisando a la Familia de la cobertura:', err.message));
     }
+  } catch (e) {
+    console.error('Error armando el aviso de cobertura para la Familia:', e.message);
   }
-
-  const { error } = await supabase.from('guardia_escaneos').insert({
-    prestadora_id: guardia.prestadora_id,
-    guardia_id: guardia.id,
-    asistente_id: guardia.asistente_id,
-    momento,
-    lat,
-    lng,
-    qr_leido: escaneo.qrLeido,
-    qr_token_leido: escaneo.qrToken,
-    qr_coincide: qrCoincide,
-    excepcion_motivo: escaneo.excepcionMotivo,
-  });
-  if (error) console.error(`Error registrando el escaneo QR del ${momento}:`, error.message);
-
-  // Mismo criterio que el check-in fuera de rango por GPS: nunca bloquea, sólo avisa — y nunca
-  // con el domicilio ni el nombre del Paciente adentro del mensaje (CLAUDE.md §6).
-  if (!escaneo.qrLeido || qrCoincide === false) {
-    const actoEnCastellano = momento === 'checkin' ? 'check-in' : 'check-out';
-    const mensaje = !escaneo.qrLeido
-      ? `Aviso automático del sistema: no se pudo leer el código QR del domicilio en el ${actoEnCastellano} de la guardia del ${guardia.fecha} (motivo: ${escaneo.excepcionMotivo}).`
-      : `Aviso automático del sistema: el código QR leído en el ${actoEnCastellano} de la guardia del ${guardia.fecha} no corresponde a este domicilio.`;
-    const { error: errorNota } = await supabase.from('mensajes_asistente').insert({
-      asistente_id: guardia.asistente_id,
-      prestadora_id: guardia.prestadora_id,
-      usuario_id: guardia.asistente_id,
-      mensaje,
-    });
-    if (errorNota) console.error('Error registrando nota de excepción del escaneo QR:', errorNota.message);
-  }
-
-  return qrCoincide;
 }
 
 // Punto único de verdad de "qué reportes tiene ya cargados esta guardia" (regla 12 de §7):
@@ -347,11 +337,9 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, async (r
   if (typeof lat !== 'number' || typeof lng !== 'number') {
     return res.status(400).json({ error: 'Faltan coordenadas GPS' });
   }
-  // El QR va junto con el GPS, nunca en lugar de él (decisión del Desarrollador, pendiente
-  // #113): se junta además de lat/lng de arriba, no en cambio de ellas. A diferencia de las
-  // coordenadas, que sí cortan con 400 cuando faltan, esto no rechaza nunca — ver
-  // `datosDeEscaneoQR`.
-  const escaneo = datosDeEscaneoQR(req.body);
+  // El código va junto con el GPS, nunca en lugar de él (decisión del Desarrollador, pendiente
+  // #113): se junta además de lat/lng de arriba, no en cambio de ellas.
+  const comprobacionPedida = datosDeComprobacion(req.body);
 
   const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
   if (!guardia) {
@@ -403,6 +391,19 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, async (r
   // es no saber. Sin coordenadas no se le manda un aviso al Coordinador.
   const dentroDeRango = llegoAlDomicilio(distancia, config) !== false;
 
+  // La comprobación se resuelve ANTES de marcar el check-in, y es lo único que puede rechazar el
+  // pedido: un código equivocado no marca la llegada, porque darlo por bueno sería no comprobar
+  // nada y decir que sí. No traba la guardia igual — la pantalla ofrece reintentar, pedirle un
+  // código a la Prestadora, o entrar con un motivo, y ese último camino nunca falla.
+  let comprobacion;
+  try {
+    comprobacion = await registrarComprobacion({
+      guardia, momento: 'checkin', lat, lng, comprobacion: comprobacionPedida,
+    });
+  } catch (e) {
+    return responderError(res, e);
+  }
+
   const { error } = await supabase
     .from('guardias')
     .update({ checkin_at: new Date().toISOString(), checkin_lat: lat, checkin_lng: lng, estado: 'activa' })
@@ -411,10 +412,12 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, async (r
     return res.status(500).json({ error: error.message });
   }
 
-  // Evidencia del escaneo contra ESTA guardia (la que empieza). Va después del UPDATE de
-  // arriba porque el check-in ya quedó marcado — un problema acá nunca puede tumbar un check-in
-  // que ya se guardó (regla: el escaneo nunca traba la guardia).
-  const qrCoincide = await registrarEscaneoQR({ guardia, momento: 'checkin', lat, lng, escaneo });
+  // A la Familia se le avisa que la guardia quedó cubierta y por quién cuando ella no participó
+  // de la comprobación: cuando el código lo mostró el Asistente que se iba, y cuando lo soltó la
+  // Prestadora.
+  if (comprobacion.avisarFamilia) {
+    await avisarALaFamiliaDeLaCobertura({ guardia, medio: comprobacion.medio });
+  }
 
   // Push inmediato a la Familia — docs/PRD_04_05_App_Servicio.md:58 ("el Asistente llegó al
   // domicilio"). Se envía una sola vez porque checkin_at ya se validó arriba como no seteado
@@ -463,7 +466,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, async (r
     });
   }
 
-  res.json({ ok: true, dentroDeRango, distanciaMetros: distancia, qrCoincide });
+  res.json({ ok: true, dentroDeRango, distanciaMetros: distancia, comprobacion: comprobacion.estado });
 });
 
 // ============================================================================
@@ -667,11 +670,9 @@ appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, async (
   if (typeof lat !== 'number' || typeof lng !== 'number') {
     return res.status(400).json({ error: 'Faltan coordenadas GPS' });
   }
-  // El QR va junto con el GPS, nunca en lugar de él (decisión del Desarrollador, pendiente
-  // #113): se junta además de lat/lng de arriba, no en cambio de ellas. A diferencia de las
-  // coordenadas, que sí cortan con 400 cuando faltan, esto no rechaza nunca — ver
-  // `datosDeEscaneoQR`.
-  const escaneo = datosDeEscaneoQR(req.body);
+  // El código va junto con el GPS, nunca en lugar de él (decisión del Desarrollador, pendiente
+  // #113): se junta además de lat/lng de arriba, no en cambio de ellas.
+  const comprobacionPedida = datosDeComprobacion(req.body);
 
   const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
   if (!guardia) {
@@ -701,6 +702,18 @@ appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, async (
     return res.status(409).json({ error: 'Check-out bloqueado por el protocolo de continuidad de guardia', motivo: 'continuidad' });
   }
 
+  // La comprobación de la salida se resuelve antes de cerrar, por el mismo motivo que en el
+  // check-in: un código equivocado no cierra la guardia, y el camino de «entro/salgo igual con
+  // un motivo» está siempre disponible.
+  let comprobacion;
+  try {
+    comprobacion = await registrarComprobacion({
+      guardia, momento: 'checkout', lat, lng, comprobacion: comprobacionPedida,
+    });
+  } catch (e) {
+    return responderError(res, e);
+  }
+
   // Se cierra solamente si sigue activa, y se comprueba que se haya cerrado de verdad. Los
   // controles de arriba se hicieron sobre una lectura anterior: si en el medio entró otro
   // check-out —dos toques seguidos al botón, la aplicación reintentando— acá no queda nada por
@@ -726,12 +739,68 @@ appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, async (
     return res.status(400).json({ error: 'Esta guardia ya tiene check-out registrado', yaRegistrado: true });
   }
 
-  // Evidencia del escaneo contra ESTA guardia (la que termina). Va después del UPDATE de
-  // arriba, y sólo si de verdad se cerró: si la carrera de arriba dejó `cerrada` vacío, no
-  // corresponde anotar un escaneo contra un check-out que no se hizo.
-  const qrCoincide = await registrarEscaneoQR({ guardia, momento: 'checkout', lat, lng, escaneo });
+  res.json({ ok: true, comprobacion: comprobacion.estado });
+});
 
-  res.json({ ok: true, qrCoincide });
+// ============================================================================
+// El pase de guardia (pendiente #113) — las tres rutas que lo sostienen
+// ============================================================================
+
+// El código que este Asistente muestra en su pantalla cuando es él el que se va y llega el
+// relevo. Se pide de nuevo cada `segundos`, y cada pedido anula el anterior: eso es lo que hace
+// que una foto de la pantalla no sirva un minuto después.
+appAsistentesRouter.get('/codigo-de-presencia', requiereRolAsistente, async (req, res) => {
+  try {
+    const { codigo, segundos, expiraEn } = await codigoParaMostrar({
+      prestadoraId: req.usuarioAsistente.prestadoraId,
+      sujetoTipo: 'asistente',
+      sujetoId: req.usuarioAsistente.id,
+    });
+    res.json({ codigo, segundos, expiraEn });
+  } catch (e) {
+    responderError(res, e);
+  }
+});
+
+// «No hay nadie que me pueda mostrar el código.» Lo escribe el Asistente con sus palabras y
+// aparece en la pantalla de la Prestadora. No marca nada: sólo abre el pedido y queda esperando.
+appAsistentesRouter.post('/guardias/:id/comprobacion/pedido', requiereRolAsistente, async (req, res) => {
+  const { momento, texto } = req.body || {};
+  if (momento !== 'checkin' && momento !== 'checkout') {
+    return res.status(400).json({ error: 'Momento inválido', motivo: 'faltan_datos' });
+  }
+
+  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  if (!guardia) return res.status(404).json({ error: 'Guardia no encontrada' });
+
+  try {
+    const pedido = await pedirCodigoALaPrestadora({ guardia, momento, texto });
+    res.json(pedido);
+  } catch (e) {
+    responderError(res, e);
+  }
+});
+
+// En qué quedó ese pedido. La pantalla lo consulta mientras espera, para saber si ya hay un
+// código soltado y puede pedirle al Asistente que lo tipee.
+appAsistentesRouter.get('/guardias/:id/comprobacion/:momento', requiereRolAsistente, async (req, res) => {
+  const { momento } = req.params;
+  if (momento !== 'checkin' && momento !== 'checkout') {
+    return res.status(400).json({ error: 'Momento inválido', motivo: 'faltan_datos' });
+  }
+
+  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  if (!guardia) return res.status(404).json({ error: 'Guardia no encontrada' });
+
+  const fila = await comprobacionDe(guardia.id, momento);
+  if (!fila) return res.json({ estado: null, codigoDisponible: false });
+
+  // Nunca se devuelve la huella ni el código: sólo si ya hay uno esperando que lo tipeen.
+  res.json({
+    estado: fila.estado,
+    codigoDisponible: Boolean(fila.codigo_huella) && new Date(fila.codigo_expira_en) > new Date(),
+    codigoExpiraEn: fila.codigo_huella ? fila.codigo_expira_en : null,
+  });
 });
 
 // Ping de ubicación en vivo durante una guardia activa — la Familia lo lee vía Supabase

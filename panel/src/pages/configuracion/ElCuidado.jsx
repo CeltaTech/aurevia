@@ -45,6 +45,11 @@ function TabServicios() {
   const [ausenciaActiva, setAusenciaActiva] = useState(true);
   const [minutosTolerancia, setMinutosTolerancia] = useState('');
   const [metrosTolerancia, setMetrosTolerancia] = useState('');
+  // Las dos decisiones del pase de guardia (pendiente #113). Viven en la misma fila que las de
+  // arriba y contestan la misma pregunta —cuándo cuenta que el Asistente llegó al domicilio—,
+  // así que se guardan con el mismo botón.
+  const [segundosCodigo, setSegundosCodigo] = useState('');
+  const [minutosCodigoPrestadora, setMinutosCodigoPrestadora] = useState('');
   const [guardandoAusencia, setGuardandoAusencia] = useState(false);
   const [ausenciaGuardada, setAusenciaGuardada] = useState(false);
 
@@ -62,6 +67,8 @@ function TabServicios() {
       setAusenciaActiva(configuracion.activo);
       setMinutosTolerancia(String(configuracion.minutos_tolerancia_checkin));
       setMetrosTolerancia(String(configuracion.metros_tolerancia_checkin));
+      setSegundosCodigo(String(configuracion.segundos_codigo_en_pantalla));
+      setMinutosCodigoPrestadora(String(configuracion.minutos_codigo_de_la_prestadora));
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -101,6 +108,8 @@ function TabServicios() {
           activo: ausenciaActiva,
           minutos_tolerancia_checkin: Number(minutosTolerancia),
           metros_tolerancia_checkin: Number(metrosTolerancia),
+          segundos_codigo_en_pantalla: Number(segundosCodigo),
+          minutos_codigo_de_la_prestadora: Number(minutosCodigoPrestadora),
         }),
       });
       setAusenciaGuardada(true);
@@ -159,7 +168,30 @@ function TabServicios() {
         value={metrosTolerancia}
         onChange={(e) => { setMetrosTolerancia(e.target.value); setAusenciaGuardada(false); }}
       />
-      <Button onClick={guardarAusencia} disabled={guardandoAusencia || !minutosTolerancia || !metrosTolerancia}>
+      {/* El pase de guardia (pendiente #113). Va acá abajo y con el mismo botón que lo de
+          arriba porque es la misma fila de la base y la misma pregunta: qué cuenta como haber
+          llegado al domicilio. Dos botones harían creer que una decisión se puede guardar sin
+          la otra. */}
+      <h3>{t.configuracion.servicios_pase_titulo}</h3>
+      <p className="panel-explicacion">{t.configuracion.servicios_pase_explicacion}</p>
+      <FormField
+        label={t.configuracion.servicios_pase_segundos}
+        name="segundos_codigo_en_pantalla"
+        type="number"
+        value={segundosCodigo}
+        onChange={(e) => { setSegundosCodigo(e.target.value); setAusenciaGuardada(false); }}
+      />
+      <FormField
+        label={t.configuracion.servicios_pase_minutos}
+        name="minutos_codigo_de_la_prestadora"
+        type="number"
+        value={minutosCodigoPrestadora}
+        onChange={(e) => { setMinutosCodigoPrestadora(e.target.value); setAusenciaGuardada(false); }}
+      />
+      <Button
+        onClick={guardarAusencia}
+        disabled={guardandoAusencia || !minutosTolerancia || !metrosTolerancia || !segundosCodigo || !minutosCodigoPrestadora}
+      >
         {guardandoAusencia ? t.comun.guardando : t.comun.guardar}
       </Button>
 

@@ -1351,6 +1351,52 @@ h2 {
   font-size: 0.85rem;
 }
 
+/* ---------- El pase de guardia (pendiente #113) ---------- */
+
+/* El código que la Prestadora acaba de soltar, y que quien atiende le dicta al Asistente. Se
+   muestra una sola vez y no se puede recuperar, así que se lo separa del resto de la tarjeta
+   en lugar de dejarlo como un renglón más. */
+.panel-codigo-soltado {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: var(--tono-info-fondo);
+  color: var(--tono-info-texto);
+}
+
+/* Seis dígitos que se leen en voz alta, así que van grandes y con las letras separadas: un
+   número que se dicta se dicta de a un dígito. */
+.panel-codigo-soltado-numero {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  letter-spacing: 0.35rem;
+  font-weight: 700;
+}
+
+.panel-codigo-soltado-aviso {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Cuántos pedidos hay esperando, al lado de su enlace en el menú. No es un adorno: es lo que
+   hace que quien está de turno se entere sin tener esa pantalla abierta. Se dibuja sólo cuando
+   hay alguno, así que un menú sin nada urgente se ve exactamente como antes. */
+.panel-nav-contador {
+  display: inline-block;
+  min-width: 1.4rem;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--tono-critico-fondo);
+  color: var(--tono-critico-texto);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+}
+
 .panel-filtros-tarjeta {
   display: flex;
   flex-wrap: wrap;

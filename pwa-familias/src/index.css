@@ -349,6 +349,32 @@ h3 {
   margin: 1rem 0;
 }
 
+/* ---------- El código de presencia (pendiente #113) ---------- */
+
+/* La imagen que lee la cámara de quien llega. La genera el navegador con fondo blanco propio,
+   así que acá no se pinta ninguno: sólo se la centra y se le pone un tope de ancho, para que en
+   una pantalla angosta se achique sin deformarse. */
+.codigo-de-presencia-qr {
+  display: block;
+  width: 220px;
+  max-width: 100%;
+  height: auto;
+  margin: 0.75rem auto;
+}
+
+/* Los seis dígitos, que son lo que de verdad se compara: sirven cuando la cámara no se puede
+   usar y hay que dictarlos o tipearlos. Van con el cuerpo del reloj de la guardia, que es el
+   otro número que en esta aplicación se mira de lejos, y con las letras separadas porque un
+   número que se lee en voz alta se dicta de a un dígito. */
+.codigo-de-presencia-numero {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  letter-spacing: 0.35rem;
+  text-align: center;
+  color: var(--azul-oscuro);
+  margin: 0 0 0.75rem;
+}
+
 .badge {
   display: inline-block;
   padding: 0.25rem 0.7rem;

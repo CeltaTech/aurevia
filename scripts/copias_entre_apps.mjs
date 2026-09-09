@@ -148,6 +148,16 @@ export const GRUPOS = [
     original: 'pwa-familias/src/styles/variables.css',
     copias: ['pwa-asistentes/src/styles/variables.css'],
   },
+  {
+    que: 'por qué motivos se puede entrar sin comprobar el pase de guardia',
+    original: 'pwa-asistentes/src/lib/motivosSinComprobar.js',
+    copias: ['backend/src/utils/motivosSinComprobar.js'],
+  },
+  {
+    que: 'la pantalla que muestra el código de presencia para que lo lea quien llega',
+    original: 'pwa-familias/src/components/CodigoDePresencia.jsx',
+    copias: ['pwa-asistentes/src/components/CodigoDePresencia.jsx'],
+  },
 ];
 
 // OJO CON ESTO, para no volver a averiguarlo:

@@ -421,6 +421,12 @@ async function probarElMotor({ motor }, sesiones, piezas) {
     ['asistente B', 'fichar entrada en ella',     'POST',   `/api/app-asistentes/guardias/${piezas.guardiaA}/checkin`,   sesiones.asistenteB, { lat: -34.6, lng: -58.4 },
       `SELECT md5(t::text) FROM public.guardias t WHERE id = '${piezas.guardiaA}';`],
     ['asistente B', 'ver reportes de un paciente de A', 'GET', `/api/app-asistentes/pacientes/${piezas.pacienteA}/reportes`, sesiones.asistenteB],
+    // El pase de guardia (pendiente #113). Las dos rutas nuevas del Asistente reciben el
+    // identificador de una guardia, así que son la misma clase de puerta que el check-in: si la
+    // guardia no es suya, no existe.
+    ['asistente B', 'pedirle un código a la Prestadora de A', 'POST', `/api/app-asistentes/guardias/${piezas.guardiaA}/comprobacion/pedido`, sesiones.asistenteB, { momento: 'checkin', texto: 'INTRUSO' },
+      `SELECT count(*) FROM public.guardia_comprobaciones WHERE guardia_id = '${piezas.guardiaA}';`],
+    ['asistente B', 'ver la comprobación de una guardia de A', 'GET', `/api/app-asistentes/guardias/${piezas.guardiaA}/comprobacion/checkin`, sesiones.asistenteB],
     // Y la dirección contraria, porque el aislamiento no es simétrico por sí solo.
     ['familia A', 'ver un paciente de B',         'GET',    `/api/app-familias/pacientes/${piezas.pacienteB}`,           sesiones.familiaA],
     ['asistente A', 'ver una guardia de B',       'GET',    `/api/app-asistentes/guardias/${piezas.guardiaB}`,           sesiones.asistenteA],

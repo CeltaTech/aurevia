@@ -9,7 +9,8 @@ import { mensajeDeError } from '../lib/errores';
 import { nombreTipo } from '../lib/tipoDeAsistente';
 import { useSeVe } from '../context/PerfilContext';
 import DomicilioTemporal from '../components/DomicilioTemporal';
-import EscaneoQR from '../components/EscaneoQR';
+import PaseDeGuardia from '../components/PaseDeGuardia';
+import CodigoDePresencia from '../components/CodigoDePresencia';
 
 // Una de las dos listas del tipo de Asistente. La de "qué no hace" se muestra igual de
 // grande que la otra a propósito: es la que evita la discusión en la puerta. Se dibuja
@@ -174,6 +175,13 @@ function esErrorDeRed(error) {
   return error instanceof TypeError;
 }
 
+// Los tres motivos con los que el motor rechaza un código del pase de guardia (pendiente #113).
+// Son los únicos que no cierran el pase: el Asistente sigue parado en la puerta, y una pantalla
+// que se cierra sola después de un código mal tipeado lo deja sin nada que apretar. El resto de
+// los motivos —falta el Reporte Diario, la guardia no se puede cerrar todavía— hablan de otra
+// cosa y sí cierran, porque no se arreglan tipeando de nuevo.
+const MOTIVOS_DEL_CODIGO = ['codigo_incorrecto', 'codigo_vencido', 'demasiados_intentos'];
+
 function obtenerUbicacion() {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
@@ -218,12 +226,14 @@ export default function GuardiaActiva() {
   const [confirmandoCierre, setConfirmandoCierre] = useState(false);
   const [cerrando, setCerrando] = useState(false);
   const [cerradoPendiente, setCerradoPendiente] = useState(false);
-  // El pase de guardia por QR (pendiente #113): mientras estos dos están en true se muestra
-  // el escaneo del cartel en vez del botón. Uno por acto porque el check-in y el check-out
-  // son actos independientes — igual que el resto del ciclo de vida de la guardia, que esta
-  // función no toca.
-  const [escaneandoCheckin, setEscaneandoCheckin] = useState(false);
-  const [escaneandoCheckout, setEscaneandoCheckout] = useState(false);
+  // El pase de guardia (pendiente #113): mientras estos dos están en true se muestra el pase en
+  // vez del botón. Uno por acto porque la llegada y el cierre son actos independientes — igual
+  // que el resto del ciclo de vida de la guardia, que esta función no toca.
+  const [pasandoCheckin, setPasandoCheckin] = useState(false);
+  const [pasandoCheckout, setPasandoCheckout] = useState(false);
+  // Y el otro lado del mismo pase: cuando el que se va es este Asistente, es él quien tiene que
+  // mostrarle el código al relevo que llega.
+  const [mostrandoMiCodigo, setMostrandoMiCodigo] = useState(false);
 
   function cargar() {
     api
@@ -271,64 +281,82 @@ export default function GuardiaActiva() {
     return () => clearInterval(intervalo);
   }, [guardia, checkinPendiente, cerradoPendiente]);
 
-  // escaneo es { qrLeido: true, qrToken } o { qrLeido: false, qrExcepcionMotivo }, resuelto
-  // por <EscaneoQR/>. QR y ubicación van siempre juntos (decisión del Desarrollador): nunca
-  // se marca un check-in con uno y no el otro, y ninguno de los dos traba la guardia si
-  // falla — cada falla queda anotada como excepción y el check-in se marca igual.
-  async function alHacerCheckin(escaneo) {
+  // `comprobacion` es { codigo } o { motivoSinComprobar, detalle }, resuelto por
+  // <PaseDeGuardia/>. Comprobación y ubicación van siempre juntas (decisión del Desarrollador):
+  // nunca se marca un check-in con una y no la otra, y ninguna de las dos traba la guardia —
+  // lo que no se pudo comprobar queda anotado como tal y el check-in se marca igual.
+  async function alHacerCheckin(comprobacion) {
     setError('');
     setAviso('');
-    setEscaneandoCheckin(false);
     setHaciendoCheckin(true);
     try {
       const { lat, lng } = await obtenerUbicacion();
       const clienteUuid = nuevoId();
       try {
-        const resultado = await api.checkin(id, { lat, lng, clienteUuid, ...escaneo });
+        const resultado = await api.checkin(id, { lat, lng, clienteUuid, comprobacion });
         const avisos = [];
         if (!resultado.dentroDeRango) avisos.push(t.guardia_activa.fuera_de_rango);
-        if (resultado.qrCoincide === false) avisos.push(t.guardia_activa.qr_no_coincide);
+        if (resultado.comprobacion === 'sin_comprobar') avisos.push(t.guardia_activa.quedo_sin_comprobar);
         if (avisos.length > 0) setAviso(avisos.join(' '));
+        setPasandoCheckin(false);
         cargar();
       } catch (e) {
         if (!esErrorDeRed(e)) throw e;
-        // Sin señal: se guarda local y se reintenta solo al volver la conexión.
-        await agregarACola({ id: clienteUuid, tipo: 'checkin', guardiaId: id, payload: { lat, lng, clienteUuid, ...escaneo } });
+        // Sin señal: se guarda local y se reintenta solo al volver la conexión. Y el código que
+        // se haya leído no se guarda con el pedido: para cuando la cola llegue al motor va a
+        // estar vencido hace rato, y un código vencido rebota. Se guarda el motivo que existe
+        // justamente para esto, así la llegada entra igual y queda para que el Coordinador la
+        // mire. Esa es la diferencia entre una guardia que se traba y una que no.
+        const sinRed = { motivoSinComprobar: 'sin_conexion' };
+        await agregarACola({ id: clienteUuid, tipo: 'checkin', guardiaId: id, payload: { lat, lng, clienteUuid, comprobacion: sinRed } });
         setCheckinPendiente({ desde: Date.now() });
+        setAviso(t.guardia_activa.sin_conexion_sin_comprobar);
+        setPasandoCheckin(false);
         sincronizarCola();
       }
     } catch (e) {
+      // Un código que el motor rechaza no cierra el pase: el Asistente sigue parado en la
+      // puerta y tiene que poder intentar otra cosa ahí mismo, sin volver a empezar.
+      if (MOTIVOS_DEL_CODIGO.includes(e.motivo)) return { ok: false, mensaje: mensajeDeError(e, t) };
+      setPasandoCheckin(false);
       setError(e.message === 'sin_geo' ? t.guardia_activa.geo_no_disponible : mensajeDeError(e, t));
     } finally {
       setHaciendoCheckin(false);
     }
+    return { ok: true };
   }
 
-  // Mismo contrato que alHacerCheckin: escaneo llega resuelto por <EscaneoQR/>, nunca traba
-  // el cierre, y viaja junto con la ubicación en el mismo pedido.
-  async function alCerrarGuardia(escaneo) {
+  // Mismo contrato que alHacerCheckin: la comprobación llega resuelta por <PaseDeGuardia/>,
+  // nunca traba el cierre, y viaja junto con la ubicación en el mismo pedido.
+  async function alCerrarGuardia(comprobacion) {
     setError('');
     setAviso('');
-    setEscaneandoCheckout(false);
     setCerrando(true);
     try {
       const { lat, lng } = await obtenerUbicacion();
       const clienteUuid = nuevoId();
       try {
-        const resultado = await api.checkout(id, { lat, lng, clienteUuid, ...escaneo });
-        if (resultado.qrCoincide === false) setAviso(t.guardia_activa.qr_no_coincide);
+        const resultado = await api.checkout(id, { lat, lng, clienteUuid, comprobacion });
+        if (resultado.comprobacion === 'sin_comprobar') setAviso(t.guardia_activa.quedo_sin_comprobar);
+        setPasandoCheckout(false);
         setConfirmandoCierre(false);
         cargar();
       } catch (e) {
         if (!esErrorDeRed(e)) throw e;
         // Sin señal: se guarda local y se reintenta solo al volver la conexión, igual que
-        // el check-in. El Asistente puede irse; el cierre viaja cuando haya red.
-        await agregarACola({ id: clienteUuid, tipo: 'checkout', guardiaId: id, payload: { lat, lng, clienteUuid, ...escaneo } });
+        // el check-in, y por el mismo motivo sin el código leído. El Asistente puede irse; el
+        // cierre viaja cuando haya red.
+        const sinRed = { motivoSinComprobar: 'sin_conexion' };
+        await agregarACola({ id: clienteUuid, tipo: 'checkout', guardiaId: id, payload: { lat, lng, clienteUuid, comprobacion: sinRed } });
         setCerradoPendiente(true);
+        setAviso(t.guardia_activa.sin_conexion_sin_comprobar);
+        setPasandoCheckout(false);
         setConfirmandoCierre(false);
         sincronizarCola();
       }
     } catch (e) {
+      if (MOTIVOS_DEL_CODIGO.includes(e.motivo)) return { ok: false, mensaje: mensajeDeError(e, t) };
+      setPasandoCheckout(false);
       if (e.message === 'sin_geo') setError(t.guardia_activa.geo_no_disponible);
       // `falta_reporte` es el único motivo que se sigue mirando acá, y es a propósito: su
       // frase lleva adentro los nombres de los Pacientes cuyo reporte falta, y eso una
@@ -348,6 +376,7 @@ export default function GuardiaActiva() {
     } finally {
       setCerrando(false);
     }
+    return { ok: true };
   }
 
   if (error) return <div className="alert alert-error" role="alert">{error}</div>;
@@ -415,17 +444,26 @@ export default function GuardiaActiva() {
         </div>
       )}
 
-      {!guardia.checkin_at && !checkinPendiente && !escaneandoCheckin && (
-        <button className="btn btn-primary btn-full" onClick={() => setEscaneandoCheckin(true)} disabled={haciendoCheckin}>
+      {!guardia.checkin_at && !checkinPendiente && !pasandoCheckin && (
+        <button className="btn btn-primary btn-full" onClick={() => setPasandoCheckin(true)} disabled={haciendoCheckin}>
           {haciendoCheckin ? t.guardia_activa.haciendo_checkin : t.guardia_activa.hacer_checkin}
         </button>
       )}
 
-      {/* El pase de guardia por QR (pendiente #113): antes de marcar el check-in se escanea
-          el cartel del domicilio. Si no se puede leer, <EscaneoQR/> deja elegir un motivo y
-          igual llama a alHacerCheckin — el escaneo nunca traba la guardia. */}
-      {!guardia.checkin_at && !checkinPendiente && escaneandoCheckin && !haciendoCheckin && (
-        <EscaneoQR t={t} onListo={alHacerCheckin} onCancelar={() => setEscaneandoCheckin(false)} />
+      {/* El pase de guardia (pendiente #113): antes de marcar la llegada se lee el código que
+          muestra en su pantalla quien está en la casa. Si no hay nadie que pueda mostrarlo,
+          <PaseDeGuardia/> ofrece pedírselo a la Prestadora, y si tampoco así, entrar igual
+          eligiendo un motivo — el pase nunca traba la guardia.
+          Se queda dibujado mientras el pedido viaja: si el motor rechaza el código, el aviso
+          aparece adentro del mismo pase y se puede intentar de nuevo sin volver a empezar. */}
+      {!guardia.checkin_at && !checkinPendiente && pasandoCheckin && (
+        <PaseDeGuardia
+          t={t}
+          guardiaId={id}
+          momento="checkin"
+          onListo={alHacerCheckin}
+          onCancelar={() => setPasandoCheckin(false)}
+        />
       )}
 
       {(guardia.checkin_at || checkinPendiente) && !guardia.checkout_at && (
@@ -481,9 +519,9 @@ export default function GuardiaActiva() {
             <div style={{ marginTop: '1rem' }}>
               <p className="guardia-card-detalle">{t.guardia_activa.cerrar_pregunta}</p>
 
-              {!escaneandoCheckout && (
+              {!pasandoCheckout && (
                 <>
-                  <button className="btn btn-primary btn-full" onClick={() => setEscaneandoCheckout(true)} disabled={cerrando}>
+                  <button className="btn btn-primary btn-full" onClick={() => setPasandoCheckout(true)} disabled={cerrando}>
                     {cerrando ? t.guardia_activa.haciendo_checkout : t.guardia_activa.cerrar_si}
                   </button>
                   <button
@@ -497,12 +535,45 @@ export default function GuardiaActiva() {
                 </>
               )}
 
-              {/* El pase de guardia por QR (pendiente #113): antes de cerrar la guardia se
-                  escanea el cartel del domicilio, con el mismo criterio de nunca trabar que
-                  el check-in. Es el lugar que ya estaba marcado para esto (tarea 66a). */}
-              {escaneandoCheckout && !cerrando && (
-                <EscaneoQR t={t} onListo={alCerrarGuardia} onCancelar={() => setEscaneandoCheckout(false)} />
+              {/* El pase de guardia (pendiente #113): antes de cerrar se comprueba lo mismo que
+                  al llegar, con el mismo criterio de nunca trabar. Es el lugar que ya estaba
+                  marcado para esto (tarea 66a). */}
+              {pasandoCheckout && (
+                <PaseDeGuardia
+                  t={t}
+                  guardiaId={id}
+                  momento="checkout"
+                  onListo={alCerrarGuardia}
+                  onCancelar={() => setPasandoCheckout(false)}
+                />
               )}
+            </div>
+          )}
+
+          {/* El otro lado del mismo pase (pendiente #113). Cuando hay relevo, el que está
+              adentro es quien tiene que mostrarle el código al que llega: acá está el suyo.
+              Se muestra a pedido y no siempre abierto, porque un código de estos se renueva
+              solo cada pocos segundos y no tiene sentido tenerlo girando toda la guardia. */}
+          {!pasandoCheckout && (
+            <div style={{ marginTop: '1.5rem' }}>
+              <button
+                className="btn btn-secondary btn-full"
+                onClick={() => setMostrandoMiCodigo((abierto) => !abierto)}
+                aria-expanded={mostrandoMiCodigo}
+                aria-controls="mi-codigo-de-presencia"
+              >
+                {mostrandoMiCodigo ? t.guardia_activa.ocultar_mi_codigo : t.guardia_activa.mostrar_mi_codigo}
+              </button>
+              <div id="mi-codigo-de-presencia">
+                {mostrandoMiCodigo && (
+                  <>
+                    <p className="guardia-card-detalle" style={{ marginTop: '0.75rem' }}>
+                      {t.guardia_activa.mi_codigo_explicacion}
+                    </p>
+                    <CodigoDePresencia t={t} pedirCodigo={api.codigoDePresencia} />
+                  </>
+                )}
+              </div>
             </div>
           )}
         </>

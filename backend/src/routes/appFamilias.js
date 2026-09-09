@@ -12,6 +12,7 @@ import { pacientesConDomicilioDeHoy } from '../utils/domicilioDelDia.js';
 import { guardarSuscripcionPush } from '../utils/suscripcionesPush.js';
 import { accesosDelPedido, exigeDelCirculo, soloElTitular, visibilidadDeLaPersona } from '../utils/accesosDelCirculo.js';
 import { instruccionPendiente, pedirCodigo, confirmarConCodigo } from '../utils/instruccionesCirculo.js';
+import { codigoParaMostrar } from '../utils/comprobacionDePresencia.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
 export const appFamiliasRouter = Router();
@@ -828,4 +829,31 @@ appFamiliasRouter.get('/qr-cobro/:id', requiereRolFamilia, exigeVisible('familia
   if (error) return res.status(500).json({ error: error.message });
   if (!data) return res.status(404).json({ error: 'QR no encontrado' });
   res.json({ qr: data });
+});
+
+// ============================================================================
+// El pase de guardia (pendiente #113) — el código que la Familia muestra en pantalla
+//
+// Cuando llega el Asistente, quien está en la casa abre esto y le muestra el código. Se renueva
+// solo cada pocos segundos —los que configuró la Prestadora—, así que una foto de la pantalla no
+// sirve un minuto después. Es lo que reemplaza al cartel impreso, que era un secreto permanente
+// pegado en la puerta.
+//
+// Lo muestra cualquiera del círculo familiar, sin acceso especial: no revela ningún dato del
+// Paciente ni de la Prestadora, y su único efecto es dejar entrar a quien ya tenía la guardia
+// asignada. El código vale para el círculo entero —sujeto_tipo 'familia'—, así que da lo mismo
+// cuál de sus miembros esté en la casa ese día.
+// ============================================================================
+
+appFamiliasRouter.get('/codigo-de-presencia', requiereRolFamilia, async (req, res) => {
+  try {
+    const { codigo, segundos, expiraEn } = await codigoParaMostrar({
+      prestadoraId: req.usuarioFamilia.prestadoraId,
+      sujetoTipo: 'familia',
+      sujetoId: req.usuarioFamilia.familiaId,
+    });
+    res.json({ codigo, segundos, expiraEn });
+  } catch (e) {
+    responderError(res, e);
+  }
 });

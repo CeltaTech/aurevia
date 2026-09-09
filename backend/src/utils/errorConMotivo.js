@@ -39,6 +39,18 @@ const ESTADO_POR_MOTIVO = {
   token_invalido: 400,
   token_ya_usado: 400,
   token_vencido: 400,
+  // El pase de guardia (pendiente #113). 404 cuando el pedido no existe o es de otra
+  // Prestadora —desde afuera las dos cosas se tienen que ver iguales—, 409 cuando el pedido
+  // está bien pero alguien ya lo resolvió, y 429 cuando se agotaron los intentos, que es el
+  // código que la web reserva para "probó demasiadas veces".
+  no_encontrado: 404,
+  ya_comprobada: 409,
+  ya_resuelta: 409,
+  ya_cerrada: 409,
+  no_corresponde: 409,
+  codigo_incorrecto: 400,
+  codigo_vencido: 400,
+  demasiados_intentos: 429,
 };
 
 // Lo que una ruta contesta cuando algo falló. Se escribe una sola vez para que ninguna ruta

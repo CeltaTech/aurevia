@@ -60,6 +60,9 @@ export const T = {
     },
     nav: {
       pacientes: 'Mis Pacientes',
+      // El código para el Asistente que llega. Va en el menú de abajo porque se busca con el
+      // timbre sonando: tiene que estar a un toque desde cualquier pantalla.
+      codigo: 'Código',
       perfil: 'Mi Perfil',
       cerrar_sesion: 'Cerrar sesión',
       // El nombre de la zona de navegación de abajo. Sin él un lector de pantalla anuncia
@@ -209,6 +212,28 @@ export const T = {
       calificacion_enviada: '¡Gracias! La calificación fue enviada.',
       escanear_boton: 'Escanear Asistente',
     },
+    // El código que se le muestra al Asistente que llega (pendiente #113). Reemplaza al cartel
+    // impreso del domicilio, que se podía fotografiar una vez y usar desde cualquier lado.
+    codigo_para_el_asistente: {
+      titulo: 'Código para el Asistente',
+      para_que_sirve: 'Cuando llegue el Asistente, muéstrele esta pantalla. Con eso queda registrado que llegó al domicilio y que había alguien para recibirlo.',
+      si_no_pueden_mostrarlo: 'Si en la casa no hay nadie que pueda mostrar el código, el Asistente le avisa a la Prestadora desde su teléfono y entra igual. La guardia nunca se traba por esto.',
+    },
+    // Las frases del componente que dibuja el código. Es el mismo archivo que usa la aplicación
+    // del Asistente, así que estas claves existen igual allá.
+    codigo_de_presencia: {
+      instrucciones: 'Muestre esta pantalla a quien tiene que leer el código.',
+      qr_alt: 'Código para leer con la cámara',
+      se_renueva: 'Se renueva en {segundos} segundos.',
+      renovando: 'Renovando el código…',
+      por_que_cambia: 'Cambia solo cada pocos segundos: una foto de esta pantalla no sirve un minuto después.',
+      pedir_otro: 'Pedir otro código',
+      pidiendo: 'Pidiendo…',
+      reintentar: 'Volver a intentar',
+      sin_codigo: 'No hay ningún código para mostrar en este momento.',
+    },
+    // Esto es otra cosa y no se mezcla: acá la Familia escanea la credencial del Asistente para
+    // comprobar que es quien dice ser (pendiente #73). El de arriba va en el sentido contrario.
     escaneo: {
       titulo: 'Escanear Asistente',
       instrucciones: 'Apunte la cámara al código QR de la credencial del Asistente.',
@@ -371,6 +396,7 @@ export const T = {
     },
     nav: {
       pacientes: 'My Patients',
+      codigo: 'Code',
       perfil: 'My Profile',
       cerrar_sesion: 'Log out',
       menu_principal: 'Main menu',
@@ -505,6 +531,22 @@ export const T = {
       enviando_calificacion: 'Sending…',
       calificacion_enviada: 'Thanks! Your rating was sent.',
       escanear_boton: 'Scan Assistant',
+    },
+    codigo_para_el_asistente: {
+      titulo: 'Code for the Assistant',
+      para_que_sirve: 'When the Assistant arrives, show them this screen. That records that they reached the address and that somebody was there to let them in.',
+      si_no_pueden_mostrarlo: 'If there is nobody at the house who can show the code, the Assistant tells the Provider from their phone and goes in anyway. The shift is never held up by this.',
+    },
+    codigo_de_presencia: {
+      instrucciones: 'Show this screen to whoever has to read the code.',
+      qr_alt: 'Code to read with the camera',
+      se_renueva: 'It renews in {segundos} seconds.',
+      renovando: 'Renewing the code…',
+      por_que_cambia: 'It changes on its own every few seconds: a photo of this screen is useless a minute later.',
+      pedir_otro: 'Ask for another code',
+      pidiendo: 'Asking…',
+      reintentar: 'Try again',
+      sin_codigo: 'There is no code to show right now.',
     },
     escaneo: {
       titulo: 'Scan Assistant',
@@ -658,6 +700,7 @@ export const T = {
     },
     nav: {
       pacientes: 'Meus Pacientes',
+      codigo: 'Código',
       perfil: 'Meu Perfil',
       cerrar_sesion: 'Sair',
       menu_principal: 'Menu principal',
@@ -792,6 +835,22 @@ export const T = {
       enviando_calificacion: 'Enviando…',
       calificacion_enviada: 'Obrigado! A avaliação foi enviada.',
       escanear_boton: 'Escanear Assistente',
+    },
+    codigo_para_el_asistente: {
+      titulo: 'Código para o Assistente',
+      para_que_sirve: 'Quando o Assistente chegar, mostre esta tela para ele. Com isso fica registrado que ele chegou ao domicílio e que havia alguém para recebê-lo.',
+      si_no_pueden_mostrarlo: 'Se na casa não houver ninguém que possa mostrar o código, o Assistente avisa a Prestadora pelo telefone dele e entra mesmo assim. O plantão nunca fica travado por isso.',
+    },
+    codigo_de_presencia: {
+      instrucciones: 'Mostre esta tela para quem tem que ler o código.',
+      qr_alt: 'Código para ler com a câmera',
+      se_renueva: 'Renova-se em {segundos} segundos.',
+      renovando: 'Renovando o código…',
+      por_que_cambia: 'Muda sozinho a cada poucos segundos: uma foto desta tela não serve um minuto depois.',
+      pedir_otro: 'Pedir outro código',
+      pidiendo: 'Pedindo…',
+      reintentar: 'Tentar novamente',
+      sin_codigo: 'Não há nenhum código para mostrar neste momento.',
     },
     escaneo: {
       titulo: 'Escanear Assistente',

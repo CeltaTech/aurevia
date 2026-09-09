@@ -38,6 +38,13 @@ export default function Layout() {
         <NavLink to="/pacientes" className={({ isActive }) => (isActive ? 'active' : '')}>
           {t.nav.pacientes}
         </NavLink>
+        {/* El código para el Asistente que llega va en el menú de abajo y no adentro de un
+            Paciente: se busca con el timbre sonando y tiene que estar a un toque desde donde
+            sea. Además es del círculo familiar entero, así que colgarlo de un Paciente diría
+            algo que no es cierto. */}
+        <NavLink to="/codigo" className={({ isActive }) => (isActive ? 'active' : '')}>
+          {t.nav.codigo}
+        </NavLink>
         <NavLink to="/perfil" className={({ isActive }) => (isActive ? 'active' : '')}>
           {t.nav.perfil}
         </NavLink>

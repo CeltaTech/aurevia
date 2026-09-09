@@ -19,6 +19,7 @@ import SuscripcionMarketplace from './pages/SuscripcionMarketplace';
 import Medicacion from './pages/Medicacion';
 import MiPerfil from './pages/MiPerfil';
 import FirmarInstruccion from './pages/FirmarInstruccion';
+import CodigoParaElAsistente from './pages/CodigoParaElAsistente';
 
 function RutaPrivada({ children }) {
   const { session, cargando } = useAuth();
@@ -131,6 +132,11 @@ function Rutas() {
             </PantallaPermitida>
           }
         />
+        {/* El código que se le muestra al Asistente que llega (pendiente #113). No va colgado de
+            un Paciente porque el código es del círculo familiar entero, y no lleva guardián
+            porque cualquiera del círculo puede ser quien esté en la casa cuando toquen el
+            timbre. El motor pide lo mismo: tener sesión de Familia y nada más. */}
+        <Route path="codigo" element={<CodigoParaElAsistente />} />
         <Route path="perfil" element={<MiPerfil />} />
         {/* No lleva guardián: quién tiene una instrucción para firmar lo contesta el motor, y
             quien no tiene ninguna ve que no hay ninguna. Adivinarlo acá dejaría al titular

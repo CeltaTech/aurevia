@@ -6,6 +6,7 @@ import { useEmpresa } from '../../context/EmpresaContext';
 import { useTenantSession } from '../../context/TenantSessionContext';
 import { usePermisos } from '../../context/PermisosContext';
 import { useModalidades } from '../../context/ModalidadesContext';
+import { usePedidosDeCodigo } from '../../context/PedidosDeCodigoContext';
 import { esAdminOSuperior } from '../../lib/roles';
 import { SelectoresPreferencias } from './SelectoresPreferencias';
 
@@ -74,6 +75,10 @@ export function Layout() {
   const { empresa } = useEmpresa();
   const { puede } = usePermisos();
   const { tieneModalidad } = useModalidades();
+  // Cuántos Asistentes están esperando un código ahora mismo. Se pregunta solo cada pocos
+  // segundos (ver `context/PedidosDeCodigoContext.jsx`): del otro lado hay alguien parado en una
+  // puerta, y no puede depender de que a alguien se le ocurra abrir esa pantalla.
+  const { pedidos: pedidosDeCodigo } = usePedidosDeCodigo();
 
   const esAdmin = esAdminOSuperior(usuario?.rol);
   const esSuperadmin = usuario?.rol === 'superadmin';
@@ -131,6 +136,16 @@ export function Layout() {
     {
       titulo: t.nav.grupo_cumplimiento,
       enlaces: [
+        // Primero el pase de guardia, que es lo único de este grupo que se atiende en el
+        // momento: lo demás se mira cuando se puede. Lleva el contador de quiénes están
+        // esperando, y se ve con las dos modalidades porque en las dos hay Asistentes que
+        // llegan a un domicilio.
+        {
+          a: '/pase-de-guardia',
+          texto: t.nav.pase_de_guardia,
+          ver: hayPlantel,
+          contador: pedidosDeCodigo.length,
+        },
         { a: '/verificacion-guardias', texto: t.nav.verificacion_guardias, ver: hayPlantel },
         { a: '/reportes', texto: t.nav.reportes, ver: directa },
         { a: '/medicacion', texto: t.nav.medicacion, ver: directa },
@@ -206,7 +221,21 @@ export function Layout() {
                     enlace por enlace. */}
                 <span className="panel-nav-grupo" role="heading" aria-level="2">{grupo.titulo}</span>
                 {visibles.map((enlace) => (
-                  <NavLink key={enlace.a} to={enlace.a}>{enlace.texto}</NavLink>
+                  <NavLink key={enlace.a} to={enlace.a}>
+                    {enlace.texto}
+                    {/* El contador aparece sólo cuando hay algo, y nunca en cero: un cero al
+                        lado de un enlace se lee como una alarma que no lo es. El número solo no
+                        dice nada, así que además del dígito va la frase entera para quien no ve
+                        la pantalla. */}
+                    {enlace.contador > 0 && (
+                      <span
+                        className="panel-nav-contador"
+                        aria-label={t.nav.esperando_cantidad.replace('{cantidad}', enlace.contador)}
+                      >
+                        {enlace.contador}
+                      </span>
+                    )}
+                  </NavLink>
                 ))}
               </Fragment>
             );

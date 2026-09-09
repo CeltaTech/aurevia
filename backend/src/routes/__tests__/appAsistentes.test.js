@@ -24,6 +24,7 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { huellaDelCodigo } from '../../utils/codigoDeUnSoloUso.js';
+import { olvidarPedidos } from '../../middleware/topeDePedidos.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const USUARIO = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'; // usuarios.id === asistentes.id === auth.uid()
@@ -164,6 +165,13 @@ function guardiaMarcada() {
   return llamadas.some((l) => l.clave === 'PATCH /rest/v1/guardias');
 }
 
+/** Cada vez que la base sumó un intento, con qué tabla y qué fila se lo pidieron. */
+function intentosSumados() {
+  return llamadas
+    .filter((l) => l.clave === 'POST /rest/v1/rpc/sumar_intento_de_codigo')
+    .map((l) => l.cuerpo);
+}
+
 // Cómo se ve desde afuera que salió el aviso de cobertura: para armarlo, el motor va a buscar el
 // nombre del Asistente a `asistentes`, y en el camino de un check-in no lo consulta nadie más. El
 // push en sí no se puede observar acá —sin claves VAPID no sale— y por eso se mira su antesala.
@@ -174,6 +182,14 @@ function avisoDeCoberturaArmado() {
 beforeEach(() => {
   llamadas = [];
   respuestas.clear();
+  // El tope de pedidos por minuto lleva su cuenta en la memoria del proceso, y todas las pruebas
+  // de este archivo entran con el mismo Asistente. Sin esto, la prueba número once heredaría los
+  // diez pedidos de las anteriores y fallaría por algo que no está probando. Que el tope existe
+  // se prueba aparte, a propósito, más abajo.
+  olvidarPedidos();
+  // Y se arranca siempre con el valor de fábrica, para que el resultado no dependa de lo que haya
+  // configurado la máquina donde corre la prueba. La prueba del tope pone el suyo.
+  delete process.env.TOPE_PEDIDOS_POR_MINUTO;
   comprobacionGuardada = null;
   codigosEnPantalla = [];
   hayRelevo = false;
@@ -207,9 +223,26 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/guardia_comprobaciones', () => (comprobacionGuardada ? [comprobacionGuardada] : []));
   respuestas.set('POST /rest/v1/guardia_comprobaciones', ({ cuerpo }) => {
     const fila = Array.isArray(cuerpo) ? cuerpo[0] : cuerpo;
-    return [{ id: COMPROBACION, ...fila }];
+    // La base pisa sólo las columnas que le mandan y deja como estaban las que no viajaron. Acá se
+    // imita eso: si el alta se quedara con la fila entera, la prueba de «pedir otro código no
+    // devuelve intentos» pasaría aunque alguien volviera a poner el cero, y no probaría nada.
+    comprobacionGuardada = { ...(comprobacionGuardada ?? {}), ...fila, id: COMPROBACION };
+    return [comprobacionGuardada];
   });
   respuestas.set('PATCH /rest/v1/guardia_comprobaciones', () => []);
+  // La base suma el intento en un solo paso y devuelve cuántos van, contando el que se acaba de
+  // hacer. Acá se imita eso de verdad —el número sube en la fila y el que vuelve es el nuevo—,
+  // porque una base falsa que devolviera siempre 1 dejaría pasar cualquier cantidad de intentos y
+  // la prueba del tope no probaría nada.
+  respuestas.set('POST /rest/v1/rpc/sumar_intento_de_codigo', ({ cuerpo }) => {
+    // Una tabla que no está en la lista o una fila que no existe: la base de verdad corta con un
+    // error, y acá se deja que corte igual (la respuesta sin preparar es un 400). Contestar un
+    // número inventado sería inventar un permiso.
+    if (cuerpo?.p_tabla !== 'guardia_comprobaciones') return undefined;
+    if (!comprobacionGuardada || comprobacionGuardada.id !== cuerpo.p_id) return undefined;
+    comprobacionGuardada.codigo_intentos = (comprobacionGuardada.codigo_intentos ?? 0) + 1;
+    return comprobacionGuardada.codigo_intentos;
+  });
   respuestas.set('GET /rest/v1/codigos_de_presencia', codigosDePresenciaRespuesta);
   respuestas.set('POST /rest/v1/codigos_de_presencia', () => []);
   // Por omisión, con el Reporte Diario ya cargado: así las pruebas de check-out que no hablan
@@ -460,7 +493,15 @@ describe('Plan B — «no hay nadie que me pueda mostrar el código»', () => {
     assert.equal(fila.momento, 'checkin');
     assert.equal(fila.pedido_texto, 'La puerta está cerrada y no atiende nadie');
     assert.equal(fila.codigo_huella, null);
-    assert.equal(fila.codigo_intentos, 0);
+    // Y el pedido NO toca la cuenta de intentos (pendiente #177). Antes escribía un cero acá, y
+    // como este pedido lo abre el mismo Asistente que después prueba los códigos, eso le daba su
+    // propio botón para volver a empezar. En un alta la base pone el cero sola; sobre una fila que
+    // ya existe, lo que no se manda no se pisa.
+    assert.equal(
+      Object.prototype.hasOwnProperty.call(fila, 'codigo_intentos'),
+      false,
+      'pedir un código nuevo no puede devolver intentos',
+    );
     assert.equal(guardiaMarcada(), false);
   });
 
@@ -572,8 +613,17 @@ describe('Plan B — «no hay nadie que me pueda mostrar el código»', () => {
     assert.equal(estado, 400);
     assert.equal(cuerpo.motivo, 'codigo_incorrecto');
 
-    const [actualizada] = comprobacionesActualizadas();
-    assert.equal(actualizada.codigo_intentos, 3);
+    // El intento lo suma la base en un solo paso, no el motor leyendo y volviendo a escribir
+    // (pendiente #177): así dos intentos a la vez cuentan dos y no uno.
+    const [sumado] = intentosSumados();
+    assert.equal(sumado.p_tabla, 'guardia_comprobaciones');
+    assert.equal(sumado.p_id, COMPROBACION);
+    assert.equal(comprobacionGuardada.codigo_intentos, 3);
+    assert.equal(
+      comprobacionesActualizadas().some((c) => 'codigo_intentos' in c),
+      false,
+      'el motor no escribe la cuenta a mano',
+    );
   });
 
   it('agotados los intentos, ese código no se prueba más', async () => {
@@ -594,6 +644,150 @@ describe('Plan B — «no hay nadie que me pueda mostrar el código»', () => {
     assert.equal(estado, 429);
     assert.equal(cuerpo.motivo, 'demasiados_intentos');
     assert.equal(guardiaMarcada(), false);
+  });
+
+  // ------------------------------------------------------------------------------------------
+  // El defecto del pendiente #177: el tope se contaba bien y se borraba solo.
+  // ------------------------------------------------------------------------------------------
+  it('pedir un código nuevo no devuelve intentos, y el piso sigue estando', async () => {
+    comprobacionGuardada = {
+      id: COMPROBACION,
+      estado: 'pendiente_de_codigo',
+      momento: 'checkin',
+      codigo_huella: huellaDelCodigo('321321'),
+      codigo_expira_en: enUnRato(10),
+      codigo_intentos: 5,
+    };
+
+    // 1. Se agotaron los intentos con el código que había.
+    const agotado = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+      lat: LAT,
+      lng: LNG,
+      comprobacion: { codigo: '111111' },
+    });
+    assert.equal(agotado.estado, 429);
+    assert.equal(agotado.cuerpo.motivo, 'demasiados_intentos');
+
+    // 2. El Asistente vuelve a pedirle un código a la Prestadora. Antes, este solo pedido le
+    //    devolvía cinco intentos más, y repitiéndolo se llegaba a los seis dígitos.
+    const pedido = await pedir('POST', `/guardias/${GUARDIA}/comprobacion/pedido`, {
+      momento: 'checkin',
+      texto: 'Sigo sin poder entrar',
+    });
+    assert.equal(pedido.estado, 200);
+    assert.ok(comprobacionGuardada.codigo_intentos >= 6, 'la cuenta no puede volver atrás');
+
+    // 3. La Prestadora suelta un código nuevo. Se escriben acá exactamente las columnas que
+    //    escribe el Panel; que en esa lista no esté la cuenta de intentos lo prueba
+    //    `utils/__tests__/codigoDeUnSoloUso.test.js`.
+    comprobacionGuardada.codigo_huella = huellaDelCodigo('987654');
+    comprobacionGuardada.codigo_expira_en = enUnRato(10);
+
+    // 4. Y el código nuevo, aun siendo el correcto, ya no sirve: el tope siguió siendo un tope.
+    const conElNuevo = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+      lat: LAT,
+      lng: LNG,
+      comprobacion: { codigo: '987654' },
+    });
+    assert.equal(conElNuevo.estado, 429);
+    assert.equal(conElNuevo.cuerpo.motivo, 'demasiados_intentos');
+    assert.equal(guardiaMarcada(), false);
+
+    // 5. Lo que no puede pasar es que la guardia quede trabada. El piso sigue ahí.
+    const conMotivo = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+      lat: LAT,
+      lng: LNG,
+      comprobacion: { motivoSinComprobar: 'prestadora_no_responde' },
+    });
+    assert.equal(conMotivo.estado, 200);
+    assert.equal(conMotivo.cuerpo.comprobacion, 'sin_comprobar');
+    assert.equal(guardiaMarcada(), true);
+  });
+
+  it('un código vencido no gasta intentos: quien pide otro porque se le venció no pierde nada', async () => {
+    comprobacionGuardada = {
+      id: COMPROBACION,
+      estado: 'pendiente_de_codigo',
+      momento: 'checkin',
+      codigo_huella: huellaDelCodigo('321321'),
+      codigo_expira_en: haceUnRato(1),
+      codigo_intentos: 0,
+    };
+
+    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+      lat: LAT,
+      lng: LNG,
+      comprobacion: { codigo: '321321' },
+    });
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.motivo, 'codigo_vencido');
+    // El vencimiento se mira antes de contar: por eso el tope pudo dejar de reiniciarse sin
+    // castigar a quien no hizo nada malo.
+    assert.equal(intentosSumados().length, 0);
+    assert.equal(comprobacionGuardada.codigo_intentos, 0);
+  });
+});
+
+// ============================================================================
+// El tope de pedidos por minuto (pendiente #177)
+// ============================================================================
+
+describe('el tope de pedidos por minuto en la llegada y la salida', () => {
+  it('frena la prueba de códigos de a uno, que es el camino que no lleva cuenta de intentos', async () => {
+    // Se prueba contra el código que alguien muestra en la pantalla de su teléfono (Plan A), que
+    // no tiene contador propio: lo único que puede frenar ahí es el tope por minuto. Si el tope
+    // no estuviera, las once respuestas serían iguales y esta prueba fallaría.
+    process.env.TOPE_PEDIDOS_POR_MINUTO = '3';
+    codigosEnPantalla = [
+      { sujeto_tipo: 'familia', sujeto_id: FAMILIA, codigo_huella: huellaDelCodigo('123456'), expira_en: enUnRato(1) },
+    ];
+
+    for (let vuelta = 1; vuelta <= 3; vuelta += 1) {
+      const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+        lat: LAT,
+        lng: LNG,
+        comprobacion: { codigo: '000000' },
+      });
+      assert.equal(estado, 400, `el intento ${vuelta} tenía que llegar a probarse`);
+      assert.equal(cuerpo.motivo, 'codigo_incorrecto');
+    }
+
+    const pasado = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+      lat: LAT,
+      lng: LNG,
+      comprobacion: { codigo: '000000' },
+    });
+    assert.equal(pasado.estado, 429);
+    assert.equal(pasado.cuerpo.motivo, 'demasiados_pedidos');
+    assert.equal(guardiaMarcada(), false);
+
+    // Y con el tope alcanzado el Asistente entra igual eligiendo un motivo: el piso no se cuenta.
+    const conMotivo = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+      lat: LAT,
+      lng: LNG,
+      comprobacion: { motivoSinComprobar: 'nadie_para_mostrar' },
+    });
+    assert.equal(conMotivo.estado, 200);
+    assert.equal(conMotivo.cuerpo.comprobacion, 'sin_comprobar');
+  });
+
+  it('también frena los pedidos de código a la Prestadora', async () => {
+    process.env.TOPE_PEDIDOS_POR_MINUTO = '2';
+
+    for (let vuelta = 1; vuelta <= 2; vuelta += 1) {
+      const { estado } = await pedir('POST', `/guardias/${GUARDIA}/comprobacion/pedido`, {
+        momento: 'checkin',
+        texto: 'No atiende nadie',
+      });
+      assert.equal(estado, 200, `el pedido ${vuelta} tenía que pasar`);
+    }
+
+    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/comprobacion/pedido`, {
+      momento: 'checkin',
+      texto: 'No atiende nadie',
+    });
+    assert.equal(estado, 429);
+    assert.equal(cuerpo.motivo, 'demasiados_pedidos');
   });
 });
 

@@ -6,6 +6,7 @@ import { necesitaNotificar } from './insistencia.js';
 import { pacientesDeGuardia, pacientesDeGuardias } from './pacientesDeGuardia.js';
 import { intervaloParaPremura } from './umbralesPremura.js';
 import { horasEntre } from './horasDeGuardia.js';
+import { describirFuente } from './textoAlertaTemprana.js';
 
 // Punto 5 de docs/PRD_06_WhatsApp_IA.md: insistencia al Coordinador según premura, con
 // coordinador de respaldo si no hay reacción, parametrizado por prestadora
@@ -255,7 +256,7 @@ async function revisarAlertas(config, ahora) {
 
   const { data: alertas, error } = await supabase
     .from('alertas_tempranas_guardia')
-    .select('id, guardia_id, motivo, detectado_at, ultima_notificacion_at, veces_notificado, backup_notificado_at')
+    .select('id, guardia_id, fuente, motivo, detectado_at, ultima_notificacion_at, veces_notificado, backup_notificado_at')
     .eq('prestadora_id', prestadoraId)
     .is('resuelto_at', null);
 
@@ -273,7 +274,10 @@ async function revisarAlertas(config, ahora) {
         evento: 'alerta_temprana_guardia',
         prestadoraId,
         asunto: 'Alerta temprana de posible ausencia sin resolver',
-        texto: `Guardia ${alerta.guardia_id}, motivo: ${alerta.motivo ?? '—'}. Sin resolver hace ${Math.round(minutosPremura)} minutos.`,
+        // El origen va adelante del motivo a propósito (pendiente #101): quien lee tiene que
+        // poder distinguir de un vistazo un aviso que dio una persona de una cuenta que sacó el
+        // sistema. Sin eso, las dos cosas llegaban con el mismo texto.
+        texto: `Guardia ${alerta.guardia_id}. Origen: ${describirFuente(alerta.fuente)}. Motivo: ${alerta.motivo ?? '—'}. Sin resolver hace ${Math.round(minutosPremura)} minutos.`,
       });
 
       await supabase

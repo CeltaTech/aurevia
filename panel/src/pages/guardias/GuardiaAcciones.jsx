@@ -72,9 +72,19 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
     onClose();
   }
 
+  /* La salida registrada desde el Panel guarda la hora y el medio, y NINGÚN punto.
+     Hasta el pendiente #101 esta función pedía la ubicación del navegador y la guardaba en
+     `salida_lat` / `salida_lng`, que es el lugar del que salió el Asistente. Pero acá quien
+     aprieta es el Coordinador, desde la oficina: lo que quedaba guardado era la oficina, con el
+     nombre de otra cosa.
+     Mientras nadie lo leyera daba lo mismo. Desde que la hora estimada de llegada se calcula con
+     ese punto y se le muestra a la Familia, un punto falso no es un dato de más: es una hora
+     inventada dicha a quien está esperando. Sin punto no hay estimación, y no mostrar ninguna es
+     mejor que mostrar una que no puede ser cierta.
+     La llegada y el cierre siguen tomando la ubicación: ahí lo que se comprueba es dónde estaba
+     quien registró, y el Panel lo usa cuando el teléfono del Asistente no pudo hacerlo. */
   async function handleRegistrarSalida() {
-    const { lat, lng } = await obtenerUbicacion();
-    actualizar({ salida_checkin_at: new Date().toISOString(), salida_lat: lat, salida_lng: lng, medio_transporte: medioTransporte });
+    actualizar({ salida_checkin_at: new Date().toISOString(), medio_transporte: medioTransporte });
   }
 
   async function handleRegistrarLlegada() {
@@ -169,15 +179,24 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
   const puedeReasignar = guardia.estado === 'programada' || guardia.estado === 'ausente';
   const puedeOfrecer = !tieneAsistente && guardia.estado === 'programada';
 
-  // Lo que ya quedó registrado no se esconde. Hasta acá, cuando la salida o la llegada ya
-  // estaban marcadas, el bloque con su botón simplemente desaparecía, y la pantalla no
-  // decía si el momento se había registrado o si nunca se había hecho: dos cosas muy
-  // distintas que se veían igual. Ahora se listan los que tienen hora, con su hora.
-  const momentosRegistrados = [
-    { clave: 'salida_registrada', at: guardia.salida_checkin_at },
-    { clave: 'llegada_registrada', at: guardia.checkin_at },
-    { clave: 'checkout_registrado', at: guardia.checkout_at },
-  ].filter((m) => m.at);
+  // Los tres momentos de la guardia, con su hora o diciendo que no quedó registrado.
+  //
+  // Primero desaparecía el bloque entero cuando el momento ya estaba marcado, y la pantalla no
+  // distinguía «se registró» de «nunca se hizo». Después se listaron los que tenían hora, y el
+  // problema quedó dado vuelta: el que no la tenía volvía a desaparecer, así que una guardia sin
+  // ninguna marca no mostraba nada, igual que una que todavía no había empezado.
+  //
+  // LA AUSENCIA DE UN REGISTRO TAMBIÉN ES UN REGISTRO (pendiente #101), y por eso los tres se
+  // listan siempre. Se dice como hecho: «no quedó registrada». Nunca «no avisó» ni nada que
+  // suene a conclusión — la conclusión la saca quien mira la pantalla, no el programa.
+  // Los nombres de los tres son neutros —«Salida», y no «Salida registrada»— porque el mismo
+  // renglón se usa para decir que no quedó registrada, y «Salida registrada · No quedó
+  // registrada» no se entiende.
+  const momentosDeLaGuardia = [
+    { clave: 'momento_salida', at: guardia.salida_checkin_at },
+    { clave: 'momento_llegada', at: guardia.checkin_at },
+    { clave: 'momento_checkout', at: guardia.checkout_at },
+  ];
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
@@ -205,15 +224,13 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
           <dd>{t.guardias[`estado_${guardia.estado}`]}</dd>
         </dl>
 
-        {momentosRegistrados.length > 0 && (
-          <ul className="panel-momentos-registrados">
-            {momentosRegistrados.map(({ clave, at }) => (
-              <li key={clave}>
-                {t.guardias.detalle[clave]} · {new Date(at).toLocaleString()}
-              </li>
-            ))}
-          </ul>
-        )}
+        <ul className="panel-momentos-registrados">
+          {momentosDeLaGuardia.map(({ clave, at }) => (
+            <li key={clave}>
+              {t.guardias.detalle[clave]} · {at ? new Date(at).toLocaleString() : t.guardias.detalle.momento_sin_registro}
+            </li>
+          ))}
+        </ul>
 
         {puedeOfrecer && (
           <div className="panel-resultado-calculo">

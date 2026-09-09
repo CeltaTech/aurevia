@@ -8,6 +8,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { ESTADO_ACTIVO } from '../../lib/candidatos';
+import { MINUTOS_DEMORA_POR_OMISION, minutosDeDemoraTolerados } from '../../lib/llegadaEstimada';
 import { mensajeDeError } from '../../lib/errores';
 import { con } from '../../lib/textos';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
@@ -36,6 +37,7 @@ function TabServicios() {
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [creandoNuevo, setCreandoNuevo] = useState(false);
+  const [nivelEditando, setNivelEditando] = useState(null);
   const [actualizandoId, setActualizandoId] = useState(null);
 
   const [diasGeneracion, setDiasGeneracion] = useState('');
@@ -197,6 +199,20 @@ function TabServicios() {
 
       <h2>{t.configuracion.servicios_escalada_titulo}</h2>
       <p className="panel-explicacion">{t.configuracion.servicios_escalada_explicacion}</p>
+      {/* CUÁNTOS MINUTOS DE ATRASO CONVIERTEN UNA LLEGADA TARDE EN UN AVISO (pendiente #101).
+          Lo decide cada Prestadora acá abajo, no el código. Pero el número se usa aunque nadie
+          haya configurado ningún nivel, así que la pantalla dice cuál está rigiendo hoy y de
+          dónde salió: un valor que actúa sin verse es un valor que nadie puede cambiar.
+          El cálculo no se repite acá —sale de `minutosDeDemoraTolerados`, la misma función que
+          usa el motor para decidir— así que la pantalla no puede decir un número y el sistema
+          usar otro. */}
+      <p className="panel-explicacion">
+        {con(t.configuracion.escalada_demora_en_uso, { minutos: minutosDeDemoraTolerados(niveles) })}
+        {' '}
+        {minutosDeDemoraTolerados(niveles) === MINUTOS_DEMORA_POR_OMISION && !niveles.some((n) => Number.isFinite(n.minutos_demora) && n.minutos_demora > 0)
+          ? t.configuracion.escalada_demora_por_omision
+          : t.configuracion.escalada_demora_configurada}
+      </p>
       <div className="panel-filtros">
         <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.escalada_nuevo_nivel}</Button>
       </div>
@@ -219,6 +235,16 @@ function TabServicios() {
                 <td>{(n.orden_prioridad || []).map((r) => t.configuracion[`escalada_rol_${r}`]).join(' → ') || '—'}</td>
                 <td>{n.plantilla_mensaje}</td>
                 <td>
+                  {/* Cada botón dice a qué nivel se refiere: fuera del renglón, «Editar» solo
+                      no dice nada, y esta tabla se lee con lector de pantalla igual que las
+                      demás del Panel. */}
+                  <button
+                    onClick={() => setNivelEditando(n)}
+                    disabled={actualizandoId === n.id}
+                    aria-label={con(t.configuracion.escalada_editar_nivel_numero, { nivel: n.nivel })}
+                  >
+                    {t.comun.editar}
+                  </button>{' '}
                   <button onClick={() => borrar(n)} disabled={actualizandoId === n.id}>{t.comun.borrar}</button>
                 </td>
               </tr>
@@ -227,8 +253,17 @@ function TabServicios() {
         </table>
       </EstadoLista>
 
+      {/* Un solo formulario para crear y para editar. Si fueran dos, el día que se agregue un
+          campo habría que acordarse de los dos, y el que se olvide queda sin él. */}
       {creandoNuevo && (
-        <NuevoNivelEscalada onClose={() => setCreandoNuevo(false)} onCreado={() => { setCreandoNuevo(false); recargar(); }} />
+        <NivelEscalada onClose={() => setCreandoNuevo(false)} onGuardado={() => { setCreandoNuevo(false); recargar(); }} />
+      )}
+      {nivelEditando && (
+        <NivelEscalada
+          nivelExistente={nivelEditando}
+          onClose={() => setNivelEditando(null)}
+          onGuardado={() => { setNivelEditando(null); recargar(); }}
+        />
       )}
 
       <TabServiciosPersonalEmergencia />
@@ -686,13 +721,29 @@ function NuevoPersonalEmergencia({ asistentes, onClose, onCreado }) {
   );
 }
 
-function NuevoNivelEscalada({ onClose, onCreado }) {
+/**
+ * El formulario de un nivel de la escalada de relevo, para crearlo o para editarlo.
+ *
+ * Sin `nivelExistente` crea uno nuevo; con él, modifica ese. Es un solo formulario a propósito:
+ * hasta el pendiente #101 se podía crear un nivel y borrarlo, pero no corregirlo, así que
+ * cambiar los minutos de demora obligaba a borrar la fila y escribirla de nuevo entera —con el
+ * mensaje y el orden de prioridad incluidos—, y en el medio la Prestadora se quedaba sin nivel.
+ */
+function NivelEscalada({ nivelExistente, onClose, onGuardado }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
-  const [nivel, setNivel] = useState('');
-  const [minutosDemora, setMinutosDemora] = useState('');
-  const [ordenPrioridad, setOrdenPrioridad] = useState(['', '', '', '']);
-  const [plantillaMensaje, setPlantillaMensaje] = useState('');
+  const [nivel, setNivel] = useState(nivelExistente ? String(nivelExistente.nivel) : '');
+  const [minutosDemora, setMinutosDemora] = useState(
+    nivelExistente?.minutos_demora === null || nivelExistente?.minutos_demora === undefined
+      ? ''
+      : String(nivelExistente.minutos_demora),
+  );
+  // Siempre cuatro casillas: son los cuatro roles posibles, y las que sobran quedan vacías.
+  const [ordenPrioridad, setOrdenPrioridad] = useState(() => {
+    const guardado = nivelExistente?.orden_prioridad ?? [];
+    return [0, 1, 2, 3].map((i) => guardado[i] ?? '');
+  });
+  const [plantillaMensaje, setPlantillaMensaje] = useState(nivelExistente?.plantilla_mensaje ?? '');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
 
@@ -704,16 +755,19 @@ function NuevoNivelEscalada({ onClose, onCreado }) {
     setGuardando(true);
     setError(null);
     try {
-      await llamarApi('/escalada-relevo', {
-        method: 'POST',
-        body: JSON.stringify({
-          nivel: Number(nivel),
-          minutos_demora: minutosDemora === '' ? null : Number(minutosDemora),
-          orden_prioridad: ordenPrioridad.filter(Boolean),
-          plantilla_mensaje: plantillaMensaje,
-        }),
-      });
-      onCreado();
+      await llamarApi(
+        nivelExistente ? `/escalada-relevo/${nivelExistente.id}` : '/escalada-relevo',
+        {
+          method: nivelExistente ? 'PATCH' : 'POST',
+          body: JSON.stringify({
+            nivel: Number(nivel),
+            minutos_demora: minutosDemora === '' ? null : Number(minutosDemora),
+            orden_prioridad: ordenPrioridad.filter(Boolean),
+            plantilla_mensaje: plantillaMensaje,
+          }),
+        },
+      );
+      onGuardado();
     } catch (err) {
       setError(mensajeDeError(err, t));
     } finally {
@@ -724,8 +778,16 @@ function NuevoNivelEscalada({ onClose, onCreado }) {
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
-        <h2 id={modal.idTitulo}>{t.configuracion.escalada_nuevo_nivel}</h2>
+        <h2 id={modal.idTitulo}>
+          {nivelExistente
+            ? con(t.configuracion.escalada_editar_nivel_numero, { nivel: nivelExistente.nivel })
+            : t.configuracion.escalada_nuevo_nivel}
+        </h2>
         {error && <Alert variant="error">{error}</Alert>}
+        {/* Qué hace este número, dicho donde se escribe. Sin esto, «Minutos de demora» se lee
+            como el tiempo que se espera antes de llamar al siguiente de la lista, y además es
+            el margen a partir del cual una llegada tarde se anota como aviso. */}
+        <p className="panel-explicacion">{t.configuracion.escalada_minutos_explicacion}</p>
         <FormField label={t.configuracion.escalada_col_nivel} name="nivel" type="number" value={nivel} onChange={(e) => setNivel(e.target.value)} required />
         <FormField label={t.configuracion.escalada_minutos_label} name="minutos_demora" type="number" value={minutosDemora} onChange={(e) => setMinutosDemora(e.target.value)} />
         {ordenPrioridad.map((valor, indice) => (

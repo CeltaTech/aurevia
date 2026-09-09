@@ -427,6 +427,13 @@ async function probarElMotor({ motor }, sesiones, piezas) {
     ['asistente B', 'pedirle un código a la Prestadora de A', 'POST', `/api/app-asistentes/guardias/${piezas.guardiaA}/comprobacion/pedido`, sesiones.asistenteB, { momento: 'checkin', texto: 'INTRUSO' },
       `SELECT count(*) FROM public.guardia_comprobaciones WHERE guardia_id = '${piezas.guardiaA}';`],
     ['asistente B', 'ver la comprobación de una guardia de A', 'GET', `/api/app-asistentes/guardias/${piezas.guardiaA}/comprobacion/checkin`, sesiones.asistenteB],
+    // Los dos actos deliberados de antes de llegar (pendiente #101). Reciben el identificador de
+    // una guardia igual que el check-in, así que son la misma puerta: si la guardia no es suya,
+    // no existe. El aviso de demora se mira contra la tabla de alertas, que es donde escribe.
+    ['asistente B', 'marcar salida en una guardia de A', 'POST', `/api/app-asistentes/guardias/${piezas.guardiaA}/salida`, sesiones.asistenteB, { lat: -34.6, lng: -58.4 },
+      `SELECT md5(t::text) FROM public.guardias t WHERE id = '${piezas.guardiaA}';`],
+    ['asistente B', 'avisar demora en una guardia de A', 'POST', `/api/app-asistentes/guardias/${piezas.guardiaA}/aviso-demora`, sesiones.asistenteB, { motivo: 'transporte' },
+      `SELECT count(*) FROM public.alertas_tempranas_guardia WHERE guardia_id = '${piezas.guardiaA}';`],
     // Y la dirección contraria, porque el aislamiento no es simétrico por sí solo.
     ['familia A', 'ver un paciente de B',         'GET',    `/api/app-familias/pacientes/${piezas.pacienteB}`,           sesiones.familiaA],
     ['asistente A', 'ver una guardia de B',       'GET',    `/api/app-asistentes/guardias/${piezas.guardiaB}`,           sesiones.asistenteA],

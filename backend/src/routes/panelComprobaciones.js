@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
+import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import {
   pedidosEsperandoCodigo,
@@ -46,8 +47,13 @@ panelComprobacionesRouter.get('/pedidos', requiereRolPanel, exigirOrganizacionAc
 
 /* Suelta el código para ese pedido. Es la única vez que el código viaja en claro: de acá en más
  * queda solamente su huella, así que la pantalla lo tiene que mostrar en el momento y quien
- * atiende dictárselo al Asistente. Quién lo soltó y cuándo queda escrito en la misma fila. */
-panelComprobacionesRouter.post('/:id/codigo', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
+ * atiende dictárselo al Asistente. Quién lo soltó y cuándo queda escrito en la misma fila.
+ *
+ * LLEVA TOPE DE PEDIDOS POR MINUTO (pendiente #177). Acá el que suelta el código es alguien de la
+ * Prestadora con sesión iniciada, así que el riesgo es menor que del otro lado del mostrador;
+ * pero es la ruta que genera secretos, y una que genera secretos sin freno se puede usar para
+ * llenar de códigos vivos la tabla, o para hacerle probar a la Prestadora sin darse cuenta. */
+panelComprobacionesRouter.post('/:id/codigo', requiereRolPanel, exigirOrganizacionActiva, topeDePedidos({ nombre: 'comprobacion_emitir_codigo' }), async (req, res) => {
   try {
     const { codigo, minutos } = await emitirCodigoDeLaPrestadora({
       comprobacionId: req.params.id,

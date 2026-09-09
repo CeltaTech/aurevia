@@ -33,6 +33,7 @@ import { revisarNotificacionesCoordinador } from './utils/revisarNotificacionesC
 import { extenderSeriesGuardiaAbiertas } from './utils/generacionSeriesGuardia.js';
 import { revisarRecordatoriosPush } from './utils/revisarRecordatoriosPush.js';
 import { revisarGuardiasSinCubrir } from './utils/revisarGuardiasSinCubrir.js';
+import { revisarLlegadasDemoradas } from './utils/revisarLlegadasDemoradas.js';
 import { whatsappWebhookRouter } from './routes/whatsappWebhook.js';
 import { appAsistentesRouter } from './routes/appAsistentes.js';
 import { appFamiliasRouter } from './routes/appFamilias.js';
@@ -192,6 +193,15 @@ setInterval(() => {
 revisarGuardiasSinCubrir().catch((err) => console.error('Error en revisión inicial de guardias sin cubrir:', err.message));
 setInterval(() => {
   revisarGuardiasSinCubrir().catch((err) => console.error('Error en revisión de guardias sin cubrir:', err.message));
+}, CINCO_MINUTOS_MS);
+
+// Alertas de llegada demorada que nadie avisó (pendiente #101, docs/PENDIENTES.md). Sólo detecta
+// y anota; de avisarle al Coordinador se ocupa revisarNotificacionesCoordinador, que ya insiste
+// sobre esa misma tabla. Corre seguido porque lo que mira son minutos: cuanto antes se anote,
+// más tiempo queda para cubrir la guardia.
+revisarLlegadasDemoradas().catch((err) => console.error('Error en revisión inicial de llegadas demoradas:', err.message));
+setInterval(() => {
+  revisarLlegadasDemoradas().catch((err) => console.error('Error en revisión de llegadas demoradas:', err.message));
 }, CINCO_MINUTOS_MS);
 
 // Verificación mensual de precios de IA (pendiente #84, docs/PENDIENTES.md) — la función

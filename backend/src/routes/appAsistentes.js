@@ -26,6 +26,11 @@ import {
   registrarComprobacion,
 } from '../utils/comprobacionDePresencia.js';
 import { responderError } from '../utils/errorConMotivo.js';
+import { topeDePedidos } from '../middleware/topeDePedidos.js';
+import { MOTIVOS_DEMORA } from '../utils/motivosDemora.js';
+import { FUENTE_AVISO_DEMORA_ASISTENTE } from '../utils/fuentesAlertaTemprana.js';
+import { describirFuente } from '../utils/textoAlertaTemprana.js';
+import { notificarCoordinador } from '../utils/whatsapp.js';
 
 export const appAsistentesRouter = Router();
 
@@ -69,7 +74,7 @@ function manejarErrorMulter(err, req, res, next) {
 async function guardiaDelAsistente(guardiaId, usuarioAsistente) {
   const { data } = await supabase
     .from('guardias')
-    .select('id, prestadora_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, checkin_at, checkout_at, checkout_bloqueado')
+    .select('id, prestadora_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
     .eq('id', guardiaId)
     .eq('asistente_id', usuarioAsistente.id)
     .eq('prestadora_id', usuarioAsistente.prestadoraId)
@@ -232,7 +237,7 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
 appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
   const { data, error } = await supabase
     .from('guardias')
-    .select('id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, checkin_at, checkout_at, checkout_bloqueado')
+    .select('id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
     .eq('asistente_id', req.usuarioAsistente.id)
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .order('fecha', { ascending: false })
@@ -255,7 +260,7 @@ appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
 appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) => {
   const { data, error } = await supabase
     .from('guardias')
-    .select('id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, checkin_at, checkout_at, checkout_bloqueado')
+    .select('id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
     .eq('id', req.params.id)
     .eq('asistente_id', req.usuarioAsistente.id)
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
@@ -332,7 +337,13 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
 // punto 4): fuera de rango se avisa y se deja confirmar igual, con nota al coordinador.
 // ============================================================================
 
-appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, async (req, res) => {
+// El tope de pedidos por minuto (pendiente #177) cuenta SÓLO los pedidos que traen un código: el
+// piso queda intacto, así que entrar o salir eligiendo un motivo nunca se frena y la guardia
+// nunca se traba. Sin esto, el código que alguien muestra en su pantalla —que no lleva cuenta de
+// intentos, sólo se renueva cada pocos segundos— se podía probar sin freno.
+const trajoUnCodigo = (req) => Boolean(req.body?.comprobacion?.codigo);
+
+appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePedidos({ nombre: 'comprobacion_probar_codigo', soloSi: trajoUnCodigo }), async (req, res) => {
   const { lat, lng } = req.body;
   if (typeof lat !== 'number' || typeof lng !== 'number') {
     return res.status(400).json({ error: 'Faltan coordenadas GPS' });
@@ -467,6 +478,165 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, async (r
   }
 
   res.json({ ok: true, dentroDeRango, distanciaMetros: distancia, comprobacion: comprobacion.estado });
+});
+
+// ============================================================================
+// Los dos actos deliberados de antes de llegar (pendiente #101): «salgo ahora» y «voy
+// demorado».
+//
+// POR QUÉ SON DOS BOTONES Y NO UN SEGUIMIENTO. El sistema se apoya en el acto de la persona.
+// Quien avisa que sale, y quien avisa que va demorado y por qué, hizo algo, y eso lo protege.
+// Lo que el sistema calcula solo es un hecho, no un mérito de nadie, y por eso se guarda con
+// otro código de origen y no se mezcla nunca con el aviso que dio la persona.
+//
+// LA MEDIDA DE ESTO SON LOS MINUTOS DE AVISO que le da a la Prestadora para cubrir la guardia.
+// De ahí salen dos decisiones: ninguno de los dos botones se traba —ni por GPS, ni por hora, ni
+// por conexión: van a la cola de la aplicación como el check-in—, y el aviso de demora sale
+// hacia el Coordinador en el momento, sin esperar la vuelta del proceso de fondo.
+// ============================================================================
+
+// Cuánto se guarda del medio de transporte. Es texto libre, igual que en el Panel: quien lo
+// escribe describe su viaje, no elige de una lista que alguien tuvo que adivinar antes.
+const LARGO_MAXIMO_MEDIO_TRANSPORTE = 60;
+
+function medioDeTransporteDelPedido(body) {
+  const medio = body?.medioTransporte;
+  if (typeof medio !== 'string') return null;
+  const limpio = medio.trim().slice(0, LARGO_MAXIMO_MEDIO_TRANSPORTE);
+  return limpio || null;
+}
+
+appAsistentesRouter.post('/guardias/:id/salida', requiereRolAsistente, async (req, res) => {
+  const { lat, lng } = req.body || {};
+
+  // El punto de salida es opcional a propósito. Sin él la hora de salida se guarda igual y lo
+  // único que se pierde es la estimación de llegada, que pasa a ser "no se sabe". Trabar el
+  // botón porque el GPS no contestó adentro de un edificio sería perder justamente los minutos
+  // de aviso que este botón existe para ganar.
+  const hayPunto = typeof lat === 'number' && typeof lng === 'number';
+  if ((lat !== undefined && lat !== null && typeof lat !== 'number')
+    || (lng !== undefined && lng !== null && typeof lng !== 'number')) {
+    return res.status(400).json({ error: 'Ubicación inválida' });
+  }
+
+  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  if (!guardia) {
+    return res.status(404).json({ error: 'Guardia no encontrada' });
+  }
+
+  // NINGUNO DE ESTOS DOS CASOS CONTESTA UN ERROR, y no es una comodidad: un pedido de la cola
+  // sin conexión que falla queda marcado con error y **corta la cola entera**
+  // (`pwa-asistentes/src/lib/sincronizarCola.js`), así que un rechazo acá dejaría trabado el
+  // check-in que viene atrás. Los dos son situaciones normales, no pedidos mal armados.
+  //
+  // Ya registrada: el mismo pedido llegó dos veces. Se contesta con la hora que ya estaba.
+  if (guardia.salida_checkin_at) {
+    return res.json({ ok: true, yaRegistrado: true, salidaAt: guardia.salida_checkin_at });
+  }
+  // Ya llegó: la salida quedó en la cola y se sincroniza recién ahora, con la persona adentro
+  // de la casa. Guardarla con la hora de este momento sería escribir que salió después de
+  // llegar. No se guarda nada y se dice por qué.
+  if (guardia.checkin_at) {
+    return res.json({ ok: true, yaLlego: true });
+  }
+
+  const salidaAt = new Date().toISOString();
+  const { error } = await supabase
+    .from('guardias')
+    .update({
+      salida_checkin_at: salidaAt,
+      salida_lat: hayPunto ? lat : null,
+      salida_lng: hayPunto ? lng : null,
+      medio_transporte: medioDeTransporteDelPedido(req.body),
+    })
+    .eq('id', guardia.id)
+    .eq('prestadora_id', req.usuarioAsistente.prestadoraId);
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  res.json({ ok: true, salidaAt });
+});
+
+appAsistentesRouter.post('/guardias/:id/aviso-demora', requiereRolAsistente, async (req, res) => {
+  // Un motivo que no está en la lista se guarda como `otro` en vez de rechazar el aviso, por lo
+  // mismo que ya hace `datosDeComprobacion` unos renglones más arriba: la lista puede haber
+  // cambiado y el teléfono tener todavía la anterior, y eso es un desajuste de versiones, no una
+  // razón para perder un aviso de demora. Lo que importa es que la Prestadora se entere.
+  const pedido = typeof req.body?.motivo === 'string' ? req.body.motivo.trim() : '';
+  const motivo = MOTIVOS_DEMORA.includes(pedido) ? pedido : 'otro';
+
+  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  if (!guardia) {
+    return res.status(404).json({ error: 'Guardia no encontrada' });
+  }
+  // Igual que en la salida: no es un error, es un aviso que llegó tarde desde la cola sin
+  // conexión y ya no describe nada. Contestar con error trabaría el resto de la cola.
+  if (guardia.checkin_at) {
+    return res.json({ ok: true, yaLlego: true });
+  }
+
+  // Un aviso por guardia mientras el anterior siga abierto. Sin esto, la cola sin conexión
+  // podría dejar tres filas iguales y el Coordinador vería tres alertas de la misma persona por
+  // el mismo viaje.
+  const { data: yaAbierta } = await supabase
+    .from('alertas_tempranas_guardia')
+    .select('id, motivo, detectado_at')
+    .eq('guardia_id', guardia.id)
+    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
+    .eq('fuente', FUENTE_AVISO_DEMORA_ASISTENTE)
+    .is('resuelto_at', null)
+    .maybeSingle();
+
+  if (yaAbierta) {
+    return res.json({ ok: true, yaRegistrado: true, avisoAt: yaAbierta.detectado_at, motivo: yaAbierta.motivo });
+  }
+
+  const detectadoAt = new Date().toISOString();
+  const { data: alerta, error } = await supabase
+    .from('alertas_tempranas_guardia')
+    .insert({
+      prestadora_id: guardia.prestadora_id,
+      guardia_id: guardia.id,
+      fuente: FUENTE_AVISO_DEMORA_ASISTENTE,
+      motivo,
+      reportado_por: req.usuarioAsistente.id,
+      detectado_at: detectadoAt,
+    })
+    .select('id')
+    .maybeSingle();
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  // El aviso sale ahora, no en la próxima vuelta del proceso de fondo: entre una cosa y la otra
+  // hay hasta cinco minutos, y cinco minutos son la mitad del margen con el que se consigue un
+  // reemplazo. Se usa el mismo evento configurable que ya emite la insistencia, así que la
+  // Prestadora que lo apagó no recibe nada por esta puerta tampoco.
+  //
+  // Si el envío falla, la fila queda con `ultima_notificacion_at` en blanco y el proceso de
+  // fondo lo reintenta solo. Nunca se le devuelve un error a quien avisó: su acto ya está
+  // guardado, que es lo que lo protege.
+  try {
+    await notificarCoordinador({
+      evento: 'alerta_temprana_guardia',
+      prestadoraId: guardia.prestadora_id,
+      asunto: 'Aviso de demora del Asistente',
+      texto: `Guardia del ${guardia.fecha} a las ${guardia.hora_inicio}. Origen: ${describirFuente(FUENTE_AVISO_DEMORA_ASISTENTE)}. Motivo: ${motivo}.`,
+    });
+    if (alerta?.id) {
+      await supabase
+        .from('alertas_tempranas_guardia')
+        .update({ ultima_notificacion_at: detectadoAt, veces_notificado: 1 })
+        .eq('id', alerta.id);
+    }
+  } catch (e) {
+    console.error('Error avisando al Coordinador del aviso de demora:', e.message);
+  }
+
+  res.json({ ok: true, avisoAt: detectadoAt, motivo });
 });
 
 // ============================================================================
@@ -665,7 +835,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
 //      Asistente vería un error genérico sin saber por qué no puede irse.
 // ============================================================================
 
-appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, async (req, res) => {
+appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, topeDePedidos({ nombre: 'comprobacion_probar_codigo', soloSi: trajoUnCodigo }), async (req, res) => {
   const { lat, lng } = req.body || {};
   if (typeof lat !== 'number' || typeof lng !== 'number') {
     return res.status(400).json({ error: 'Faltan coordenadas GPS' });
@@ -764,7 +934,7 @@ appAsistentesRouter.get('/codigo-de-presencia', requiereRolAsistente, async (req
 
 // «No hay nadie que me pueda mostrar el código.» Lo escribe el Asistente con sus palabras y
 // aparece en la pantalla de la Prestadora. No marca nada: sólo abre el pedido y queda esperando.
-appAsistentesRouter.post('/guardias/:id/comprobacion/pedido', requiereRolAsistente, async (req, res) => {
+appAsistentesRouter.post('/guardias/:id/comprobacion/pedido', requiereRolAsistente, topeDePedidos({ nombre: 'comprobacion_pedir_codigo' }), async (req, res) => {
   const { momento, texto } = req.body || {};
   if (momento !== 'checkin' && momento !== 'checkout') {
     return res.status(400).json({ error: 'Momento inválido', motivo: 'faltan_datos' });

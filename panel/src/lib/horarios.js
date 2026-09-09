@@ -66,6 +66,26 @@ export function sumarDias(fechaISO, dias) {
 }
 
 /**
+ * La hora de reloj de un momento guardado (`2026-09-09T14:19:03Z` → `14:19`), en el huso del
+ * aparato que lo muestra.
+ *
+ * RELOJ DE 24 HORAS EN LOS TRES IDIOMAS, a propósito. El horario de una guardia sale de la base
+ * escrito así —`08:00` a `16:00`— y no hay forma de escribirlo de otra manera. Dejar que el
+ * idioma elija pondría «Llegó a las 08:03 a. m.» justo debajo de «08:00 - 16:00»: dos relojes
+ * distintos en la misma tarjeta, que es lo que hace dudar de si llegó tarde o no.
+ *
+ * Devuelve cadena vacía cuando no hay momento. Un momento que falta no se dibuja como `—` acá:
+ * quien llama decide qué dice cuando no hay dato, porque «no se sabe» y «no pasó» son cosas
+ * distintas y esta función no puede saber cuál es.
+ */
+export function horaDelMomento(momento, locale) {
+  if (!momento) return '';
+  const fecha = new Date(momento);
+  if (Number.isNaN(fecha.getTime())) return '';
+  return fecha.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+/**
  * Corre una hora de reloj una cantidad de minutos, dando la vuelta al día si hace falta.
  * `correrHora('23:30', 60)` → `'00:30'`. La usa la acción de "correr el horario" de a muchas.
  */

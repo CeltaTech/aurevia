@@ -99,6 +99,16 @@ export const GRUPOS = [
     copias: ['backend/src/utils/toleranciaCheckin.js'],
   },
   {
+    que: 'a qué hora se estima que llega quien ya salió, y desde cuántos minutos eso se avisa',
+    original: 'panel/src/lib/llegadaEstimada.js',
+    copias: ['backend/src/utils/llegadaEstimada.js'],
+  },
+  {
+    que: 'de dónde salió cada alerta temprana de guardia',
+    original: 'panel/src/lib/fuentesAlertaTemprana.js',
+    copias: ['backend/src/utils/fuentesAlertaTemprana.js'],
+  },
+  {
     que: 'cómo se avisa que el Paciente está en un domicilio temporal',
     original: 'pwa-asistentes/src/components/DomicilioTemporal.jsx',
     copias: ['pwa-familias/src/components/DomicilioTemporal.jsx'],
@@ -152,6 +162,11 @@ export const GRUPOS = [
     que: 'por qué motivos se puede entrar sin comprobar el pase de guardia',
     original: 'pwa-asistentes/src/lib/motivosSinComprobar.js',
     copias: ['backend/src/utils/motivosSinComprobar.js'],
+  },
+  {
+    que: 'por qué motivos se avisa que se va demorado',
+    original: 'pwa-asistentes/src/lib/motivosDemora.js',
+    copias: ['backend/src/utils/motivosDemora.js'],
   },
   {
     que: 'la pantalla que muestra el código de presencia para que lo lea quien llega',

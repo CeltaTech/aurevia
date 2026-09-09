@@ -9,6 +9,9 @@ import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { cargarPacientesDeGuardias, conPacientes, pacientesDeGuardia, textoDePacientes } from '../lib/pacientesDeGuardia';
 import { estaEnElPlantel } from '../lib/candidatos';
+import { laDioUnaPersona } from '../lib/fuentesAlertaTemprana';
+import { horaDelMomento } from '../lib/horarios';
+import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
@@ -26,7 +29,7 @@ const TIPOS_RESOLUCION = ['suplente', 'franquero', 'emergencia', 'familiar'];
 const VISTA_AVISOS_DE_CIERRE = 'notificaciones_cierre_servicio_quien_cerro';
 
 export function Continuidad() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { usuario } = useAuth();
   const confirmarDestructivo = useConfirmarDestructivo();
   const [incidentes, setIncidentes] = useState([]);
@@ -255,8 +258,33 @@ export function Continuidad() {
             <div>
               <strong>{a.fecha} · {a.horario}</strong> · {t.continuidad.col_paciente}: {a.paciente_nombre}
               <div>{t.continuidad.col_ausente}: {a.asistente_nombre}</div>
-              <div>{t.continuidad.fuente_aviso_telefonico}</div>
-              {a.motivo && <div>{t.continuidad.col_motivo}: {t.guardias.detalle[`aviso_previo_motivo_${a.motivo}`] || a.motivo}</div>}
+              {/* DE DÓNDE SALIÓ ESTA ALERTA, dicho en cada fila. Hasta acá la pantalla decía
+                  «Aviso telefónico previo» en todas, viniera de donde viniera, y desde el
+                  pendiente #101 hay cuatro orígenes posibles: el aviso que el Coordinador
+                  levantó por teléfono, el que dio el Asistente desde su teléfono, la cuenta de
+                  la hora estimada de llegada, y la hora de inicio alcanzada sin que nadie
+                  apretara nada.
+
+                  No se pueden mezclar. Apretar «voy demorado» es un acto de una persona y la
+                  protege; que la cuenta diga que no llega es un hecho y no es mérito de nadie.
+                  Por eso además del nombre del origen va el renglón de abajo, que dice cuál de
+                  las dos cosas es, sin que haya que conocer los códigos.
+
+                  Una fuente desconocida —una fila vieja, o una que escriba una versión
+                  posterior— no se calla ni se inventa: se dice que no se sabe de dónde salió. */}
+              <div>
+                {t.continuidad[`fuente_${a.fuente}`] ?? t.continuidad.fuente_desconocida}
+                {a.detectado_at ? ` · ${con(t.continuidad.anotada_a_las, { hora: horaDelMomento(a.detectado_at, locale) })}` : ''}
+              </div>
+              <div className="panel-explicacion">
+                {laDioUnaPersona(a.fuente) ? t.continuidad.la_dio_una_persona : t.continuidad.la_anoto_el_sistema}
+              </div>
+              {/* El motivo se guarda en la misma columna con dos vocabularios distintos: el aviso
+                  telefónico guarda el texto del motivo que cargó la Prestadora, y el aviso del
+                  Asistente guarda uno de los cinco códigos de `lib/motivosDemora.js`, que se lee
+                  traducido. Se prueba el código primero y, si no es uno, se muestra tal cual
+                  vino: cambiar el texto de la Prestadora por un guión sería perder el dato. */}
+              {a.motivo && <div>{t.continuidad.col_motivo}: {t.continuidad[`motivo_demora_${a.motivo}`] || a.motivo}</div>}
             </div>
             <div className="panel-modal-acciones">
               <Button onClick={() => resolverAlerta(a)} disabled={actualizandoId === a.id}>

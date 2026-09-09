@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
-import { hoyISO } from '../lib/horarios';
+import { hoyISO, horaDelMomento } from '../lib/horarios';
 import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
 
@@ -17,16 +17,9 @@ function enPalabras(fechaISO, locale, opciones) {
   return new Date(`${fechaISO}T00:00:00`).toLocaleDateString(locale, opciones);
 }
 
-// La hora en que el Asistente llegó o se fue. Se guarda como un momento exacto, así que acá se
-// muestra en el reloj del teléfono de quien mira.
-//
-// Reloj de 24 horas en los tres idiomas, a propósito. El horario de la guardia sale de la base
-// escrito así —`08:00` a `16:00`— y no hay forma de escribirlo de otra manera. Dejar que el
-// idioma elija pondría "Llegó a las 08:03 a. m." justo debajo de "08:00 - 16:00", dos relojes
-// distintos en la misma tarjeta, que es lo que hace dudar de si llegó tarde o no.
-function horaDelMomento(momento, locale) {
-  return new Date(momento).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false });
-}
+// La hora en que el Asistente llegó o se fue la escribe `horaDelMomento`, en `lib/horarios.js`:
+// la misma cuenta la usan la pantalla del Paciente y la aplicación de los Asistentes, y un reloj
+// que se escribe distinto en cada pantalla es la clase de cosa que hace dudar de si llegó tarde.
 
 export default function Guardias() {
   const { id } = useParams();

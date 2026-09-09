@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 import { supabase } from '../lib/supabaseClient';
 import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
+import { horaDelMomento } from '../lib/horarios';
 import { useSeVe } from '../context/PerfilContext';
 import { useCirculo } from '../context/CirculoContext';
 import { pantallaPermitida } from '../lib/interruptorDeCadaPantalla';
@@ -16,7 +17,7 @@ function segundosDesde(fecha) {
 
 export default function PacienteDetalle() {
   const { id } = useParams();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const seVe = useSeVe();
   const { puedeVer } = useCirculo();
   // Cada botón de abajo pregunta lo mismo que pregunta la ruta que abre, con la misma función:
@@ -136,6 +137,25 @@ export default function PacienteDetalle() {
           </div>
           {guardiaActiva && !guardiaActiva.checkin_at && <div className="guardia-card-detalle">{t.paciente.checkin_pendiente}</div>}
           {enCamino && <div className="guardia-card-detalle">{t.paciente.en_camino}</div>}
+          {/* A qué hora se estima que llega (pendiente #101). Es una hora y nada más: la Familia
+              nunca ve por dónde va quien viene. El punto del que salió el Asistente es casi
+              siempre su casa, y eso no viaja a este teléfono — el motor lo usa para la cuenta y
+              manda sólo el resultado.
+
+              Se dice «alrededor de» a propósito, y abajo se aclara que es una estimación: una
+              hora dicha en seco se lee como una promesa, y quien espera a alguien que cuida a su
+              madre la anota en la cabeza como si lo fuera.
+
+              Sin hora estimada —salida sin ubicación, o domicilio sin coordenadas— no se dibuja
+              nada. Inventar una hora es peor que no dar ninguna. */}
+          {enCamino && guardia.llegada_estimada_at && (
+            <>
+              <div className="guardia-card-detalle">
+                {t.paciente.llegada_estimada.replace('{hora}', horaDelMomento(guardia.llegada_estimada_at, locale))}
+              </div>
+              <div className="guardia-card-detalle">{t.paciente.llegada_estimada_aclaracion}</div>
+            </>
+          )}
         </div>
       )}
 

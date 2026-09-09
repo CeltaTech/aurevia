@@ -36,6 +36,10 @@ export async function sincronizarCola() {
           await api.confirmarReporte(item.guardiaId, item.payload);
         } else if (item.tipo === 'checkout') {
           await api.checkout(item.guardiaId, item.payload);
+        } else if (item.tipo === 'salida') {
+          await api.registrarSalida(item.guardiaId, item.payload);
+        } else if (item.tipo === 'aviso_demora') {
+          await api.avisarDemora(item.guardiaId, item.payload);
         }
         await quitarDeCola(item.id);
         avisar();

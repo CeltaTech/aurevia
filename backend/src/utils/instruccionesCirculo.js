@@ -6,11 +6,11 @@ import { enviarWhatsApp } from './whatsapp.js';
 import { enviarEmail } from './email.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import {
-  INTENTOS_MAXIMOS,
   codigoCoincide,
-  codigoNuevo,
+  codigoNuevoParaGuardar,
   estaVencido,
-  huellaDelCodigo,
+  seAgotaronLosIntentos,
+  sumarIntento,
   vencimientoEnMinutos,
 } from './codigoDeUnSoloUso.js';
 
@@ -194,14 +194,13 @@ export async function pedirCodigo({ instruccionId, familiaId }) {
     throw new ErrorConMotivo('ya_cerrada', 'Esta instrucción ya no está pendiente de firma');
   }
 
-  const codigo = codigoNuevo();
+  // El código nuevo no devuelve intentos: la cuenta es de esta instrucción y no del código de
+  // turno (pendiente #177). El porqué, y por qué el caso legítimo del código vencido sigue
+  // andando, está escrito una sola vez en `codigoDeUnSoloUso.js`.
+  const { codigo, campos } = codigoNuevoParaGuardar(vencimientoEnMinutos(VIGENCIA_DEL_CODIGO_MINUTOS));
   const { error } = await supabase
     .from('instrucciones_acceso_circulo')
-    .update({
-      codigo_huella: huellaDelCodigo(codigo),
-      codigo_expira_en: vencimientoEnMinutos(VIGENCIA_DEL_CODIGO_MINUTOS),
-      codigo_intentos: 0,
-    })
+    .update(campos)
     .eq('id', instruccionId);
   if (error) throw new Error(error.message);
 
@@ -251,7 +250,7 @@ export async function pedirCodigo({ instruccionId, familiaId }) {
 export async function confirmarConCodigo({ instruccionId, familiaId, codigo, desde }) {
   const { data: instruccion } = await supabase
     .from('instrucciones_acceso_circulo')
-    .select('id, estado, codigo_huella, codigo_expira_en, codigo_intentos')
+    .select('id, estado, codigo_huella, codigo_expira_en')
     .eq('id', instruccionId)
     .eq('familia_id', familiaId)
     .maybeSingle();
@@ -259,14 +258,18 @@ export async function confirmarConCodigo({ instruccionId, familiaId, codigo, des
   if (!instruccion) return { ok: false, motivo: 'no_encontrado' };
   if (instruccion.estado !== 'pendiente_firma') return { ok: false, motivo: 'ya_cerrada' };
   if (!instruccion.codigo_huella) return { ok: false, motivo: 'sin_codigo' };
-  if (instruccion.codigo_intentos >= INTENTOS_MAXIMOS) return { ok: false, motivo: 'demasiados_intentos' };
+
+  // El vencimiento se mira ANTES de contar, y es lo que deja intacto el caso legítimo: a quien
+  // se le venció el código no se le gasta ningún intento, así que llega al código nuevo con los
+  // cinco enteros.
   if (estaVencido(instruccion.codigo_expira_en)) return { ok: false, motivo: 'vencido' };
 
+  // La suma la hace la base en un solo paso. Antes se leía y se escribía por separado, y dos
+  // intentos a la vez contaban como uno (pendiente #177).
+  const intentos = await sumarIntento({ tabla: 'instrucciones_acceso_circulo', id: instruccionId });
+  if (seAgotaronLosIntentos(intentos)) return { ok: false, motivo: 'demasiados_intentos' };
+
   if (!codigoCoincide(codigo, instruccion.codigo_huella)) {
-    await supabase
-      .from('instrucciones_acceso_circulo')
-      .update({ codigo_intentos: instruccion.codigo_intentos + 1 })
-      .eq('id', instruccionId);
     return { ok: false, motivo: 'codigo_incorrecto' };
   }
 

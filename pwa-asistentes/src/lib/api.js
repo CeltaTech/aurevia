@@ -39,6 +39,11 @@ export const api = {
   guardia: (id) => pedido(`/guardias/${id}`),
   checkin: (id, datos) => pedido(`/guardias/${id}/checkin`, { method: 'POST', body: JSON.stringify(datos) }),
   checkout: (id, datos) => pedido(`/guardias/${id}/checkout`, { method: 'POST', body: JSON.stringify(datos) }),
+  // Los dos actos de antes de llegar (pendiente #101). Son deliberados: los aprieta la persona,
+  // y por eso quedan guardados como acto suyo y no como una cuenta del sistema. Ninguno de los
+  // dos exige ubicación: sin GPS se manda igual y lo único que se pierde es la estimación.
+  registrarSalida: (id, datos) => pedido(`/guardias/${id}/salida`, { method: 'POST', body: JSON.stringify(datos) }),
+  avisarDemora: (id, datos) => pedido(`/guardias/${id}/aviso-demora`, { method: 'POST', body: JSON.stringify(datos) }),
   // El pase de guardia (pendiente #113). Tres pedidos y ninguno más:
   //   - el código que este Asistente muestra cuando es él el que se va y llega el relevo;
   //   - el aviso de que no hay nadie que pueda mostrarle el código, que aparece en la pantalla

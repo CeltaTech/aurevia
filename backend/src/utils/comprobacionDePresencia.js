@@ -1,11 +1,13 @@
 import { supabase } from '../db/connection.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import {
-  INTENTOS_MAXIMOS,
   codigoCoincide,
   codigoNuevo,
+  codigoNuevoParaGuardar,
   estaVencido,
   huellaDelCodigo,
+  seAgotaronLosIntentos,
+  sumarIntento,
   vencimientoEnMinutos,
   vencimientoEnSegundos,
 } from './codigoDeUnSoloUso.js';
@@ -211,20 +213,22 @@ async function resolverCodigo({ guardia, momento, codigo }) {
   // Primero el de la Prestadora, si esta comprobación estaba esperando uno.
   const fila = await comprobacionDe(guardia.id, momento);
   if (fila?.codigo_huella) {
-    if (fila.codigo_intentos >= INTENTOS_MAXIMOS) {
-      throw new ErrorConMotivo('demasiados_intentos', 'Se agotaron los intentos con este código');
-    }
+    // El vencimiento va primero, y es lo que deja andar el caso legítimo: un código vencido no
+    // gasta intento, así que quien pide otro porque se le venció no pierde nada (pendiente #177).
     if (estaVencido(fila.codigo_expira_en)) {
       throw new ErrorConMotivo('codigo_vencido', 'El código de la Prestadora venció');
     }
+
+    // Se cuenta el intento antes de comparar, y la suma la hace la base en un solo paso. Antes se
+    // leía y se escribía por separado, y dos intentos a la vez contaban como uno.
+    const intentos = await sumarIntento({ tabla: 'guardia_comprobaciones', id: fila.id });
+    if (seAgotaronLosIntentos(intentos)) {
+      throw new ErrorConMotivo('demasiados_intentos', 'Se agotaron los intentos con este código');
+    }
+
     if (codigoCoincide(texto, fila.codigo_huella)) {
       return { medio: 'codigo_prestadora', sujetoTipo: null, sujetoId: null };
     }
-    // Se cuenta el intento fallido antes de seguir: sin tope, seis dígitos se prueban de a uno.
-    await supabase
-      .from('guardia_comprobaciones')
-      .update({ codigo_intentos: fila.codigo_intentos + 1, updated_at: ahora() })
-      .eq('id', fila.id);
   }
 
   // Después, los de las personas que podrían estar en la casa.
@@ -343,7 +347,10 @@ export async function pedirCodigoALaPrestadora({ guardia, momento, texto }) {
     pedido_en: ahora(),
     codigo_huella: null,
     codigo_expira_en: null,
-    codigo_intentos: 0,
+    // `codigo_intentos` NO se vuelve a cero acá, y no es un olvido: este pedido lo abre el mismo
+    // Asistente que después prueba los códigos, así que devolver la cuenta desde acá era darle el
+    // botón de reiniciar su propio tope (pendiente #177). Al dar de alta la fila la base pone 0
+    // por omisión; al pisar una que ya existe, la cuenta queda como estaba.
     codigo_emitido_por: null,
     codigo_emitido_en: null,
   });
@@ -401,14 +408,15 @@ export async function emitirCodigoDeLaPrestadora({ comprobacionId, prestadoraId,
   }
 
   const { minutosCodigoDeLaPrestadora } = await configuracionDeComprobacion(prestadoraId);
-  const codigo = codigoNuevo();
+
+  // El código nuevo no devuelve intentos: la cuenta es de esta llegada y no del código de turno
+  // (pendiente #177). El porqué está escrito una sola vez en `codigoDeUnSoloUso.js`.
+  const { codigo, campos } = codigoNuevoParaGuardar(vencimientoEnMinutos(minutosCodigoDeLaPrestadora));
 
   const { error } = await supabase
     .from('guardia_comprobaciones')
     .update({
-      codigo_huella: huellaDelCodigo(codigo),
-      codigo_expira_en: vencimientoEnMinutos(minutosCodigoDeLaPrestadora),
-      codigo_intentos: 0,
+      ...campos,
       codigo_emitido_por: emitidoPor,
       codigo_emitido_en: ahora(),
       updated_at: ahora(),

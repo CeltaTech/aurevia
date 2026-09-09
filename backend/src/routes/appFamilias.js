@@ -14,6 +14,8 @@ import { accesosDelPedido, exigeDelCirculo, soloElTitular, visibilidadDeLaPerson
 import { instruccionPendiente, pedirCodigo, confirmarConCodigo } from '../utils/instruccionesCirculo.js';
 import { codigoParaMostrar } from '../utils/comprobacionDePresencia.js';
 import { responderError } from '../utils/errorConMotivo.js';
+import { topeDePedidos } from '../middleware/topeDePedidos.js';
+import { llegadaEstimadaDeGuardia } from '../utils/estimarLlegadaDeGuardia.js';
 
 export const appFamiliasRouter = Router();
 
@@ -151,7 +153,11 @@ appFamiliasRouter.get('/instruccion-pendiente', requiereRolFamilia, soloElTitula
 
 // Pide el código que llega al teléfono. La persona ya entró con su clave: el código es el segundo
 // paso, no el único — juntos son la firma que se aprobó.
-appFamiliasRouter.post('/instruccion/:instruccionId/codigo', requiereRolFamilia, soloElTitular, async (req, res) => {
+//
+// LAS DOS RUTAS LLEVAN TOPE DE PEDIDOS POR MINUTO (pendiente #177). Acá quien prueba los códigos
+// es la misma persona que los pide, así que sin tope se pedían y se probaban sin freno. Cada una
+// cuenta por separado: gastar los pedidos de una no tiene que dejar sin la otra.
+appFamiliasRouter.post('/instruccion/:instruccionId/codigo', requiereRolFamilia, soloElTitular, topeDePedidos({ nombre: 'instruccion_pedir_codigo' }), async (req, res) => {
   try {
     const { enviadoA } = await pedirCodigo({
       instruccionId: req.params.instruccionId,
@@ -163,7 +169,7 @@ appFamiliasRouter.post('/instruccion/:instruccionId/codigo', requiereRolFamilia,
   }
 });
 
-appFamiliasRouter.post('/instruccion/:instruccionId/confirmar', requiereRolFamilia, soloElTitular, async (req, res) => {
+appFamiliasRouter.post('/instruccion/:instruccionId/confirmar', requiereRolFamilia, soloElTitular, topeDePedidos({ nombre: 'instruccion_confirmar' }), async (req, res) => {
   const resultado = await confirmarConCodigo({
     instruccionId: req.params.instruccionId,
     familiaId: req.usuarioFamilia.familiaId,
@@ -251,6 +257,28 @@ appFamiliasRouter.get('/pacientes/:id', requiereRolFamilia, async (req, res) => 
     guardiaProxima = data || null;
   }
 
+  // A qué hora se estima que llega quien ya salió (pendiente #101).
+  //
+  // LO QUE VIAJA ES UNA HORA Y NADA MÁS. La Familia lee «llega alrededor de las 14:45». Nunca ve
+  // por dónde va: el punto del que salió el Asistente es casi siempre su casa, y mandarlo al
+  // teléfono de un tercero sería entregar la ubicación de quien trabaja. Por eso las coordenadas
+  // se leen en una consulta aparte, quedan en una variable de este lado y no tocan la respuesta.
+  //
+  // Es una estimación, no una promesa, y así se dice en la pantalla. Cuando no se puede calcular
+  // —salida sin GPS, domicilio sin coordenadas— viaja `null`, que la pantalla trata como «no se
+  // sabe»: una hora inventada parece confiable y nadie la vuelve a mirar.
+  let llegadaEstimadaAt = null;
+  if (guardiaProxima?.salida_checkin_at) {
+    const { data: conSuPuntoDeSalida } = await supabase
+      .from('guardias')
+      .select('id, fecha, paciente_id, salida_checkin_at, salida_lat, salida_lng')
+      .eq('id', guardiaProxima.id)
+      .eq('prestadora_id', paciente.prestadora_id)
+      .maybeSingle();
+    const estimada = await llegadaEstimadaDeGuardia(conSuPuntoDeSalida);
+    llegadaEstimadaAt = estimada ? estimada.toISOString() : null;
+  }
+
   // Las alertas de la revisión automática solo se consultan si esta Prestadora las muestra.
   // Apagadas, la revisión sigue corriendo y el Coordinador se sigue enterando igual — lo que
   // cambia es que no viajan al teléfono de la Familia.
@@ -271,7 +299,7 @@ appFamiliasRouter.get('/pacientes/:id', requiereRolFamilia, async (req, res) => 
   res.json({
     paciente,
     guardiaActiva: guardiaActiva || null,
-    guardiaProxima,
+    guardiaProxima: guardiaProxima && { ...guardiaProxima, llegada_estimada_at: llegadaEstimadaAt },
     alertasActivas,
   });
 });

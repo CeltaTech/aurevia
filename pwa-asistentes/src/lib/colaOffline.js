@@ -41,7 +41,10 @@ export function nuevoId() {
   return crypto.randomUUID();
 }
 
-// tipo: 'checkin' | 'reporte'. payload: datos a enviar. guardiaId: para agrupar/mostrar.
+// tipo: 'salida' | 'aviso_demora' | 'checkin' | 'reporte' | 'checkout'. payload: datos a enviar.
+// guardiaId: para agrupar/mostrar. El orden de creación es el orden de envío, y así los dos
+// avisos de antes de llegar (pendiente #101) salen antes que la llegada, que es el orden en que
+// pasaron.
 export async function agregarACola({ id, tipo, guardiaId, payload }) {
   const item = { id, tipo, guardiaId, payload, creadoEn: Date.now(), error: null };
   await transaccion('readwrite', (almacen) => almacen.put(item));

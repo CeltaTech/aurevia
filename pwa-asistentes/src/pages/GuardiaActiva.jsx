@@ -7,7 +7,9 @@ import { sincronizarCola, suscribirseASincronizacion } from '../lib/sincronizarC
 import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
 import { nombreTipo } from '../lib/tipoDeAsistente';
+import { obtenerUbicacion } from '../lib/ubicacionDelTelefono';
 import { useSeVe } from '../context/PerfilContext';
+import AntesDeLlegar from '../components/AntesDeLlegar';
 import DomicilioTemporal from '../components/DomicilioTemporal';
 import PaseDeGuardia from '../components/PaseDeGuardia';
 import CodigoDePresencia from '../components/CodigoDePresencia';
@@ -175,26 +177,13 @@ function esErrorDeRed(error) {
   return error instanceof TypeError;
 }
 
-// Los tres motivos con los que el motor rechaza un código del pase de guardia (pendiente #113).
-// Son los únicos que no cierran el pase: el Asistente sigue parado en la puerta, y una pantalla
-// que se cierra sola después de un código mal tipeado lo deja sin nada que apretar. El resto de
-// los motivos —falta el Reporte Diario, la guardia no se puede cerrar todavía— hablan de otra
-// cosa y sí cierran, porque no se arreglan tipeando de nuevo.
-const MOTIVOS_DEL_CODIGO = ['codigo_incorrecto', 'codigo_vencido', 'demasiados_intentos'];
-
-function obtenerUbicacion() {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('sin_geo'));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (posicion) => resolve({ lat: posicion.coords.latitude, lng: posicion.coords.longitude }),
-      () => reject(new Error('sin_geo')),
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
-  });
-}
+// Los motivos con los que el motor rechaza un código del pase de guardia (pendiente #113, y el
+// tope de pedidos por minuto en el #177). Son los únicos que no cierran el pase: el Asistente
+// sigue parado en la puerta, y una pantalla que se cierra sola después de un código mal tipeado
+// lo deja sin nada que apretar. El resto de los motivos —falta el Reporte Diario, la guardia no
+// se puede cerrar todavía— hablan de otra cosa y sí cierran, porque no se arreglan tipeando de
+// nuevo.
+const MOTIVOS_DEL_CODIGO = ['codigo_incorrecto', 'codigo_vencido', 'demasiados_intentos', 'demasiados_pedidos'];
 
 function tiempoTranscurrido(desde) {
   const ms = Date.now() - new Date(desde).getTime();
@@ -206,7 +195,7 @@ function tiempoTranscurrido(desde) {
 
 export default function GuardiaActiva() {
   const { id } = useParams();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const seVe = useSeVe();
   const [guardia, setGuardia] = useState(null);
   const [error, setError] = useState('');
@@ -214,6 +203,11 @@ export default function GuardiaActiva() {
   const [haciendoCheckin, setHaciendoCheckin] = useState(false);
   const [tick, setTick] = useState(0);
   const [checkinPendiente, setCheckinPendiente] = useState(null); // { desde } o null
+  // Los dos actos de antes de llegar (pendiente #101) esperando señal. Se miran igual que el
+  // check-in pendiente: quien avisó sin conexión tiene que ver que su aviso quedó guardado, o
+  // vuelve a apretar el botón pensando que no salió.
+  const [salidaPendiente, setSalidaPendiente] = useState(false);
+  const [avisoPendiente, setAvisoPendiente] = useState(false);
   // Quiénes del turno ya tienen su reporte. Es una lista y no un sí/no porque cada Paciente
   // lleva el suyo: si el Asistente atendió a dos personas y escribió una sola hoja, el turno
   // todavía no está terminado.
@@ -260,6 +254,8 @@ export default function GuardiaActiva() {
       setConReporte((previos) => [...new Set([...previos, ...esperando])]);
     }
     setCerradoPendiente(pendientes.some((p) => p.tipo === 'checkout'));
+    setSalidaPendiente(pendientes.some((p) => p.tipo === 'salida'));
+    setAvisoPendiente(pendientes.some((p) => p.tipo === 'aviso_demora'));
   }
 
   useEffect(() => {
@@ -444,8 +440,31 @@ export default function GuardiaActiva() {
         </div>
       )}
 
+      {/* Los dos actos de antes de llegar (pendiente #101). Se muestran mientras la llegada no
+          esté marcada y no se esté haciendo el pase, que es exactamente el rato en que sirven:
+          después de llegar, avisar que se sale no describe nada. */}
       {!guardia.checkin_at && !checkinPendiente && !pasandoCheckin && (
-        <button className="btn btn-primary btn-full" onClick={() => setPasandoCheckin(true)} disabled={haciendoCheckin}>
+        <AntesDeLlegar
+          t={t}
+          locale={locale}
+          guardiaId={id}
+          guardia={guardia}
+          salidaPendiente={salidaPendiente}
+          avisoPendiente={avisoPendiente}
+          alRegistrar={() => {
+            cargar();
+            revisarPendientes();
+          }}
+        />
+      )}
+
+      {!guardia.checkin_at && !checkinPendiente && !pasandoCheckin && (
+        <button
+          className="btn btn-primary btn-full"
+          onClick={() => setPasandoCheckin(true)}
+          disabled={haciendoCheckin}
+          style={{ marginTop: '1.5rem' }}
+        >
           {haciendoCheckin ? t.guardia_activa.haciendo_checkin : t.guardia_activa.hacer_checkin}
         </button>
       )}

@@ -358,7 +358,7 @@ Asistente/Familia).
 (catálogo de 4 tipos sembrado por prestadora, columnas viejas
 eliminadas de `asistentes`, `configuracion_notificaciones` migrado al evento genérico
 `vencimiento_documento_asistente`, `dias_aviso_vencimiento_documentos` con default 30 — ver
-`docs/PLAN_HASTA_PRODUCCION.md pasos 104 y 105`); el archivo de esquema que llevó ese cambio se eliminó del
+`docs/PLAN_HASTA_PRODUCCION.md pasos 103 y 104`); el archivo de esquema que llevó ese cambio se eliminó del
 repositorio el 2026-08-18. Código de Panel/backend (`backend/src/routes/panelConfiguracion.js`,
 `panel/src/pages/Configuracion.jsx`, `panel/src/pages/asistentes/PerfilTab.jsx`,
 `backend/src/utils/vencimientos.js`) también entregado en el mismo cierre.

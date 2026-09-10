@@ -41,10 +41,11 @@
   nació con el rol comercial `admin_plataforma` y el 2026-07-28, en la Etapa 2 de la separación
   CeltaTech/Careonys, pasó a ser la **sesión de soporte técnico** de `superadmin` — el rol
   comercial se fue entero a CeltaTech y ya no existe en Careonys. **Único
-  hardcodeo estructural que sigue abierto, a propósito**: el envío de emails sigue saliendo
-  de una sola cuenta Gmail compartida entre todas las Prestadoras (`backend/src/utils/email.js`,
-  `SMTP_USER`) — pendiente #44 en `docs/PLAN_HASTA_PRODUCCION.md`, con fecha de cierre exigida "antes
-  de dar de alta la primera Prestadora real", no antes.
+  hardcodeo estructural que sigue abierto, a propósito**: el correo sale de una sola cuenta
+  de Gmail compartida entre todas las Prestadoras (`backend/src/utils/email.js`, `SMTP_USER`).
+  Se cierra con los pasos 1 a 3 de `docs/PLAN_HASTA_PRODUCCION.md`, y hay que hacerlo antes de
+  dar de alta la primera Prestadora real: hoy el correo no se entrega, porque Railway bloquea
+  los puertos de SMTP.
 
 ## Roles de usuario
 

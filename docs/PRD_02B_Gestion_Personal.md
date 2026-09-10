@@ -27,7 +27,7 @@ números hardcodeados — ver regla 10 de `CLAUDE.md`.
 | 6 | Guardias de cobertura (reemplazo temporal por ausencia) |
 | 7 | Generador de documentación (liquidaciones, telegramas, certificados) |
 | 8 | Tabla versionada de valores legales (`escalas_legales`) |
-| 9 | Notificaciones de vencimientos de documentación (catálogo configurable por prestadora — ver `docs/PLAN_HASTA_PRODUCCION.md pasos 104 y 105`) |
+| 9 | Notificaciones de vencimientos de documentación (catálogo configurable por prestadora — ver `docs/PLAN_HASTA_PRODUCCION.md pasos 103 y 104`) |
 
 ## Glosario nuevo (sumar al de `CLAUDE.md`)
 

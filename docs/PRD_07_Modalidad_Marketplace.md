@@ -194,7 +194,7 @@ textual, para no perderla:
   toda implicancia de la Prestadora en el vínculo contractual entre ambas partes.
 
 **c) Cooperativas**: mostrar las herramientas necesarias para administrarlas dentro de lo
-ya hablado (sin mayor detalle todavía — ver también `docs/PLAN_HASTA_PRODUCCION.md pasos 108 y 109`, post-MVP).
+ya hablado (sin mayor detalle todavía — ver también `docs/PLAN_HASTA_PRODUCCION.md pasos 107 y 108`, post-MVP).
 
 **Todavía pendiente**: el "rearme del esquema" en sí (cómo quedan agrupados estos bloques
 en la UI del dashboard, qué falta considerar) — es el próximo paso de diseño antes de tocar

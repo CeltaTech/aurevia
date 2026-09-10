@@ -23,6 +23,10 @@ const COBRO = '55555555-5555-5555-5555-555555555555';
 const SUSCRIPCION = '66666666-6666-6666-6666-666666666666';
 const SECRETO = 'whsec_un_secreto_de_mentira_para_la_prueba';
 const SECRETO_DE_AMBIENTE = 'un_secreto_de_ambiente_de_mentira';
+/** El mes que la suscripción está esperando cobrar. Es una fecha guardada, no la de hoy: de ella
+ *  sale el mes siguiente cuando la plata entra (`utils/cobrosMarketplace.js`). */
+const PERIODO = '2026-09-01';
+const MONTO_MENSUAL = 12500;
 
 /** Las variables de ambiente de los rieles que no publican esquema de firma (paso 9). */
 const SECRETOS_DE_AMBIENTE = [
@@ -48,8 +52,12 @@ const baseFalsa = createServer((req, res) => {
     const clave = `${req.method} ${ruta}`;
     llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null });
 
+    // A la respuesta preparada se le pasa también la dirección con sus filtros: hay dos consultas
+    // distintas que caen en la misma tabla —la que busca la suscripción por la referencia del
+    // aviso y la que la lee por su identificador antes de moverla— y sólo el filtro las separa.
     const preparada = respuestas.get(clave);
-    const valor = typeof preparada === 'function' ? preparada(crudo ? JSON.parse(crudo) : null) : preparada;
+    const valor =
+      typeof preparada === 'function' ? preparada(crudo ? JSON.parse(crudo) : null, req.url) : preparada;
     if (valor === undefined) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: `la prueba no preparó respuesta para ${clave}` }));
@@ -144,9 +152,16 @@ beforeEach(() => {
   ]);
   respuestas.set('POST /rest/v1/rpc/leer_credencial_pasarela_pago', () => 'sk_de_mentira');
   respuestas.set('POST /rest/v1/rpc/leer_secreto_firma_pasarela_pago', () => SECRETO);
-  respuestas.set('GET /rest/v1/cobros_marketplace', () => [{ id: COBRO, suscripcion_id: SUSCRIPCION }]);
+  respuestas.set('GET /rest/v1/cobros_marketplace', () => [{ id: COBRO, suscripcion_id: SUSCRIPCION, periodo: PERIODO }]);
   respuestas.set('PATCH /rest/v1/cobros_marketplace', () => []);
+  respuestas.set('POST /rest/v1/cobros_marketplace', () => []);
   respuestas.set('PATCH /rest/v1/suscripciones_marketplace', () => []);
+  // Dos consultas distintas caen acá y se distinguen por el filtro: la ruta busca la suscripción
+  // **por la referencia del aviso** —y de fábrica no la encuentra, porque la de fábrica es la de
+  // un cobro—, y `registrarCobroExitoso` la lee **por su identificador** antes de moverla.
+  respuestas.set('GET /rest/v1/suscripciones_marketplace', (_cuerpo, url) =>
+    url.includes('referencia_externa=eq.') ? [] : [{ id: SUSCRIPCION, proximo_cobro: PERIODO }]
+  );
   // Los tres rieles sin esquema publicado miran un secreto de ambiente cuando la Prestadora no
   // cargó el suyo. La máquina donde corre esto puede tenerlo puesto, así que cada prueba
   // arranca sin ninguno y lo pone la que quiera probarlo.
@@ -155,6 +170,12 @@ beforeEach(() => {
 
 function escrituras() {
   return llamadas.filter((l) => l.clave.startsWith('PATCH '));
+}
+
+/** Las filas nuevas. Se miran aparte de las escrituras porque son otra cosa: una modifica un cobro
+ *  que ya existía y la otra anota un mes que de este lado no estaba anotado. */
+function inserciones() {
+  return llamadas.filter((l) => l.clave === 'POST /rest/v1/cobros_marketplace');
 }
 
 describe('el aviso de cobro auténtico', () => {
@@ -167,6 +188,14 @@ describe('el aviso de cobro auténtico', () => {
     assert.equal(cobro.cuerpo.estado_cobro, 'exitoso');
     const suscripcion = escrituras().find((l) => l.clave.endsWith('/suscripciones_marketplace'));
     assert.equal(suscripcion.cuerpo.estado, 'activa');
+  });
+
+  it('la suscripción pasa al mes siguiente al del período cobrado, no al de hoy', async () => {
+    // Es la diferencia que se ve el día que un cobro entra tarde: contando desde hoy, cada demora
+    // corre la fecha y la Prestadora termina cobrando once meses por año en vez de doce.
+    await avisar();
+    const suscripcion = escrituras().find((l) => l.clave.endsWith('/suscripciones_marketplace'));
+    assert.equal(suscripcion.cuerpo.proximo_cobro, '2026-10-01');
   });
 
   it('la búsqueda del cobro va acotada a la Prestadora de la dirección', async () => {
@@ -493,6 +522,147 @@ for (const { proveedor, variable, aviso } of RIELES_SIN_ESQUEMA) {
     });
   });
 }
+
+// ---------------------------------------------------------------------------
+// El aviso de un riel que cobra solo, donde la referencia es la de la suscripción (paso 5)
+//
+// `mercadopago`, `stripe` y `debin` quedan cobrando del lado del proveedor desde el alta de la
+// suscripción: de este lado nadie arma el cobro de cada mes, así que cuando llega el aviso no hay
+// ninguna fila que tenga esa referencia. Hasta acá se buscaba únicamente entre los cobros: no se
+// encontraba nada, se contestaba 200 y se seguía de largo, así que la suscripción cobraba todos
+// los meses del lado del proveedor y en esta base no figuraba ninguno.
+//
+// Lo que se prueba es que el mes se anote, con qué datos, y —sobre todo— las dos formas de
+// anotarlo mal, que son las que rompen el mes siguiente en vez de éste.
+// ---------------------------------------------------------------------------
+
+/** Un aviso de Stripe armado a medida. El cuerpo va con sangría, como lo manda Stripe. */
+function eventoStripe(tipo, objeto = { id: 'sub_1234567890' }) {
+  return Buffer.from(JSON.stringify({ type: tipo, data: { object: objeto } }, null, 2), 'utf8');
+}
+
+/** La base sin ningún cobro con esa referencia, y una suscripción que sí la tiene. */
+function sinCobroYConSuscripcion({ proximoCobro = PERIODO } = {}) {
+  respuestas.set('GET /rest/v1/cobros_marketplace', () => []);
+  respuestas.set('GET /rest/v1/suscripciones_marketplace', (_cuerpo, url) =>
+    url.includes('referencia_externa=eq.')
+      ? [{ id: SUSCRIPCION, monto_mensual: MONTO_MENSUAL, proximo_cobro: proximoCobro }]
+      : [{ id: SUSCRIPCION, proximo_cobro: proximoCobro }]
+  );
+}
+
+describe('el aviso de un riel que cobra solo, con la referencia de la suscripción', () => {
+  it('anota el cobro del mes que la suscripción estaba esperando', async () => {
+    sinCobroYConSuscripcion();
+    const { estado } = await avisar();
+    assert.equal(estado, 200);
+
+    assert.equal(inserciones().length, 1);
+    const anotado = inserciones()[0].cuerpo;
+    assert.equal(anotado.suscripcion_id, SUSCRIPCION);
+    assert.equal(anotado.prestadora_id, PRESTADORA);
+    assert.equal(anotado.medio, 'stripe');
+    assert.equal(anotado.monto, MONTO_MENSUAL);
+    assert.equal(anotado.periodo, PERIODO);
+    assert.equal(anotado.estado_cobro, 'exitoso');
+  });
+
+  it('el cobro que nace del aviso no se queda con la referencia de la suscripción', async () => {
+    // Si se guardara, el aviso del mes que viene encontraría esta misma fila y pisaría el cobro
+    // anterior en vez de anotar uno nuevo: la Familia pagaría doce meses y la base mostraría uno.
+    sinCobroYConSuscripcion();
+    await avisar();
+    assert.equal(inserciones()[0].cuerpo.referencia_externa ?? null, null);
+  });
+
+  it('y la suscripción pasa al mes siguiente al del período anotado', async () => {
+    sinCobroYConSuscripcion({ proximoCobro: '2026-01-31' });
+    await avisar();
+
+    assert.equal(inserciones()[0].cuerpo.periodo, '2026-01-31');
+    const suscripcion = escrituras().find((l) => l.clave.endsWith('/suscripciones_marketplace'));
+    assert.equal(suscripcion.cuerpo.estado, 'activa');
+    // El 31 de enero más un mes con `setMonth(+1)` da 3 de marzo, y a partir de ahí la suscripción
+    // cobra el 3 de cada mes en vez del 31. Acá tiene que dar el último día de febrero.
+    assert.equal(suscripcion.cuerpo.proximo_cobro, '2026-02-28');
+  });
+
+  it('un aviso que todavía no dice si la plata entró no deja ninguna fila', async () => {
+    // Un `pendiente` no dice nada que se pueda anotar, y el mismo mes puede traer varios antes de
+    // que la plata entre: anotarlos chocaría contra el índice único parcial del período pendiente.
+    sinCobroYConSuscripcion();
+    const { estado } = await avisar({ cuerpo: eventoStripe('invoice.created') });
+    assert.equal(estado, 200);
+    assert.equal(inserciones().length, 0);
+    assert.equal(escrituras().length, 0);
+  });
+
+  it('un aviso fallido anota el mes como fallido y deja la suscripción vencida', async () => {
+    sinCobroYConSuscripcion();
+    await avisar({ cuerpo: eventoStripe('invoice.payment_failed') });
+
+    assert.equal(inserciones()[0].cuerpo.estado_cobro, 'fallido');
+    const suscripcion = escrituras().find((l) => l.clave.endsWith('/suscripciones_marketplace'));
+    assert.equal(suscripcion.cuerpo.estado, 'vencida');
+  });
+
+  it('sin cobro y sin suscripción con esa referencia se contesta 200 y no se escribe nada', async () => {
+    // El aviso vino firmado pero habla de algo que acá no existe. Se contesta 200 para que el
+    // proveedor no lo repita para siempre.
+    respuestas.set('GET /rest/v1/cobros_marketplace', () => []);
+    respuestas.set('GET /rest/v1/suscripciones_marketplace', () => []);
+    const { estado, cuerpo } = await avisar();
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo, { ok: true });
+    assert.equal(inserciones().length, 0);
+    assert.equal(escrituras().length, 0);
+  });
+
+  it('la suscripción se busca acotada a la Prestadora de la dirección', async () => {
+    sinCobroYConSuscripcion();
+    await avisar();
+    const busqueda = llamadas.find(
+      (l) => l.clave === 'GET /rest/v1/suscripciones_marketplace' && l.url.includes('referencia_externa=eq.')
+    );
+    assert.ok(busqueda.url.includes(`prestadora_id=eq.${PRESTADORA}`));
+  });
+
+  it('cuando el cobro sí existe, no se busca ninguna suscripción por referencia', async () => {
+    // La otra mitad: el riel al que este producto le arma el cobro mes a mes ya tiene la fila, y
+    // la segunda consulta sería trabajo al pedo contra la base.
+    await avisar();
+    const porReferencia = llamadas.filter(
+      (l) => l.clave === 'GET /rest/v1/suscripciones_marketplace' && l.url.includes('referencia_externa=eq.')
+    );
+    assert.equal(porReferencia.length, 0);
+    assert.equal(inserciones().length, 0);
+  });
+});
+
+describe('el aviso de una factura de Stripe', () => {
+  it('se busca por la suscripción, no por la factura', async () => {
+    // Lo que este producto guardó al dar de alta es la suscripción de Stripe. La factura nace del
+    // lado de Stripe y acá no existe: buscar por su identificador equivale a no encontrar nunca
+    // nada, y hasta el paso 5 ningún aviso de Stripe imputaba un solo cobro.
+    await avisar({ cuerpo: eventoStripe('invoice.paid', { id: 'in_de_una_factura', subscription: 'sub_1234567890' }) });
+    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/cobros_marketplace');
+    assert.ok(busqueda.url.includes('sub_1234567890'), 'se busca por la suscripción');
+    assert.equal(busqueda.url.includes('in_de_una_factura'), false, 'no se busca por la factura');
+  });
+
+  it('también cuando Stripe lo pone en el lugar nuevo de su API', async () => {
+    const objeto = { id: 'in_de_una_factura', parent: { subscription_details: { subscription: 'sub_1234567890' } } };
+    await avisar({ cuerpo: eventoStripe('invoice.paid', objeto) });
+    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/cobros_marketplace');
+    assert.ok(busqueda.url.includes('sub_1234567890'));
+  });
+
+  it('y en la baja de la suscripción, donde el objeto es la suscripción, se usa su identificador', async () => {
+    await avisar({ cuerpo: eventoStripe('customer.subscription.deleted') });
+    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/cobros_marketplace');
+    assert.ok(busqueda.url.includes('sub_1234567890'));
+  });
+});
 
 describe('los tres rieles sin esquema publicado piden secreto de firma', () => {
   it('el Panel se entera de que se lo tiene que pedir a la Prestadora', async () => {

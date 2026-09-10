@@ -23,11 +23,17 @@ export const REQUIERE_SECRETO_FIRMA = true;
  *  cada proveedor, y eso lo sabe su adaptador (regla 12 del §7). */
 export const CONFIRMA_CONSULTANDO = true;
 
-export async function crearSuscripcion({ credencial, suscripcionId, monto, moneda, familiaId }) {
+export async function crearSuscripcion({ credencial, suscripcionId, monto, moneda, emailPagador }) {
   // La moneda llega de la suscripción, que la heredó de la Prestadora. No hay valor por
   // descarte: cobrarle a una Familia en una moneda que nadie eligió es peor que fallar
   // (regla 14, §7).
   if (!moneda) throw new Error('Falta la moneda de la suscripción');
+
+  // Y el correo del pagador tampoco tiene valor por descarte. Mercado Pago exige `payer_email`
+  // para crear un preapproval: hasta acá esa línea decía `undefined` con la nota «se completa en
+  // la ruta que llama», y no había ninguna ruta que llamara. Sin este corte, el alta se iba a
+  // Mercado Pago para que la rechazara del otro lado y volviera un error que no explica nada.
+  if (!emailPagador) throw new Error('Falta el correo de la Familia que va a pagar');
 
   const respuesta = await fetch(`${API_BASE}/preapproval`, {
     method: 'POST',
@@ -38,7 +44,7 @@ export async function crearSuscripcion({ credencial, suscripcionId, monto, moned
     body: JSON.stringify({
       reason: `Suscripción ${IDENTIDAD.nombre} Marketplace`,
       external_reference: suscripcionId,
-      payer_email: undefined, // se completa en la ruta que llama, con el email real de la Familia
+      payer_email: emailPagador,
       auto_recurring: {
         frequency: 1,
         frequency_type: 'months',

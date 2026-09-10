@@ -29,73 +29,71 @@
 
 ## El dinero
 
-**5.** Dar de alta la suscripción en la pasarela y armar el cobro de cada período. Hoy `crearSuscripcion`, `generarCobroQr` y `generarCupon` no los llama nadie, y todo cobro se carga a mano.
+**5.** Baja en un clic: la columna `cancelada_en` sólo se lee, nadie la escribe desde una pantalla.
 
-**6.** Baja en un clic: la columna `cancelada_en` sólo se lee, nadie la escribe desde una pantalla.
+**6.** Corte diferido al fin del período pagado.
 
-**7.** Corte diferido al fin del período pagado.
+**7.** Aviso previo antes del primer cobro: `trial_fin` nunca se lee.
 
-**8.** Aviso previo antes del primer cobro: `trial_fin` nunca se lee.
+**8.** Período de gracia y reintentos. Hoy un cobro que falla suspende en el acto (`backend/src/routes/webhooksPasarelas.js:141-143`).
 
-**9.** Período de gracia y reintentos. Hoy un cobro que falla suspende en el acto (`backend/src/routes/webhooksPasarelas.js:141-143`).
+**9.** Que la factura mire las fechas de vigencia y el precio pactado del paquete. Hoy arma el total sin ningún filtro de fecha y nunca consulta `paquetes_prestaciones` (`panel/src/pages/Facturacion.jsx:120-175`).
 
-**10.** Que la factura mire las fechas de vigencia y el precio pactado del paquete. Hoy arma el total sin ningún filtro de fecha y nunca consulta `paquetes_prestaciones` (`panel/src/pages/Facturacion.jsx:120-175`).
+**10.** Sacar `precio_addon` y `moneda_addon` de `catalogo_modulos`: es concepto comercial adentro del producto.
 
-**11.** Sacar `precio_addon` y `moneda_addon` de `catalogo_modulos`: es concepto comercial adentro del producto.
+**11. Usted** — El ciclo de cobranza a obras sociales: hoy sólo existen validado y anulado. ¿Qué estados hacen falta — presentación, débito, conciliación?
 
-**12. Usted** — El ciclo de cobranza a obras sociales: hoy sólo existen validado y anulado. ¿Qué estados hacen falta — presentación, débito, conciliación?
+**12.** Construir ese ciclo.
 
-**13.** Construir ese ciclo.
+**13.** Que la Familia vea su factura desglosada en la aplicación. La base está entera; falta la ventanilla.
 
-**14.** Que la Familia vea su factura desglosada en la aplicación. La base está entera; falta la ventanilla.
-
-**15. Usted** — ¿Se agrega una tercera vía de pago, con un intermediario que reciba en bloque y redistribuya? Si es sí, antes hay que resolver si eso cambia quién ejerce el control (art. 23 LCT).
+**14. Usted** — ¿Se agrega una tercera vía de pago, con un intermediario que reciba en bloque y redistribuya? Si es sí, antes hay que resolver si eso cambia quién ejerce el control (art. 23 LCT).
 
 ---
 
 ## Que los avisos lleguen
 
-**16.** Los avisos del motor en los tres idiomas. Hoy el castellano está escrito adentro del código en seis archivos.
+**15.** Los avisos del motor en los tres idiomas. Hoy el castellano está escrito adentro del código en seis archivos.
 
-**17.** Canal único de avisos empujados al Panel. Hoy una pantalla pregunta cada 12 segundos y no hay ningún canal en vivo.
+**16.** Canal único de avisos empujados al Panel. Hoy una pantalla pregunta cada 12 segundos y no hay ningún canal en vivo.
 
-**18.** Enviar la plantilla a Meta y guardar el identificador que devuelve. Hoy sólo cambia un estado guardado.
+**17.** Enviar la plantilla a Meta y guardar el identificador que devuelve. Hoy sólo cambia un estado guardado.
 
-**19.** Traer de Meta el resultado de la aprobación. Hoy «aprobada» y «rechazada» sólo cambian si alguien los escribe a mano.
+**18.** Traer de Meta el resultado de la aprobación. Hoy «aprobada» y «rechazada» sólo cambian si alguien los escribe a mano.
 
-**20.** Enviar por plantilla de verdad. Hoy `backend/src/utils/whatsapp.js:44-49` arma siempre texto suelto.
+**19.** Enviar por plantilla de verdad. Hoy `backend/src/utils/whatsapp.js:44-49` arma siempre texto suelto.
 
-**21.** Redacción y corrección de plantillas por IA. La columna `motivo_rechazo` existe y no la lee nadie.
+**20.** Redacción y corrección de plantillas por IA. La columna `motivo_rechazo` existe y no la lee nadie.
 
-**22.** El vencimiento de documentos avisa por el catálogo, con su casilla de WhatsApp habilitada.
+**21.** El vencimiento de documentos avisa por el catálogo, con su casilla de WhatsApp habilitada.
 
-**23. Usted** — ¿Qué situaciones puede contestar la IA sola? Hoy la única regla es el criterio del modelo.
+**22. Usted** — ¿Qué situaciones puede contestar la IA sola? Hoy la única regla es el criterio del modelo.
 
-**24.** Hacerlo configurable por Prestadora, según lo contestado.
+**23.** Hacerlo configurable por Prestadora, según lo contestado.
 
-**25.** Que la fase automática recorra `configuracion_escalada_relevo`. Hoy sólo avisa que se llegó al umbral.
+**24.** Que la fase automática recorra `configuracion_escalada_relevo`. Hoy sólo avisa que se llegó al umbral.
 
-**26.** Poder ordenar los tres pasos de la escalada — insistir, Coordinador de respaldo, fase automática. Hoy el orden está fijo en el código.
+**25.** Poder ordenar los tres pasos de la escalada — insistir, Coordinador de respaldo, fase automática. Hoy el orden está fijo en el código.
 
-**27. Usted** — ¿Se saca el tope de una semana hacia atrás de la ventana de aviso de guardias sin cerrar?
+**26. Usted** — ¿Se saca el tope de una semana hacia atrás de la ventana de aviso de guardias sin cerrar?
 
-**28.** Sacarlo, si corresponde.
+**27.** Sacarlo, si corresponde.
 
-**29. Usted** — Pase de guardia, dos preguntas: cuando la llegada queda sin comprobar, ¿se le avisa igual a la Familia? Y un relevo, ¿cierra una guardia y abre la siguiente en un solo acto, o quedan dos constancias?
+**28. Usted** — Pase de guardia, dos preguntas: cuando la llegada queda sin comprobar, ¿se le avisa igual a la Familia? Y un relevo, ¿cierra una guardia y abre la siguiente en un solo acto, o quedan dos constancias?
 
-**30.** Ajustar el pase de guardia según lo contestado.
+**29.** Ajustar el pase de guardia según lo contestado.
 
 ---
 
 ## Derechos escritos que la persona no puede ejercer
 
-**31.** Pantalla del descargo del Asistente ante una calificación negativa. Existe en el motor y en la base; la aplicación no llama a esas rutas.
+**30.** Pantalla del descargo del Asistente ante una calificación negativa. Existe en el motor y en la base; la aplicación no llama a esas rutas.
 
-**32.** Que el Asistente vea sus propias calificaciones.
+**31.** Que el Asistente vea sus propias calificaciones.
 
-**33.** El interruptor de disponibilidad en manos del Asistente. Hoy lo maneja el Panel.
+**32.** El interruptor de disponibilidad en manos del Asistente. Hoy lo maneja el Panel.
 
-**34.** Que la Familia vea el estado documental del Asistente que contrató.
+**33.** Que la Familia vea el estado documental del Asistente que contrató.
 
 ---
 
@@ -103,9 +101,11 @@
 
 Existe el andamiaje —base, disparadores, cobros, consentimiento— y no existe la modalidad. **Hoy la Familia no puede buscar un Asistente, ni verlo, ni hablarle, ni contratarlo.**
 
-**35.** Búsqueda y perfiles públicos de Asistentes en la aplicación de la Familia, con insignias de verificación y calificación.
+**34.** Búsqueda y perfiles públicos de Asistentes en la aplicación de la Familia, con insignias de verificación y calificación.
 
-**36.** Chat interno y videollamada entre Familia y Asistente, con el contacto tapado hasta que se activa la suscripción.
+**35.** Chat interno y videollamada entre Familia y Asistente, con el contacto tapado hasta que se activa la suscripción.
+
+**36.** Los dos valores que la Prestadora configura una sola vez y que hoy no salen de ningún lado: el precio mensual de la suscripción del Marketplace y cuántos días dura la prueba sin cargo. Hoy `monto_mensual` y `trial_fin` se escriben suscripción por suscripción, así que la activación del paso siguiente no tiene con qué armar la primera. Van en `prestadoras`, con el mismo molde que `dias_aviso_vencimiento_documentos`, y con su lugar en Configuración.
 
 **37.** La activación al intentar ver el contacto, con confirmación antes de cobrar.
 

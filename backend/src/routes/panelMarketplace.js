@@ -13,6 +13,8 @@ import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { exigirModalidad } from '../middleware/exigirModalidad.js';
 import { advertenciaVigente, advertenciasVigentes, registrarAviso } from '../utils/advertenciaLegal.js';
 import { responderError } from '../utils/errorConMotivo.js';
+import { darDeAltaEnPasarela, MOTIVO_ALTA } from '../utils/altaEnPasarela.js';
+import { registrarCobroExitoso } from '../utils/cobrosMarketplace.js';
 
 export const panelMarketplaceRouter = Router();
 
@@ -189,7 +191,7 @@ panelMarketplaceRouter.patch('/pasarela/:proveedor', soloAdministracion, soloAdm
 panelMarketplaceRouter.get('/suscripciones', soloAdministracion, async (req, res) => {
   const { data, error } = await supabase
     .from('suscripciones_marketplace')
-    .select('id, familia_id, paciente_id, asistente_id, estado, monto_mensual, trial_fin, proximo_cobro, cancelada_en, created_at')
+    .select('id, familia_id, paciente_id, asistente_id, estado, monto_mensual, trial_fin, proximo_cobro, cancelada_en, created_at, proveedor, url_accion, alta_en_pasarela')
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .order('created_at', { ascending: false });
   if (error) return responderError(res, error);
@@ -260,7 +262,11 @@ panelMarketplaceRouter.post('/cobros/efectivo-manual', soloAdministracion, async
   });
   if (error) return responderError(res, error);
 
-  res.json({ ok: true });
+  // Y la suscripción pasa al mes siguiente. Sin esto el período quedaba pagado y la suscripción
+  // seguía esperando el mismo mes para siempre, así que el mes que viene no llegaba nunca.
+  const movimiento = await registrarCobroExitoso({ suscripcionId, periodo });
+
+  res.json({ ok: true, proximo_cobro: movimiento.proximo_cobro ?? null });
 });
 
 // Canje del QR de cobro en efectivo escaneado por el cobrador — validación de firma/
@@ -318,7 +324,48 @@ panelMarketplaceRouter.post('/qr-cobro/canjear', soloAdministracion, async (req,
     .eq('id', qr.id);
   if (errorQr) return responderError(res, errorQr);
 
-  res.json({ ok: true, monto: qr.monto });
+  // Igual que el efectivo en mano: cobrado el período, la suscripción pasa al siguiente.
+  const movimiento = await registrarCobroExitoso({ suscripcionId: qr.suscripcion_id, periodo: qr.periodo });
+
+  res.json({ ok: true, monto: qr.monto, proximo_cobro: movimiento.proximo_cobro ?? null });
+});
+
+// ============================================================================
+// El alta de la suscripción en la pasarela
+// ============================================================================
+
+// Sin esto una suscripción vive en esta base y no existe del lado de ningún proveedor, así que no
+// hay con qué cobrarle. Lo hace el Admin de la Prestadora desde la pantalla de suscripciones;
+// mañana lo va a llamar también la activación del lado de la Familia. Los seis pasos que hacen
+// falta están en un solo lugar (`utils/altaEnPasarela.js`) y esta ruta no repite ninguno.
+panelMarketplaceRouter.post('/suscripciones/:id/alta-en-pasarela', soloAdministracion, async (req, res) => {
+  const { proveedor } = req.body || {};
+
+  // Con qué riel sólo hace falta decirlo cuando la Prestadora tiene más de uno conectado; con uno
+  // solo se resuelve solo. Si viene, tiene que ser uno de los que el producto conoce.
+  if (proveedor && !proveedoresDisponibles().includes(proveedor)) {
+    return res.status(400).json({ error: 'Proveedor de pasarela desconocido' });
+  }
+
+  const resultado = await darDeAltaEnPasarela({
+    suscripcionId: req.params.id,
+    prestadoraId: req.usuarioPanel.prestadoraId,
+    proveedor: proveedor || null,
+  });
+
+  if (!resultado.ok) {
+    // El motivo es un código, y la frase que lee la persona sale de las traducciones del Panel en
+    // los tres idiomas. El detalle crudo no sale de acá: puede nombrar la cuenta de cobro
+    // (`celtatech\CLAUDE.md` §6).
+    const estado = resultado.motivo === MOTIVO_ALTA.SUSCRIPCION_INEXISTENTE ? 404 : 409;
+    return res.status(estado).json({
+      error: 'No se pudo dar de alta la suscripción en la pasarela',
+      motivo: resultado.motivo,
+      conectados: resultado.conectados,
+    });
+  }
+
+  res.json({ ok: true, ya_estaba: Boolean(resultado.yaEstaba), alta: resultado.alta });
 });
 
 // ============================================================================

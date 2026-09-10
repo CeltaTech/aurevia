@@ -131,6 +131,7 @@ const TABLAS_DE_PLATA = [
   'qr_cobro_efectivo',
   'rpc/guardar_credencial_pasarela_pago',
   'rpc/guardar_secreto_firma_pasarela_pago',
+  'rpc/leer_credencial_pasarela_pago',
 ];
 
 function noTocoLaPlata() {
@@ -150,6 +151,9 @@ const RUTAS_DE_PLATA = [
   ['GET', `/suscripciones/${SUSCRIPCION}/cobros`, undefined],
   ['POST', '/cobros/efectivo-manual', { suscripcion_id: SUSCRIPCION, monto: 1000, periodo: '2026-09', fecha_cobro: '2026-09-04' }],
   ['POST', '/qr-cobro/canjear', { token: 'token-de-mentira' }],
+  // Dar de alta una suscripción en la pasarela es lo que la deja cobrando de verdad: saca la
+  // credencial de la caja fuerte y crea el cobro recurrente del lado del proveedor.
+  ['POST', `/suscripciones/${SUSCRIPCION}/alta-en-pasarela`, {}],
 ];
 
 describe('el Coordinador no llega a la plata del Marketplace', () => {

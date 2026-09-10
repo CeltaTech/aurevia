@@ -17,11 +17,16 @@ function form(objeto) {
   return new URLSearchParams(objeto).toString();
 }
 
-export async function crearSuscripcion({ credencial, suscripcionId, monto, moneda, familiaId }) {
+export async function crearSuscripcion({ credencial, suscripcionId, monto, moneda, familiaId, emailPagador }) {
   // Ver la nota de mercadopago.js: la moneda viene de la suscripción, sin valor por descarte.
   if (!moneda) throw new Error('Falta la moneda de la suscripción');
+  // Stripe crea igual un cliente sin correo, pero entonces no le manda ningún comprobante a la
+  // Familia y el cobro le aparece en el resumen sin haber recibido nada. Se corta acá, con el
+  // mismo criterio que la moneda: falta un dato del que depende el cobro.
+  if (!emailPagador) throw new Error('Falta el correo de la Familia que va a pagar');
 
   const cliente = await llamar('/customers', credencial, {
+    email: emailPagador,
     'metadata[suscripcion_id]': suscripcionId,
     'metadata[familia_id]': familiaId,
   });
@@ -83,7 +88,16 @@ export function verificarWebhook({ secretoFirma, headers, cuerpoCrudo, body, aho
     return { valido: false, motivo: comprobacion.motivo, referenciaExterna: null, estado: 'pendiente' };
   }
 
-  const referenciaExterna = body?.data?.object?.id;
+  // Qué identificador se devuelve. Lo que este producto guardó al dar de alta es la suscripción
+  // de Stripe, no la factura de cada mes: la factura nace del lado de Stripe y acá no existe
+  // hasta que llega este aviso. Así que en el aviso de una factura se mira a qué suscripción
+  // pertenece, y sólo si no lo dice se usa el identificador del objeto —que es lo correcto para
+  // `customer.subscription.deleted`, donde el objeto *es* la suscripción—. Stripe pone ese dato
+  // en dos lugares según la versión de su API y se prueban los dos, porque devolver el
+  // identificador de la factura equivale a no encontrar nunca nada.
+  const objeto = body?.data?.object;
+  const referenciaExterna =
+    objeto?.subscription || objeto?.parent?.subscription_details?.subscription || objeto?.id;
   if (!referenciaExterna) {
     return { valido: false, motivo: MOTIVO.SIN_REFERENCIA, referenciaExterna: null, estado: 'pendiente' };
   }

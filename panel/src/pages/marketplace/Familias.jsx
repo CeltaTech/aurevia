@@ -41,14 +41,24 @@ export function MarketplaceFamilias() {
   const [guardandoEfectivo, setGuardandoEfectivo] = useState(false);
   const [escaneando, setEscaneando] = useState(false);
   const [mensajeCanje, setMensajeCanje] = useState(null);
+  const [rielesConectados, setRielesConectados] = useState([]);
+  const [rielElegido, setRielElegido] = useState({});
+  const [dandoAlta, setDandoAlta] = useState(null);
   const lectorRef = useRef(null);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
     try {
-      const { suscripciones: filas } = await llamarApi('/suscripciones');
+      // Las pasarelas se piden junto con las suscripciones porque de ellas depende qué se puede
+      // hacer en esta pantalla: con ninguna conectada no hay alta posible, y con más de una hay
+      // que elegir cuál cobra. Elegir por la Prestadora sería decidir con qué cobra.
+      const [{ suscripciones: filas }, { pasarelas }] = await Promise.all([
+        llamarApi('/suscripciones'),
+        llamarApi('/pasarela'),
+      ]);
       setSuscripciones(filas);
+      setRielesConectados((pasarelas || []).filter((p) => p.estado_conexion === 'conectada').map((p) => p.proveedor));
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -98,6 +108,26 @@ export function MarketplaceFamilias() {
       setError(mensajeDeError(err, t));
     } finally {
       setGuardandoEfectivo(false);
+    }
+  }
+
+  async function darDeAlta(suscripcionId) {
+    setDandoAlta(suscripcionId);
+    setError(null);
+    setMensajeCanje(null);
+    try {
+      // El riel sólo se manda cuando hay más de uno conectado; con uno solo lo resuelve el motor.
+      const elegido = rielesConectados.length > 1 ? rielElegido[suscripcionId] : null;
+      await llamarApi(`/suscripciones/${suscripcionId}/alta-en-pasarela`, {
+        method: 'POST',
+        body: JSON.stringify(elegido ? { proveedor: elegido } : {}),
+      });
+      setMensajeCanje(t.marketplace.alta_pasarela_exitosa);
+      await recargar();
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setDandoAlta(null);
     }
   }
 
@@ -191,6 +221,7 @@ export function MarketplaceFamilias() {
               <th>{t.marketplace.col_estado}</th>
               <th>{t.marketplace.col_monto}</th>
               <th>{t.marketplace.col_proximo_cobro}</th>
+              <th>{t.marketplace.col_cobro}</th>
               <th></th>
             </tr>
           </thead>
@@ -205,12 +236,71 @@ export function MarketplaceFamilias() {
                   <td>{s.monto_mensual}</td>
                   <td>{s.proximo_cobro || '—'}</td>
                   <td>
+                    {s.alta_en_pasarela
+                      ? t.marketplace[`medio_${s.proveedor}`] || s.proveedor
+                      : t.marketplace.alta_pasarela_pendiente}
+                  </td>
+                  <td>
                     <Button variant="secondary" onClick={() => verCobros(s.id)}>{t.marketplace.ver_cobros}</Button>
                   </td>
                 </tr>
                 {expandida === s.id && (
                   <tr>
-                    <td colSpan={7}>
+                    <td colSpan={8}>
+                      <div style={{ marginBottom: '1.5rem' }}>
+                        <h3>{t.marketplace.alta_pasarela_titulo}</h3>
+                        {s.alta_en_pasarela ? (
+                          <p className="panel-explicacion">
+                            {t.marketplace.alta_pasarela_hecha.replace(
+                              '{proveedor}',
+                              t.marketplace[`medio_${s.proveedor}`] || s.proveedor
+                            )}
+                            {s.url_accion && (
+                              <>
+                                {' '}
+                                <a href={s.url_accion} target="_blank" rel="noreferrer">
+                                  {t.marketplace.alta_pasarela_link}
+                                </a>
+                              </>
+                            )}
+                          </p>
+                        ) : (
+                          <>
+                            <p className="panel-explicacion">{t.marketplace.alta_pasarela_explicacion}</p>
+                            {rielesConectados.length === 0 ? (
+                              <Alert variant="warning">{t.errores.motivos.sin_pasarela_conectada}</Alert>
+                            ) : (
+                              <>
+                                {rielesConectados.length > 1 && (
+                                  <FormField
+                                    label={t.marketplace.alta_pasarela_riel}
+                                    name={`riel-${s.id}`}
+                                    type="select"
+                                    value={rielElegido[s.id] || ''}
+                                    onChange={(e) => setRielElegido((r) => ({ ...r, [s.id]: e.target.value }))}
+                                  >
+                                    <option value="">{t.comun.seleccionar}</option>
+                                    {rielesConectados.map((riel) => (
+                                      <option key={riel} value={riel}>
+                                        {t.marketplace[`medio_${riel}`] || riel}
+                                      </option>
+                                    ))}
+                                  </FormField>
+                                )}
+                                <Button
+                                  onClick={() => darDeAlta(s.id)}
+                                  disabled={
+                                    dandoAlta === s.id || (rielesConectados.length > 1 && !rielElegido[s.id])
+                                  }
+                                >
+                                  {dandoAlta === s.id ? t.comun.guardando : t.marketplace.alta_pasarela_boton}
+                                </Button>
+                              </>
+                            )}
+                          </>
+                        )}
+                      </div>
+
                       <h3>{t.marketplace.cobros_titulo}</h3>
                       <table className="panel-tabla">
                         <thead>

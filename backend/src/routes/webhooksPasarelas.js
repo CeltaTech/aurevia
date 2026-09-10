@@ -22,6 +22,7 @@ import express, { Router } from 'express';
 import { supabase } from '../db/connection.js';
 import { obtenerAdaptador, confirmaConsultando } from '../pasarelas/index.js';
 import { esRechazoDeAutenticidad, MOTIVO } from '../pasarelas/firmaWebhook.js';
+import { registrarCobroExitoso } from '../utils/cobrosMarketplace.js';
 
 export const webhooksPasarelasRouter = Router();
 
@@ -102,14 +103,36 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', async (req, res) => {
     return res.status(200).json({ ok: true });
   }
 
+  // La referencia que trae el aviso puede ser una de dos cosas, y las dos son legítimas:
+  //
+  //   * **la del cobro**, en los rieles a los que este producto les arma el cobro mes a mes
+  //     (`modo`, `cobranza_efectivo`): la referencia se guardó al armarlo y la fila ya existe;
+  //   * **la de la suscripción**, en los rieles que cobran solos (`mercadopago`, `stripe`,
+  //     `debin`): ahí no hay ninguna fila de ese mes, porque el que decidió cobrar fue el
+  //     proveedor y de este lado nadie armó nada.
+  //
+  // Hasta acá se buscaba únicamente entre los cobros. Para el segundo grupo eso no encontraba
+  // nunca nada: se contestaba 200 y se seguía de largo, así que la suscripción cobraba todos
+  // los meses del lado del proveedor y en esta base no figuraba ninguno.
   const { data: cobro } = await supabase
     .from('cobros_marketplace')
-    .select('id, suscripcion_id')
+    .select('id, suscripcion_id, periodo')
     .eq('prestadora_id', prestadoraId)
     .eq('referencia_externa', referenciaExterna)
     .maybeSingle();
 
-  if (!cobro) {
+  const { data: suscripcionDelAviso } = cobro
+    ? { data: null }
+    : await supabase
+        .from('suscripciones_marketplace')
+        .select('id, monto_mensual, proximo_cobro')
+        .eq('prestadora_id', prestadoraId)
+        .eq('referencia_externa', referenciaExterna)
+        .maybeSingle();
+
+  // Ni un cobro ni una suscripción de esta Prestadora: el aviso vino firmado pero habla de algo
+  // que acá no existe. Se contesta 200 para que el proveedor no lo repita para siempre.
+  if (!cobro && !suscripcionDelAviso) {
     return res.status(200).json({ ok: true });
   }
 
@@ -129,17 +152,41 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', async (req, res) => {
     }
   }
 
-  await supabase.from('cobros_marketplace').update({ estado_cobro: estadoFinal }).eq('id', cobro.id);
+  const suscripcionId = cobro ? cobro.suscripcion_id : suscripcionDelAviso.id;
+  let periodo = cobro ? cobro.periodo : null;
+
+  if (cobro) {
+    await supabase.from('cobros_marketplace').update({ estado_cobro: estadoFinal }).eq('id', cobro.id);
+  } else if (estadoFinal !== 'pendiente') {
+    // El cobro del mes nace acá, con el estado que trajo el aviso. Un aviso `pendiente` no deja
+    // fila: no dice nada que se pueda anotar, y el mismo mes puede traer varios antes de que la
+    // plata entre.
+    periodo = suscripcionDelAviso.proximo_cobro || new Date().toISOString().slice(0, 10);
+    // Sin `referencia_externa`, a propósito: la que trajo el aviso es la de la suscripción, no la
+    // de este mes. Guardarla acá haría que el aviso del mes que viene encontrara esta misma fila
+    // y pisara el cobro anterior en vez de anotar uno nuevo.
+    const { error: errorInsertar } = await supabase.from('cobros_marketplace').insert({
+      suscripcion_id: suscripcionId,
+      prestadora_id: prestadoraId,
+      medio: proveedor,
+      monto: suscripcionDelAviso.monto_mensual,
+      periodo,
+      estado_cobro: estadoFinal,
+    });
+    if (errorInsertar) {
+      console.error('No se pudo anotar el cobro que avisó la pasarela:', proveedor, prestadoraId, errorInsertar.message);
+      return res.status(200).json({ ok: true });
+    }
+  }
 
   if (estadoFinal === 'exitoso') {
-    const proximoCobro = new Date();
-    proximoCobro.setMonth(proximoCobro.getMonth() + 1);
-    await supabase
-      .from('suscripciones_marketplace')
-      .update({ estado: 'activa', proximo_cobro: proximoCobro.toISOString().slice(0, 10) })
-      .eq('id', cobro.suscripcion_id);
+    // Quién mueve la suscripción cuando entra la plata es uno solo, y es el mismo que usan las
+    // dos cargas a mano del Panel (`utils/cobrosMarketplace.js`). Acá se contaba el mes siguiente
+    // desde la fecha de hoy: con eso, un cobro que entraba tarde corría la fecha de cobro un poco
+    // más cada mes, y el 31 de enero más un mes daba 3 de marzo.
+    await registrarCobroExitoso({ suscripcionId, periodo });
   } else if (estadoFinal === 'fallido') {
-    await supabase.from('suscripciones_marketplace').update({ estado: 'vencida' }).eq('id', cobro.suscripcion_id);
+    await supabase.from('suscripciones_marketplace').update({ estado: 'vencida' }).eq('id', suscripcionId);
   }
 
   res.status(200).json({ ok: true });

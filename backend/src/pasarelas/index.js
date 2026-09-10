@@ -4,8 +4,13 @@
 // importa un adaptador puntual por su nombre de proveedor.
 //
 // Interfaz común que todo adaptador implementa:
-//   crearSuscripcion({ prestadoraId, credencial, suscripcionId, monto, moneda, familiaId })
+//   crearSuscripcion({ prestadoraId, credencial, suscripcionId, monto, moneda, familiaId,
+//                      emailPagador })
 //     -> { estadoConexion: 'pendiente'|'exitoso', referenciaExterna, urlAccion? }
+//     `emailPagador` es el correo real de la Familia. Lo resuelve quien llama —hoy
+//     `backend/src/utils/altaEnPasarela.js`, que es el único punto por donde se da de alta una
+//     suscripción—, porque el adaptador no consulta la base. Los rieles que no se lo piden al
+//     proveedor lo ignoran; Mercado Pago sin él rechaza el alta.
 //   cancelarSuscripcion({ credencial, referenciaExterna })
 //     -> { ok: true }
 //   verificarWebhook({ credencial, secretoFirma, headers, consulta, cuerpoCrudo, body })
@@ -16,6 +21,11 @@
 //     `firmaWebhook.js`).
 //   consultarEstado({ credencial, referenciaExterna })
 //     -> { estado: 'exitoso'|'fallido'|'pendiente' }
+//
+// Y sólo los rieles que no dejan nada recurrente del lado del proveedor implementan además:
+//   armarCobroDelPeriodo({ credencial, monto, referencia, vencimiento })
+//     -> { referenciaExterna, urlAccion, codigoCupon }
+//     Se reconocen por la marca `ARMA_COBRO_POR_PERIODO`, que consulta `armaCobroPorPeriodo()`.
 //
 // El monto SIEMPRE viaja como parámetro — ningún adaptador asume un monto fijo, para poder
 // reutilizarse el día que se automatice también el cobro de facturas_familia (pendiente #59).
@@ -54,6 +64,20 @@ export function requiereSecretoFirma(proveedor) {
  *  Lo contesta el adaptador, que es el único que sabe cómo avisa su proveedor (regla 12). */
 export function confirmaConsultando(proveedor) {
   return Boolean(ADAPTADORES[proveedor]?.CONFIRMA_CONSULTANDO);
+}
+
+/** ¿A este riel hay que armarle el cobro período por período? Los seis se parten en dos grupos y
+ *  la diferencia manda todo lo demás: los que cobran solos (`mercadopago`, `stripe`, `debin`)
+ *  quedan andando con el alta de la suscripción y avisan por cada mes que cobran; los que no
+ *  (`modo`, `cobranza_efectivo`) no dejan nada recurrente, y si nadie les pide el QR o el cupón de
+ *  este mes, la Familia no tiene con qué pagar. `efectivo_manual` no es ninguno de los dos: ahí
+ *  no hay proveedor, la carga la hace una persona desde el Panel.
+ *
+ *  Lo contesta el adaptador y no una lista escrita en el trabajo diario, que es lo mismo que ya
+ *  hacen `requiereSecretoFirma` y `confirmaConsultando`: el día que entre un riel nuevo, alcanza
+ *  con que su archivo diga de qué grupo es. */
+export function armaCobroPorPeriodo(proveedor) {
+  return Boolean(ADAPTADORES[proveedor]?.ARMA_COBRO_POR_PERIODO);
 }
 
 export function obtenerAdaptador(proveedor) {

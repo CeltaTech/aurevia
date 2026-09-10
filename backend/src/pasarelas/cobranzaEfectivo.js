@@ -14,6 +14,11 @@ const API_BASE = process.env.COBRANZA_EFECTIVO_API_BASE;
  *  en todos (`celtatech\CLAUDE.md` §8). */
 export const REQUIERE_SECRETO_FIRMA = true;
 
+/** En la red de cobranza no queda nada recurrente: cada período hay que pedirle su propio cupón.
+ *  Con esta marca, el trabajo diario que arma los cobros
+ *  (`backend/src/utils/cobrosMarketplace.js`) sabe que a este riel le toca pasar todos los meses. */
+export const ARMA_COBRO_POR_PERIODO = true;
+
 export async function crearSuscripcion({ suscripcionId }) {
   return { estadoConexion: 'pendiente', referenciaExterna: suscripcionId };
 }
@@ -36,6 +41,14 @@ export async function generarCupon({ credencial, monto, referencia, vencimiento 
     throw new Error(data?.mensaje || 'La red de cobranza rechazó la generación del cupón');
   }
   return { codigoCupon: data.codigo, referenciaExterna: data.id };
+}
+
+/** El nombre común con el que el trabajo diario le pide a cualquier riel de período el cobro de
+ *  un mes (ver el mismo en `modo.js`). Acá sí viaja la fecha de vencimiento: un cupón de la red
+ *  de cobranza vence, y quien decide hasta cuándo se puede pagar es este producto, no la red. */
+export async function armarCobroDelPeriodo({ credencial, monto, referencia, vencimiento }) {
+  const { codigoCupon, referenciaExterna } = await generarCupon({ credencial, monto, referencia, vencimiento });
+  return { referenciaExterna, urlAccion: null, codigoCupon };
 }
 
 /** Comprueba que el aviso vino firmado y recién ahí lo interpreta. Antes alcanzaba con que

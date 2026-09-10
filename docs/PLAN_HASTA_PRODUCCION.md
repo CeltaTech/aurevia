@@ -33,15 +33,15 @@
 
 *Las tres preguntas que trababan estos pasos ya están contestadas.* **El precio, el calendario y el cierre pasan a colgar del Servicio**, no del Paciente. **El Cliente puede no ser una Familia**: el glosario ya lo define como Cliente Contratante —una Familia, una Obra Social o cualquier otro que contrate—, en pantalla se dice «Cliente» a secas y en la base el identificador es `contratante`; y un mismo Servicio puede cuidar a más de un Paciente. **Los motivos de cierre son un catálogo de cada Prestadora**, que puede agregar y también quitar los que vienen de fábrica; salen de fábrica siete: fin de demanda, fallecimiento, internación del Paciente, la Familia da de baja, se cortó el pago o la cobertura, se mudó fuera de la zona, y otro.
 
-**5.** Tipo de Cliente e identificador en `servicios`, en lugar del `familia_id` obligatorio de hoy, y reescribir `public.validar_servicio_misma_familia()` —con sus dos disparadores, uno en `guardias` y otro en `prestaciones`— junto con la que hace el trabajo de verdad, `public.exigir_paciente_y_servicio_de_la_misma_familia()`, que es la que compara las dos Familias.
+**5.** `vigente_desde` y `vigente_hasta` en `prestaciones`, con el relleno de las filas que ya existen.
 
-**6.** `vigente_desde` y `vigente_hasta` en `prestaciones`, con el relleno de las filas que ya existen.
+**6.** `servicio_id` en `series_guardias`, y que el motor nocturno lo copie a cada guardia. Es el eslabón que falta: hoy se lee en todas partes y no se escribe en ninguna, así que las guardias nacen sin Servicio.
 
-**7.** `servicio_id` en `series_guardias`, y que el motor nocturno lo copie a cada guardia. Es el eslabón que falta: hoy se lee en todas partes y no se escribe en ninguna, así que las guardias nacen sin Servicio.
+**7.** Mudar el precio, el calendario y el cierre del Paciente al Servicio. En la misma migración se reescriben las dos políticas de cierre del Coordinador, que hoy dependen de que exista una fila de cierre de ese Paciente.
 
-**8.** Mudar el precio, el calendario y el cierre del Paciente al Servicio. En la misma migración se reescriben las dos políticas de cierre del Coordinador, que hoy dependen de que exista una fila de cierre de ese Paciente.
+**8.** Motivos de cierre configurables por Prestadora: quitar el CHECK con los tres valores fijos.
 
-**9.** Motivos de cierre configurables por Prestadora: quitar el CHECK con los tres valores fijos.
+**9.** Sacar las columnas viejas que quedaron de los cuatro pasos anteriores, en una migración aparte y recién cuando ninguna pantalla las lea: `servicios.familia_id` con su índice y su clave foránea, y la parte del disparador `interno.exigir_contratante_del_servicio()` que las mantenía sincronizadas. Antes de sacar cada una se comprueba contra el código que nadie la nombre.
 
 ---
 

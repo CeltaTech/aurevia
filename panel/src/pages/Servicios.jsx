@@ -9,12 +9,18 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { mensajeDeError } from '../lib/errores';
+import { clienteDelServicio } from '../lib/clienteDelServicio';
 
 // Se piden `paciente_id` de las prestaciones y de las guardias, y no un conteo, porque de
 // esas dos listas sale la tercera cifra de la tarjeta: a cuántos Pacientes cubre el
 // Servicio. Es la misma persona contada una sola vez aunque tenga veinte guardias.
+//
+// Quién contrató sale de `tipo_contratante` y `contratante_id`, que es lo que la base guarda:
+// el Cliente puede no ser una Familia. La solicitud sigue anidada porque, cuando sí lo es, de
+// ahí salen su nombre y su localidad; quien decide cuál de los dos caminos se usa es
+// `clienteDelServicio`, no esta pantalla.
 const CONSULTA =
-  'id, etiqueta, estado, created_at, familia_id, ' +
+  'id, etiqueta, estado, created_at, tipo_contratante, contratante_id, ' +
   'familias(id, solicitudes!familias_solicitud_id_fkey(nombre, localidad)), ' +
   'prestaciones(paciente_id), guardias(paciente_id)';
 
@@ -55,7 +61,7 @@ export function Servicios() {
       const b = f.busqueda.toLowerCase();
       return (
         s.etiqueta?.toLowerCase().includes(b) ||
-        s.familias?.solicitudes?.nombre?.toLowerCase().includes(b)
+        clienteDelServicio(s).contacto?.nombre?.toLowerCase().includes(b)
       );
     });
   }, [filas, f]);
@@ -105,7 +111,7 @@ export function Servicios() {
                   <div>
                     <p className="lista-tarjeta-titulo">{s.etiqueta || '—'}</p>
                     <p className="lista-tarjeta-subtitulo">
-                      {t.servicios.col_cliente}: {s.familias?.solicitudes?.nombre || '—'}
+                      {t.servicios.col_cliente}: {clienteDelServicio(s).contacto?.nombre || '—'}
                     </p>
                   </div>
                   <span className={claseBadge(s.estado)}>

@@ -8,6 +8,7 @@ import { claseBadge } from '../../lib/tonos';
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
 import { mensajeDeError } from '../../lib/errores';
+import { clienteDelServicio } from '../../lib/clienteDelServicio';
 
 // Cuántas guardias se traen a la ficha. Un Servicio de meses puede tener cientos, y esta
 // pantalla no es la grilla de guardias: acá alcanza con las más próximas para entender de
@@ -32,7 +33,10 @@ export function ServicioDetalle() {
 
     const { data: s, error: fallaServicio } = await supabase
       .from('servicios')
-      .select('id, etiqueta, estado, created_at, familia_id, familias(id, solicitudes!familias_solicitud_id_fkey(nombre, telefono, email, localidad))')
+      // Quién contrató sale de `tipo_contratante` y `contratante_id`; la solicitud sigue anidada
+      // porque de ahí salen los datos de contacto cuando el Cliente es una Familia. Cuál de los
+      // dos caminos se usa lo decide `clienteDelServicio`, no esta pantalla.
+      .select('id, etiqueta, estado, created_at, tipo_contratante, contratante_id, familias(id, solicitudes!familias_solicitud_id_fkey(nombre, telefono, email, localidad))')
       .eq('id', id)
       .single();
 
@@ -128,7 +132,8 @@ export function ServicioDetalle() {
     );
   }
 
-  const contacto = servicio.familias?.solicitudes;
+  const cliente = clienteDelServicio(servicio);
+  const contacto = cliente.contacto;
 
   return (
     <div>
@@ -155,8 +160,8 @@ export function ServicioDetalle() {
         <p><strong>{contacto?.nombre || '—'}</strong></p>
         <p>{contacto?.localidad || '—'}</p>
         <p>{contacto?.telefono || '—'} · {contacto?.email || '—'}</p>
-        {servicio.familia_id && (
-          <Button variant="secondary" onClick={() => navigate(`/familias/${servicio.familia_id}`)}>
+        {cliente.ruta && (
+          <Button variant="secondary" onClick={() => navigate(cliente.ruta)}>
             {t.servicios.detalle.cliente_ver_ficha}
           </Button>
         )}

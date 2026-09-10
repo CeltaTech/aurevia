@@ -11,6 +11,7 @@ import { cargarPacientesDeGuardias, conPacientes, pacientesDeGuardia, textoDePac
 import { estaEnElPlantel } from '../lib/candidatos';
 import { laDioUnaPersona } from '../lib/fuentesAlertaTemprana';
 import { horaDelMomento } from '../lib/horarios';
+import { nombreMotivoGuardado } from '../lib/motivoDeCierre';
 import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
@@ -310,7 +311,7 @@ export function Continuidad() {
               <strong>{t.continuidad.col_paciente}: {n.paciente_nombre}</strong>
               <div>{t.continuidad.col_ausente}: {n.asistente_nombre}</div>
               <div>{t.continuidad.notificaciones_cierre_cerrado_por}: {n.cerrado_por_nombre}</div>
-              <div>{t.continuidad.col_motivo}: {t.prestaciones[`cierre_servicio_motivo_${n.motivo}`] || n.motivo}</div>
+              <div>{t.continuidad.col_motivo}: {nombreMotivoGuardado(n.motivo, t)}</div>
               {n.motivo_detalle && <div>{n.motivo_detalle}</div>}
             </div>
             <div className="panel-modal-acciones">

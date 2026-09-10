@@ -10,6 +10,8 @@ import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
+import { useMotivosCierreServicio } from '../../hooks/useMotivosCierreServicio';
+import { nombreMotivo, valorGuardado } from '../../lib/motivoDeCierre';
 import { con } from '../../lib/textos';
 import { hoyISO } from '../../lib/horarios';
 import { situacion } from '../../lib/vigenciaPrestacion';
@@ -71,8 +73,16 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   const [errorRevision, setErrorRevision] = useState(null);
 
   const [servicioCierreId, setServicioCierreId] = useState('');
+  // Acá se guarda el identificador de la fila del catálogo, no el texto: hace falta saber si ese
+  // motivo pide detalle. Lo que se guarda en el cierre lo arma `valorGuardado`.
   const [motivoCierre, setMotivoCierre] = useState('');
   const [motivoDetalleCierre, setMotivoDetalleCierre] = useState('');
+  const {
+    filas: motivosCierre,
+    estado: estadoMotivosCierre,
+    error: errorMotivosCierre,
+  } = useMotivosCierreServicio(prestadoraId);
+  const motivoCierreElegido = motivosCierre.find((m) => m.id === motivoCierre) ?? null;
   const [cerrandoServicio, setCerrandoServicio] = useState(false);
   const [errorCierre, setErrorCierre] = useState(null);
   const [asistentesAviso, setAsistentesAviso] = useState([]);
@@ -279,6 +289,10 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       setErrorCierre(t.prestaciones.seleccionar_servicio);
       return;
     }
+    if (!motivoCierreElegido) {
+      setErrorCierre(t.prestaciones.cierre_servicio_falta_motivo);
+      return;
+    }
 
     if (!(await confirmarDestructivo(t.prestaciones.confirmar_cierre_servicio))) return;
 
@@ -294,8 +308,8 @@ export function PrestacionesPaciente({ paciente, onClose }) {
         // abierto para este mismo Paciente, ése sigue corriendo.
         servicio_id: servicioCierreId,
         paciente_id: paciente.id,
-        motivo: motivoCierre,
-        motivo_detalle: motivoCierre === 'otro' ? motivoDetalleCierre : null,
+        motivo: valorGuardado(motivoCierreElegido),
+        motivo_detalle: motivoCierreElegido.pide_detalle ? motivoDetalleCierre.trim() : null,
         cerrado_por: usuario.id,
       })
       .select()
@@ -388,8 +402,8 @@ export function PrestacionesPaciente({ paciente, onClose }) {
             paciente_id: paciente.id,
             asistente_id: asistenteId,
             cerrado_por: usuario.id,
-            motivo: motivoCierre,
-            motivo_detalle: motivoCierre === 'otro' ? motivoDetalleCierre : null,
+            motivo: valorGuardado(motivoCierreElegido),
+            motivo_detalle: motivoCierreElegido.pide_detalle ? motivoDetalleCierre.trim() : null,
           }))
         );
       }
@@ -963,25 +977,36 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                     </option>
                   ))}
                 </FormField>
+                {/* La lista sale del catálogo de la Prestadora, que ella arma en Configuración.
+                    Si se quedó sin ninguno encendido no hay nada que elegir, y se lo dice: sin
+                    eso el desplegable aparecería vacío y sin explicación. */}
+                {estadoMotivosCierre === 'listo' && motivosCierre.length === 0 && (
+                  <Alert variant="info">{t.prestaciones.cierre_servicio_sin_motivos}</Alert>
+                )}
+                {errorMotivosCierre && <Alert variant="error">{errorMotivosCierre}</Alert>}
                 <FormField
                   label={t.prestaciones.cierre_servicio_motivo}
                   name="motivo_cierre"
                   type="select"
                   value={motivoCierre}
                   onChange={(e) => setMotivoCierre(e.target.value)}
+                  disabled={estadoMotivosCierre !== 'listo' || motivosCierre.length === 0}
                 >
                   <option value="">{t.guardias.nueva_guardia.elegir}</option>
-                  <option value="fin_demanda">{t.prestaciones.cierre_servicio_motivo_fin_demanda}</option>
-                  <option value="fallecimiento">{t.prestaciones.cierre_servicio_motivo_fallecimiento}</option>
-                  <option value="otro">{t.prestaciones.cierre_servicio_motivo_otro}</option>
+                  {motivosCierre.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {nombreMotivo(m, t)}
+                    </option>
+                  ))}
                 </FormField>
-                {motivoCierre === 'otro' && (
+                {motivoCierreElegido?.pide_detalle && (
                   <FormField
                     label={t.prestaciones.cierre_servicio_motivo_detalle}
                     name="motivo_detalle_cierre"
                     type="textarea"
                     value={motivoDetalleCierre}
                     onChange={(e) => setMotivoDetalleCierre(e.target.value)}
+                    required
                   />
                 )}
                 <Button
@@ -990,8 +1015,8 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                   disabled={
                     cerrandoServicio ||
                     !servicioCierreId ||
-                    !motivoCierre ||
-                    (motivoCierre === 'otro' && !motivoDetalleCierre)
+                    !motivoCierreElegido ||
+                    (motivoCierreElegido.pide_detalle && !motivoDetalleCierre.trim())
                   }
                 >
                   {cerrandoServicio ? t.prestaciones.cerrando_servicio : t.prestaciones.cierre_servicio_titulo}

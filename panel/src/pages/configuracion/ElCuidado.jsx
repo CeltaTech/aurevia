@@ -10,6 +10,7 @@ import { EstadoLista } from '../../components/layout/EstadoLista';
 import { ESTADO_ACTIVO } from '../../lib/candidatos';
 import { MINUTOS_DEMORA_POR_OMISION, minutosDeDemoraTolerados } from '../../lib/llegadaEstimada';
 import { mensajeDeError } from '../../lib/errores';
+import { esMotivoDeFabrica, nombreMotivo } from '../../lib/motivoDeCierre';
 import { con } from '../../lib/textos';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
@@ -268,7 +269,184 @@ function TabServicios() {
 
       <TabServiciosPersonalEmergencia />
       <TabServiciosMotivosAvisoPrevio />
+      <TabServiciosMotivosCierre />
       <TabServiciosEtapasIncorporacion />
+    </div>
+  );
+}
+
+/* Por qué se cierra la atención de un Paciente. La Prestadora nace con siete motivos y a partir
+   de ahí la lista es suya: apaga los que no usa, borra los que le sobran y agrega los propios.
+   Los que trae el producto se muestran traducidos y los de ella, tal como los escribió; el
+   archivo `lib/motivoDeCierre.js` es el único que sabe cuál es cuál. */
+function TabServiciosMotivosCierre() {
+  const modal = useModalAccesible(() => setCreandoNuevo(false));
+  const { t } = useLocale();
+  const confirmarDestructivo = useConfirmarDestructivo();
+  const [motivos, setMotivos] = useState([]);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [creandoNuevo, setCreandoNuevo] = useState(false);
+  const [nombreNuevo, setNombreNuevo] = useState('');
+  const [pideDetalleNuevo, setPideDetalleNuevo] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [actualizandoId, setActualizandoId] = useState(null);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const { motivos: filas } = await llamarApi('/motivos-cierre-servicio');
+      setMotivos(filas);
+      setEstado('listo');
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+      setEstado('error');
+    }
+  }, [t]);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  async function cambiar(fila, cambios) {
+    setActualizandoId(fila.id);
+    setError(null);
+    try {
+      await llamarApi(`/motivos-cierre-servicio/${fila.id}`, { method: 'PATCH', body: JSON.stringify(cambios) });
+      recargar();
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setActualizandoId(null);
+    }
+  }
+
+  async function borrar(fila) {
+    if (!(await confirmarDestructivo(t.configuracion.motivos_cierre_confirmar_borrar))) return;
+    setActualizandoId(fila.id);
+    setError(null);
+    try {
+      await llamarApi(`/motivos-cierre-servicio/${fila.id}`, { method: 'DELETE' });
+      recargar();
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setActualizandoId(null);
+    }
+  }
+
+  async function crear() {
+    setGuardando(true);
+    setError(null);
+    try {
+      await llamarApi('/motivos-cierre-servicio', {
+        method: 'POST',
+        body: JSON.stringify({ nombre: nombreNuevo, pide_detalle: pideDetalleNuevo }),
+      });
+      setNombreNuevo('');
+      setPideDetalleNuevo(false);
+      setCreandoNuevo(false);
+      recargar();
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <div>
+      <h2>{t.configuracion.motivos_cierre_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.motivos_cierre_explicacion}</p>
+      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
+      <div className="panel-filtros">
+        <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.motivos_cierre_nuevo}</Button>
+      </div>
+      <EstadoLista
+        estado={estado}
+        error={error}
+        vacio={estado === 'listo' && motivos.length === 0}
+        recargar={recargar}
+        mensajeVacio={t.configuracion.motivos_cierre_vacio}
+      >
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{t.configuracion.motivos_cierre_col_nombre}</th>
+              <th>{t.configuracion.motivos_cierre_col_origen}</th>
+              <th>{t.configuracion.motivos_cierre_col_pide_detalle}</th>
+              <th>{t.configuracion.documentos_tipos_col_activo}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {motivos.map((m) => {
+              const nombre = nombreMotivo(m, t);
+              return (
+                <tr key={m.id}>
+                  <td>{nombre}</td>
+                  <td>
+                    {esMotivoDeFabrica(m)
+                      ? t.configuracion.motivos_cierre_origen_producto
+                      : t.configuracion.motivos_cierre_origen_prestadora}
+                  </td>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={m.pide_detalle}
+                      onChange={() => cambiar(m, { pide_detalle: !m.pide_detalle })}
+                      disabled={actualizandoId === m.id}
+                      aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.motivos_cierre_col_pide_detalle, nombre })}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={m.activo}
+                      onChange={() => cambiar(m, { activo: !m.activo })}
+                      disabled={actualizandoId === m.id}
+                      aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.documentos_tipos_col_activo, nombre })}
+                    />
+                  </td>
+                  <td>
+                    <Button variant="secondary" onClick={() => borrar(m)} disabled={actualizandoId === m.id}>
+                      {t.comun.borrar}
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </EstadoLista>
+
+      {creandoNuevo && (
+        <div className="panel-modal-fondo" onClick={() => setCreandoNuevo(false)}>
+          <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+            <h2 id={modal.idTitulo}>{t.configuracion.motivos_cierre_nuevo}</h2>
+            <FormField
+              label={t.configuracion.motivos_cierre_col_nombre}
+              name="nombre"
+              value={nombreNuevo}
+              onChange={(e) => setNombreNuevo(e.target.value)}
+              required
+            />
+            <FormField
+              label={t.configuracion.motivos_cierre_col_pide_detalle}
+              name="pide_detalle"
+              type="checkbox"
+              checked={pideDetalleNuevo}
+              onChange={(e) => setPideDetalleNuevo(e.target.checked)}
+              ayuda={t.configuracion.motivos_cierre_pide_detalle_ayuda}
+            />
+            <div className="panel-modal-acciones">
+              <Button variant="secondary" onClick={() => setCreandoNuevo(false)} disabled={guardando}>{t.comun.cancelar}</Button>
+              <Button onClick={crear} disabled={guardando || !nombreNuevo}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

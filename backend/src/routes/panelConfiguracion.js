@@ -717,10 +717,8 @@ panelConfiguracionRouter.patch('/modo-control-matricula', async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- Catálogo de motivos de aviso previo de guardia, configurable por prestadora
-//     (pendiente #18 candidato 3, docs/PLAN_HASTA_PRODUCCION.md — ver
-//     supabase/migrations/). Mismo patrón que
-//     /documentos-tipo. ---
+// --- Catálogo de motivos de aviso previo de guardia, configurable por prestadora. Mismo patrón
+//     que /documentos-tipo. ---
 panelConfiguracionRouter.get('/motivos-aviso-previo', async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
   const { data, error } = await supabase
@@ -755,9 +753,74 @@ panelConfiguracionRouter.patch('/motivos-aviso-previo/:id', async (req, res) => 
   res.json({ ok: true });
 });
 
-// --- Horizonte de generación de guardias de series abiertas (pendiente #18 punto 2,
-//     docs/PLAN_HASTA_PRODUCCION.md) — cron backend/src/utils/generacionSeriesGuardia.js. Mismo patrón
-//     que /documentos-tipo/plazo-aviso: valor en "prestadoras", expuesto acá para reusar el
+// --- Catálogo de motivos de cierre de la atención de un Paciente, configurable por prestadora.
+//     Dos niveles: las filas que trae el producto guardan "clave" y su texto sale de las
+//     traducciones; las que agrega la prestadora guardan "nombre", escrito por ella. Cada
+//     prestadora nace con las siete de fábrica y a partir de ahí la lista es suya: puede
+//     apagarlas, borrarlas y agregar las que quiera. La base lo controla en el disparador
+//     "validar_motivo_cierres_servicio_paciente", no acá. ---
+panelConfiguracionRouter.get('/motivos-cierre-servicio', async (req, res) => {
+  const { data, error } = await supabase
+    .from('motivos_cierre_servicio')
+    .select('*')
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .order('orden');
+  if (error) return responderError(res, error);
+  res.json({ motivos: data });
+});
+
+/* Sólo se crean motivos propios: los de fábrica ya vienen sembrados y su clave no la elige
+   nadie desde afuera —el texto visible de una clave sale de las traducciones, así que una clave
+   inventada acá se mostraría con un guion—. Por eso esta ruta no acepta "clave". */
+panelConfiguracionRouter.post('/motivos-cierre-servicio', async (req, res) => {
+  const { nombre, pide_detalle } = req.body;
+  if (!nombre) return res.status(400).json({ error: 'Falta nombre' });
+  const { error } = await supabase
+    .from('motivos_cierre_servicio')
+    .insert({
+      nombre,
+      pide_detalle: pide_detalle === true,
+      prestadora_id: req.usuarioPanel.prestadoraId,
+    });
+  if (error) return responderError(res, error);
+  res.json({ ok: true });
+});
+
+/* Lo que se puede cambiar de una fila ya creada es si está encendida y si pide detalle. El
+   nombre no: es lo que quedó escrito en los cierres que ya se hicieron con ese motivo, y
+   cambiarlo acá los dejaría diciendo una cosa distinta de la que se eligió ese día. Para
+   corregir un nombre se apaga el motivo y se crea otro. */
+panelConfiguracionRouter.patch('/motivos-cierre-servicio/:id', async (req, res) => {
+  const { activo, pide_detalle } = req.body;
+  const cambios = {};
+  if (activo !== undefined) cambios.activo = activo === true;
+  if (pide_detalle !== undefined) cambios.pide_detalle = pide_detalle === true;
+  if (Object.keys(cambios).length === 0) {
+    return res.status(400).json({ error: 'No hay nada que cambiar' });
+  }
+  cambios.updated_at = new Date().toISOString();
+  let query = supabase.from('motivos_cierre_servicio').update(cambios).eq('id', req.params.id);
+  query = acotarAPrestadora(query, req.usuarioPanel);
+  const { data, error } = await query.select('id');
+  if (error) return responderError(res, error);
+  if (!data?.length) return res.status(404).json({ error: 'No se encontró ese motivo de cierre' });
+  res.json({ ok: true });
+});
+
+/* Borrar no rompe la historia: el cierre guarda el texto del motivo, no una referencia a esta
+   fila, así que los cierres viejos siguen diciendo lo que decían. */
+panelConfiguracionRouter.delete('/motivos-cierre-servicio/:id', async (req, res) => {
+  let query = supabase.from('motivos_cierre_servicio').delete().eq('id', req.params.id);
+  query = acotarAPrestadora(query, req.usuarioPanel);
+  const { data, error } = await query.select('id');
+  if (error) return responderError(res, error);
+  if (!data?.length) return res.status(404).json({ error: 'No se encontró ese motivo de cierre' });
+  res.json({ ok: true });
+});
+
+// --- Horizonte de generación de guardias de series abiertas — cron
+//     backend/src/utils/generacionSeriesGuardia.js. Mismo patrón que
+//     /documentos-tipo/plazo-aviso: valor en "prestadoras", expuesto acá para reusar el
 //     scoping por prestadora ya resuelto en este router. ---
 panelConfiguracionRouter.get('/guardias/horizonte-generacion', async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;

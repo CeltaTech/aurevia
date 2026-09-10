@@ -3,9 +3,11 @@ import { supabase } from '../lib/supabaseClient';
 import { mensajeDeError } from '../lib/errores';
 import { useLocale } from '../i18n/LocaleContext';
 
-// Catálogo de motivos de aviso previo de guardia, configurable por Prestadora. Reemplaza los
-// cuatro valores fijos que antes tenía GuardiaAcciones.jsx (Salud/Transporte/Familiar/Otro).
-export function useMotivosAvisoPrevio(prestadoraId) {
+// Los motivos de cierre que la Prestadora tiene encendidos hoy: es la lista que se ofrece al
+// cerrar la atención de un Paciente. Reemplaza los tres valores fijos que antes estaban escritos
+// adentro de la pantalla —y adentro de una restricción de la base—. El catálogo completo, con los
+// apagados, se administra desde Configuración y pasa por el motor.
+export function useMotivosCierreServicio(prestadoraId) {
   const { t } = useLocale();
   const [filas, setFilas] = useState([]);
   const [estado, setEstado] = useState('cargando'); // cargando | error | listo
@@ -17,10 +19,11 @@ export function useMotivosAvisoPrevio(prestadoraId) {
     setError(null);
 
     const { data, error: errorConsulta } = await supabase
-      .from('motivos_aviso_previo_guardia')
+      .from('motivos_cierre_servicio')
       .select('*')
       .eq('prestadora_id', prestadoraId)
-      .order('nombre');
+      .eq('activo', true)
+      .order('orden');
 
     if (errorConsulta) {
       setError(mensajeDeError(errorConsulta, t));

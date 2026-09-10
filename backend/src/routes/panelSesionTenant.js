@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 // Sesión de soporte técnico — pendiente #30.
 // Es la única puerta por la que superadmin entra a una Prestadora real: una por vez, nunca
@@ -77,7 +78,7 @@ panelSesionTenantRouter.get('/', requiereRolPanel, requiereSoporteTecnico, async
     const sesion = await buscarSesionVigenteYCerrarSiVencio(req.usuarioPanel.id);
     res.json({ sesion });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    responderError(res, err);
   }
 });
 
@@ -91,10 +92,10 @@ panelSesionTenantRouter.post('/actividad', requiereRolPanel, requiereSoporteTecn
       .update({ ultima_actividad_at: new Date().toISOString() })
       .eq('id', sesion.id);
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return responderError(res, error);
     res.json({ ok: true, sesion });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    responderError(res, err);
   }
 });
 
@@ -133,7 +134,7 @@ panelSesionTenantRouter.post('/', requiereRolPanel, requiereSoporteTecnico, asyn
     .select('prestadora_id, entrada_at, expira_at')
     .single();
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   await registrarAuditoria({ adminId: req.usuarioPanel.id, prestadoraId: prestadora_id, tipoEvento: 'login' });
   res.json({ ok: true, sesion });
 });
@@ -154,11 +155,11 @@ panelSesionTenantRouter.post('/renovar', requiereRolPanel, requiereSoporteTecnic
       })
       .eq('id', sesion.id);
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return responderError(res, error);
     await registrarAuditoria({ adminId: req.usuarioPanel.id, prestadoraId: sesion.prestadora_id, tipoEvento: 'renovacion' });
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    responderError(res, err);
   }
 });
 
@@ -176,7 +177,7 @@ panelSesionTenantRouter.post('/salir', requiereRolPanel, requiereSoporteTecnico,
     .eq('admin_id', req.usuarioPanel.id)
     .is('salida_at', null);
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (sesionSaliente) {
     await registrarAuditoria({ adminId: req.usuarioPanel.id, prestadoraId: sesionSaliente.prestadora_id, tipoEvento: 'logout', detalle: { motivo: 'manual' } });
   }

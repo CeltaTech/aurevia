@@ -1,6 +1,6 @@
 name: Verificar textos traducidos
 
-# Los guardarraíles del texto visible. Son dos programas y revisan cinco cosas:
+# Los guardarraíles del texto visible. Son tres programas y revisan seis cosas:
 #
 #   buscar_textos_huerfanos.mjs (pendiente #114)
 #     · que no queden textos traducidos que ninguna pantalla usa. Una traducción muerta no
@@ -16,7 +16,14 @@ name: Verificar textos traducidos
 #       en la base: la advertencia legal, los consentimientos, el catálogo de módulos.
 #       Esos se le escapaban al control y se corrigieron dos veces a ojo (#145).
 #
-# Los dos existen por el mismo motivo: eran reglas escritas que solo controlaba una persona
+#   verificar_errores_hacia_afuera.mjs
+#     · que ninguna respuesta del motor lleve al navegador el texto crudo de un error de la
+#       base. Un mensaje de error es texto visible como cualquier otro (§8 de CLAUDE.md), y
+#       el de Postgres nombra tablas, columnas y restricciones: quien mire la pantalla con
+#       las herramientas del navegador abiertas se lleva el mapa del esquema. Había 209
+#       lugares así, en 28 archivos; todos pasan ahora por el punto único, `responderError`.
+#
+# Los tres existen por el mismo motivo: eran reglas escritas que solo controlaba una persona
 # leyendo, y se rompieron igual. Una regla que corta la publicación no se rompe sola.
 #
 # Corre en cada push y en cada pull request. Ninguno de los dos tiene dependencias que haya
@@ -39,6 +46,13 @@ jobs:
 
       - name: Buscar textos huérfanos y a medio traducir
         run: node scripts/buscar_textos_huerfanos.mjs
+
+      # `if: always()` por lo mismo que los de abajo: son problemas distintos y conviene
+      # verlos juntos, no uno por vez en dos publicaciones seguidas. Este no necesita ni
+      # `psql` ni credenciales: sólo lee los archivos del motor.
+      - name: Buscar errores de la base que salgan hacia el navegador
+        if: always()
+        run: node scripts/verificar_errores_hacia_afuera.mjs
 
       # Para leer los textos guardados en la base hace falta `psql`, el programa que consulta
       # una base Postgres desde la línea de comandos. Las máquinas de GitHub ya lo traen

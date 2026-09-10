@@ -9,7 +9,7 @@ import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { generarConstanciaAusencia, descargarPDF } from '../../lib/generarDocumentoCese';
 import { ESTADO_ACTIVO } from '../../lib/candidatos';
-import { mensajeDeError } from '../../lib/errores';
+import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 
 const TIPOS = ['enfermedad_inculpable', 'accidente_inculpable', 'otra_licencia', 'ausencia_no_justificada'];
 const API_URL = import.meta.env.VITE_API_URL;
@@ -23,8 +23,8 @@ async function llamarApiAusencias(path, opciones = {}) {
       ...opciones.headers,
     },
   });
-  const resultado = await respuesta.json();
-  if (!respuesta.ok) throw new Error(resultado.error);
+  const resultado = await respuesta.json().catch(() => ({}));
+  if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
   return resultado;
 }
 

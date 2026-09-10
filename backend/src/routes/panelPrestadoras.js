@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 // Listado de prestadoras licenciatarias — pendiente #30, ítem I.
 // Solo superadmin tiene uso legítimo de esto:
@@ -23,6 +24,6 @@ panelPrestadorasRouter.get('/', requiereRolPanel, requiereSuperadmin, async (req
     .select('id, nombre_fantasia, estado')
     .order('nombre_fantasia', { ascending: true });
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ prestadoras: data });
 });

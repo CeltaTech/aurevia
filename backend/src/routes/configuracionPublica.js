@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { supabase } from '../db/connection.js';
 import { resolverPrestadoraPublica } from '../middleware/resolverPrestadoraPublica.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 // `mergeParams` para que llegue el `:prestadora` de la dirección donde se monta este router
 // (server.js) — de ahí sale la Prestadora, no de un encabezado (resolverPrestadoraPublica.js).
@@ -21,7 +22,7 @@ configuracionPublicaRouter.get('/', resolverPrestadoraPublica, async (req, res) 
     .order('orden');
 
   if (errorZonas) {
-    return res.status(500).json({ error: errorZonas.message });
+    return responderError(res, errorZonas);
   }
 
   res.json({ empresa, zonas });

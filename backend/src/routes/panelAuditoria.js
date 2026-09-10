@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 import { esAdminOSuperior } from '../utils/roles.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 // Ítem G del pendiente #30 — lectura del registro de auditoría de las sesiones de soporte
 // técnico (tabla auditoria_soporte_tecnico). El motor entra a la base con la llave de servicio,
@@ -59,6 +60,6 @@ panelAuditoriaRouter.get('/', requiereRolPanel, async (req, res) => {
     .order('created_at', { ascending: false })
     .limit(500);
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ eventos: data });
 });

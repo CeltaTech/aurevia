@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { situacionDelError, mensajeDeError, SITUACIONES } from '../errores';
+import { situacionDelError, mensajeDeError, errorDeLaRespuesta, SITUACIONES } from '../errores';
 import { T } from '../../i18n/translations';
 
 const t = T['es-AR'];
@@ -76,5 +76,80 @@ describe('mensajeDeError', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(mensajeDeError(new Error('x'), { comun: { error_generico: 'ups' } })).toBe('ups');
     expect(mensajeDeError(new Error('x'), undefined)).toBe('');
+  });
+});
+
+/* El camino entero, del motor a la pantalla.
+   ==========================================================================
+
+   Las pruebas de arriba comprueban las dos piezas por separado. Ésta comprueba que están
+   enganchadas, que es justo lo que estuvo roto: el motor mandaba el motivo, la pantalla armaba
+   el error a mano con `new Error(resultado.error)` y el motivo se perdía en ese renglón. El
+   mecanismo estaba entero y no funcionaba, porque nadie recorría el camino de punta a punta.
+
+   Lo que se simula es la respuesta del motor tal como llega: un número, un texto crudo para el
+   registro del servidor y un motivo. La frase no viaja nunca desde el motor —no sabe en qué
+   idioma está mirando la persona—, así que se busca acá, en las traducciones. */
+describe('del motor a la pantalla', () => {
+  // Lo mínimo que `errorDeLaRespuesta` mira de la respuesta de `fetch`.
+  const respuestaConNumero = (status) => ({ ok: false, status });
+
+  it('el motivo que manda el motor llega hasta la frase traducida', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const error = errorDeLaRespuesta(respuestaConNumero(409), {
+      error: 'A user with this email address has already been registered',
+      motivo: 'correo_de_otra_cuenta',
+    });
+
+    const texto = mensajeDeError(error, t);
+
+    expect(texto).toBe(t.errores.motivos.correo_de_otra_cuenta);
+    // Y no la frase genérica del 409, que es exactamente lo que se veía cuando el motivo se
+    // perdía al armar el error a mano: la persona leía "ya existe un registro con esos datos"
+    // en vez de enterarse de que ese correo ya está en uso.
+    expect(texto).not.toBe(t.errores.duplicado);
+    // Ni el texto crudo del motor, que está escrito para quien programa.
+    expect(texto).not.toMatch(/registered|email/i);
+  });
+
+  it('el mismo motivo se explica en los tres idiomas', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const error = errorDeLaRespuesta(respuestaConNumero(409), { motivo: 'modalidad_con_asistentes' });
+
+    for (const idioma of Object.keys(T)) {
+      const textos = T[idioma];
+      const texto = mensajeDeError(error, textos);
+      expect(texto, `${idioma}.errores.motivos.modalidad_con_asistentes`).toBe(
+        textos.errores.motivos.modalidad_con_asistentes,
+      );
+      expect(texto).not.toBe(textos.errores.duplicado);
+    }
+  });
+
+  it('sin motivo, la explicación sale del número de la respuesta', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(mensajeDeError(errorDeLaRespuesta(respuestaConNumero(403), { error: 'permission denied' }), t)).toBe(
+      t.errores.sin_permiso,
+    );
+    expect(mensajeDeError(errorDeLaRespuesta(respuestaConNumero(404), {}), t)).toBe(t.errores.no_encontrado);
+  });
+
+  it('un cuerpo vacío no deja a la pantalla sin explicación', () => {
+    // Una baja puede contestar sin cuerpo, y una caída del servidor puede contestar una página
+    // que no es JSON. En los dos casos la pantalla lee `{}` y lo único que queda es el número.
+    // Ése era el agujero que las pantallas tapaban con un `|| 'Error de red'` escrito a mano.
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const texto = mensajeDeError(errorDeLaRespuesta(respuestaConNumero(503), {}), t);
+    expect(texto).toBe(t.errores.falla_del_sistema);
+    expect(texto).not.toMatch(/HTTP|503/);
+  });
+
+  it('un motivo sin traducción no le muestra un código a nadie', () => {
+    // El motor puede adelantarse a las traducciones. Si eso pasa, se cae a la situación del
+    // número y quien mira ve una frase, nunca `motivo_que_nadie_tradujo`.
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const texto = mensajeDeError(errorDeLaRespuesta(respuestaConNumero(409), { motivo: 'motivo_que_nadie_tradujo' }), t);
+    expect(texto).toBe(t.errores.duplicado);
+    expect(texto).not.toMatch(/motivo_que_nadie_tradujo/);
   });
 });

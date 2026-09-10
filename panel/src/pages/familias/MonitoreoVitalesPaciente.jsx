@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
-import { mensajeDeError } from '../../lib/errores';
+import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 
@@ -17,8 +17,8 @@ async function llamarApi(path, opciones = {}) {
     ...opciones,
     headers: { Authorization: `Bearer ${data.session?.access_token}`, ...opciones.headers },
   });
-  const resultado = await respuesta.json();
-  if (!respuesta.ok) throw new Error(resultado.error);
+  const resultado = await respuesta.json().catch(() => ({}));
+  if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
   return resultado;
 }
 
@@ -98,8 +98,8 @@ export function MonitoreoVitalesPaciente({ paciente, onClose }) {
         headers: { Authorization: `Bearer ${sesion.session?.access_token}` },
         body: formData,
       });
-      const resultadoSubida = await respuestaSubida.json();
-      if (!respuestaSubida.ok) throw new Error(resultadoSubida.error);
+      const resultadoSubida = await respuestaSubida.json().catch(() => ({}));
+      if (!respuestaSubida.ok) throw errorDeLaRespuesta(respuestaSubida, resultadoSubida);
 
       if (autorizacion) {
         await supabase.from('autorizaciones_monitoreo_paciente').update({ vigente: false }).eq('id', autorizacion.id);

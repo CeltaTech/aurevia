@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 // Interruptor de MFA obligatorio para superadmin.
 // Es configuración de plataforma, no de una prestadora puntual — por eso va en su propio
@@ -23,7 +24,7 @@ panelConfiguracionPlataformaRouter.get('/mfa', requiereSuperadmin, async (req, r
     .from('configuracion_plataforma')
     .select('mfa_admin_obligatorio, updated_at')
     .single();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ configuracion: data });
 });
 
@@ -36,7 +37,7 @@ panelConfiguracionPlataformaRouter.patch('/mfa', requiereSuperadmin, async (req,
     .from('configuracion_plataforma')
     .update({ mfa_admin_obligatorio, actualizado_por: req.usuarioPanel.id, updated_at: new Date().toISOString() })
     .eq('id', true);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 

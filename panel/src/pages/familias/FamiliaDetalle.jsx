@@ -26,7 +26,7 @@ import {
   DocumentoDeLaInstruccion,
   RegistrarPapelFirmadoModal,
 } from './AccesosDelCirculoModal';
-import { mensajeDeError } from '../../lib/errores';
+import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { llamarApiPanel } from '../../lib/apiPanel';
 import { con } from '../../lib/textos';
 
@@ -151,10 +151,8 @@ export function FamiliaDetalle() {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${data.session?.access_token}` },
       });
-      const resultado = await respuesta.json();
-      if (!respuesta.ok) {
-        throw new Error(resultado.error || t.familias.circulo.quitar_error);
-      }
+      const resultado = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
       recargarCirculo();
     } catch (err) {
       setErrorCirculo(mensajeDeError(err, t));
@@ -172,10 +170,8 @@ export function FamiliaDetalle() {
         method: 'POST',
         headers: { Authorization: `Bearer ${data.session?.access_token}` },
       });
-      const resultado = await respuesta.json();
-      if (!respuesta.ok) {
-        throw new Error(resultado.error);
-      }
+      const resultado = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
       setMensajeReenvio({ tipo: 'info', texto: t.comun.invitacion_reenviada });
     } catch {
       setMensajeReenvio({ tipo: 'error', texto: t.comun.reenviar_invitacion_error });

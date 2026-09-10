@@ -6,7 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { traducirValor } from '../i18n/valores';
-import { mensajeDeError } from '../lib/errores';
+import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -20,8 +20,8 @@ async function llamarApi(path, opciones = {}) {
       ...opciones.headers,
     },
   });
-  const resultado = await respuesta.json();
-  if (!respuesta.ok) throw new Error(resultado.error);
+  const resultado = await respuesta.json().catch(() => ({}));
+  if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
   return resultado;
 }
 

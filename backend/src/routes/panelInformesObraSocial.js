@@ -3,6 +3,7 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 import { requierePermiso } from '../utils/permisos.js';
 import { horasEntre, horasImputadasAlPaciente } from '../utils/horasDeGuardia.js';
+import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 
 export const panelInformesObraSocialRouter = Router();
 
@@ -42,7 +43,10 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
   if (errorPaciente) throw new Error(errorPaciente.message);
-  if (!paciente) throw new Error('Paciente no encontrado en esta Prestadora');
+  // Con motivo, y no con la frase suelta que estaba antes. Además la frase contaba de más:
+  // decía «en esta Prestadora», o sea que distinguía «no existe» de «existe pero es de otra».
+  // El motivo contesta lo mismo en los dos casos.
+  if (!paciente) throw new ErrorConMotivo('paciente_no_encontrado', `paciente ${pacienteId}`);
 
   // Las guardias de este Paciente salen de la lista de Pacientes de cada guardia, no de la
   // columna vieja `guardias.paciente_id`: esa columna guarda UNO solo, así que en una guardia
@@ -143,7 +147,7 @@ panelInformesObraSocialRouter.get('/preview', requiereRolPanel, async (req, res)
     });
     res.json({ contenido });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    responderError(res, error, 400);
   }
 });
 
@@ -176,7 +180,7 @@ panelInformesObraSocialRouter.post('/', requiereRolPanel, requierePermiso('valid
 
     res.json(informe);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    responderError(res, error, 400);
   }
 });
 
@@ -192,7 +196,7 @@ panelInformesObraSocialRouter.get('/', requiereRolPanel, async (req, res) => {
   if (hasta) query = query.lte('periodo_hasta', hasta);
 
   const { data, error } = await query;
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json(data);
 });
 
@@ -203,7 +207,7 @@ panelInformesObraSocialRouter.get('/:id', requiereRolPanel, async (req, res) => 
     .eq('id', req.params.id)
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!data) return res.status(404).json({ error: 'Informe no encontrado' });
   res.json(data);
 });
@@ -236,6 +240,6 @@ panelInformesObraSocialRouter.post('/:id/anular', requiereRolPanel, requierePerm
     .eq('id', informe.id)
     .select()
     .single();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json(data);
 });

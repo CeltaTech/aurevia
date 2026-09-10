@@ -5,6 +5,7 @@ import { conPacientes } from '../utils/pacientesDeGuardia.js';
 import { conDomicilioDelDia } from '../utils/domicilioDelDia.js';
 import { visibilidadDelPedido } from '../utils/visibilidadPrestadora.js';
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 // ============================================================================
 // Las guardias que se le ofrecieron al Asistente, y su respuesta.
@@ -94,8 +95,16 @@ function motivoDelBloqueo(error) {
 // Una respuesta que no es un error del sistema sino una situación prevista: el turno ya lo
 // tomó otro, el plazo se venció, la invitación ya estaba contestada. Viaja con su motivo, que
 // es lo que le permite a la pantalla decir exactamente qué pasó y no "algo falló".
+//
+// El `detalle` se queda de este lado, igual que en `responderError`: en dos de las llamadas es
+// el texto crudo del disparador de la base —`matricula_bloquea:vencida:`—, y eso no puede salir
+// al teléfono (`celtatech/CLAUDE.md` §6); en las otras es una frase escrita en castellano acá
+// adentro, que tampoco sirve, porque la pantalla arma la frase con el motivo y las traducciones
+// de los tres idiomas. Afuera va el código y nada más.
 function noSePudo(res, estado, motivo, detalle) {
-  return res.status(estado).json({ error: detalle, motivo });
+  const donde = res?.req ? `${res.req.method} ${res.req.originalUrl ?? res.req.url}` : 'sin ruta';
+  console.error(`[${estado}] ${donde} — ${motivo}:`, detalle);
+  return res.status(estado).json({ error: motivo, motivo });
 }
 
 // ============================================================================
@@ -120,7 +129,7 @@ appAsistentesOfertasRouter.get('/', requiereRolAsistente, async (req, res) => {
     .limit(50);
 
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
 
   const ahora = Date.now();
@@ -151,7 +160,7 @@ appAsistentesOfertasRouter.get('/', requiereRolAsistente, async (req, res) => {
       })),
     });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    responderError(res, e);
   }
 });
 
@@ -202,7 +211,7 @@ appAsistentesOfertasRouter.post('/:id/responder', requiereRolAsistente, async (r
       .is('respuesta', null)
       .select('id');
 
-    if (falla) return res.status(500).json({ error: falla.message });
+    if (falla) return responderError(res, falla);
     if (!contestada?.length) {
       return noSePudo(res, 409, 'oferta_ya_contestada', 'La invitación ya estaba contestada');
     }
@@ -241,7 +250,7 @@ appAsistentesOfertasRouter.post('/:id/responder', requiereRolAsistente, async (r
     // razón: entre la invitación y esta respuesta pudo vencerse el papel que lo autoriza.
     const bloqueo = motivoDelBloqueo(fallaGuardia);
     if (bloqueo) return noSePudo(res, 409, bloqueo, fallaGuardia.message);
-    return res.status(500).json({ error: fallaGuardia.message });
+    return responderError(res, fallaGuardia);
   }
   if (!tomada?.length) {
     return noSePudo(res, 409, 'guardia_ya_cubierta', 'La guardia ya no está disponible');
@@ -269,7 +278,7 @@ appAsistentesOfertasRouter.post('/:id/responder', requiereRolAsistente, async (r
 
     const bloqueo = motivoDelBloqueo(fallaOferta);
     if (bloqueo) return noSePudo(res, 409, bloqueo, fallaOferta.message);
-    return res.status(500).json({ error: fallaOferta.message });
+    return responderError(res, fallaOferta);
   }
 
   res.json({ respuesta: 'acepta', guardiaId: guardia.id });

@@ -4,6 +4,7 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { supabase } from '../db/connection.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 export const panelVitalesAutorizacionRouter = Router();
 
@@ -61,7 +62,7 @@ panelVitalesAutorizacionRouter.post(
       .from(BUCKET)
       .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
     if (error) {
-      return res.status(500).json({ error: error.message });
+      return responderError(res, error);
     }
 
     res.json({ archivoUrl: ruta });
@@ -81,7 +82,7 @@ panelVitalesAutorizacionRouter.get('/:pacienteId/archivo-url', requiereRolPanel,
 
   const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(ruta, 60);
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
 
   res.json({ url: data.signedUrl });

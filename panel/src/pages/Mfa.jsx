@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabaseClient';
 import { FormField } from '../components/ui/FormField';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
-import { mensajeDeError } from '../lib/errores';
+import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -118,8 +118,8 @@ export function Mfa() {
         method: 'POST',
         headers: { Authorization: `Bearer ${data.session?.access_token}` },
       });
-      const resultado = await respuesta.json();
-      if (!respuesta.ok) throw new Error(resultado.error);
+      const resultado = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
       setCodigoSolicitado(true);
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -142,8 +142,8 @@ export function Mfa() {
         },
         body: JSON.stringify({ codigo: codigoRecuperacion }),
       });
-      const resultado = await respuesta.json();
-      if (!respuesta.ok) throw new Error(resultado.error);
+      const resultado = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
       await refrescarMfa();
     } catch (err) {
       setError(mensajeDeError(err, t));

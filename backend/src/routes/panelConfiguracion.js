@@ -39,7 +39,7 @@ panelConfiguracionRouter.get('/empresa', async (req, res) => {
     .select('*')
     .eq('prestadora_id', prestadoraId)
     .single();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ empresa: data });
 });
 
@@ -54,7 +54,7 @@ panelConfiguracionRouter.patch('/empresa', async (req, res) => {
     .update({ nombre, telefono, whatsapp_numero, email, dominio, zona_cobertura_texto, updated_at: new Date().toISOString() })
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .select('prestadora_id');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'Esta Prestadora todavía no tiene configuración cargada' });
   res.json({ ok: true });
 });
@@ -64,7 +64,7 @@ panelConfiguracionRouter.get('/zonas', async (req, res) => {
   let query = supabase.from('zonas_cobertura').select('*').order('orden');
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query;
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ zonas: data });
 });
 
@@ -76,7 +76,7 @@ panelConfiguracionRouter.post('/zonas', async (req, res) => {
   const { error } = await supabase
     .from('zonas_cobertura')
     .insert({ codigo, nombre, categoria, orden: orden ?? 0, prestadora_id: req.usuarioPanel.prestadoraId });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
@@ -88,7 +88,7 @@ panelConfiguracionRouter.patch('/zonas/:id', async (req, res) => {
     .eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query.select('id');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró esa zona de cobertura' });
   res.json({ ok: true });
 });
@@ -97,7 +97,7 @@ panelConfiguracionRouter.delete('/zonas/:id', async (req, res) => {
   let query = supabase.from('zonas_cobertura').delete().eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query.select('id');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró esa zona de cobertura' });
   res.json({ ok: true });
 });
@@ -107,7 +107,7 @@ panelConfiguracionRouter.get('/escalada-relevo', async (req, res) => {
   let query = supabase.from('configuracion_escalada_relevo').select('*').order('nivel');
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query;
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ niveles: data });
 });
 
@@ -119,7 +119,7 @@ panelConfiguracionRouter.post('/escalada-relevo', async (req, res) => {
   const { error } = await supabase
     .from('configuracion_escalada_relevo')
     .insert({ nivel, minutos_demora, orden_prioridad, plantilla_mensaje, prestadora_id: req.usuarioPanel.prestadoraId });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
@@ -131,7 +131,7 @@ panelConfiguracionRouter.patch('/escalada-relevo/:id', async (req, res) => {
     .eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query.select('id');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró ese nivel de la escalada de relevo' });
   res.json({ ok: true });
 });
@@ -140,7 +140,7 @@ panelConfiguracionRouter.delete('/escalada-relevo/:id', async (req, res) => {
   let query = supabase.from('configuracion_escalada_relevo').delete().eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query.select('id');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró ese nivel de la escalada de relevo' });
   res.json({ ok: true });
 });
@@ -157,7 +157,7 @@ panelConfiguracionRouter.get('/etapas-incorporacion', async (req, res) => {
     .select('*')
     .eq('prestadora_id', prestadoraId)
     .order('orden');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ etapas: data });
 });
 
@@ -171,11 +171,11 @@ panelConfiguracionRouter.post('/etapas-incorporacion', async (req, res) => {
     .order('orden', { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (errorMax) return res.status(500).json({ error: errorMax.message });
+  if (errorMax) return responderError(res, errorMax);
   const { error } = await supabase
     .from('etapas_incorporacion_asistente')
     .insert({ clave, nombre, orden: (maxOrden?.orden ?? 0) + 1, prestadora_id: req.usuarioPanel.prestadoraId });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
@@ -187,7 +187,7 @@ panelConfiguracionRouter.patch('/etapas-incorporacion/:id', async (req, res) => 
     .eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query.select('id');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró esa etapa del Proceso de Incorporación de Asistentes' });
   res.json({ ok: true });
 });
@@ -205,7 +205,7 @@ panelConfiguracionRouter.patch('/etapas-incorporacion/:id/mover', async (req, re
     .select('*')
     .eq('prestadora_id', prestadoraId)
     .order('orden');
-  if (errorEtapas) return res.status(500).json({ error: errorEtapas.message });
+  if (errorEtapas) return responderError(res, errorEtapas);
 
   const indice = etapas.findIndex((e) => e.id === req.params.id);
   if (indice === -1) return res.status(404).json({ error: 'Etapa no encontrada' });
@@ -217,7 +217,7 @@ panelConfiguracionRouter.patch('/etapas-incorporacion/:id/mover', async (req, re
   const { error: errorSwap } = await supabase.rpc('intercambiar_orden_etapas_incorporacion', {
     p_id_a: actual.id, p_orden_a: vecino.orden, p_id_b: vecino.id, p_orden_b: actual.orden,
   });
-  if (errorSwap) return res.status(500).json({ error: errorSwap.message });
+  if (errorSwap) return responderError(res, errorSwap);
   res.json({ ok: true });
 });
 
@@ -230,7 +230,7 @@ panelConfiguracionRouter.get('/personal-emergencia', async (req, res) => {
     .order('created_at', { ascending: false });
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query;
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ personal: data });
 });
 
@@ -242,7 +242,7 @@ panelConfiguracionRouter.post('/personal-emergencia', async (req, res) => {
   const { error } = await supabase
     .from('personal_emergencia')
     .insert({ asistente_id, tipo, prestadora_id: req.usuarioPanel.prestadoraId });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
@@ -251,7 +251,7 @@ panelConfiguracionRouter.patch('/personal-emergencia/:id', async (req, res) => {
   let query = supabase.from('personal_emergencia').update({ activo }).eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query.select('id');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró a esa persona en el personal de emergencia' });
   res.json({ ok: true });
 });
@@ -260,7 +260,7 @@ panelConfiguracionRouter.delete('/personal-emergencia/:id', async (req, res) => 
   let query = supabase.from('personal_emergencia').delete().eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query.select('id');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró a esa persona en el personal de emergencia' });
   res.json({ ok: true });
 });
@@ -279,7 +279,7 @@ panelConfiguracionRouter.get('/notificaciones', async (req, res) => {
     .select('evento, descripcion, emails, activo, whatsapp_activo, notificar_familia');
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query;
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ notificaciones: mezclarAvisosConCatalogo(data) });
 });
 
@@ -305,7 +305,7 @@ panelConfiguracionRouter.patch('/notificaciones/:evento', async (req, res) => {
     },
     { onConflict: 'evento,prestadora_id' }
   );
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
@@ -320,7 +320,7 @@ panelConfiguracionRouter.get('/aviso-previo-guardia', async (req, res) => {
     .select('minutos_aviso_previo_guardia')
     .eq('id', req.usuarioPanel.prestadoraId)
     .single();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ minutos_aviso_previo_guardia: data.minutos_aviso_previo_guardia });
 });
 
@@ -339,7 +339,7 @@ panelConfiguracionRouter.patch('/aviso-previo-guardia', async (req, res) => {
     .from('prestadoras')
     .update({ minutos_aviso_previo_guardia: minutos })
     .eq('id', req.usuarioPanel.prestadoraId);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
@@ -355,7 +355,7 @@ panelConfiguracionRouter.get('/alertas-ia', async (req, res) => {
     .select('palabras_clave, reportes_a_analizar, roja_avisa_familia, amarilla_avisa_familia, amarilla_avisa_coordinador')
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ configuracion: data || { ...VALORES_POR_DEFECTO_ALERTAS_IA } });
 });
 
@@ -397,7 +397,7 @@ panelConfiguracionRouter.patch('/alertas-ia', async (req, res) => {
     amarilla_avisa_coordinador: Boolean(amarilla_avisa_coordinador),
     updated_at: new Date().toISOString(),
   });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
@@ -410,7 +410,7 @@ panelConfiguracionRouter.get('/visibilidad-app', async (req, res) => {
     .from('configuracion_visibilidad_app')
     .select('clave, visible')
     .eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ visibilidad: mezclarVisibilidadConCatalogo(data) });
 });
 
@@ -436,7 +436,7 @@ panelConfiguracionRouter.patch('/visibilidad-app/:clave', async (req, res) => {
     },
     { onConflict: 'prestadora_id,clave' }
   );
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
@@ -465,7 +465,7 @@ panelConfiguracionRouter.get('/whatsapp', soloAdminDePrestadora, async (req, res
     .select('prestadora_id, activo, numero_telefono, waba_id, phone_number_id, verificado_at, updated_at, app_secret_secret_id, verify_token_secret_id')
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   // De los tres secretos sale de acá si están cargados o no, nunca su contenido: la referencia
   // a la caja fuerte tampoco viaja al navegador, porque no le sirve para nada y sí sirve para
   // aparecer en un registro donde no tendría que estar.
@@ -507,14 +507,14 @@ panelConfiguracionRouter.patch('/whatsapp', soloAdminDePrestadora, async (req, r
       phone_number_id,
       updated_at: new Date().toISOString(),
     });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
 
   if (token) {
     const { error: errorToken } = await supabase.rpc('guardar_token_whatsapp', {
       p_prestadora_id: prestadoraId,
       p_token: token,
     });
-    if (errorToken) return res.status(500).json({ error: errorToken.message });
+    if (errorToken) return responderError(res, errorToken);
   }
 
   // Los dos secretos con los que el motor le cree a un aviso entrante de Meta (pendiente #165):
@@ -526,7 +526,7 @@ panelConfiguracionRouter.patch('/whatsapp', soloAdminDePrestadora, async (req, r
       p_prestadora_id: prestadoraId,
       p_secreto: app_secret,
     });
-    if (errorAppSecret) return res.status(500).json({ error: errorAppSecret.message });
+    if (errorAppSecret) return responderError(res, errorAppSecret);
   }
 
   if (verify_token) {
@@ -534,7 +534,7 @@ panelConfiguracionRouter.patch('/whatsapp', soloAdminDePrestadora, async (req, r
       p_prestadora_id: prestadoraId,
       p_token: verify_token,
     });
-    if (errorVerifyToken) return res.status(500).json({ error: errorVerifyToken.message });
+    if (errorVerifyToken) return responderError(res, errorVerifyToken);
   }
 
   res.json({ ok: true });
@@ -559,7 +559,7 @@ panelConfiguracionRouter.get('/email-remitente', soloAdminDePrestadoraCorreo, as
     .select('prestadora_id, activo, direccion_remitente, usuario_smtp, host, puerto, verificado_at, updated_at, credencial_secret_id')
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({
     emailRemitente: data
       ? { ...data, credencial_cargada: !!data.credencial_secret_id, credencial_secret_id: undefined }
@@ -582,14 +582,14 @@ panelConfiguracionRouter.patch('/email-remitente', soloAdminDePrestadoraCorreo, 
       puerto: puerto || 465,
       updated_at: new Date().toISOString(),
     });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
 
   if (password) {
     const { error: errorPassword } = await supabase.rpc('guardar_credencial_smtp_prestadora', {
       p_prestadora_id: prestadoraId,
       p_password: password,
     });
-    if (errorPassword) return res.status(500).json({ error: errorPassword.message });
+    if (errorPassword) return responderError(res, errorPassword);
   }
 
   res.json({ ok: true });
@@ -601,7 +601,7 @@ panelConfiguracionRouter.get('/whatsapp/plantillas', async (req, res) => {
   let query = supabase.from('plantillas_whatsapp').select('*').order('created_at', { ascending: false });
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query;
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ plantillas: data });
 });
 
@@ -618,7 +618,7 @@ panelConfiguracionRouter.post('/whatsapp/plantillas', async (req, res) => {
     prestadora_id: req.usuarioPanel.prestadoraId,
     created_by: req.usuarioPanel.id,
   });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
@@ -630,7 +630,7 @@ panelConfiguracionRouter.patch('/whatsapp/plantillas/:id', async (req, res) => {
     .eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query.select('id');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró esa plantilla de WhatsApp' });
   res.json({ ok: true });
 });
@@ -639,7 +639,7 @@ panelConfiguracionRouter.delete('/whatsapp/plantillas/:id', async (req, res) => 
   let query = supabase.from('plantillas_whatsapp').delete().eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query.select('id');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró esa plantilla de WhatsApp' });
   res.json({ ok: true });
 });
@@ -657,8 +657,8 @@ panelConfiguracionRouter.get('/documentos-tipo', async (req, res) => {
     supabase.from('tipos_documento_asistente').select('*').eq('prestadora_id', prestadoraId).order('nombre'),
     supabase.from('prestadoras').select('dias_aviso_vencimiento_documentos').eq('id', prestadoraId).single(),
   ]);
-  if (errorTipos) return res.status(500).json({ error: errorTipos.message });
-  if (errorPrestadora) return res.status(500).json({ error: errorPrestadora.message });
+  if (errorTipos) return responderError(res, errorTipos);
+  if (errorPrestadora) return responderError(res, errorPrestadora);
   res.json({ tipos, dias_aviso_vencimiento_documentos: prestadora.dias_aviso_vencimiento_documentos });
 });
 
@@ -668,7 +668,7 @@ panelConfiguracionRouter.post('/documentos-tipo', async (req, res) => {
   const { error } = await supabase
     .from('tipos_documento_asistente')
     .insert({ nombre, requiere_vencimiento: requiere_vencimiento ?? true, prestadora_id: req.usuarioPanel.prestadoraId });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
@@ -681,7 +681,7 @@ panelConfiguracionRouter.patch('/documentos-tipo/plazo-aviso', async (req, res) 
     .from('prestadoras')
     .update({ dias_aviso_vencimiento_documentos: dias })
     .eq('id', req.usuarioPanel.prestadoraId);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
@@ -700,7 +700,7 @@ panelConfiguracionRouter.get('/modo-control-matricula', async (req, res) => {
     .select('modo_control_matricula')
     .eq('id', req.usuarioPanel.prestadoraId)
     .single();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ modo: data.modo_control_matricula });
 });
 
@@ -713,7 +713,7 @@ panelConfiguracionRouter.patch('/modo-control-matricula', async (req, res) => {
     .from('prestadoras')
     .update({ modo_control_matricula: modo })
     .eq('id', req.usuarioPanel.prestadoraId);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
@@ -728,7 +728,7 @@ panelConfiguracionRouter.get('/motivos-aviso-previo', async (req, res) => {
     .select('*')
     .eq('prestadora_id', prestadoraId)
     .order('nombre');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ motivos: data });
 });
 
@@ -738,7 +738,7 @@ panelConfiguracionRouter.post('/motivos-aviso-previo', async (req, res) => {
   const { error } = await supabase
     .from('motivos_aviso_previo_guardia')
     .insert({ nombre, prestadora_id: req.usuarioPanel.prestadoraId });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
@@ -750,7 +750,7 @@ panelConfiguracionRouter.patch('/motivos-aviso-previo/:id', async (req, res) => 
     .eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query.select('id');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró ese motivo de aviso previo' });
   res.json({ ok: true });
 });
@@ -766,7 +766,7 @@ panelConfiguracionRouter.get('/guardias/horizonte-generacion', async (req, res) 
     .select('dias_generacion_series_guardia')
     .eq('id', prestadoraId)
     .single();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ dias_generacion_series_guardia: data.dias_generacion_series_guardia });
 });
 
@@ -779,7 +779,7 @@ panelConfiguracionRouter.patch('/guardias/horizonte-generacion', async (req, res
     .from('prestadoras')
     .update({ dias_generacion_series_guardia: dias })
     .eq('id', req.usuarioPanel.prestadoraId);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
@@ -798,7 +798,7 @@ panelConfiguracionRouter.get('/ausencia-automatica', async (req, res) => {
     )
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({
     configuracion: data || {
       activo: true,
@@ -857,7 +857,7 @@ panelConfiguracionRouter.patch('/ausencia-automatica', async (req, res) => {
       segundos_codigo_en_pantalla,
       minutos_codigo_de_la_prestadora,
     });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
@@ -869,7 +869,7 @@ panelConfiguracionRouter.patch('/documentos-tipo/:id', async (req, res) => {
     .eq('id', req.params.id);
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query.select('id');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró ese tipo de documento' });
   res.json({ ok: true });
 });
@@ -907,8 +907,8 @@ panelConfiguracionRouter.get('/permisos', async (req, res) => {
       supabase.from('permisos_prestadora').select('*').eq('prestadora_id', prestadoraId),
       coordinadoresDeLaPrestadora(prestadoraId),
     ]);
-    if (errorFilas) return res.status(500).json({ error: errorFilas.message });
-    if (errorCoordinadores) return res.status(500).json({ error: errorCoordinadores.message });
+    if (errorFilas) return responderError(res, errorFilas);
+    if (errorCoordinadores) return responderError(res, errorCoordinadores);
 
     const porAccion = Object.fromEntries((filas || []).map((f) => [f.accion, f]));
     const permisos = acciones.map(({ accion, default_solo_admin }) => porAccion[accion] || {
@@ -920,7 +920,7 @@ panelConfiguracionRouter.get('/permisos', async (req, res) => {
 
     res.json({ permisos, coordinadores });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    responderError(res, e);
   }
 });
 
@@ -930,7 +930,7 @@ panelConfiguracionRouter.patch('/permisos/:accion', async (req, res) => {
   try {
     acciones = await accionesDePermisos();
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    return responderError(res, e);
   }
   if (!acciones.some((a) => a.accion === accion)) {
     return res.status(400).json({ error: 'Acción desconocida' });
@@ -951,7 +951,7 @@ panelConfiguracionRouter.patch('/permisos/:accion', async (req, res) => {
     },
     { onConflict: 'prestadora_id,accion' }
   );
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
@@ -961,7 +961,7 @@ panelConfiguracionRouter.get('/politica-verificacion', async (req, res) => {
     .select('politica_verificacion_alta_manual')
     .eq('id', req.usuarioPanel.prestadoraId)
     .single();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ politica_verificacion_alta_manual: data.politica_verificacion_alta_manual });
 });
 
@@ -974,7 +974,7 @@ panelConfiguracionRouter.patch('/politica-verificacion', async (req, res) => {
     .from('prestadoras')
     .update({ politica_verificacion_alta_manual: politica })
     .eq('id', req.usuarioPanel.prestadoraId);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
@@ -1055,7 +1055,7 @@ panelConfiguracionRouter.get('/modalidades', async (req, res) => {
     .from('prestadora_modalidades')
     .select('modalidad, activa')
     .eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
 
   const porModalidad = Object.fromEntries((data || []).map((f) => [f.modalidad, f.activa]));
   const modalidades = MODALIDADES_DISPONIBLES.map((modalidad) => ({
@@ -1084,8 +1084,8 @@ panelConfiguracionRouter.patch('/modalidades/:modalidad', async (req, res) => {
       // No se pudo comprobar qué depende de la modalidad. Se deja como está: apagarla sin
       // haber mirado es justamente lo que esta comprobación vino a impedir. El texto crudo de
       // la base queda en el registro del servidor y no sube a la pantalla (CLAUDE.md §6).
-      console.error(`No se pudo comprobar qué depende de la modalidad ${modalidad}:`, e.message);
-      return res.status(500).json({ error: 'No se pudo comprobar qué depende de esta modalidad' });
+      console.error(`No se pudo comprobar qué depende de la modalidad ${modalidad}:`, e?.message ?? e);
+      return responderError(res, e);
     }
     if (motivo) {
       return responderError(res, new ErrorConMotivo(motivo, `modalidad ${modalidad} todavía en uso`));
@@ -1104,7 +1104,7 @@ panelConfiguracionRouter.patch('/modalidades/:modalidad', async (req, res) => {
     },
     { onConflict: 'prestadora_id,modalidad' }
   );
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
@@ -1133,8 +1133,8 @@ panelConfiguracionRouter.get('/escalada-coordinador', async (req, res) => {
       .maybeSingle(),
     coordinadoresDeLaPrestadora(prestadoraId),
   ]);
-  if (error) return res.status(500).json({ error: error.message });
-  if (errorCoordinadores) return res.status(500).json({ error: errorCoordinadores.message });
+  if (error) return responderError(res, error);
+  if (errorCoordinadores) return responderError(res, errorCoordinadores);
   res.json({
     coordinadores: coordinadores || [],
     escalada: data || {
@@ -1204,6 +1204,6 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
         horas_antes_aviso_grave_sin_cerrar ?? HORAS_ANTES_DE_ESCALAR_POR_DEFECTO,
       updated_at: new Date().toISOString(),
     });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ ok: true });
 });

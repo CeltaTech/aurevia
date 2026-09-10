@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 // Etapa 2 de la separación CeltaTech / Careonys (2026-07-28, docs/ETAPA_2_INVENTARIO.md §5):
 // este bloque venía adentro de panelAdminPlataforma.js, que era el panel comercial del SaaS.
@@ -35,7 +36,7 @@ panelCostosIARouter.get('/uso-ia', async (req, res) => {
     .select('prestadora_id, modulo, costo_usd, creado_at, prestadoras(nombre_fantasia)')
     .order('creado_at', { ascending: false })
     .limit(5000);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
 
   const resumenPorPrestadora = new Map();
   for (const fila of usos) {
@@ -64,7 +65,7 @@ panelCostosIARouter.get('/cambios-precio-ia', async (req, res) => {
     .select('*')
     .eq('estado', 'pendiente')
     .order('detectado_at', { ascending: false });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ cambios: data });
 });
 
@@ -77,7 +78,7 @@ panelCostosIARouter.post('/cambios-precio-ia/:id/confirmar', async (req, res) =>
     .eq('id', id)
     .eq('estado', 'pendiente')
     .maybeSingle();
-  if (errorCambio) return res.status(500).json({ error: errorCambio.message });
+  if (errorCambio) return responderError(res, errorCambio);
   if (!cambio) return res.status(404).json({ error: 'Cambio no encontrado o ya resuelto' });
 
   const hoy = new Date().toISOString().slice(0, 10);
@@ -94,7 +95,7 @@ panelCostosIARouter.post('/cambios-precio-ia/:id/confirmar', async (req, res) =>
     verificado_at: new Date().toISOString(),
     fuente: cambio.fuente_url,
   }, { onConflict: 'proveedor,modelo,vigente_desde' });
-  if (errorInsert) return res.status(500).json({ error: errorInsert.message });
+  if (errorInsert) return responderError(res, errorInsert);
 
   // Mismo criterio que la ruta de descartar de más abajo: se cierra solo si seguía pendiente, y
   // se comprueba que se haya cerrado. La lectura de arriba pasó hace un instante, pero dos
@@ -105,7 +106,7 @@ panelCostosIARouter.post('/cambios-precio-ia/:id/confirmar', async (req, res) =>
     .eq('id', id)
     .eq('estado', 'pendiente')
     .select('id');
-  if (errorUpdate) return res.status(500).json({ error: errorUpdate.message });
+  if (errorUpdate) return responderError(res, errorUpdate);
   if (!confirmado?.length) return res.status(404).json({ error: 'Cambio no encontrado o ya resuelto' });
 
   res.json({ ok: true });
@@ -122,7 +123,7 @@ panelCostosIARouter.post('/cambios-precio-ia/:id/descartar', async (req, res) =>
     .eq('id', id)
     .eq('estado', 'pendiente')
     .select('id');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!descartado?.length) {
     return res.status(404).json({ error: 'Cambio no encontrado o ya resuelto' });
   }

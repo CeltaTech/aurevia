@@ -3,6 +3,7 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { supabase } from '../db/connection.js';
 import { marcarAusenteYCrearIncidente } from '../utils/marcarAusente.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 export const panelGuardiasRouter = Router();
 
@@ -31,7 +32,7 @@ panelGuardiasRouter.post('/:id/ausente', requiereRolPanel, exigirOrganizacionAct
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data: guardia, error } = await query.maybeSingle();
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!guardia) return res.status(404).json({ error: 'No se encontró esa guardia' });
 
   // Sin Asistente asignado no hay ausencia: nadie faltó. Es el mismo filtro que aplica la

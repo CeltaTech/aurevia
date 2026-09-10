@@ -5,6 +5,7 @@ import { requierePermiso } from '../utils/permisos.js';
 import { horasEntre } from '../utils/horasDeGuardia.js';
 import { resolverEscalasVigentes } from '../utils/escalasLegales.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 /* Lo que se le liquida a cada Asistente en un mes, guardado.
    ==========================================================================
@@ -349,7 +350,7 @@ panelLiquidacionesRouter.get('/conceptos', requiereRolPanel, requierePermiso(PER
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .order('orden', { ascending: true })
     .order('nombre', { ascending: true });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json(data);
 });
 
@@ -362,7 +363,7 @@ panelLiquidacionesRouter.post('/conceptos', requiereRolPanel, requierePermiso(PE
     .insert({ prestadora_id: req.usuarioPanel.prestadoraId, ...camposDelConcepto(req.body) })
     .select()
     .single();
-  if (error) return res.status(400).json({ error: error.message });
+  if (error) return responderError(res, error, 400);
   res.json(data);
 });
 
@@ -373,7 +374,7 @@ panelLiquidacionesRouter.patch('/conceptos/:id', requiereRolPanel, requierePermi
     .eq('id', req.params.id)
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
-  if (errorLectura) return res.status(500).json({ error: errorLectura.message });
+  if (errorLectura) return responderError(res, errorLectura);
   if (!actual) return res.status(404).json({ error: 'Concepto no encontrado' });
 
   // Un concepto no se borra nunca: dar de baja es `activo: false`. Borrarlo dejaría a los
@@ -408,7 +409,7 @@ panelLiquidacionesRouter.patch('/conceptos/:id', requiereRolPanel, requierePermi
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .select()
     .single();
-  if (error) return res.status(400).json({ error: error.message });
+  if (error) return responderError(res, error, 400);
   res.json(data);
 });
 
@@ -440,7 +441,7 @@ panelLiquidacionesRouter.get('/', requiereRolPanel, requierePermiso(PERMISO_LECT
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .eq('periodo', primerDia(periodo))
     .order('created_at', { ascending: true });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
 
   // El nombre se busca aparte y filtrando por Prestadora, en vez de traerlo colgado de la
   // liquidación: el motor entra con la clave de servicio, o sea sin las reglas de acceso de
@@ -465,7 +466,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
     .select('pais, moneda')
     .eq('id', prestadoraId)
     .maybeSingle();
-  if (errorPrestadora) return res.status(500).json({ error: errorPrestadora.message });
+  if (errorPrestadora) return responderError(res, errorPrestadora);
   if (!prestadora) return res.status(404).json({ error: 'Prestadora no encontrada' });
 
   const guardias = await traerPaginado(() =>
@@ -496,7 +497,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
     .from('remuneraciones_asistente')
     .select('asistente_id, valor_hora, sueldo_basico')
     .eq('prestadora_id', prestadoraId);
-  if (errorRemuneraciones) return res.status(500).json({ error: errorRemuneraciones.message });
+  if (errorRemuneraciones) return responderError(res, errorRemuneraciones);
   const pagoPorAsistente = new Map((remuneraciones || []).map((r) => [r.asistente_id, r]));
 
   const { data: conceptos, error: errorConceptos } = await supabase
@@ -506,7 +507,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
     .eq('activo', true)
     .order('orden', { ascending: true })
     .order('nombre', { ascending: true });
-  if (errorConceptos) return res.status(500).json({ error: errorConceptos.message });
+  if (errorConceptos) return responderError(res, errorConceptos);
 
   // Las escalas legales son contenido curado por CeltaTech por país, nunca una decisión de
   // una Prestadora: por eso el filtro es por jurisdicción y no por `prestadora_id`.
@@ -514,7 +515,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
     .from('escalas_legales')
     .select('*')
     .eq('jurisdiccion', prestadora.pais);
-  if (errorEscalas) return res.status(500).json({ error: errorEscalas.message });
+  if (errorEscalas) return responderError(res, errorEscalas);
   const escalasPorTipo = escalasEstablesDelPeriodo(filasEscalas || [], periodo, prestadora.pais);
 
   // Entra quien trabajó en el mes —aunque después se haya dado de baja, porque el trabajo que
@@ -529,7 +530,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
     .select('id, asistente_id, estado')
     .eq('prestadora_id', prestadoraId)
     .eq('periodo', desde);
-  if (errorExistentes) return res.status(500).json({ error: errorExistentes.message });
+  if (errorExistentes) return responderError(res, errorExistentes);
   const existentePorAsistente = new Map((yaExistentes || []).map((l) => [l.asistente_id, l]));
 
   const resultado = {
@@ -575,7 +576,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
         .delete()
         .eq('id', existente.id)
         .eq('prestadora_id', prestadoraId);
-      if (errorBorrado) return res.status(500).json({ error: errorBorrado.message });
+      if (errorBorrado) return responderError(res, errorBorrado);
     }
 
     // La moneda no se manda: la completa la base con la de la Prestadora, igual que en todas
@@ -585,7 +586,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
       .insert({ prestadora_id: prestadoraId, ...calculada.liquidacion, generada_por: req.usuarioPanel.id })
       .select()
       .single();
-    if (errorGuardar) return res.status(500).json({ error: errorGuardar.message });
+    if (errorGuardar) return responderError(res, errorGuardar);
 
     const { error: errorItems } = await supabase
       .from('liquidaciones_asistente_items')
@@ -594,7 +595,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
       // Una liquidación sin sus renglones no explica nada: si los renglones no entraron, la
       // cabecera tampoco se queda.
       await supabase.from('liquidaciones_asistente').delete().eq('id', guardada.id).eq('prestadora_id', prestadoraId);
-      return res.status(500).json({ error: errorItems.message });
+      return responderError(res, errorItems);
     }
 
     if (existente) resultado.rehechas += 1;
@@ -611,7 +612,7 @@ panelLiquidacionesRouter.get('/:id', requiereRolPanel, requierePermiso(PERMISO_L
     .eq('id', req.params.id)
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!liquidacion) return res.status(404).json({ error: 'Liquidación no encontrada' });
 
   const { data: items, error: errorItems } = await supabase
@@ -619,7 +620,7 @@ panelLiquidacionesRouter.get('/:id', requiereRolPanel, requierePermiso(PERMISO_L
     .select('*')
     .eq('liquidacion_id', liquidacion.id)
     .order('orden', { ascending: true });
-  if (errorItems) return res.status(500).json({ error: errorItems.message });
+  if (errorItems) return responderError(res, errorItems);
 
   const { data: asistente, error: errorAsistente } = await supabase
     .from('asistentes')
@@ -627,7 +628,7 @@ panelLiquidacionesRouter.get('/:id', requiereRolPanel, requierePermiso(PERMISO_L
     .eq('id', liquidacion.asistente_id)
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
-  if (errorAsistente) return res.status(500).json({ error: errorAsistente.message });
+  if (errorAsistente) return responderError(res, errorAsistente);
 
   res.json({ ...liquidacion, items: items || [], asistente: asistente ?? null });
 });
@@ -645,7 +646,7 @@ panelLiquidacionesRouter.post('/:id/pagar', requiereRolPanel, requierePermiso(PE
     .eq('id', req.params.id)
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!liquidacion) return res.status(404).json({ error: 'Liquidación no encontrada' });
   if (liquidacion.estado === 'pagada') return res.status(400).json({ error: 'Esta liquidación ya figura pagada' });
 
@@ -663,7 +664,7 @@ panelLiquidacionesRouter.post('/:id/pagar', requiereRolPanel, requierePermiso(PE
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .select()
     .single();
-  if (errorPago) return res.status(500).json({ error: errorPago.message });
+  if (errorPago) return responderError(res, errorPago);
   res.json(data);
 });
 
@@ -674,7 +675,7 @@ panelLiquidacionesRouter.delete('/:id', requiereRolPanel, requierePermiso(PERMIS
     .eq('id', req.params.id)
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!liquidacion) return res.status(404).json({ error: 'Liquidación no encontrada' });
   // Una liquidación pagada es el registro de una plata que ya salió: borrarla sería borrar la
   // única explicación de ese pago.
@@ -693,7 +694,7 @@ panelLiquidacionesRouter.delete('/:id', requiereRolPanel, requierePermiso(PERMIS
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .neq('estado', 'pagada')
     .select('id');
-  if (errorBorrado) return res.status(500).json({ error: errorBorrado.message });
+  if (errorBorrado) return responderError(res, errorBorrado);
   if (!borrada?.length) {
     return res.status(409).json({ error: 'La liquidación ya no está, o quedó pagada mientras tanto' });
   }

@@ -51,6 +51,9 @@ export const T = {
         modalidad_con_asistentes: 'No se puede desactivar esa modalidad mientras haya Asistentes que trabajan de esa forma. Hace falta pasarlos a la otra modalidad, o registrarles el cese, y recién ahí desactivarla.',
         modalidad_con_suscripciones: 'No se puede desactivar esa modalidad mientras haya Familias con la suscripción en curso. Hace falta darlas de baja antes de desactivarla.',
         modalidad_con_asistentes_y_suscripciones: 'No se puede desactivar esa modalidad: hay Asistentes que trabajan de esa forma y Familias con la suscripción en curso. Hace falta resolver las dos cosas antes de desactivarla.',
+        // Dos avisos que antes llegaban como frase armada del lado del motor, en un solo idioma.
+        persona_fuera_del_circulo: 'Esa persona no figura en el círculo de cuidado de esta Familia, así que no hay nada que quitar. Conviene recargar la lista para ver cómo quedó.',
+        paciente_no_encontrado: 'No se encontró ese Paciente. Conviene recargar la lista.',
       },
     },
     comun: {
@@ -1138,10 +1141,8 @@ export const T = {
         invitar_email: 'Email',
         invitar_telefono: 'Teléfono',
         invitando: 'Invitando…',
-        invitar_error: 'No se pudo invitar a esta persona.',
         quitar: 'Quitar acceso',
         quitar_confirmacion: '¿Quitar el acceso de esta persona al círculo de cuidado? Ya no podrá ingresar a la app.',
-        quitar_error: 'No se pudo quitar el acceso.',
       },
     },
     medicacion: {
@@ -2079,6 +2080,8 @@ export const T = {
         modalidad_con_asistentes: 'That service model cannot be turned off while there are Assistants working that way. They need to be moved to the other model, or have their termination recorded, before it can be turned off.',
         modalidad_con_suscripciones: 'That service model cannot be turned off while there are Families with an ongoing subscription. Those subscriptions need to be ended before it can be turned off.',
         modalidad_con_asistentes_y_suscripciones: 'That service model cannot be turned off: there are Assistants working that way and Families with an ongoing subscription. Both need to be resolved before it can be turned off.',
+        persona_fuera_del_circulo: 'That person is not listed in this Family’s care circle, so there is nothing to remove. It is worth reloading the list to see how it stands.',
+        paciente_no_encontrado: 'That Patient could not be found. It is worth reloading the list.',
       },
     },
     comun: {
@@ -3150,10 +3153,8 @@ export const T = {
         invitar_email: 'Email',
         invitar_telefono: 'Phone',
         invitando: 'Inviting…',
-        invitar_error: 'Could not invite this person.',
         quitar: 'Remove access',
         quitar_confirmacion: 'Remove this person\'s access to the circle of care? They will no longer be able to log in to the app.',
-        quitar_error: 'Could not remove access.',
       },
     },
     medicacion: {
@@ -4082,6 +4083,8 @@ export const T = {
         modalidad_con_asistentes: 'Não é possível desativar essa modalidade enquanto houver Assistentes que trabalham dessa forma. É preciso passá-los para a outra modalidade, ou registrar o encerramento do vínculo, antes de desativá-la.',
         modalidad_con_suscripciones: 'Não é possível desativar essa modalidade enquanto houver Famílias com a assinatura em curso. É preciso encerrá-las antes de desativá-la.',
         modalidad_con_asistentes_y_suscripciones: 'Não é possível desativar essa modalidade: há Assistentes que trabalham dessa forma e Famílias com a assinatura em curso. É preciso resolver as duas coisas antes de desativá-la.',
+        persona_fuera_del_circulo: 'Essa pessoa não consta no círculo de cuidado desta Família, portanto não há nada a remover. É preciso recarregar a lista para ver como ficou.',
+        paciente_no_encontrado: 'Esse Paciente não foi encontrado. É preciso recarregar a lista.',
       },
     },
     comun: {
@@ -5153,10 +5156,8 @@ export const T = {
         invitar_email: 'Email',
         invitar_telefono: 'Telefone',
         invitando: 'Convidando…',
-        invitar_error: 'Não foi possível convidar esta pessoa.',
         quitar: 'Remover acesso',
         quitar_confirmacion: 'Confirma remover o acesso desta pessoa ao círculo de cuidado? Ela não poderá mais entrar no app.',
-        quitar_error: 'Não foi possível remover o acesso.',
       },
     },
     medicacion: {

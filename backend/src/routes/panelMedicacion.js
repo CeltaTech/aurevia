@@ -5,6 +5,7 @@ import { supabase } from '../db/connection.js';
 import { tipoMatriculaRequerida, hayAsistenteAsignadoConMatricula } from '../utils/medicacionIndicaciones.js';
 import { extensionDeArchivo, rutaDeMatriculaNueva } from '../utils/archivosSubidos.js';
 import { registrarAvisoAlActivar } from '../utils/advertenciaLegal.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 // Cierra pendiente #62 (docs/PLAN_HASTA_PRODUCCION.md): cola de revisión de indicaciones de
 // medicación solicitadas por la Familia (appFamiliasMedicacion.js). Aceptar/rechazar nunca
@@ -48,7 +49,7 @@ panelMedicacionRouter.get('/pendientes', requiereRolPanel, async (req, res) => {
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .eq('estado', 'pendiente')
     .order('created_at', { ascending: true });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
 
   const pendientes = await Promise.all(
     (data || []).map(async (indicacion) => {
@@ -83,7 +84,7 @@ panelMedicacionRouter.post('/:id/aceptar', requiereRolPanel, async (req, res) =>
     .eq('id', indicacion.id)
     .eq('estado', 'pendiente')
     .select('id');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!aceptada?.length) return res.status(404).json({ error: 'Indicación no encontrada o ya revisada' });
 
   // Aceptada de verdad, se anota que se avisó. La situación se vuelve a calcular acá y no se
@@ -130,7 +131,7 @@ panelMedicacionRouter.post('/:id/rechazar', requiereRolPanel, async (req, res) =
     .eq('id', indicacion.id)
     .eq('estado', 'pendiente')
     .select('id');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!rechazada?.length) return res.status(404).json({ error: 'Indicación no encontrada o ya revisada' });
 
   res.json({ ok: true });
@@ -159,7 +160,7 @@ panelMedicacionRouter.post(
     const { error } = await supabase.storage
       .from(BUCKET)
       .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return responderError(res, error);
 
     res.json({ archivoUrl: ruta });
   }
@@ -172,7 +173,7 @@ panelMedicacionRouter.get('/archivo-url', requiereRolPanel, async (req, res) => 
   }
 
   const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(ruta, 60);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
 
   res.json({ url: data.signedUrl });
 });

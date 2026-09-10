@@ -67,7 +67,7 @@ panelCuentasRouter.get('/permisos-efectivos', requiereRolPanel, async (req, res)
   try {
     res.json({ permisos: await permisosEfectivos(req.usuarioPanel.id) });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    responderError(res, e);
   }
 });
 
@@ -85,7 +85,7 @@ panelCuentasRouter.get('/modalidades-activas', requiereRolPanel, async (req, res
     .select('modalidad')
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .eq('activa', true);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ modalidades: (data || []).map((f) => f.modalidad) });
 });
 
@@ -383,7 +383,7 @@ panelCuentasRouter.post(
       .from(DEPOSITO_INSTRUCCIONES)
       .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
     if (errorSubida) {
-      return res.status(500).json({ error: errorSubida.message });
+      return responderError(res, errorSubida);
     }
 
     try {
@@ -424,7 +424,7 @@ panelCuentasRouter.get('/familia/:familiaId/circulo/instruccion/:instruccionId/p
     .from(DEPOSITO_INSTRUCCIONES)
     .createSignedUrl(instruccion.archivo_firmado_url, 60);
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
 
   res.json({ url: data.signedUrl });
@@ -470,7 +470,7 @@ panelCuentasRouter.delete('/familia/:familiaId/circulo/:usuarioId', requiereRolP
     await revocarMiembroCirculo(req.params.usuarioId, { prestadoraId, familiaId: req.params.familiaId });
     res.json({ ok: true });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    responderError(res, error, 400);
   }
 });
 
@@ -494,6 +494,6 @@ panelCuentasRouter.post('/:usuarioId/reenviar-activacion', requiereRolPanel, exi
     await reenviarActivacionCuenta(usuario.id);
     res.json({ ok: true });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    responderError(res, error);
   }
 });

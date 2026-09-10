@@ -5,6 +5,7 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { supabase } from '../db/connection.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 export const panelAusenciasRouter = Router();
 
@@ -68,7 +69,7 @@ panelAusenciasRouter.post(
       .from(BUCKET)
       .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
     if (errorSubida) {
-      return res.status(500).json({ error: errorSubida.message });
+      return responderError(res, errorSubida);
     }
 
     try {
@@ -94,7 +95,7 @@ panelAusenciasRouter.post(
       .eq('id', ausencia.id)
       .select('id');
     if (errorUpdate) {
-      return res.status(500).json({ error: errorUpdate.message });
+      return responderError(res, errorUpdate);
     }
     if (!apuntada?.length) {
       return res.status(404).json({ error: 'No se encontró esa ausencia' });
@@ -119,7 +120,7 @@ panelAusenciasRouter.get('/:id/certificado-url', requiereRolPanel, exigirOrganiz
     .from(BUCKET)
     .createSignedUrl(fila.certificado_url, 60);
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
 
   res.json({ url: data.signedUrl });

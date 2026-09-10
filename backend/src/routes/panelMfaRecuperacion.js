@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { supabase } from '../db/connection.js';
 import { solicitarCodigoRecuperacion, confirmarCodigoRecuperacion } from '../utils/mfaRecuperacionEmail.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 // Pendiente #37 — recuperación de acceso por email para el superadmin que pierde el
 // dispositivo TOTP. A propósito NO usa requiereRolPanel: ese middleware exige
@@ -34,7 +35,7 @@ panelMfaRecuperacionRouter.post('/solicitar', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('Error en /mfa-recuperacion/solicitar:', err);
-    res.status(500).json({ error: err.message });
+    responderError(res, err);
   }
 });
 

@@ -9,6 +9,7 @@ import { supabase } from '../db/connection.js';
 import { crearCuentaConPerfil, borrarCuenta } from '../utils/cuentasPanel.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { ROLES_PANEL } from '../utils/roles.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 export const panelUsuariosRouter = Router();
 
@@ -40,7 +41,7 @@ panelUsuariosRouter.get('/', requiereRolPanel, soloAdministracion, async (req, r
 
   const { data, error } = await query;
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ usuarios: data });
 });
 
@@ -86,7 +87,7 @@ panelUsuariosRouter.post('/', requiereRolPanel, soloAdministracion, async (req, 
     });
     res.json({ ok: true, id: userId, passwordTemporal });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    responderError(res, error);
   }
 });
 
@@ -106,7 +107,7 @@ panelUsuariosRouter.patch('/:id', requiereRolPanel, soloAdministracion, async (r
   // para que la respuesta no permita averiguar qué cuentas tienen las demás Prestadoras.
   const { data: modificada, error } = await query.select('id');
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!modificada?.length) {
     return res.status(404).json({ error: 'No se encontró esa cuenta' });
   }

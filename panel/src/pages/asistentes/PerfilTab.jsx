@@ -22,6 +22,7 @@ import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { generarCertificadoTrabajo, generarCertificadoRemuneracionesServicios, descargarPDF } from '../../lib/generarDocumentoCese';
 import { con } from '../../lib/textos';
+import { errorDeLaRespuesta } from '../../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -168,10 +169,8 @@ export function PerfilTab({ asistente, onActualizado }) {
         method: 'POST',
         headers: { Authorization: `Bearer ${data.session?.access_token}` },
       });
-      const resultado = await respuesta.json();
-      if (!respuesta.ok) {
-        throw new Error(resultado.error);
-      }
+      const resultado = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
       setMensajeReenvio({ tipo: 'info', texto: t.comun.invitacion_reenviada });
     } catch {
       setMensajeReenvio({ tipo: 'error', texto: t.comun.reenviar_invitacion_error });

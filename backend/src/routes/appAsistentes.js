@@ -246,7 +246,7 @@ appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
     .limit(100);
 
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
 
   try {
@@ -254,7 +254,7 @@ appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
     const guardias = await conPacientes(data ?? [], camposDePacienteParaElAsistente(visibilidad));
     res.json({ guardias: await conDomicilioDelDia(guardias) });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    responderError(res, e);
   }
 });
 
@@ -281,7 +281,7 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
     // permite a la pantalla avisar que hoy no se lo atiende en su casa.
     [guardia] = await conDomicilioDelDia([conSuGente]);
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    return responderError(res, e);
   }
 
   // Los signos vitales son de una persona, no de un turno: la presión normal de la señora de
@@ -379,7 +379,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
     pacientes = await pacientesDeGuardia(guardia, 'id, nombre, lat, lng, familia_id');
     pacientes = await pacientesConDomicilioDelDia(guardia, pacientes);
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    return responderError(res, e);
   }
 
   const { data: config } = await supabase
@@ -431,7 +431,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
     })
     .eq('id', guardia.id);
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
 
   // A la Familia se le avisa que la guardia quedó cubierta y por quién cuando ella no participó
@@ -564,7 +564,7 @@ appAsistentesRouter.post('/guardias/:id/salida', requiereRolAsistente, async (re
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId);
 
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
 
   res.json({ ok: true, salidaAt });
@@ -619,7 +619,7 @@ appAsistentesRouter.post('/guardias/:id/aviso-demora', requiereRolAsistente, asy
     .maybeSingle();
 
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
 
   // El aviso sale ahora, no en la próxima vuelta del proceso de fondo: entre una cosa y la otra
@@ -696,7 +696,7 @@ appAsistentesRouter.post(
       .from('reportes-fotos')
       .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
     if (error) {
-      return res.status(500).json({ error: error.message });
+      return responderError(res, error);
     }
 
     res.json({ fotoUrl: ruta });
@@ -730,7 +730,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
   try {
     pacientes = await pacientesDeGuardia(guardia, 'id, nombre');
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    return responderError(res, e);
   }
   const paciente = pacienteId ? pacientes.find((p) => p.id === pacienteId) : pacientes.length === 1 ? pacientes[0] : null;
   if (!paciente) {
@@ -775,7 +775,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
     .select('id')
     .single();
   if (errorReporte) {
-    return res.status(500).json({ error: errorReporte.message });
+    return responderError(res, errorReporte);
   }
 
   const { error: errorGuardia } = await supabase
@@ -783,7 +783,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
     .update({ push_reporte_enviado_at: new Date().toISOString() })
     .eq('id', guardia.id);
   if (errorGuardia) {
-    return res.status(500).json({ error: errorGuardia.message });
+    return responderError(res, errorGuardia);
   }
 
   // El aviso va a la Familia de este Paciente y a ninguna otra: el reporte habla de él. Si el
@@ -870,7 +870,7 @@ appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, topeDeP
   try {
     faltan = await pacientesSinReporte(guardia);
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    return responderError(res, e);
   }
   if (faltan.length > 0) {
     return res.status(400).json({
@@ -916,7 +916,7 @@ appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, topeDeP
     .eq('estado', 'activa')
     .select('id');
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
   if (!cerrada?.length) {
     // Misma respuesta que el control de arriba: para quien está del otro lado es el mismo caso,
@@ -1018,7 +1018,7 @@ appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, exige
     .eq('estado', 'activa')
     .select('id');
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
   if (!marcada?.length) {
     return res.status(404).json({ error: 'Guardia activa no encontrada' });
@@ -1050,7 +1050,7 @@ appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, exigeVi
     .order('created_at', { ascending: false })
     .limit(30);
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
   res.json({ reportes: data });
 });
@@ -1074,7 +1074,7 @@ appAsistentesRouter.post('/push/suscribir', requiereRolAsistente, async (req, re
     userAgent: req.headers['user-agent'],
   });
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
 
   res.json({ ok: true });
@@ -1092,7 +1092,7 @@ appAsistentesRouter.delete('/push/suscribir', requiereRolAsistente, async (req, 
     .eq('endpoint', endpoint)
     .eq('asistente_id', req.usuarioAsistente.id);
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
 
   res.json({ ok: true });
@@ -1112,7 +1112,7 @@ appAsistentesRouter.get('/calificaciones', requiereRolAsistente, async (req, res
     .select('id, estrellas, comentario, visible_publica, descargo_asistente, descargo_en, created_at')
     .eq('asistente_id', req.usuarioAsistente.id)
     .order('created_at', { ascending: false });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ calificaciones: data });
 });
 
@@ -1146,7 +1146,7 @@ appAsistentesRouter.patch('/calificaciones/:id/descargo', requiereRolAsistente, 
     .eq('id', req.params.id)
     .eq('asistente_id', req.usuarioAsistente.id)
     .select('id');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!guardada?.length) {
     return res.status(404).json({ error: 'No se encontró esa calificación, el descargo no quedó guardado' });
   }

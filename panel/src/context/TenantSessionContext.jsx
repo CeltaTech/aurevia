@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { useAuth } from './AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
 import { supabase } from '../lib/supabaseClient';
+import { errorDeLaRespuesta } from '../lib/errores';
 import { Button } from '../components/ui/Button';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 
@@ -21,8 +22,8 @@ async function llamarApi(path, opciones = {}) {
       ...opciones.headers,
     },
   });
-  const resultado = await respuesta.json();
-  if (!respuesta.ok) throw new Error(resultado.error);
+  const resultado = await respuesta.json().catch(() => ({}));
+  if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
   return resultado;
 }
 

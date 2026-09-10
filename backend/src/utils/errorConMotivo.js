@@ -57,6 +57,14 @@ const ESTADO_POR_MOTIVO = {
   modalidad_con_asistentes: 409,
   modalidad_con_suscripciones: 409,
   modalidad_con_asistentes_y_suscripciones: 409,
+  // Dos avisos que antes viajaban como frase adentro del `Error` y que, al dejar de mandarse el
+  // texto crudo, se habrían perdido: quien mira leería "algo falló de nuestro lado" cuando en
+  // realidad no falló nada, sólo que lo que pidió no corresponde. El de la persona es 409 —el
+  // pedido está bien armado, lo que pasa es que esa persona no es del círculo de esa Familia—;
+  // el del Paciente es 404, y contesta lo mismo cuando el Paciente no existe y cuando es de otra
+  // Prestadora, que desde afuera se tienen que ver iguales.
+  persona_fuera_del_circulo: 409,
+  paciente_no_encontrado: 404,
   // El tope de pedidos por minuto (pendiente #177). Es el mismo 429 que los intentos agotados,
   // porque para la web es la misma situación —"probó demasiadas veces"—, pero el motivo es otro
   // y la pantalla dice otra cosa: los intentos agotados no se arreglan esperando, y esto sí.
@@ -65,8 +73,31 @@ const ESTADO_POR_MOTIVO = {
 
 // Lo que una ruta contesta cuando algo falló. Se escribe una sola vez para que ninguna ruta
 // se olvide de mandar el motivo, que es justamente lo que le permite a la pantalla explicar.
+//
+// Y ES EL ÚNICO LUGAR QUE DECIDE QUÉ SALE HACIA AFUERA. El texto crudo de un error de la base
+// describe la base: nombra tablas, columnas y restricciones —"insert or update on table
+// facturas_familia_items violates foreign key constraint …"— y eso no puede llegar nunca al
+// navegador (`../../../CLAUDE.md` §6). Acá el detalle se queda del lado del servidor y afuera
+// va únicamente el motivo, que es un código.
+//
+// Además no se pierde nada al no mandarlo. `panel/src/lib/errores.js` clasifica por motivo y
+// por código de respuesta, y el código de respuesta se mira **antes** que el texto: un 500
+// cae en "falla del sistema" sin leer una sola letra del mensaje. O sea que ese texto crudo
+// viajaba entero hasta el navegador para que la pantalla lo descartara.
+//
+// `error` sigue viniendo en el cuerpo, y sigue siendo un código y no una frase: hay pantallas
+// que lo leen para armar su propio Error. Nunca es texto para mostrarle a nadie — la frase
+// vive en las traducciones, en los tres idiomas.
+const SIN_MOTIVO = 'falla_del_sistema';
+
 export function responderError(res, error, estadoPorOmision = 500) {
   const estado = ESTADO_POR_MOTIVO[error?.motivo] ?? estadoPorOmision;
-  const cuerpo = error?.motivo ? { error: error.message, motivo: error.motivo } : { error: error.message };
+  const motivo = error?.motivo ?? SIN_MOTIVO;
+
+  // El detalle, acá. Es lo que hay que mirar cuando algo falla, y el único lugar donde está.
+  const donde = res?.req ? `${res.req.method} ${res.req.originalUrl ?? res.req.url}` : 'sin ruta';
+  console.error(`[${estado}] ${donde} — ${motivo}:`, error?.message ?? error);
+
+  const cuerpo = error?.motivo ? { error: motivo, motivo } : { error: motivo };
   return res.status(estado).json(cuerpo);
 }

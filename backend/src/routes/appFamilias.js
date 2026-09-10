@@ -196,7 +196,7 @@ appFamiliasRouter.get('/pacientes', requiereRolFamilia, async (req, res) => {
     .eq('prestadora_id', req.usuarioFamilia.prestadoraId)
     .order('nombre');
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
   // Si al Paciente lo están atendiendo estos días en otro lado, la Familia ve esa dirección y no
   // la de la ficha — es la misma respuesta que ve el Asistente en su teléfono, escrita una sola
@@ -356,7 +356,7 @@ appFamiliasRouter.get('/pacientes/:id/guardias', requiereRolFamilia, exigeDelCir
     .lte('guardias.fecha', semana.hasta);
 
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
 
   // Qué viaja al teléfono: lo que la pantalla dibuja y nada más. El identificador del Asistente
@@ -443,7 +443,7 @@ appFamiliasRouter.get('/pacientes/:id/reportes', requiereRolFamilia, exigeDelCir
     .order('created_at', { ascending: false })
     .limit(60);
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
 
   // Los rangos normales solo tienen sentido junto a los valores: sin signos vitales en
@@ -475,7 +475,7 @@ appFamiliasRouter.get('/pacientes/:id/reportes/:reporteId', requiereRolFamilia, 
     .eq('paciente_id', paciente.id)
     .maybeSingle();
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
   if (!data) {
     return res.status(404).json({ error: 'Reporte no encontrado' });
@@ -508,7 +508,7 @@ appFamiliasRouter.get('/pacientes/:id/alertas', requiereRolFamilia, exigeVisible
     .order('created_at', { ascending: false })
     .limit(60);
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
   res.json({ alertas: data });
 });
@@ -736,7 +736,7 @@ appFamiliasRouter.post('/guardias/:guardiaId/calificar', requiereRolFamilia, exi
     comentario: comentario || null,
   });
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
 
   res.json({ ok: true });
@@ -767,7 +767,7 @@ appFamiliasRouter.post('/push/suscribir', requiereRolFamilia, async (req, res) =
     userAgent: req.headers['user-agent'],
   });
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
 
   res.json({ ok: true });
@@ -785,7 +785,7 @@ appFamiliasRouter.delete('/push/suscribir', requiereRolFamilia, async (req, res)
     .eq('endpoint', endpoint)
     .eq('familia_id', req.usuarioFamilia.familiaId);
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
 
   res.json({ ok: true });
@@ -805,7 +805,7 @@ appFamiliasRouter.get('/suscripcion/:pacienteId', requiereRolFamilia, exigeVisib
     .eq('familia_id', req.usuarioFamilia.familiaId)
     .eq('paciente_id', req.params.pacienteId)
     .maybeSingle();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ suscripcion: data });
 });
 
@@ -838,7 +838,7 @@ appFamiliasRouter.post('/qr-cobro', requiereRolFamilia, exigeVisible('familia_pa
     })
     .select('id, token, expira_en, usado_en')
     .single();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
 
   res.json({ qr: data });
 });
@@ -850,7 +850,7 @@ appFamiliasRouter.get('/qr-cobro/:id', requiereRolFamilia, exigeVisible('familia
     .eq('id', req.params.id)
     .eq('familia_id', req.usuarioFamilia.familiaId)
     .maybeSingle();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!data) return res.status(404).json({ error: 'QR no encontrado' });
   res.json({ qr: data });
 });

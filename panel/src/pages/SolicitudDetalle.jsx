@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
-import { mensajeDeError } from '../lib/errores';
+import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 
 const ESTADOS = ['nueva', 'en_gestion', 'asignada', 'cancelada', 'completada'];
@@ -43,10 +43,8 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
         },
         body: JSON.stringify({ solicitudId: solicitud.id }),
       });
-      const resultado = await respuesta.json();
-      if (!respuesta.ok) {
-        throw new Error(resultado.error || t.comun.error_generico);
-      }
+      const resultado = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
       onActualizada();
     } catch (err) {
       setErrorConversion(mensajeDeError(err, t));

@@ -8,6 +8,7 @@ import {
   loQueEstaMalEnElCobro,
   primerDiaDelPeriodo,
 } from '../utils/cobrosDeFamilia.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 /* Lo que la Familia pagó, anotado; y el saldo, que es una resta.
    ==========================================================================
@@ -127,13 +128,13 @@ panelCobrosRouter.get('/saldos', requiereRolPanel, async (req, res) => {
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .eq('periodo', periodo)
     .order('fecha_emision', { ascending: false });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
 
   let nombres;
   try {
     nombres = await nombresDeFamilias(req.usuarioPanel.prestadoraId, (data || []).map((s) => s.familia_id));
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    return responderError(res, e);
   }
 
   res.json((data || []).map((s) => ({ ...s, familia_nombre: nombres.get(s.familia_id) ?? null })));
@@ -147,7 +148,7 @@ panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, async (req, res)
   try {
     saldo = await saldoDeLaFactura(prestadoraId, req.params.facturaId);
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    return responderError(res, e);
   }
   if (!saldo) return res.status(404).json({ error: 'Factura no encontrada' });
 
@@ -160,13 +161,13 @@ panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, async (req, res)
     .eq('prestadora_id', prestadoraId)
     .order('fecha_cobro', { ascending: false })
     .order('created_at', { ascending: false });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
 
   let nombres;
   try {
     nombres = await nombresDeFamilias(prestadoraId, [saldo.familia_id]);
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    return responderError(res, e);
   }
 
   res.json({ ...saldo, familia_nombre: nombres.get(saldo.familia_id) ?? null, cobros: cobros || [] });
@@ -191,7 +192,7 @@ panelCobrosRouter.post('/facturas/:facturaId/cobros', requiereRolPanel, async (r
   try {
     factura = await facturaDeLaPrestadora(prestadoraId, req.params.facturaId);
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    return responderError(res, e);
   }
   if (!factura) return res.status(404).json({ error: 'Factura no encontrada' });
 
@@ -210,13 +211,13 @@ panelCobrosRouter.post('/facturas/:facturaId/cobros', requiereRolPanel, async (r
     })
     .select()
     .single();
-  if (error) return res.status(400).json({ error: error.message });
+  if (error) return responderError(res, error, 400);
 
   let saldo;
   try {
     saldo = await saldoDeLaFactura(prestadoraId, factura.id);
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    return responderError(res, e);
   }
 
   res.json({ cobro: data, saldo });
@@ -238,7 +239,7 @@ panelCobrosRouter.post('/cobros/:id/anular', requiereRolPanel, async (req, res) 
     .eq('id', req.params.id)
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!cobro) return res.status(404).json({ error: 'Cobro no encontrado' });
   if (cobro.estado === 'anulado') return res.status(400).json({ error: 'Este cobro ya figura anulado' });
 
@@ -255,13 +256,13 @@ panelCobrosRouter.post('/cobros/:id/anular', requiereRolPanel, async (req, res) 
     .eq('prestadora_id', prestadoraId)
     .select()
     .single();
-  if (errorAnulacion) return res.status(500).json({ error: errorAnulacion.message });
+  if (errorAnulacion) return responderError(res, errorAnulacion);
 
   let saldo;
   try {
     saldo = await saldoDeLaFactura(prestadoraId, cobro.factura_id);
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    return responderError(res, e);
   }
 
   res.json({ cobro: data, saldo });
@@ -338,7 +339,7 @@ panelCobrosRouter.post('/entrada', requiereRolPanel, async (req, res) => {
       .eq('prestadora_id', prestadoraId)
       .eq('origen', origen)
       .in('referencia_externa', [...new Set(referencias)]);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return responderError(res, error);
     for (const c of data || []) yaEstaban.set(c.referencia_externa, c);
   }
 
@@ -369,7 +370,7 @@ panelCobrosRouter.post('/entrada', requiereRolPanel, async (req, res) => {
     try {
       ubicacion = await ubicarFactura(prestadoraId, cobro);
     } catch (e) {
-      return res.status(500).json({ error: e.message });
+      return responderError(res, e);
     }
     if (!ubicacion.factura) {
       resultados.push({ ...renglon, resultado: 'rechazado', motivo: ubicacion.motivo });
@@ -398,10 +399,15 @@ panelCobrosRouter.post('/entrada', requiereRolPanel, async (req, res) => {
       // El choque contra el índice único es la otra mitad de la idempotencia, la que sirve
       // cuando dos envíos llegan al mismo tiempo. No es un error del que envía.
       const esDuplicado = error.code === '23505';
+      // El motivo de un renglón rechazado sale de las frases de este archivo, nunca del texto
+      // crudo de la base: ese texto nombra tablas, columnas y restricciones (CLAUDE.md §6), y
+      // acá viajaría al navegador mezclado entre los motivos escritos a mano. El detalle queda
+      // del lado del servidor, que es donde se lo mira cuando algo falla.
+      if (!esDuplicado) console.error('Cobros, entrada de lote, renglón', i, '—', error.message);
       resultados.push({
         ...renglon,
         resultado: esDuplicado ? 'duplicado' : 'rechazado',
-        motivo: esDuplicado ? undefined : error.message,
+        motivo: esDuplicado ? undefined : 'No se pudo registrar este cobro',
       });
       continue;
     }
@@ -420,7 +426,7 @@ panelCobrosRouter.post('/entrada', requiereRolPanel, async (req, res) => {
       .select('factura_id, monto_total, cobrado, saldo, estado, moneda, actualizado_en, origenes')
       .eq('prestadora_id', prestadoraId)
       .in('factura_id', [...facturasTocadas]);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return responderError(res, error);
     saldos = data || [];
   }
 

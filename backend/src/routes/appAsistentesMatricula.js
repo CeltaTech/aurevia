@@ -4,6 +4,7 @@ import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
 import { supabase } from '../db/connection.js';
 import { exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { esRutaDeMatriculaDe, extensionDeArchivo, rutaDeMatriculaNueva } from '../utils/archivosSubidos.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 // ============================================================================
 // La Matrícula, vista desde el teléfono del Asistente.
@@ -90,7 +91,7 @@ appAsistentesMatriculaRouter.get('/', requiereRolAsistente, async (req, res) => 
     .select('id, tipo, numero_matricula, vigente_desde, vigente_hasta, archivo_url, verificada_at, cargada_por_el_asistente, created_at')
     .eq('asistente_id', req.usuarioAsistente.id)
     .order('vigente_desde', { ascending: false });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
 
   res.json({
     estado,
@@ -146,7 +147,7 @@ appAsistentesMatriculaRouter.post(
       const { error: errorSubida } = await supabase.storage
         .from(BUCKET)
         .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
-      if (errorSubida) return res.status(500).json({ error: errorSubida.message });
+      if (errorSubida) return responderError(res, errorSubida);
       archivoUrl = ruta;
     }
 
@@ -160,7 +161,7 @@ appAsistentesMatriculaRouter.post(
       registrado_por: req.usuarioAsistente.id,
       cargada_por_el_asistente: true,
     });
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return responderError(res, error);
 
     res.json({ estado: await estadoDelAsistente(req.usuarioAsistente.id) });
   }
@@ -184,7 +185,7 @@ appAsistentesMatriculaRouter.get('/archivo-url', requiereRolAsistente, async (re
   }
 
   const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(ruta, 60);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
 
   res.json({ url: data.signedUrl });
 });

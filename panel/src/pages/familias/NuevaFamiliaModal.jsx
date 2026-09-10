@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
-import { mensajeDeError } from '../../lib/errores';
+import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -35,10 +35,8 @@ export function NuevaFamiliaModal({ onClose, onCreada }) {
         },
         body: JSON.stringify({ nombreContacto, telefono, email, localidad, nombrePaciente, domicilioPaciente }),
       });
-      const resultado = await respuesta.json();
-      if (!respuesta.ok) {
-        throw new Error(resultado.error || t.comun.error_generico);
-      }
+      const resultado = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
       onCreada();
     } catch (err) {
       setError(mensajeDeError(err, t));

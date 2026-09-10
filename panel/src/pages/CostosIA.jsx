@@ -5,7 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { useConfirmarDestructivo } from '../context/TenantSessionContext';
-import { mensajeDeError } from '../lib/errores';
+import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 
 // Etapa 2 de la separación CeltaTech / Careonys (2026-07-28, docs/ETAPA_2_INVENTARIO.md §5):
 // estas dos secciones venían adentro de AdminPlataforma.jsx, el panel comercial del SaaS.
@@ -25,8 +25,8 @@ async function llamarApi(path, opciones = {}) {
       ...opciones.headers,
     },
   });
-  const resultado = await respuesta.json();
-  if (!respuesta.ok) throw new Error(resultado.error);
+  const resultado = await respuesta.json().catch(() => ({}));
+  if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
   return resultado;
 }
 

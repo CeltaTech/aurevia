@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../ui/Button';
 import { Alert } from '../ui/Alert';
 import { EstadoLista } from '../layout/EstadoLista';
-import { mensajeDeError } from '../../lib/errores';
+import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -20,8 +20,15 @@ async function llamarApi(path, opciones = {}) {
       ...opciones.headers,
     },
   });
-  const resultado = await respuesta.json();
-  if (!respuesta.ok) throw new Error(resultado.codigo || resultado.error);
+  const resultado = await respuesta.json().catch(() => ({}));
+  // El motor manda en `codigo` el detalle de por qué no se pudo enviar —hoy
+  // `whatsapp_no_configurado` o `envio_fallido`, de `routes/panelWhatsapp.js`—, que es
+  // exactamente lo que `lib/errores.js` llama un motivo: un código con el que dice qué pasó, no
+  // una frase. Se lo pasa como tal para que viaje adentro del error junto con el número de la
+  // respuesta, en vez de perderse al armar el Error a mano.
+  if (!respuesta.ok) {
+    throw errorDeLaRespuesta(respuesta, { ...resultado, motivo: resultado.motivo ?? resultado.codigo });
+  }
   return resultado;
 }
 
@@ -84,7 +91,7 @@ export function HiloWhatsapp({ conversacionId, onCambio }) {
       onCambio?.();
     } catch (err) {
       setError(
-        err.message === 'whatsapp_no_configurado'
+        err.motivo === 'whatsapp_no_configurado'
           ? t.comunicacion.whatsapp_no_configurado
           : t.comunicacion.error_envio_whatsapp,
       );

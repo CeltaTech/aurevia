@@ -1,4 +1,5 @@
 import { supabase } from '../db/connection.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 // De qué Prestadora es un pedido que llega sin sesión: los dos formularios del sitio público de
 // una Prestadora —pedir un servicio, postularse como Asistente— y los datos de contacto que ese
@@ -35,7 +36,7 @@ export async function resolverPrestadoraPublica(req, res, next) {
     .eq('dominio', identificador)
     .maybeSingle();
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!data) return res.status(404).json({ error: 'prestadora_no_reconocida' });
 
   req.prestadoraPublica = data;

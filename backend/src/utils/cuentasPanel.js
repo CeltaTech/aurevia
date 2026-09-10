@@ -525,7 +525,13 @@ export async function revocarMiembroCirculo(usuarioId, { prestadoraId, familiaId
     .eq('usuario_id', usuarioId)
     .single();
   if (errorMiembro || !miembro || miembro.familia_id !== familiaId) {
-    throw new Error('Esta persona no pertenece al círculo de cuidado de esta Familia');
+    // Con motivo, y no con la frase suelta que estaba antes: la frase viajaba en el cuerpo de
+    // la respuesta y era texto visible escrito a mano, en un solo idioma. El motivo es un
+    // código, y la frase vive en las traducciones, en los tres.
+    throw new ErrorConMotivo(
+      'persona_fuera_del_circulo',
+      `usuario ${usuarioId} no figura en el círculo de la familia ${familiaId}`,
+    );
   }
 
   await supabase.from('permisos_circulo_familiar').delete().eq('usuario_id', usuarioId);

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { supabase } from '../lib/supabaseClient';
 import { EstadoLista } from '../components/layout/EstadoLista';
-import { mensajeDeError } from '../lib/errores';
+import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 import { useAuth } from '../context/AuthContext';
 import { useTenantSession } from '../context/TenantSessionContext';
 
@@ -13,8 +13,8 @@ async function llamarApi(path) {
   const respuesta = await fetch(`${API_URL}/api/panel${path}`, {
     headers: { Authorization: `Bearer ${data.session?.access_token}` },
   });
-  const resultado = await respuesta.json();
-  if (!respuesta.ok) throw new Error(resultado.error);
+  const resultado = await respuesta.json().catch(() => ({}));
+  if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
   return resultado;
 }
 

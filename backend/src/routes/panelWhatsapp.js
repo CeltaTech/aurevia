@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { enviarWhatsApp } from '../utils/whatsapp.js';
 import { supabase } from '../db/connection.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 export const panelWhatsappRouter = Router();
 
@@ -135,7 +136,7 @@ panelWhatsappRouter.post('/conversaciones/:id/descartar', requiereRolPanel, asyn
       .from('mensajes_whatsapp')
       .update({ revisado_por_coordinador_at: ahora })
       .eq('id', borrador.id);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return responderError(res, error);
   }
 
   const { data: descartada, error } = await supabase
@@ -143,7 +144,7 @@ panelWhatsappRouter.post('/conversaciones/:id/descartar', requiereRolPanel, asyn
     .update({ requiere_atencion_coordinador: false })
     .eq('id', conversacion.id)
     .select('id');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!descartada?.length) return res.status(404).json({ error: 'Conversación inexistente' });
 
   res.json({ ok: true });

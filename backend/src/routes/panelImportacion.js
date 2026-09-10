@@ -12,6 +12,7 @@ import {
   CAMPOS_IMPORTACION, CAMPOS_LISTA, valorDesdeFila,
 } from '../utils/importacionIA.js';
 import { proponerConfiguracionInicial } from '../utils/propuestaConfiguracionInicial.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 export const panelImportacionRouter = Router();
 
@@ -115,7 +116,7 @@ panelImportacionRouter.post(
       }
       res.json(resultado.analisis);
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      responderError(res, error, 400);
     }
   }
 );
@@ -167,7 +168,7 @@ panelImportacionRouter.post(
         analisis: resultado.analisis,
       });
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      responderError(res, error, 400);
     }
   }
 );
@@ -230,7 +231,14 @@ panelImportacionRouter.post(
         }
         creadas += 1;
       } catch (error) {
-        errores.push({ fila: i + 1, error: error.message });
+        // Acá no sirve `responderError`: esto es un renglón de un lote, y contestar cortaría la
+        // importación en la primera fila que falla, que es justo lo que no se quiere. Pero el
+        // texto crudo tampoco puede salir: este arreglo viaja al navegador en la respuesta de
+        // `/confirmar` y además se guarda en `importaciones_prestadora.errores`, así que un
+        // mensaje de Postgres quedaría escrito en la base y a la vista (`celtatech/CLAUDE.md`
+        // §6). Afuera va el motivo, que la pantalla traduce; el detalle, al registro.
+        console.error(`Importación ${lote.id}, fila ${i + 1}:`, error?.message ?? error);
+        errores.push({ fila: i + 1, motivo: error?.motivo ?? 'falla_del_sistema' });
       }
     }
 

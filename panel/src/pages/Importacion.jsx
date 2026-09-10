@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
-import { mensajeDeError } from '../lib/errores';
+import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 import { con } from '../lib/textos';
 import { tomarPlanillaAnalizada } from '../lib/planillaAnalizada';
 import { useModalAccesible } from '../hooks/useModalAccesible';
@@ -21,8 +21,8 @@ async function llamarApi(path, opciones = {}) {
       ...opciones.headers,
     },
   });
-  const resultado = await respuesta.json();
-  if (!respuesta.ok) throw new Error(resultado.error);
+  const resultado = await respuesta.json().catch(() => ({}));
+  if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
   return resultado;
 }
 
@@ -78,8 +78,8 @@ export function Importacion() {
         headers: { Authorization: `Bearer ${data.session?.access_token}` },
         body: formData,
       });
-      const resultadoJson = await respuesta.json();
-      if (!respuesta.ok) throw new Error(resultadoJson.error);
+      const resultadoJson = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultadoJson);
       setAnalisis(resultadoJson);
       setMapeo(resultadoJson.mapeoPropuesto);
       setPaso(2);
@@ -280,9 +280,17 @@ export function Importacion() {
             <Alert variant="error">
               <strong>{t.importacion.filas_error_titulo}</strong>
               <ul>
+                {/* Cada fila fallada llega con un motivo, que es un código, y no con el texto
+                    del error: ese texto lo escribe la base y nombra tablas y columnas
+                    (`celtatech/CLAUDE.md` §6). La frase la arma acá `mensajeDeError`, que es el
+                    mismo punto único que usa el resto del Panel, así que sale en el idioma que
+                    está mirando la persona y cae en la frase genérica si el motivo no tuviera
+                    traducción. El estado 500 es lo que hace de respaldo esa caída. */}
                 {resultado.errores.map((e) => (
                   <li key={e.fila}>
-                    {t.importacion.fila_error.replace('{n}', e.fila).replace('{error}', e.error)}
+                    {t.importacion.fila_error
+                      .replace('{n}', e.fila)
+                      .replace('{error}', mensajeDeError({ motivo: e.motivo, status: 500 }, t, 'importación'))}
                   </li>
                 ))}
               </ul>

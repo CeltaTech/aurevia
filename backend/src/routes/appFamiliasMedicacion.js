@@ -5,6 +5,7 @@ import { supabase } from '../db/connection.js';
 import { exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { exigeDelCirculo } from '../utils/accesosDelCirculo.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 // Cierra pendiente #62 (docs/PLAN_HASTA_PRODUCCION.md): la Familia solicita la indicación de
 // medicación desde su propia PWA (consentimiento implícito por venir de su sesión
@@ -58,7 +59,7 @@ appFamiliasMedicacionRouter.get('/:pacienteId', requiereRolFamilia, exigeVisible
     .select('id, medicamento, dosis, frecuencia, via_administracion, fecha_desde, fecha_hasta, estado, motivo_rechazo, created_at')
     .eq('paciente_id', paciente.id)
     .order('created_at', { ascending: false });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
 
   res.json({ indicaciones: data });
 });
@@ -92,7 +93,7 @@ appFamiliasMedicacionRouter.post(
       const { error: errorUpload } = await supabase.storage
         .from(BUCKET)
         .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
-      if (errorUpload) return res.status(500).json({ error: errorUpload.message });
+      if (errorUpload) return responderError(res, errorUpload);
       prescripcionArchivoUrl = ruta;
     }
 
@@ -113,7 +114,7 @@ appFamiliasMedicacionRouter.post(
       })
       .select('id, estado')
       .single();
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return responderError(res, error);
 
     res.json({ indicacion: data });
   }

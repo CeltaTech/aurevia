@@ -51,6 +51,7 @@ import { webhooksPasarelasRouter } from './routes/webhooksPasarelas.js';
 import { revisarAlertasIA } from './utils/revisarAlertasIA.js';
 import { revisarAvisosAutomaticosCese } from './utils/avisoAutomaticoCese.js';
 import { verificarPreciosIA } from './utils/verificarPreciosIA.js';
+import { responderError } from './utils/errorConMotivo.js';
 
 const app = express();
 app.use(cors());
@@ -215,9 +216,14 @@ setInterval(() => {
 // Middleware de error único (pendiente #91) — punto único de verdad para toda excepción no
 // atrapada en cualquiera de las 129 rutas (Regla 12): nunca se expone el stack ni detalle
 // interno al cliente (CLAUDE.md §6), solo se loguea server-side.
+//
+// Lo que contesta lo decide `responderError`, igual que en cualquier ruta: afuera va un código
+// y el detalle se queda acá. Antes salía `err.message`, que en un error de la base es el texto
+// crudo de Postgres y nombra tablas, columnas y restricciones — justo lo que el comentario de
+// arriba decía que no pasaba. El estado sigue saliendo de `err.status` cuando el error lo trae.
 app.use((err, req, res, next) => {
   console.error('Error no manejado en', req.method, req.originalUrl, ':', err);
-  res.status(err.status || 500).json({ error: err.message || 'Error interno' });
+  responderError(res, err, err?.status || 500);
 });
 
 const PORT = process.env.PORT || 4000;

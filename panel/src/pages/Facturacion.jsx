@@ -120,7 +120,7 @@ export function Facturacion() {
     const { data: prestacionesData, error: errorPrestaciones } = pacienteIds.length
       ? await supabase
           .from('prestaciones')
-          .select('id, paciente_id, tipo_servicio, precio_final')
+          .select('id, paciente_id, servicio_id, tipo_servicio, precio_final')
           .eq('estado', 'vigente')
           .in('paciente_id', pacienteIds)
       : { data: [], error: null };
@@ -145,9 +145,13 @@ export function Facturacion() {
     for (const familia of familiasData ?? []) {
       if (familiasYaFacturadas.has(familia.id)) continue;
 
+      // Cada renglón dice de qué Servicio se cobra, además de a quién se le prestó. La columna
+      // está en la tabla desde que se creó y hasta ahora quedaba vacía, así que una factura no
+      // podía contestar contra qué contratación se emitió.
       const items = familia.pacientes.flatMap((paciente) =>
         (prestacionesPorPaciente[paciente.id] ?? []).map((p) => ({
           paciente_id: paciente.id,
+          servicio_id: p.servicio_id,
           descripcion: `${p.tipo_servicio} — ${paciente.nombre}`,
           monto: p.precio_final,
         }))

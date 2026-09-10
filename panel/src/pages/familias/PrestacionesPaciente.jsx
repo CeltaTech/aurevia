@@ -13,6 +13,7 @@ import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { con } from '../../lib/textos';
 import { hoyISO } from '../../lib/horarios';
 import { situacion } from '../../lib/vigenciaPrestacion';
+import { servicioSirveParaFamilia } from '../../lib/serviciosDelPaciente';
 
 function calcularPrecioFinal(precioLista, tipoDescuento, valorDescuento) {
   const base = Number(precioLista) || 0;
@@ -34,7 +35,14 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
 
+  // Todos los Servicios vigentes que alcanza esta sesión. Cuáles de ellos le sirven a este
+  // Paciente lo decide `servicioSirveParaFamilia`, que es la regla de la base y no una escrita
+  // acá. La lista entera se guarda igual porque también sirve para nombrar los ya cerrados.
+  const [serviciosDelCliente, setServiciosDelCliente] = useState([]);
+  const [cierres, setCierres] = useState([]);
+
   const [mostrandoForm, setMostrandoForm] = useState(false);
+  const [servicioId, setServicioId] = useState('');
   const [precioListaId, setPrecioListaId] = useState('');
   const [dias, setDias] = useState('');
   const [horario, setHorario] = useState('');
@@ -62,11 +70,11 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   const [marcandoRevisado, setMarcandoRevisado] = useState(null);
   const [errorRevision, setErrorRevision] = useState(null);
 
+  const [servicioCierreId, setServicioCierreId] = useState('');
   const [motivoCierre, setMotivoCierre] = useState('');
   const [motivoDetalleCierre, setMotivoDetalleCierre] = useState('');
   const [cerrandoServicio, setCerrandoServicio] = useState(false);
   const [errorCierre, setErrorCierre] = useState(null);
-  const [servicioCerrado, setServicioCerrado] = useState(false);
   const [asistentesAviso, setAsistentesAviso] = useState([]);
   const [marcandoAvisoId, setMarcandoAvisoId] = useState(null);
 
@@ -85,7 +93,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     setEstado('cargando');
     setError(null);
 
-    const [listaResp, prestacionesResp, paquetesResp, cierreResp, hospResp, alertasResp] = await Promise.all([
+    const [listaResp, prestacionesResp, paquetesResp, cierresResp, hospResp, alertasResp, serviciosResp] = await Promise.all([
       supabase.from('lista_precios').select('*').eq('activo', true).order('tipo_servicio'),
       supabase.from('prestaciones').select('*').eq('paciente_id', paciente.id).order('created_at', { ascending: false }),
       supabase
@@ -93,17 +101,28 @@ export function PrestacionesPaciente({ paciente, onClose }) {
         .select('*, paquete_prestacion_items(prestacion_id)')
         .eq('paciente_id', paciente.id)
         .order('created_at', { ascending: false }),
-      supabase.from('cierres_servicio_paciente').select('id').eq('paciente_id', paciente.id).limit(1).maybeSingle(),
+      supabase.from('cierres_servicio_paciente').select('id, servicio_id').eq('paciente_id', paciente.id),
       supabase.from('hospitalizaciones_paciente').select('*').eq('paciente_id', paciente.id).is('fecha_fin', null).maybeSingle(),
       supabase
         .from('alertas_contingencia_hospitalizacion')
         .select('*, pacientes:pacientes!alertas_contingencia_hosp_hospitalizado_tenant_fk(nombre)')
         .eq('paciente_conviviente_id', paciente.id)
         .is('resuelto_at', null),
+      // Los Servicios vigentes que alcanza esta sesión. La protección por fila ya los acota a la
+      // Prestadora; cuáles de ellos sirven para este Paciente lo decide abajo la misma regla que
+      // aplica la base, y no una consulta escrita a medida acá.
+      supabase
+        .from('servicios')
+        .select('id, etiqueta, tipo_contratante, contratante_id')
+        .eq('estado', 'vigente')
+        .order('etiqueta'),
     ]);
 
-    if (listaResp.error || prestacionesResp.error || paquetesResp.error || cierreResp.error || hospResp.error || alertasResp.error) {
-      setError(mensajeDeError(listaResp.error || prestacionesResp.error || paquetesResp.error || cierreResp.error || hospResp.error || alertasResp.error, t));
+    const falla =
+      listaResp.error || prestacionesResp.error || paquetesResp.error || cierresResp.error ||
+      hospResp.error || alertasResp.error || serviciosResp.error;
+    if (falla) {
+      setError(mensajeDeError(falla, t));
       setEstado('error');
       return;
     }
@@ -111,15 +130,17 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     setListaPrecios(listaResp.data ?? []);
     setPrestaciones(prestacionesResp.data ?? []);
     setPaquetes(paquetesResp.data ?? []);
-    setServicioCerrado(!!cierreResp.data);
+    setCierres(cierresResp.data ?? []);
+    setServiciosDelCliente(serviciosResp.data ?? []);
     setHospitalizacionActiva(hospResp.data ?? null);
     setAlertasContingencia(alertasResp.data ?? []);
 
-    if (cierreResp.data) {
+    const idsCierre = (cierresResp.data ?? []).map((c) => c.id);
+    if (idsCierre.length > 0) {
       const { data: asistentesAvisoData, error: errorAvisos } = await supabase
         .from('cierre_servicio_asistentes')
         .select('*, asistentes(nombre)')
-        .eq('cierre_id', cierreResp.data.id);
+        .in('cierre_id', idsCierre);
       if (!errorAvisos) setAsistentesAviso(asistentesAvisoData ?? []);
     } else {
       setAsistentesAviso([]);
@@ -142,6 +163,30 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     [precioSeleccionado, tipoDescuento, valorDescuento]
   );
 
+  // Un mismo Cliente puede tener varios Servicios abiertos a la vez. Se ofrecen los que la base
+  // acepta para este Paciente, menos los que ya se cerraron para él: ésos no se ofrecen ni para
+  // colgarles una Prestación nueva ni para volver a cerrarlos.
+  const serviciosAbiertos = useMemo(() => {
+    const cerrados = new Set(cierres.map((c) => c.servicio_id).filter(Boolean));
+    return serviciosDelCliente.filter(
+      (s) => !cerrados.has(s.id) && servicioSirveParaFamilia(s, paciente.familia_id),
+    );
+  }, [serviciosDelCliente, cierres, paciente.familia_id]);
+
+  // Qué Servicios ya se cerraron, dichos por su nombre y no como «el servicio de este Paciente»:
+  // ahora puede haber más de uno y hace falta saber cuál.
+  const etiquetasCerradas = useMemo(() => {
+    const nombres = new Map(serviciosDelCliente.map((s) => [s.id, s.etiqueta]));
+    return cierres.map((c) => nombres.get(c.servicio_id) ?? '—').join(', ');
+  }, [cierres, serviciosDelCliente]);
+
+  // Cuando hay uno solo no se hace elegir; cuando hay varios, la elección es de quien carga.
+  useEffect(() => {
+    const unico = serviciosAbiertos.length === 1 ? serviciosAbiertos[0].id : '';
+    setServicioId((actual) => (serviciosAbiertos.some((s) => s.id === actual) ? actual : unico));
+    setServicioCierreId((actual) => (serviciosAbiertos.some((s) => s.id === actual) ? actual : unico));
+  }, [serviciosAbiertos]);
+
   function limpiarForm() {
     setPrecioListaId('');
     setDias('');
@@ -159,6 +204,11 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   }
 
   async function handleGuardarPrestacion() {
+    if (!servicioId) {
+      setErrorForm(t.prestaciones.seleccionar_servicio);
+      return;
+    }
+
     if (!precioSeleccionado) {
       setErrorForm(t.prestaciones.seleccionar_precio_lista);
       return;
@@ -176,6 +226,9 @@ export function PrestacionesPaciente({ paciente, onClose }) {
 
     const { error: errorInsert } = await supabase.from('prestaciones').insert({
       prestadora_id: prestadoraId,
+      // De qué Servicio es lo que se pacta, y a quién se le presta. Las dos cosas: el precio y
+      // el calendario son del Servicio, y el Paciente sigue siendo quien lo recibe.
+      servicio_id: servicioId,
       paciente_id: paciente.id,
       tipo_servicio: `${precioSeleccionado.tipo_servicio} — ${precioSeleccionado.modalidad}`,
       configuracion: {
@@ -222,6 +275,11 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   }
 
   async function handleCerrarServicio() {
+    if (!servicioCierreId) {
+      setErrorCierre(t.prestaciones.seleccionar_servicio);
+      return;
+    }
+
     if (!(await confirmarDestructivo(t.prestaciones.confirmar_cierre_servicio))) return;
 
     setCerrandoServicio(true);
@@ -231,6 +289,10 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       .from('cierres_servicio_paciente')
       .insert({
         prestadora_id: prestadoraId,
+        // Qué Servicio se cierra y para qué Paciente. Lo que se pactó es el Servicio, así que
+        // todo lo que se da de baja abajo se acota a él: si el Cliente tiene otro Servicio
+        // abierto para este mismo Paciente, ése sigue corriendo.
+        servicio_id: servicioCierreId,
         paciente_id: paciente.id,
         motivo: motivoCierre,
         motivo_detalle: motivoCierre === 'otro' ? motivoDetalleCierre : null,
@@ -244,24 +306,26 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       return;
     }
 
-    // El pre-fetch de Asistentes/zonas involucrados corre recién acá, después del insert
-    // de cierres_servicio_paciente: la policy RLS "coordinador_cierra_servicio_*" que le da
-    // visibilidad a un Coordinador fuera de zona depende de que ese registro ya exista (ver
-    // schema_cierre_servicio_zona_fix.sql). Si este fetch corriera antes del insert (como
-    // en una versión anterior), un Coordinador fuera de zona no ve ninguna fila por RLS y la
-    // notificación cruzada nunca se dispara — bug encontrado probando el flujo real
-    // (docs/PLAN_HASTA_PRODUCCION.md). Todavía tiene que ir antes de la cascada de abajo, porque
+    // La consulta de Asistentes y zonas involucrados corre recién acá, después de insertar el
+    // cierre: la política "coordinador_cierra_servicio_*" que le da visibilidad a un Coordinador
+    // fuera de zona depende de que ese registro ya exista, y desde
+    // 20260910220000_el_precio_el_calendario_y_el_cierre_cuelgan_del_servicio.sql pregunta por el
+    // Servicio del cierre y no por el Paciente. Si esta consulta corriera antes del insert (como
+    // en una versión anterior), un Coordinador fuera de zona no vería ninguna fila y el aviso
+    // cruzado nunca se dispararía. Y todavía tiene que ir antes de la baja de más abajo, porque
     // filtra por estado='activa'/'programada'.
     const [seriesActivasResp, guardiasProgramadasResp] = await Promise.all([
       supabase
         .from('series_guardias')
         .select('asistente_id, asistentes(zonas)')
         .eq('paciente_id', paciente.id)
+        .eq('servicio_id', servicioCierreId)
         .eq('estado', 'activa'),
       supabase
         .from('guardias')
         .select('asistente_id, asistentes(zonas)')
         .eq('paciente_id', paciente.id)
+        .eq('servicio_id', servicioCierreId)
         .eq('estado', 'programada'),
     ]);
 
@@ -280,17 +344,26 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       // La fecha de fin no se manda desde acá a propósito: la pone la base al ver la baja, con
       // su propio reloj y no con el de esta computadora, y recorta sola lo que estaba pactado
       // para más adelante. Escribirla también acá sería tener la misma decisión en dos lugares.
-      supabase.from('prestaciones').update({ estado: 'de_baja' }).eq('paciente_id', paciente.id).eq('estado', 'vigente'),
+      supabase
+        .from('prestaciones')
+        .update({ estado: 'de_baja' })
+        .eq('paciente_id', paciente.id)
+        .eq('servicio_id', servicioCierreId)
+        .eq('estado', 'vigente'),
+      // El paquete agrupa Prestaciones de este Paciente y no sabe de qué Servicio es ninguna.
+      // Queda por Paciente, como estaba, hasta que se lo mude también.
       supabase.from('paquetes_prestaciones').update({ estado: 'de_baja' }).eq('paciente_id', paciente.id).eq('estado', 'vigente'),
       supabase
         .from('series_guardias')
         .update({ estado: 'cancelada', cancelacion_origen: 'prestadora', cancelado_at: ahora })
         .eq('paciente_id', paciente.id)
+        .eq('servicio_id', servicioCierreId)
         .eq('estado', 'activa'),
       supabase
         .from('guardias')
         .update({ estado: 'cancelada', cancelacion_origen: 'prestadora', cancelacion_alcance: 'total' })
         .eq('paciente_id', paciente.id)
+        .eq('servicio_id', servicioCierreId)
         .eq('estado', 'programada'),
       ...(asistentesAInsertar.length > 0 ? [supabase.from('cierre_servicio_asistentes').insert(asistentesAInsertar)] : []),
     ]);
@@ -628,6 +701,24 @@ export function PrestacionesPaciente({ paciente, onClose }) {
               <div className="panel-resultado-calculo">
                 <h3>{t.prestaciones.nueva_prestacion}</h3>
                 {errorForm && <Alert variant="error">{errorForm}</Alert>}
+                {serviciosAbiertos.length === 0 && <Alert variant="info">{t.prestaciones.sin_servicio_abierto}</Alert>}
+
+                <FormField
+                  label={t.prestaciones.servicio}
+                  name="servicio_id"
+                  type="select"
+                  value={servicioId}
+                  onChange={(e) => setServicioId(e.target.value)}
+                  ayuda={t.prestaciones.servicio_ayuda}
+                  required
+                >
+                  <option value="">—</option>
+                  {serviciosAbiertos.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.etiqueta}
+                    </option>
+                  ))}
+                </FormField>
 
                 <FormField
                   label={t.prestaciones.col_tipo_servicio}
@@ -717,7 +808,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                   >
                     {t.comun.cancelar}
                   </Button>
-                  <Button onClick={handleGuardarPrestacion} disabled={guardando}>
+                  <Button onClick={handleGuardarPrestacion} disabled={guardando || !servicioId}>
                     {guardando ? t.comun.guardando : t.comun.guardar}
                   </Button>
                 </div>
@@ -799,9 +890,11 @@ export function PrestacionesPaciente({ paciente, onClose }) {
         {estado === 'listo' && ['admin_prestadora', 'coordinador'].includes(usuario.rol) && (
           <div className="panel-resultado-calculo">
             <h3>{t.prestaciones.cierre_servicio_titulo}</h3>
-            {servicioCerrado ? (
+            {cierres.length > 0 && (
               <>
-                <Alert variant="info">{t.prestaciones.servicio_ya_cerrado}</Alert>
+                <Alert variant="info">
+                  {con(t.prestaciones.servicio_ya_cerrado, { servicios: etiquetasCerradas })}
+                </Alert>
                 {asistentesAviso.length > 0 && (
                   <>
                     <h3>{t.prestaciones.aviso_asistente_titulo}</h3>
@@ -845,10 +938,31 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                   </>
                 )}
               </>
+            )}
+
+            {/* Que ya se haya cerrado uno no quiere decir que no quede otro abierto: el mismo
+                Cliente puede tener varios Servicios corriendo a la vez para este Paciente. */}
+            {serviciosAbiertos.length === 0 ? (
+              cierres.length === 0 && <p className="estado-vacio">{t.prestaciones.sin_servicio_abierto}</p>
             ) : (
               <>
                 <p className="panel-explicacion">{t.prestaciones.cierre_servicio_explicacion}</p>
                 {errorCierre && <Alert variant="error">{errorCierre}</Alert>}
+                <FormField
+                  label={t.prestaciones.servicio}
+                  name="servicio_cierre_id"
+                  type="select"
+                  value={servicioCierreId}
+                  onChange={(e) => setServicioCierreId(e.target.value)}
+                  required
+                >
+                  <option value="">{t.guardias.nueva_guardia.elegir}</option>
+                  {serviciosAbiertos.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.etiqueta}
+                    </option>
+                  ))}
+                </FormField>
                 <FormField
                   label={t.prestaciones.cierre_servicio_motivo}
                   name="motivo_cierre"
@@ -873,7 +987,12 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                 <Button
                   variant="secondary"
                   onClick={handleCerrarServicio}
-                  disabled={cerrandoServicio || !motivoCierre || (motivoCierre === 'otro' && !motivoDetalleCierre)}
+                  disabled={
+                    cerrandoServicio ||
+                    !servicioCierreId ||
+                    !motivoCierre ||
+                    (motivoCierre === 'otro' && !motivoDetalleCierre)
+                  }
                 >
                   {cerrandoServicio ? t.prestaciones.cerrando_servicio : t.prestaciones.cierre_servicio_titulo}
                 </Button>

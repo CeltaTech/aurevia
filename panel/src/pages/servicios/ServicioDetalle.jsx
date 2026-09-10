@@ -95,9 +95,10 @@ export function ServicioDetalle() {
     recargar();
   }, [recargar]);
 
-  // Los Pacientes del Servicio no son un dato guardado: se deducen de a quién le llegan sus
-  // prestaciones y sus guardias. Es una de las señales de que hoy el Servicio está armado al
-  // revés, colgando del Paciente en vez de al derecho (pendiente #125).
+  // Los Pacientes del Servicio no son un dato guardado, y no hace falta que lo sean: un Servicio
+  // se presta a quien recibe sus prestaciones y sus guardias, y las dos cosas ya dicen de qué
+  // Servicio son. La lista sale de ahí, que es el dato, y no de una tabla aparte que habría que
+  // mantener al día a mano.
   const pacientesDelServicio = useMemo(() => {
     const ids = [...new Set([...prestaciones, ...guardias].map((r) => r.paciente_id).filter(Boolean))];
     return ids.map((idPaciente) => ({ id: idPaciente, nombre: nombresPaciente[idPaciente] || '—' }));

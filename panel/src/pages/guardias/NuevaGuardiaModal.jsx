@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { ESTADO_ACTIVO } from '../../lib/candidatos';
+import { serviciosParaFamilias } from '../../lib/serviciosDelPaciente';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
@@ -79,22 +80,18 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
     cargarListas();
   }, [prestadoraId]);
 
-  // Qué Servicios se le pueden ofrecer a este turno. La base ya lo controla —un Servicio sólo
-  // factura Pacientes de quien lo contrató—, así que acá no se inventa la regla: se muestra
-  // solamente lo que la base va a aceptar, para que nadie elija algo que después rebota.
-  // Si el turno cubre a gente de Familias distintas no hay ningún Servicio en común, y la lista
-  // sale vacía a propósito.
-  const serviciosDisponibles = useMemo(() => {
-    const familias = [
-      ...new Set(
-        pacienteIds.map((id) => pacientes.find((p) => p.id === id)?.familia_id).filter(Boolean),
-      ),
-    ];
-    if (familias.length !== 1) return [];
-    return servicios.filter(
-      (s) => s.tipo_contratante === 'familia' && s.contratante_id === familias[0],
-    );
-  }, [pacienteIds, pacientes, servicios]);
+  // Qué Servicios se le pueden ofrecer a este turno. La regla es la de la base y sale del mismo
+  // archivo que usa el alta de Prestaciones, para que no haya dos versiones de lo mismo: se
+  // muestra solamente lo que la base va a aceptar, y para todos los Pacientes que el turno
+  // cubre. Si el turno junta gente de Familias distintas, un Servicio contratado por una Familia
+  // no le sirve a nadie más y la lista sale vacía a propósito.
+  const serviciosDisponibles = useMemo(
+    () => serviciosParaFamilias(
+      servicios,
+      pacienteIds.map((id) => pacientes.find((p) => p.id === id)?.familia_id ?? null),
+    ),
+    [pacienteIds, pacientes, servicios],
+  );
 
   // Cambiar de Paciente puede dejar elegido un Servicio que ya no corresponde. Se limpia solo,
   // porque si no se manda algo que la base rechaza y el mensaje no explica por qué.
@@ -137,6 +134,14 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
       return;
     }
 
+    // Sin Servicio el turno nace suelto: no se puede facturar, no aparece en la pantalla del
+    // Servicio, y el día que se cierre la atención de ese Paciente el cierre no lo alcanza y
+    // queda un turno programado de algo que ya no se presta. Por eso es obligatorio.
+    if (!servicioId) {
+      setError(t.guardias.nueva_guardia.error_sin_servicio);
+      return;
+    }
+
     if (esSerie && diasSemana.length === 0) {
       setError(t.guardias.nueva_guardia.error_dias_semana);
       return;
@@ -157,7 +162,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
           prestadora_id: prestadoraId,
           asistente_id: asistenteId || null,
           paciente_id: primero,
-          servicio_id: servicioId || null,
+          servicio_id: servicioId,
           fecha,
           hora_inicio: horaInicio,
           hora_fin: horaFin,
@@ -198,7 +203,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
         prestadora_id: prestadoraId,
         asistente_id: asistenteId || null,
         paciente_id: primero,
-        servicio_id: servicioId || null,
+        servicio_id: servicioId,
         dias_semana: diasSemana,
         hora_inicio: horaInicio,
         hora_fin: horaFin,
@@ -347,10 +352,11 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
             label={t.guardias.nueva_guardia.servicio}
             name="servicio_id"
             type="select"
+            required
             value={servicioId}
             onChange={(e) => setServicioId(e.target.value)}
           >
-            <option value="">{t.guardias.nueva_guardia.sin_servicio}</option>
+            <option value="">—</option>
             {serviciosDisponibles.map((s) => (
               <option key={s.id} value={s.id}>{s.etiqueta || s.id}</option>
             ))}
@@ -439,7 +445,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
             <Button variant="secondary" type="button" onClick={onClose} disabled={guardando}>
               {t.comun.cancelar}
             </Button>
-            <Button type="submit" disabled={guardando}>
+            <Button type="submit" disabled={guardando || !servicioId}>
               {guardando ? t.guardias.nueva_guardia.creando : t.guardias.nueva_guardia.crear}
             </Button>
           </div>

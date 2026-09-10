@@ -917,8 +917,10 @@ VALUES ('70000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-2222222
 
 -- Con Asistente asignado, por el mismo motivo que el Paciente lleva Familia: un
 -- Asistente sin Guardias no ve nada, y una prueba contra la nada no prueba nada.
-INSERT INTO public.guardias (id, prestadora_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, modalidad)
+-- Y colgada de su Servicio, como toda Guardia: el calendario es del Servicio, no del Paciente.
+INSERT INTO public.guardias (id, prestadora_id, servicio_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, modalidad)
 VALUES ('80000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222',
+        '70000000-0000-4000-8000-000000000001',
         '50000000-0000-4000-8000-000000000003',
         '60000000-0000-4000-8000-000000000001', current_date + 1, '08:00', '16:00', 'presencial');
 

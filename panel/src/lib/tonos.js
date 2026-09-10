@@ -54,6 +54,7 @@ const TONO_POR_ESTADO = {
   conectada: TONO.EXITO,
   confirmada: TONO.EXITO,
   confirmado: TONO.EXITO,
+  corriendo: TONO.EXITO,
   cubierta: TONO.EXITO,
   exitoso: TONO.EXITO,
   finalizada: TONO.EXITO,
@@ -102,6 +103,7 @@ const TONO_POR_ESTADO = {
   vencido: TONO.CRITICO,
 
   // --- Es un dato, ni bueno ni malo ---
+  por_empezar: TONO.INFO,
   programada: TONO.INFO,
 
   // --- No hay información, o no aplica ---
@@ -110,6 +112,9 @@ const TONO_POR_ESTADO = {
   otro: TONO.NEUTRO,
   sin_datos: TONO.NEUTRO,
   sin_domicilio: TONO.NEUTRO,
+  // Lo pactado llegó a su fin sin que nadie lo cortara: ya no aplica, y no es ni bueno ni malo.
+  // No va en verde para que no se confunda con lo que todavía está corriendo.
+  terminada: TONO.NEUTRO,
 };
 
 /**

@@ -3,7 +3,7 @@ import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
 import { supabase } from '../../lib/supabaseClient';
-import { TONO, claseBadgeTono } from '../../lib/tonos';
+import { TONO, claseBadge, claseBadgeTono } from '../../lib/tonos';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
@@ -11,6 +11,8 @@ import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { con } from '../../lib/textos';
+import { hoyISO } from '../../lib/horarios';
+import { situacion } from '../../lib/vigenciaPrestacion';
 
 function calcularPrecioFinal(precioLista, tipoDescuento, valorDescuento) {
   const base = Number(precioLista) || 0;
@@ -43,6 +45,11 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   const [tipoDescuento, setTipoDescuento] = useState('');
   const [valorDescuento, setValorDescuento] = useState('');
   const [nota, setNota] = useState('');
+  // Lo pactado casi siempre arranca el día en que se carga, así que la fecha viene puesta; y
+  // casi nunca tiene fecha de fin acordada de antemano, así que ésa viene vacía y quiere decir
+  // que sigue hasta que se la dé de baja.
+  const [vigenteDesde, setVigenteDesde] = useState(() => hoyISO());
+  const [vigenteHasta, setVigenteHasta] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState(null);
 
@@ -146,12 +153,21 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     setTipoDescuento('');
     setValorDescuento('');
     setNota('');
+    setVigenteDesde(hoyISO());
+    setVigenteHasta('');
     setErrorForm(null);
   }
 
   async function handleGuardarPrestacion() {
     if (!precioSeleccionado) {
       setErrorForm(t.prestaciones.seleccionar_precio_lista);
+      return;
+    }
+
+    // La base rechaza un período dado vuelta, pero el mensaje que devolvería habla de una
+    // restricción y de una columna. Acá se avisa antes y con palabras de quien está cargando.
+    if (vigenteHasta && vigenteHasta < vigenteDesde) {
+      setErrorForm(t.prestaciones.vigencia_al_reves);
       return;
     }
 
@@ -177,6 +193,8 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       precio_final: precioFinalCalculado,
       nota,
       estado: 'vigente',
+      vigente_desde: vigenteDesde,
+      vigente_hasta: vigenteHasta || null,
     });
 
     if (errorInsert) {
@@ -259,6 +277,9 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       asistente_id: asistenteId,
     }));
     const resultados = await Promise.all([
+      // La fecha de fin no se manda desde acá a propósito: la pone la base al ver la baja, con
+      // su propio reloj y no con el de esta computadora, y recorta sola lo que estaba pactado
+      // para más adelante. Escribirla también acá sería tener la misma decisión en dos lugares.
       supabase.from('prestaciones').update({ estado: 'de_baja' }).eq('paciente_id', paciente.id).eq('estado', 'vigente'),
       supabase.from('paquetes_prestaciones').update({ estado: 'de_baja' }).eq('paciente_id', paciente.id).eq('estado', 'vigente'),
       supabase
@@ -514,7 +535,9 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                     <th></th>
                     <th>{t.prestaciones.col_tipo_servicio}</th>
                     <th>{t.prestaciones.col_precio_final}</th>
-                    <th>{t.prestaciones.col_estado}</th>
+                    <th>{t.prestaciones.col_vigencia}</th>
+                    <th>{t.prestaciones.col_situacion}</th>
+                    <th>{t.prestaciones.col_revision}</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -531,6 +554,15 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                       </td>
                       <td>{p.tipo_servicio}</td>
                       <td>{p.precio_final}</td>
+                      <td>
+                        {p.vigente_desde} →{' '}
+                        {p.vigente_hasta || <span className="panel-dato-vacio">{t.prestaciones.vigencia_sin_fin}</span>}
+                      </td>
+                      <td>
+                        <span className={claseBadge(situacion(p))}>
+                          {t.prestaciones[`situacion_${situacion(p)}`]}
+                        </span>
+                      </td>
                       <td>
                         {p.requiere_revision ? (
                           <span className={claseBadgeTono(TONO.ATENCION)}>{t.prestaciones.a_revisar}</span>
@@ -648,6 +680,23 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                     onChange={(e) => setValorDescuento(e.target.value)}
                   />
                 )}
+
+                <FormField
+                  label={t.prestaciones.vigente_desde}
+                  name="vigente_desde"
+                  type="date"
+                  value={vigenteDesde}
+                  onChange={(e) => setVigenteDesde(e.target.value)}
+                  required
+                />
+                <FormField
+                  label={t.prestaciones.vigente_hasta}
+                  name="vigente_hasta"
+                  type="date"
+                  value={vigenteHasta}
+                  onChange={(e) => setVigenteHasta(e.target.value)}
+                  ayuda={t.prestaciones.vigente_hasta_ayuda}
+                />
 
                 <FormField label={t.comun.nota_interna} name="nota" type="textarea" value={nota} onChange={(e) => setNota(e.target.value)} />
 

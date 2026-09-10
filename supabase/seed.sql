@@ -396,29 +396,47 @@ INSERT INTO public.lista_precios (prestadora_id, tipo_servicio, modalidad, preci
 -- que importa —un Servicio es una canasta, no una sola cosa—: cuidado permanente
 -- más kinesiología más limpieza, tres prestaciones distintas dentro del mismo
 -- Servicio (ver el glosario, `CLAUDE.md` §4).
+--
+-- Las fechas de vigencia son relativas al día en que se siembra, y las cinco no
+-- están en la misma situación a propósito: una corriendo desde hace meses, una
+-- que arranca la semana que viene, una con fin pactado, una que ya cumplió su
+-- período y una cortada antes de tiempo. Si todas arrancaran hoy, las pantallas
+-- de vigencia se verían siempre iguales y no habría manera de notar que una
+-- muestra mal.
 INSERT INTO public.prestaciones (
   prestadora_id, servicio_id, paciente_id, tipo_servicio, precio_final,
-  precio_lista_snapshot, nota, estado
+  precio_lista_snapshot, nota, estado, vigente_desde, vigente_hasta
 ) VALUES
+  -- Corriendo, sin fecha de fin: el caso corriente.
   ('11111111-1111-4111-8111-111111111111', '60000000-0000-4000-8000-000000000001',
    '50000000-0000-4000-8000-000000000001', 'Cuidado de adultos mayores — Guardia de 12',
-   38000.00, 38000.00, 'Incluye acompañamiento y apoyo en el baño. No incluye curaciones.', 'vigente'),
+   38000.00, 38000.00, 'Incluye acompañamiento y apoyo en el baño. No incluye curaciones.',
+   'vigente', CURRENT_DATE - 120, NULL),
 
+  -- Pactada y todavía no arrancada: la Familia la contrató para la semana que viene.
   ('11111111-1111-4111-8111-111111111111', '60000000-0000-4000-8000-000000000002',
    '50000000-0000-4000-8000-000000000002', 'Cuidado de adultos mayores — Por hora',
-   3500.00, 3500.00, 'Seis horas por la mañana. No incluye traslados.', 'vigente'),
+   3500.00, 3500.00, 'Seis horas por la mañana. No incluye traslados. Arranca la semana que viene.',
+   'vigente', CURRENT_DATE + 7, NULL),
 
+  -- Corriendo con fin acordado de antemano: la factura tiene que dejar de cobrarla ese día
+  -- sin que nadie se acuerde de darla de baja.
   ('11111111-1111-4111-8111-111111111111', '60000000-0000-4000-8000-000000000003',
    '50000000-0000-4000-8000-000000000003', 'Cuidado de adultos mayores — Guardia de 24',
-   70000.00, 70000.00, 'Cobertura permanente, dos Asistentes rotando.', 'vigente'),
+   70000.00, 70000.00, 'Cobertura permanente, dos Asistentes rotando. Acordada hasta fin del trimestre.',
+   'vigente', CURRENT_DATE - 60, CURRENT_DATE + 90),
 
+  -- Cumplió lo pactado y se terminó sola. Nadie la dio de baja: no es lo mismo.
   ('11111111-1111-4111-8111-111111111111', '60000000-0000-4000-8000-000000000003',
    '50000000-0000-4000-8000-000000000003', 'Kinesiología — Por sesión',
-   12000.00, 12000.00, 'Dos sesiones por semana, martes y jueves.', 'vigente'),
+   12000.00, 12000.00, 'Dos sesiones por semana, martes y jueves. Ciclo de rehabilitación cumplido.',
+   'vigente', CURRENT_DATE - 90, CURRENT_DATE - 10),
 
+  -- Cortada antes de tiempo. La fecha de fin la pone el disparador al ver la baja.
   ('11111111-1111-4111-8111-111111111111', '60000000-0000-4000-8000-000000000003',
    '50000000-0000-4000-8000-000000000003', 'Limpieza del hogar — Por jornada',
-   25000.00, 25000.00, 'Una jornada semanal. Se dio de baja a pedido de la Familia.', 'de_baja');
+   25000.00, 25000.00, 'Una jornada semanal. Se dio de baja a pedido de la Familia.',
+   'de_baja', CURRENT_DATE - 45, NULL);
 
 
 -- ----------------------------------------------------------------------------

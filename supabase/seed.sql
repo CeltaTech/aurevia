@@ -375,10 +375,13 @@ INSERT INTO public.pacientes (
    ARRAY['EPOC'], 'II',
    'Av. Siempreviva 742, CABA', -34.6037, -58.3816, 'Obra Social de Prueba', 'OSP-0004');
 
-INSERT INTO public.servicios (id, prestadora_id, familia_id, etiqueta, estado) VALUES
-  ('60000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', 'Acompañamiento diurno de Elena',   'vigente'),
-  ('60000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000002', 'Cuidado de mañana de Héctor',      'vigente'),
-  ('60000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000003', 'Cuidado permanente de Rosa',       'vigente');
+-- Quién contrata el Servicio son dos columnas y no una: `tipo_contratante` dice de qué clase es
+-- el Cliente y `contratante_id` cuál. Hoy el único tipo que la base acepta es `familia`, pero se
+-- nombra igual, porque el día que haya otro estos datos de ejemplo no van a tener que cambiar.
+INSERT INTO public.servicios (id, prestadora_id, tipo_contratante, contratante_id, etiqueta, estado) VALUES
+  ('60000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'familia', '40000000-0000-4000-8000-000000000001', 'Acompañamiento diurno de Elena',   'vigente'),
+  ('60000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'familia', '40000000-0000-4000-8000-000000000002', 'Cuidado de mañana de Héctor',      'vigente'),
+  ('60000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'familia', '40000000-0000-4000-8000-000000000003', 'Cuidado permanente de Rosa',       'vigente');
 
 -- La Lista de Precios es el catálogo: lo que la Prestadora ofrece y a cuánto.
 -- No es lo vendido. Lo vendido son las prestaciones de más abajo, que guardan el
@@ -911,9 +914,9 @@ INSERT INTO public.pacientes (id, nombre, prestadora_id, familia_id)
 VALUES ('60000000-0000-4000-8000-000000000001', 'Rosa Ríos', '22222222-2222-4222-8222-222222222222',
         '50000000-0000-4000-8000-000000000004');
 
-INSERT INTO public.servicios (id, prestadora_id, familia_id, etiqueta)
+INSERT INTO public.servicios (id, prestadora_id, tipo_contratante, contratante_id, etiqueta)
 VALUES ('70000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222',
-        '50000000-0000-4000-8000-000000000004', 'Cuidado diurno Ríos');
+        'familia', '50000000-0000-4000-8000-000000000004', 'Cuidado diurno Ríos');
 
 -- Con Asistente asignado, por el mismo motivo que el Paciente lleva Familia: un
 -- Asistente sin Guardias no ve nada, y una prueba contra la nada no prueba nada.

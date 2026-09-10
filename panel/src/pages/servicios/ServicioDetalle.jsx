@@ -8,7 +8,7 @@ import { claseBadge } from '../../lib/tonos';
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
 import { mensajeDeError } from '../../lib/errores';
-import { clienteDelServicio } from '../../lib/clienteDelServicio';
+import { clienteDelServicio, contactosDeClientes } from '../../lib/clienteDelServicio';
 
 // Cuántas guardias se traen a la ficha. Un Servicio de meses puede tener cientos, y esta
 // pantalla no es la grilla de guardias: acá alcanza con las más próximas para entender de
@@ -20,6 +20,7 @@ export function ServicioDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [servicio, setServicio] = useState(null);
+  const [contactos, setContactos] = useState(new Map());
   const [prestaciones, setPrestaciones] = useState([]);
   const [guardias, setGuardias] = useState([]);
   const [nombresPaciente, setNombresPaciente] = useState({});
@@ -33,10 +34,10 @@ export function ServicioDetalle() {
 
     const { data: s, error: fallaServicio } = await supabase
       .from('servicios')
-      // Quién contrató sale de `tipo_contratante` y `contratante_id`; la solicitud sigue anidada
-      // porque de ahí salen los datos de contacto cuando el Cliente es una Familia. Cuál de los
-      // dos caminos se usa lo decide `clienteDelServicio`, no esta pantalla.
-      .select('id, etiqueta, estado, created_at, tipo_contratante, contratante_id, familias(id, solicitudes!familias_solicitud_id_fkey(nombre, telefono, email, localidad))')
+      // Quién contrató sale de `tipo_contratante` y `contratante_id`; sus datos de contacto vienen
+      // en una consulta aparte, porque esas dos columnas no apuntan siempre a la misma tabla y sin
+      // clave foránea la base no sabe anidarlos. De dónde salen lo decide `contactosDeClientes`.
+      .select('id, etiqueta, estado, created_at, tipo_contratante, contratante_id')
       .eq('id', id)
       .single();
 
@@ -74,16 +75,18 @@ export function ServicioDetalle() {
     const idsPaciente = [...new Set([...(pr ?? []), ...(gu ?? [])].map((r) => r.paciente_id).filter(Boolean))];
     const idsAsistente = [...new Set((gu ?? []).map((r) => r.asistente_id).filter(Boolean))];
 
-    const [pacientes, asistentes] = await Promise.all([
+    const [pacientes, asistentes, { contactos: mapaContactos }] = await Promise.all([
       idsPaciente.length
         ? supabase.from('pacientes').select('id, nombre').in('id', idsPaciente)
         : Promise.resolve({ data: [] }),
       idsAsistente.length
         ? supabase.from('asistentes').select('id, nombre').in('id', idsAsistente)
         : Promise.resolve({ data: [] }),
+      contactosDeClientes(supabase, [s]),
     ]);
 
     setServicio(s);
+    setContactos(mapaContactos);
     setPrestaciones(pr ?? []);
     setGuardias(gu ?? []);
     setNombresPaciente(Object.fromEntries((pacientes.data ?? []).map((p) => [p.id, p.nombre])));
@@ -133,7 +136,7 @@ export function ServicioDetalle() {
     );
   }
 
-  const cliente = clienteDelServicio(servicio);
+  const cliente = clienteDelServicio(servicio, contactos);
   const contacto = cliente.contacto;
 
   return (

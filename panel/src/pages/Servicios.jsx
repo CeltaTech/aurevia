@@ -9,25 +9,25 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { mensajeDeError } from '../lib/errores';
-import { clienteDelServicio } from '../lib/clienteDelServicio';
+import { clienteDelServicio, contactosDeClientes } from '../lib/clienteDelServicio';
 
 // Se piden `paciente_id` de las prestaciones y de las guardias, y no un conteo, porque de
 // esas dos listas sale la tercera cifra de la tarjeta: a cuántos Pacientes cubre el
 // Servicio. Es la misma persona contada una sola vez aunque tenga veinte guardias.
 //
-// Quién contrató sale de `tipo_contratante` y `contratante_id`, que es lo que la base guarda:
-// el Cliente puede no ser una Familia. La solicitud sigue anidada porque, cuando sí lo es, de
-// ahí salen su nombre y su localidad; quien decide cuál de los dos caminos se usa es
-// `clienteDelServicio`, no esta pantalla.
+// Quién contrató sale de `tipo_contratante` y `contratante_id`, que es lo que la base guarda: el
+// Cliente puede no ser una Familia. Sus datos de contacto vienen en una consulta aparte —esas dos
+// columnas no apuntan siempre a la misma tabla, así que no hay clave foránea que permita anidarlos—
+// y quien decide de dónde salen es `contactosDeClientes`, no esta pantalla.
 const CONSULTA =
   'id, etiqueta, estado, created_at, tipo_contratante, contratante_id, ' +
-  'familias(id, solicitudes!familias_solicitud_id_fkey(nombre, localidad)), ' +
   'prestaciones(paciente_id), guardias(paciente_id)';
 
 export function Servicios() {
   const { t } = useLocale();
   const navigate = useNavigate();
   const [filas, setFilas] = useState([]);
+  const [contactos, setContactos] = useState(new Map());
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '', estado: 'todos' });
@@ -46,7 +46,16 @@ export function Servicios() {
       return;
     }
 
+    const { contactos: mapa, error: errorContactos } = await contactosDeClientes(supabase, data);
+
+    if (errorContactos) {
+      setError(mensajeDeError(errorContactos, t));
+      setEstado('error');
+      return;
+    }
+
     setFilas(data ?? []);
+    setContactos(mapa);
     setEstado('listo');
   }, [t]);
 
@@ -61,10 +70,10 @@ export function Servicios() {
       const b = f.busqueda.toLowerCase();
       return (
         s.etiqueta?.toLowerCase().includes(b) ||
-        clienteDelServicio(s).contacto?.nombre?.toLowerCase().includes(b)
+        clienteDelServicio(s, contactos).contacto?.nombre?.toLowerCase().includes(b)
       );
     });
-  }, [filas, f]);
+  }, [filas, contactos, f]);
 
   return (
     <div>
@@ -111,7 +120,7 @@ export function Servicios() {
                   <div>
                     <p className="lista-tarjeta-titulo">{s.etiqueta || '—'}</p>
                     <p className="lista-tarjeta-subtitulo">
-                      {t.servicios.col_cliente}: {clienteDelServicio(s).contacto?.nombre || '—'}
+                      {t.servicios.col_cliente}: {clienteDelServicio(s, contactos).contacto?.nombre || '—'}
                     </p>
                   </div>
                   <span className={claseBadge(s.estado)}>

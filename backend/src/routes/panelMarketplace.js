@@ -1,4 +1,4 @@
-// Pendiente #85 (docs/PENDIENTES.md), Grupo 3 Marketplace — rutas del Panel: pasarela de
+// Pendiente #85 (docs/PLAN_HASTA_PRODUCCION.md), Grupo 3 Marketplace — rutas del Panel: pasarela de
 // pago por Prestadora, suscripciones/cobros, calificaciones con descargo, y la auditoría de
 // advertencias legales de marketplace. Mismo patrón de scoping por prestadora_id/rol que
 // panelConfiguracion.js.
@@ -214,7 +214,7 @@ panelMarketplaceRouter.get('/suscripciones/:id/cobros', soloAdministracion, asyn
 });
 
 // Carga manual de efectivo en mano — mitigante central del riesgo de suspensión indebida
-// por cobro no reflejado a tiempo en el sistema (docs/PENDIENTES.md #85). fecha_cobro es la
+// por cobro no reflejado a tiempo en el sistema (docs/PLAN_HASTA_PRODUCCION.md). fecha_cobro es la
 // fecha real del hecho, nunca la de carga (CLAUDE.md §3).
 panelMarketplaceRouter.post('/cobros/efectivo-manual', soloAdministracion, async (req, res) => {
   const { suscripcion_id: suscripcionId, monto, periodo, fecha_cobro: fechaCobro } = req.body || {};

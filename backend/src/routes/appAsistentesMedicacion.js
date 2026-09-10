@@ -4,7 +4,7 @@ import { medicacionVigenteDelPaciente, tipoMatriculaRequerida, asistenteTieneMat
 import { asistenteAtiendeAlPaciente } from '../utils/pacientesDeGuardia.js';
 import { exigeVisible } from '../utils/visibilidadPrestadora.js';
 
-// Cierra pendiente #62 (docs/PENDIENTES.md): órdenes de medicación de solo lectura para el
+// Cierra pendiente #62 (docs/PLAN_HASTA_PRODUCCION.md): órdenes de medicación de solo lectura para el
 // Asistente asignado — nunca muestra una vía que este Asistente en particular no está
 // habilitado a administrar, ni siquiera de lectura (evita que "aparezca como orden" para
 // quien no puede ejecutarla legalmente).

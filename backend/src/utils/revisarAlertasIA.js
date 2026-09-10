@@ -77,7 +77,7 @@ export async function analizarPaciente(pacienteId, prestadoraId) {
     .maybeSingle();
   if (!paciente) return;
 
-  // pacientes.medicacion_habitual queda retirada (pendiente #62, docs/PENDIENTES.md): la
+  // pacientes.medicacion_habitual queda retirada (pendiente #62, docs/PLAN_HASTA_PRODUCCION.md): la
   // IA analiza la medicación vigente real, derivada de indicaciones_medicacion.
   const medicacionVigente = await medicacionVigenteDelPaciente(pacienteId);
 

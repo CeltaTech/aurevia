@@ -4,7 +4,7 @@ import { mensajeDeError } from '../lib/errores';
 import { useLocale } from '../i18n/LocaleContext';
 
 // Catálogo de motivos de aviso previo de guardia, configurable por Prestadora —
-// pendiente #18 candidato 3 (docs/PENDIENTES.md). Reemplaza los 4 valores fijos que
+// pendiente #18 candidato 3 (docs/PLAN_HASTA_PRODUCCION.md). Reemplaza los 4 valores fijos que
 // antes tenía GuardiaAcciones.jsx (Salud/Transporte/Familiar/Otro).
 export function useMotivosAvisoPrevio(prestadoraId) {
   const { t } = useLocale();

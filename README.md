@@ -13,7 +13,7 @@ Workspace/
 ```
 
 Cada etapa nueva (Panel Admin, PWA Asistentes, PWA Familias) se agrega como su propia
-carpeta hermana cuando llegue su turno en `docs/BUILD_ORDER.md` — no se anticipan carpetas
+carpeta hermana cuando llegue su turno en `docs/PLAN_HASTA_PRODUCCION.md` — no se anticipan carpetas
 vacías de etapas futuras.
 
 ## Cómo levantar el entorno de desarrollo (Etapa 1)

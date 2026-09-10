@@ -1,6 +1,6 @@
 # PLAN_CONTINUIDAD_PROVEEDORES.md — Resguardos ante caída o salida de un proveedor
 
-> Origen: pendiente #15 de `docs/PENDIENTES.md` (inventario de dependencia de un solo
+> Origen: pendiente #15 de `docs/PLAN_HASTA_PRODUCCION.md` (inventario de dependencia de un solo
 > proveedor — Supabase/Railway/Cloudflare Pages/Gmail/GitHub). Este documento cubre los puntos 1 a 4
 > del roadmap acordado con el Desarrollador el 2026-07-13 (de lo simple/prioritario a lo
 > complejo/no prioritario). El punto 5 (mirror en caliente de Supabase Auth) queda fuera de
@@ -10,7 +10,7 @@
 
 `docs/SECURITY.md` ya documentaba el backup diario a dos buckets independientes de Supabase
 (Cloudflare R2 principal + Backblaze B2 espejo, `backend/scripts/backup_a_buckets.mjs`), pero
-el pendiente #4 de `docs/PENDIENTES.md` dejaba anotado un hueco honesto (Regla 12.5): nunca se
+el pendiente #4 de `docs/PLAN_HASTA_PRODUCCION.md` dejaba anotado un hueco honesto (Regla 12.5): nunca se
 había restaurado ese backup dentro de una base Postgres viva, solo se había verificado que el
 archivo subía y existía en los dos buckets.
 
@@ -104,7 +104,7 @@ que reemplazarlo — para no tener que decidir el procedimiento en el momento de
      variable que apunta a la dirección del backend.
    - Cualquier webhook configurado externamente (ej. el webhook de WhatsApp/Meta Cloud
      API, `docs/PRD_06_WhatsApp_IA.md`) — hay que reconfigurar la URL en el panel de Meta.
-4. El `RAILWAY_TOKEN` usado en GitHub Actions (`docs/PENDIENTES.md` #1) solo sirve para el
+4. El `RAILWAY_TOKEN` usado en GitHub Actions (`docs/PLAN_HASTA_PRODUCCION.md`) solo sirve para el
    auto-deploy — no bloquea la migración, se reemplaza por el token/mecanismo equivalente
    del proveedor nuevo.
 
@@ -172,7 +172,7 @@ que reemplazarlo — para no tener que decidir el procedimiento en el momento de
 
 Puntos 1 (feature de subida de Certificado de Aptitud + mirror de almacenamiento), 2
 (prueba de restauración), 3 (plan de migración de Auth) y 4 (runbooks) quedan resueltos con
-este documento y el build de la feature de certificados (ver `docs/PENDIENTES.md` para el
+este documento y el build de la feature de certificados (ver `docs/PLAN_HASTA_PRODUCCION.md` para el
 detalle de aplicación pendiente de la parte de Supabase Storage). El punto 5 (mirror en
 caliente de Supabase Auth) sigue explícitamente fuera de alcance y no recomendado —
 se retoma en una conversación aparte si el Desarrollador quiere profundizarlo.

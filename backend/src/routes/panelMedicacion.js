@@ -5,7 +5,7 @@ import { supabase } from '../db/connection.js';
 import { tipoMatriculaRequerida, hayAsistenteAsignadoConMatricula } from '../utils/medicacionIndicaciones.js';
 import { extensionDeArchivo, rutaDeMatriculaNueva } from '../utils/archivosSubidos.js';
 
-// Cierra pendiente #62 (docs/PENDIENTES.md): cola de revisión de indicaciones de
+// Cierra pendiente #62 (docs/PLAN_HASTA_PRODUCCION.md): cola de revisión de indicaciones de
 // medicación solicitadas por la Familia (appFamiliasMedicacion.js). Aceptar/rechazar nunca
 // bloquea por falta de matrícula del Asistente (CLAUDE.md §3) — solo informa mediante
 // el flag `sinMatricula`, que el Panel usa para disparar la advertencia legal ya

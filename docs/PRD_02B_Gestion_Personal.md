@@ -27,7 +27,7 @@ números hardcodeados — ver regla 10 de `CLAUDE.md`.
 | 6 | Guardias de cobertura (reemplazo temporal por ausencia) |
 | 7 | Generador de documentación (liquidaciones, telegramas, certificados) |
 | 8 | Tabla versionada de valores legales (`escalas_legales`) |
-| 9 | Notificaciones de vencimientos de documentación (catálogo configurable por prestadora — ver `docs/PENDIENTES.md` #18 punto 1) |
+| 9 | Notificaciones de vencimientos de documentación (catálogo configurable por prestadora — ver `docs/PLAN_HASTA_PRODUCCION.md pasos 104 y 105`) |
 
 ## Glosario nuevo (sumar al de `CLAUDE.md`)
 
@@ -63,7 +63,7 @@ la ficha no hay forma de exigir un permiso para un dato y no para el resto.
 Los vencimientos de documentación del Asistente (Monotributo, ART, Seguro, Certificado de
 Antecedentes Penales u otros que agregue cada prestadora) ya no viven como columnas de
 `asistentes` — pasaron a las tablas `tipos_documento_asistente`/`documentos_asistente` (ver
-`DATA_MODEL.md`, pendiente #18 punto 1 de `docs/PENDIENTES.md`), configurables por prestadora
+`DATA_MODEL.md`, pendiente #18 punto 1 de `docs/PLAN_HASTA_PRODUCCION.md`), configurables por prestadora
 sin límite de cantidad.
 
 Regla que más se rompe (repetida a propósito): toda lectura de `escalas_legales` filtra por

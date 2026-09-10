@@ -56,7 +56,7 @@ function manejarErrorDeArchivo(err, req, res, next) {
 const soloAdministracion = exigirAdministracion('Solo Admin puede crear cuentas');
 
 // Alta desde Postulación/Solicitud (rutas /familia y /asistente, más abajo) se queda
-// admin-only sin cambios — el motor de permisos de la Fase 2 (docs/PENDIENTES.md, plan
+// admin-only sin cambios — el motor de permisos de la Fase 2 (docs/PLAN_HASTA_PRODUCCION.md, plan
 // aprobado) solo cubre el alta manual (/familia-directa y /asistente-directo), que es lo
 // que el plan pidió hacer configurable para Coordinador.
 
@@ -184,7 +184,7 @@ panelCuentasRouter.post('/familia-directa', requiereRolPanel, exigirOrganizacion
 // Inicia el Proceso de Incorporación de Asistentes (uso interno del Panel, ver glosario
 // de CLAUDE.md): crea la cuenta real de Asistente a partir de una postulación aprobada,
 // y registra las etapas de verificacion_asistente configuradas por esa Prestadora
-// (pendiente #18 candidato 7, docs/PENDIENTES.md — cada Prestadora define su propio plan
+// (pendiente #18 candidato 7, docs/PLAN_HASTA_PRODUCCION.md — cada Prestadora define su propio plan
 // de incorporación en etapas_incorporacion_asistente, ya no hay 5 etapas fijas para todas).
 // La primera etapa (menor "orden") queda aprobada de entrada porque ya se cumplió: es la
 // postulación misma, que ya pasó.

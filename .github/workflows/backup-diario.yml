@@ -1,7 +1,7 @@
 name: Backup diario a buckets (R2 + B2)
 
 # Corre pg_dump contra Supabase y sube el resultado comprimido a los dos buckets de backup
-# (Cloudflare R2 como principal, Backblaze B2 como espejo) — ver docs/PENDIENTES.md #4 y
+# (Cloudflare R2 como principal, Backblaze B2 como espejo) — ver docs/PLAN_HASTA_PRODUCCION.md y
 # docs/SECURITY.md, sección de backup propio independiente del nativo de Supabase.
 on:
   schedule:

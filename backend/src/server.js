@@ -158,7 +158,7 @@ setInterval(() => {
 }, CINCO_MINUTOS_MS);
 
 // Renovación automática del horizonte de guardias de series abiertas (pendiente #18 punto 2,
-// docs/PENDIENTES.md) — se mide en días, misma cadencia que revisarVencimientos.
+// docs/PLAN_HASTA_PRODUCCION.md) — se mide en días, misma cadencia que revisarVencimientos.
 extenderSeriesGuardiaAbiertas().catch((err) => console.error('Error en extensión inicial de series de guardia:', err.message));
 setInterval(() => {
   extenderSeriesGuardiaAbiertas().catch((err) => console.error('Error en extensión de series de guardia:', err.message));
@@ -187,7 +187,7 @@ setInterval(() => {
 }, CINCO_MINUTOS_MS);
 
 // Aviso al Coordinador de guardias próximas que siguen sin cubrir (pendiente #106,
-// docs/PENDIENTES.md). Con cuánta anticipación avisar y cada cuánto repetirlo los define
+// docs/PLAN_HASTA_PRODUCCION.md). Con cuánta anticipación avisar y cada cuánto repetirlo los define
 // cada Prestadora en configuracion_aviso_guardia_sin_cubrir; acá solo se fija cada cuánto se
 // mira, y se mira seguido porque la anticipación configurada puede ser de pocas horas.
 revisarGuardiasSinCubrir().catch((err) => console.error('Error en revisión inicial de guardias sin cubrir:', err.message));
@@ -195,7 +195,7 @@ setInterval(() => {
   revisarGuardiasSinCubrir().catch((err) => console.error('Error en revisión de guardias sin cubrir:', err.message));
 }, CINCO_MINUTOS_MS);
 
-// Alertas de llegada demorada que nadie avisó (pendiente #101, docs/PENDIENTES.md). Sólo detecta
+// Alertas de llegada demorada que nadie avisó (pendiente #101, docs/PLAN_HASTA_PRODUCCION.md). Sólo detecta
 // y anota; de avisarle al Coordinador se ocupa revisarNotificacionesCoordinador, que ya insiste
 // sobre esa misma tabla. Corre seguido porque lo que mira son minutos: cuanto antes se anote,
 // más tiempo queda para cubrir la guardia.
@@ -204,7 +204,7 @@ setInterval(() => {
   revisarLlegadasDemoradas().catch((err) => console.error('Error en revisión de llegadas demoradas:', err.message));
 }, CINCO_MINUTOS_MS);
 
-// Verificación mensual de precios de IA (pendiente #84, docs/PENDIENTES.md) — la función
+// Verificación mensual de precios de IA (pendiente #84, docs/PLAN_HASTA_PRODUCCION.md) — la función
 // misma revisa internamente si hoy es el día del mes que corresponde, por eso el chequeo
 // corre con la misma cadencia diaria que revisarVencimientos.
 verificarPreciosIA().catch((err) => console.error('Error en verificación inicial de precios de IA:', err.message));

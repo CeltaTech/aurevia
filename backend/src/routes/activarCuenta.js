@@ -4,7 +4,7 @@ import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 
 export const activarCuentaRouter = Router();
 
-// Sin auth a propósito: quien llega acá todavía no tiene sesión (pendiente #75, docs/PENDIENTES.md).
+// Sin auth a propósito: quien llega acá todavía no tiene sesión (pendiente #75, docs/PLAN_HASTA_PRODUCCION.md).
 //
 // Todo lo que puede salir mal acá viaja como **motivo**: un código que la pantalla traduce a
 // una frase en el idioma de quien mira (CLAUDE.md §7, reglas 1 y 2). Antes salía solo el

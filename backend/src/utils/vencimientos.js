@@ -5,7 +5,7 @@ import { DIAS_AVISO_POR_DEFECTO, fechaLimiteDeAviso, ventanaDeAviso } from './re
 const EVENTO_VENCIMIENTO_DOCUMENTO = 'vencimiento_documento_asistente';
 
 // Revisa vencimientos de los documentos que cada prestadora eligió trackear (catálogo en
-// tipos_documento_asistente, configurable por prestadora — ver docs/PENDIENTES.md #18 punto 1,
+// tipos_documento_asistente, configurable por prestadora — ver docs/PLAN_HASTA_PRODUCCION.md pasos 104 y 105,
 // supabase/migrations/) y avisa por email al Coordinador según
 // docs/PRD_02B_Gestion_Personal.md función 9. Se ejecuta una vez por día (ver server.js).
 // Recorre TODAS las prestadoras licenciatarias, no una fija (mismo patrón que

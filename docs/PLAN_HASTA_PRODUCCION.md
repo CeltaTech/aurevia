@@ -1,11 +1,10 @@
 # PLAN HASTA PRODUCCIÓN — Careonys
 
-**Una sola lista, del 1 al 156, en orden.** Se hace el 1, después el 2, y así hasta el final.
+**Una sola lista, del 1 al 154, en orden.** Se hace el 1, después el 2, y así hasta el final.
 
 - Los pasos que empiezan con **Usted** los contesta o los hace el Desarrollador. Los demás los hago yo.
 - **Un paso terminado se borra de este archivo.** No se marca como hecho: se saca.
 - **No se abren pendientes nuevos.** Un problema que aparece se arregla en el momento; si no cabe en la tarea que se está haciendo, se agrega como paso en el lugar de la lista que le corresponde.
-- Al final, la tabla de los 45 pendientes que siguen abiertos y en qué paso quedó cada uno.
 
 ---
 
@@ -59,7 +58,9 @@
 
 ## El cimiento: el Servicio
 
-**19. Usted** — Aprobar `docs/PLAN_SERVICIO.md`. Son tres preguntas, ninguna técnica (`docs/PLAN_SERVICIO.md:354-364`): ¿el precio, el calendario y el cierre pasan a colgar del acuerdo en vez del Paciente? ¿se hace lugar para que el Cliente pueda no ser una Familia? ¿qué motivos de cierre existen además de fin de demanda, fallecimiento y otro? **Sin esto no se hace ninguno de los cinco pasos que siguen.**
+*Cómo se hacen los pasos 20 a 24, que mueven datos que ya están cargados:* primero se agregan las columnas nuevas **sin sacar las viejas**; después se rellenan con lo que ya hay; después se comprueba fila por fila contra la base, y **si no cuadra se para ahí**; recién entonces el código pasa a leer las nuevas; y las viejas se borran en una migración posterior, aparte. *Y tres cosas que el diseño da por sentadas:* el calendario es de cada prestación, no del Servicio; no toda prestación se convierte en una Guardia —un traslado o una limpieza se facturan sin ninguna—; y un mismo Cliente puede tener varios Servicios abiertos a la vez, sin que el producto le imponga cuántos.
+
+**19. Usted** — Tres preguntas, ninguna técnica: ¿el precio, el calendario y el cierre pasan a colgar del acuerdo en vez del Paciente? ¿se hace lugar para que el Cliente pueda no ser una Familia? ¿qué motivos de cierre existen además de fin de demanda, fallecimiento y otro? **Sin esto no se hace ninguno de los cinco pasos que siguen.**
 
 **20.** Tipo de Cliente e identificador en `servicios`, en lugar del `familia_id` obligatorio de hoy, y reescribir `interno.validar_servicio_misma_familia()` con sus dos disparadores.
 
@@ -397,62 +398,6 @@ Hoy hay una ruta de motor que acepta doce campos y **ninguna pantalla que la use
 
 **152.** Actualizar `docs/CONTEXT.md`. Hoy dice cuatro cosas que ya no son ciertas: que el Módulo 6 no tiene rutas ni pantallas, que el correo sale de una sola cuenta compartida, que no hay forma de que la Prestadora le cobre a las Familias, y su mapa de módulos describe un producto mucho más chico que el real.
 
-**153.** Actualizar el cierre de `docs/Analisis_Parametrizacion_Prestadoras.md`, que declara los ocho puntos sin resolver cuando seis ya lo están.
+**153.** Borrar la sección 9 de `celtatech/docs/SUGERENCIAS_DESDE_EL_MARKETPLACE.md`: describe un riesgo que ya no existe.
 
-**154.** Borrar la sección 9 de `celtatech/docs/SUGERENCIAS_DESDE_EL_MARKETPLACE.md`: describe un riesgo que ya no existe.
-
-**155.** Correr las pruebas y publicar.
-
-**156.** Comprobar la tabla de abajo y borrar `docs/PENDIENTES.md`.
-
----
-
-## Los 45 pendientes abiertos y dónde quedó cada uno
-
-| Pendiente | Paso |
-|---|---|
-| 18 | 104 y 105 |
-| 19 | 35 |
-| 37 | 1 y 2 |
-| 49 | 147 y 148 |
-| 53 | 108 y 109 |
-| 54 | 117 y 118 |
-| 55 | 135 |
-| 57 | 32 y 33 |
-| 58 | 72 y 73 |
-| 59 | 34 |
-| 76 | 118 |
-| 77 | 136 |
-| 97 | 123 |
-| 100 | 127 |
-| 101 | 120 |
-| 102 | 119 y 120 |
-| 107 | 112 y 113 |
-| 108 | 132 y 133 |
-| 109 | 110 y 111 |
-| 112 | 71 |
-| 113 | 49 y 50 |
-| 118 | 128 y 131 |
-| 123 | 134 |
-| 124 | 121 y 122 |
-| 125 | 19 a 24 |
-| 128 | 63, 64 y 65 |
-| 129 | 115 y 116 |
-| 130 | 16 y 18 |
-| 138 | 114 |
-| 139 | 15 |
-| 141 | 128 y 130 |
-| 148 | 3 |
-| 151 | 150 y 151 |
-| 154 | 149 |
-| 155 | 128 y 129 |
-| 156 | 30 |
-| 159 | 9 |
-| 160 | 25 |
-| 161 | 132 |
-| 162 | 138 |
-| 171 | 17 |
-| 173 | 132 |
-| 178 | 36 |
-| 179 | 37 |
-| 180 | 137 |
+**154.** Correr las pruebas y publicar.

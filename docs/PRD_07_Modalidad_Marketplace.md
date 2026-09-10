@@ -11,7 +11,7 @@
 - `asistentes.canales TEXT[]` (default `['directo','marketplace']`) — un Asistente puede
   estar en uno, otro o ambos canales a la vez (`docs/DATA_MODEL.md:222-230`, y el esquema
   vigente en `supabase/migrations/`). Pendiente de aplicar contra Supabase real (ver
-  `docs/PENDIENTES.md` #13).
+  `docs/PLAN_HASTA_PRODUCCION.md`).
 - `calificaciones_asistente` — estrellas de la Familia, puramente informativas; la
   Prestadora solo decide `visible_publica`, nunca edita el contenido ni dispara acción
   automática sobre el Asistente (`docs/DATA_MODEL.md:589-612`, y el esquema vigente en
@@ -25,7 +25,7 @@ la vez.
 > La tercera se llamó **"cooperativa"** hasta el 2026-08-07, y con ese nombre aparece más
 > abajo en la propuesta cruda del §8, que se conserva textual porque es lo que el
 > Desarrollador escribió ese día. El nombre cambió porque nombraba otra cosa: ver
-> `docs/PENDIENTES.md` pendiente #115 y `docs/claude_history.md`.
+> `docs/PLAN_HASTA_PRODUCCION.md` pendiente #115 y `docs/claude_history.md`.
 
 ## 2. Principio central: quién ejerce el control
 
@@ -94,7 +94,7 @@ intervención en el vínculo:
    conflictos horarios/de convivencia se parece a dirigir el vínculo, rompe el argumento de
    "canal de contacto neutral" (§2).
 5. **Alertas críticas** (ausencia sin aviso, caída del check-in) por push/WhatsApp —
-   reutiliza el mecanismo ya construido para prestación directa (`docs/PENDIENTES.md` #82).
+   reutiliza el mecanismo ya construido para prestación directa (`docs/PLAN_HASTA_PRODUCCION.md`).
 6. **Contenido/recursos para cuidadores familiares** — menor esfuerzo de construir primero.
 
 ## 5. Riesgo legal invertido (modalidad marketplace)
@@ -189,12 +189,12 @@ textual, para no perderla:
   soporte y coberturas adicionales que se ofrezcan.
 - Los Asistentes comparten con la modalidad directa todo lo referente a reclutamiento,
   calificación y capacitación — un solo plantel, un solo proceso de verificación (ya
-  confirmado como infraestructura común a ambos modelos en `docs/PENDIENTES.md` #13) —
+  confirmado como infraestructura común a ambos modelos en `docs/PLAN_HASTA_PRODUCCION.md`) —
   pudiendo ofrecerse a ambas partes el uso de PWA adaptadas a ese uso limitado, excluyendo
   toda implicancia de la Prestadora en el vínculo contractual entre ambas partes.
 
 **c) Cooperativas**: mostrar las herramientas necesarias para administrarlas dentro de lo
-ya hablado (sin mayor detalle todavía — ver también `docs/PENDIENTES.md` #53, post-MVP).
+ya hablado (sin mayor detalle todavía — ver también `docs/PLAN_HASTA_PRODUCCION.md pasos 108 y 109`, post-MVP).
 
 **Todavía pendiente**: el "rearme del esquema" en sí (cómo quedan agrupados estos bloques
 en la UI del dashboard, qué falta considerar) — es el próximo paso de diseño antes de tocar
@@ -210,7 +210,7 @@ resueltas y no van a hacer cambiar la respuesta.
   con su regla (`directo`, `marketplace`, al menos uno) y su valor de arranque, y ninguna
   pantalla ni ruta del motor la consulta: hoy nada impide ofrecerle una guardia de
   marketplace a un Asistente que solo trabaja en prestación directa. Tiene fila propia,
-  la `#154`, en `docs/PENDIENTES.md`.
+  la `#154`, en `docs/PLAN_HASTA_PRODUCCION.md`.
 - **Rediseño del dashboard de Admin_prestadora** en "grupos fundamentales" por modalidad —
   este documento alimenta ese rediseño, todavía no iniciado.
 

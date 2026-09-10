@@ -94,7 +94,7 @@ Son límites duros, no preferencias.
    "para traducirla después".
 6. **No se promete lo que el producto no hace.** A la fecha de hoy no existen: el cobro
    automático a las Familias, la aplicación instalable desde las tiendas de Android y Apple, y
-   los niveles de inteligencia artificial 3 a 5 (`BUILD_ORDER.md`). Lo que está a medias se
+   los niveles de inteligencia artificial 3 a 5 (`PLAN_HASTA_PRODUCCION.md`). Lo que está a medias se
    cuenta como lo que es o no se cuenta.
 7. **Ningún número de precio hasta que estén decididos** (§6).
 
@@ -274,5 +274,5 @@ No se hace así: se piden por una interfaz, como cualquier otro producto de la e
 ## 11. Estado
 
 Documento de definición, sin nada construido. La única página que existe es la de obra (§8).
-Lo que sigue abierto está en `docs/PENDIENTES.md`; el porqué de este cambio de rumbo, en
+Lo que sigue abierto está en `docs/PLAN_HASTA_PRODUCCION.md`; el porqué de este cambio de rumbo, en
 `docs/claude_history.md`.

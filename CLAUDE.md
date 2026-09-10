@@ -140,7 +140,7 @@ contestar antes esa objeción.**
 
 **Ninguna palabra de Careonys entra en un módulo** —Prestadora, Guardia, Paciente, Servicio— si el
 otro producto no la tiene. Todavía no hay ningún módulo; sacar una pieza de acá para convertirla
-en uno entra por `..\..\CLAUDE.md` §11, nunca como parte de otra tarea. Anotado en `docs/PENDIENTES.md` #173.
+en uno entra por `..\..\CLAUDE.md` §11, nunca como parte de otra tarea. Anotado en `docs/PLAN_HASTA_PRODUCCION.md paso 132`.
 
 **Nunca datos reales en pruebas: se usa Sandbox y datos inventados.**
 
@@ -171,10 +171,10 @@ Lo general está en `..\..\CLAUDE.md` §12. Acá, lo de este producto.
 
 **Al iniciar:** leer este archivo, `..\..\CLAUDE.md`,
 `..\..\docs\REGLAS_PRODUCTOS_CAREONYS.md`,
-`..\..\docs\GLOSARIO_PRODUCTOS_CAREONYS.md`, `docs/CONTEXT.md`, `docs/BUILD_ORDER.md` —la tabla de
-etapas con el estado de cada una— y el PRD de la etapa actual. Confirmar en una línea: *«Leí los
-documentos correspondientes. Etapa actual: [X]. Última tarea completada: [Y]. Tarea de esta
-sesión: [Z].»*
+`..\..\docs\GLOSARIO_PRODUCTOS_CAREONYS.md`, `docs/CONTEXT.md`, `docs/PLAN_HASTA_PRODUCCION.md` —la lista
+de pasos, en orden— y el PRD que corresponda al paso que se va a hacer. Confirmar en una línea:
+*«Leí los documentos correspondientes. Paso del plan: [X]. Último paso terminado: [Y]. Tarea de
+esta sesión: [Z].»*
 
 **Cómo se escribe la ruta de un documento.** Hay dos carpetas `docs/`: la del producto y la de la
 empresa. Un documento del producto se cita desde la raíz del producto —`docs/CONTEXT.md`—; uno de
@@ -187,5 +187,7 @@ en la nube con `supabase migration list --linked`.
 **Por qué cambió una regla** va a `docs/claude_history.md`, en una línea: qué decía antes, qué
 dice ahora y el motivo. Se revisa antes de proponer algo que suene a tema ya debatido.
 
-**Pendientes:** `docs/PENDIENTES.md`. Un pendiente que se cierra se borra; la fila entera se
-elimina.
+**Qué falta hacer:** `docs/PLAN_HASTA_PRODUCCION.md`, una sola lista numerada, en orden. **No se
+abren pendientes nuevos:** un problema que aparece se arregla en el momento; si no cabe en la tarea
+que se está haciendo, se agrega como paso en el lugar de la lista que le corresponde. Un paso
+terminado se borra: no se marca como hecho, se saca.

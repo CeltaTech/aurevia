@@ -19,7 +19,7 @@
   operar con muy poca gente administrando.** Por lo tanto, toda tarea operativa que se
   pueda automatizar con IA sin comprometer el riesgo legal (ver `CLAUDE.md`) es deseable,
   no un extra opcional. Esto pesa a favor de priorizar antes de lo previsto algunos de los
-  niveles de IA que `BUILD_ORDER.md` marca hoy como "Diferida" — a revisar caso por caso
+  niveles de IA que `PLAN_HASTA_PRODUCCION.md` marca hoy como "Diferida" — a revisar caso por caso
   cuando se llegue a esa etapa, no se re-prioriza automáticamente sin evaluar cada nivel.
 - **Cambio societario (2026-07-09): el software pasa a ser propiedad de CeltaTech**, que
   lo licencia como SaaS a cualquier prestadora de cuidado domiciliario. Cada prestadora
@@ -43,7 +43,7 @@
   comercial se fue entero a CeltaTech y ya no existe en Careonys. **Único
   hardcodeo estructural que sigue abierto, a propósito**: el envío de emails sigue saliendo
   de una sola cuenta Gmail compartida entre todas las Prestadoras (`backend/src/utils/email.js`,
-  `SMTP_USER`) — pendiente #44 en `docs/PENDIENTES.md`, con fecha de cierre exigida "antes
+  `SMTP_USER`) — pendiente #44 en `docs/PLAN_HASTA_PRODUCCION.md`, con fecha de cierre exigida "antes
   de dar de alta la primera Prestadora real", no antes.
 
 ## Roles de usuario
@@ -229,7 +229,7 @@ social) vía Planillas 3, pero no el cobro directo a familias particulares. Ante
 construir cualquier flujo de cobro, esto necesita una decisión de negocio explícita
 (Mercado Pago, transferencia, ambos) — no asumir nada del documento no vinculante
 "Prompt de Money Suite.md" sin validarlo con el equipo de negocio primero. Ver nota en
-`SECURITY.md` y `BUILD_ORDER.md`.
+`SECURITY.md` y `PLAN_HASTA_PRODUCCION.md`.
 
 ## Changelog de este documento
 

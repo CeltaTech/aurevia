@@ -4,7 +4,7 @@ import { mensajeDeError } from '../lib/errores';
 import { useLocale } from '../i18n/LocaleContext';
 
 // Etapas del Proceso de Incorporación de Asistentes configuradas por cada Prestadora —
-// pendiente #18 candidato 7 (docs/PENDIENTES.md). Reemplaza el arreglo fijo de 5 etapas
+// pendiente #18 candidato 7 (docs/PLAN_HASTA_PRODUCCION.md). Reemplaza el arreglo fijo de 5 etapas
 // que antes compartían todas las Prestadoras.
 export function useEtapasIncorporacion(prestadoraId) {
   const { t } = useLocale();

@@ -18,7 +18,7 @@ import { MODELO_IA } from '../config/modeloIA.js';
 // crearAsistenteDirecto()/crearFamiliaDirecta() (backend/src/utils/cuentasPanel.js) aceptan.
 // Se excluye `medicacion_habitual` de Paciente: es un array de objetos {nombre, dosis,
 // frecuencia} que no mapea a una sola columna de planilla — queda para cargar después
-// desde la ficha de la Familia, no como parte de este import (ver docs/PENDIENTES.md).
+// desde la ficha de la Familia, no como parte de este import (ver docs/PLAN_HASTA_PRODUCCION.md).
 export const CAMPOS_IMPORTACION = {
   asistente: [
     'nombre', 'telefono', 'email', 'dni', 'tipo_asistente', 'zonas',

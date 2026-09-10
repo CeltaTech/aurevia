@@ -49,7 +49,7 @@ function textosActivacionCuenta(nombre, link, marca) {
 
 // Punto único de verdad: genera el token de un solo uso y manda el email de activación por
 // el SMTP que ya existe (email.js) — usado por crearCuentaConPerfil cuando la cuenta nueva
-// es de Familia/Asistente/Círculo (pendiente #75, docs/PENDIENTES.md), nunca para
+// es de Familia/Asistente/Círculo (pendiente #75, docs/PLAN_HASTA_PRODUCCION.md), nunca para
 // Coordinador/Admin_prestadora/Superadmin (esos siguen con el flujo manual existente).
 export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, prestadoraId = null, idioma = 'es-AR' }) {
   const appUrl = urlAppPorRol(rol);

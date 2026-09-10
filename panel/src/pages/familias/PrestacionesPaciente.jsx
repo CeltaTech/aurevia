@@ -232,7 +232,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     // schema_cierre_servicio_zona_fix.sql). Si este fetch corriera antes del insert (como
     // en una versión anterior), un Coordinador fuera de zona no ve ninguna fila por RLS y la
     // notificación cruzada nunca se dispara — bug encontrado probando el flujo real
-    // (docs/PENDIENTES.md #32). Todavía tiene que ir antes de la cascada de abajo, porque
+    // (docs/PLAN_HASTA_PRODUCCION.md). Todavía tiene que ir antes de la cascada de abajo, porque
     // filtra por estado='activa'/'programada'.
     const [seriesActivasResp, guardiasProgramadasResp] = await Promise.all([
       supabase

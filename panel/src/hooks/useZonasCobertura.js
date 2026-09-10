@@ -4,7 +4,7 @@ import { mensajeDeError } from '../lib/errores';
 import { useLocale } from '../i18n/LocaleContext';
 
 // Zonas de cobertura reales configuradas por cada Prestadora (tabla zonas_cobertura) —
-// pendiente #18 candidatos 4 y 5 (docs/PENDIENTES.md). Reemplaza las 7 etiquetas fijas de
+// pendiente #18 candidatos 4 y 5 (docs/PLAN_HASTA_PRODUCCION.md). Reemplaza las 7 etiquetas fijas de
 // AMBA que antes vivían en t.postulaciones.zonas_labels: cada Prestadora puede operar en
 // cualquier región, sin geografía hardcodeada.
 export function useZonasCobertura(prestadoraId) {

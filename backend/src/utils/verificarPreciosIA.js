@@ -3,7 +3,7 @@ import { supabase } from '../db/connection.js';
 import { jsonDeRespuestaIA } from './respuestaIA.js';
 import { MODELO_IA } from '../config/modeloIA.js';
 
-// Rutina mensual del pendiente #84 (docs/PENDIENTES.md): el día 1 de cada mes, revisa si
+// Rutina mensual del pendiente #84 (docs/PLAN_HASTA_PRODUCCION.md): el día 1 de cada mes, revisa si
 // el precio oficial publicado por cada proveedor de IA sigue coincidiendo con lo cargado
 // en precios_ia_modelo. Nunca aplica un cambio detectado por su cuenta — lo deja en
 // cambios_precio_ia_pendientes esperando confirmación explícita en el panel de

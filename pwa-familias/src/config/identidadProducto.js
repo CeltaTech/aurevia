@@ -68,7 +68,7 @@
 // Hoy eso NO se cumple: las dos PWA muestran el nombre del producto como marca
 // principal en su encabezado y en las notificaciones push, y el email de
 // activación —que se manda solo a Familias y Asistentes— también. Es anterior a
-// este archivo y está registrado como pendiente #95 en docs/PENDIENTES.md.
+// este archivo y está registrado como pendiente #95 en docs/PLAN_HASTA_PRODUCCION.md.
 // Mientras siga abierto, no agregar ningún uso nuevo de IDENTIDAD en las PWA
 // fuera de esa línea al pie.
 //

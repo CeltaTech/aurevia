@@ -32,7 +32,7 @@ async function crearTransporterCompartido() {
   });
 }
 
-// Pendiente #18 (docs/PENDIENTES.md), candidato 8 — cada Prestadora puede configurar sus
+// Pendiente #18 (docs/PLAN_HASTA_PRODUCCION.md), candidato 8 — cada Prestadora puede configurar sus
 // propias credenciales SMTP (configuracion_email_prestadora, backend/src/db/
 // schema_email_remitente_prestadora_01.sql), en vez de mandar siempre "desde" la cuenta
 // compartida de CeltaTech. Si la Prestadora no configuró remitente propio (o no está activo),

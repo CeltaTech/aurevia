@@ -78,7 +78,7 @@ cuando las opera la Familia sobre su propio vínculo.
 
 ## Indicaciones de medicación — riesgo de mala praxis por falta de habilitación
 
-> Diseño completo en el pendiente #62 (`docs/PENDIENTES.md`). Acá solo la advertencia que
+> Diseño completo en el pendiente #62 (`docs/PLAN_HASTA_PRODUCCION.md`). Acá solo la advertencia que
 > corresponde a esta jurisdicción — pendiente de revisión por un abogado antes de una
 > Prestadora real que active esta función, igual que el resto de este documento (ver nota
 > al inicio).
@@ -112,7 +112,7 @@ Notas de aplicación (mismo principio que el resto del documento, `CLAUDE.md` §
 
 ## Fórmula de cálculo de cese
 
-> Diseño completo en el pendiente #72 (`docs/PENDIENTES.md`). La estructura descrita acá
+> Diseño completo en el pendiente #72 (`docs/PLAN_HASTA_PRODUCCION.md`). La estructura descrita acá
 > vive como dato en `formulas_cese` (jurisdicción `AR`), interpretada genéricamente por
 > `panel/src/lib/calcularCese.js` — este documento describe en lenguaje humano lo que esas
 > filas codifican, no fija ningún valor nuevo. Pendiente de revisión por un abogado

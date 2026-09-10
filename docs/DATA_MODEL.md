@@ -4,7 +4,7 @@
 > único de especificación (Parte L — Arquitectura Web, Parte O — App de Servicio), PRD de
 > Gestión de Personal y PRD de Reclutamiento, en un solo DDL de referencia. Es el mapa
 > completo — al construir cada etapa, crear solo las tablas que esa etapa necesita
-> (ver `BUILD_ORDER.md`), no todas de una vez.
+> (ver `PLAN_HASTA_PRODUCCION.md`), no todas de una vez.
 >
 > Las notas marcadas **"(patrón adoptado de Money Suite)"** son convenciones técnicas
 > tomadas del documento no vinculante `Prompt de Money Suite.md` porque mejoran el schema
@@ -70,7 +70,7 @@ tenant — no depende solo de que la RLS esté bien escrita. Las tablas de los B
 antes de esta convención) tienen `prestadora_id` como columna simple, sin FK compuesta a sus
 tablas relacionadas; no se retrofitea salvo que se decida explícitamente.
 
-**Deuda técnica — cerrada 2026-07-11 (ver `docs/PENDIENTES.md` ítem #3):**
+**Deuda técnica — cerrada 2026-07-11 (ver `docs/PLAN_HASTA_PRODUCCION.md` ítem #3):**
 `schema_multitenant_02.sql` había agregado un `DEFAULT '874f54d7-...'` (prestadora_id de
 la Prestadora Demo) en `prestadora_id` de las 15 tablas de los Bloques 1-3 (`usuarios`, `asistentes`,
 `ausencias`, `guardias_cobertura`, `ceses`, `familias`, `pacientes`, `lista_precios`,
@@ -211,7 +211,7 @@ como toggle en el producto. El hook `panel/src/context/AdvertenciaLegalContext.j
 (`useAdvertenciaLegal().verificarAntesDeActivar(prestadoraId, funcionClave)`) está listo para
 que el primer toggle real lo use, pero no se pudo probar de punta a punta con un caso vivo —
 solo se verificaron las policies directo contra Supabase real. Ver pendiente #51 en
-`docs/PENDIENTES.md` para el detalle completo.
+`docs/PLAN_HASTA_PRODUCCION.md` para el detalle completo.
 
 ## Tabla: asistentes
 
@@ -358,7 +358,7 @@ Asistente/Familia).
 (catálogo de 4 tipos sembrado por prestadora, columnas viejas
 eliminadas de `asistentes`, `configuracion_notificaciones` migrado al evento genérico
 `vencimiento_documento_asistente`, `dias_aviso_vencimiento_documentos` con default 30 — ver
-`docs/PENDIENTES.md` #18); el archivo de esquema que llevó ese cambio se eliminó del
+`docs/PLAN_HASTA_PRODUCCION.md pasos 104 y 105`); el archivo de esquema que llevó ese cambio se eliminó del
 repositorio el 2026-08-18. Código de Panel/backend (`backend/src/routes/panelConfiguracion.js`,
 `panel/src/pages/Configuracion.jsx`, `panel/src/pages/asistentes/PerfilTab.jsx`,
 `backend/src/utils/vencimientos.js`) también entregado en el mismo cierre.
@@ -526,7 +526,7 @@ RLS). Resumen de las tablas:
 
 **Ampliación 2026-07-12 (DDL en `supabase/migrations/`)** — detección
 automática de ausencia + alertas tempranas, diseñado con el Desarrollador el 2026-07-12 tras
-probar Módulo 6 Parte 2 en navegador (ver `docs/PENDIENTES.md` #20). Dos tablas nuevas:
+probar Módulo 6 Parte 2 en navegador (ver `docs/PLAN_HASTA_PRODUCCION.md`). Dos tablas nuevas:
 
 - **`configuracion_ausencia_automatica`** — un registro por prestadora (`prestadora_id`
   `PRIMARY KEY`), con `activo` (interruptor: una prestadora puede preferir seguir marcando
@@ -547,7 +547,7 @@ probar Módulo 6 Parte 2 en navegador (ver `docs/PENDIENTES.md` #20). Dos tablas
 **Estado 2026-07-12:** las 8 tablas originales de Módulo 6 tienen rutas de Panel construidas
 (`GuardiaAcciones.jsx`, `Continuidad.jsx`). Las dos tablas nuevas de
 esta ampliación tienen código de Panel/backend escrito pero **el DDL todavía no se aplicó
-contra Supabase** — ver `docs/PENDIENTES.md` #20 para la condición de cierre.
+contra Supabase** — ver `docs/PLAN_HASTA_PRODUCCION.md` para la condición de cierre.
 
 Diseño original (pre-Módulo 6, mantenido acá solo como referencia histórica de las columnas
 base que sí sobrevivieron a `guardias`):
@@ -834,5 +834,5 @@ Ningún PRD original define tablas de pago/facturación a familias (ver `CONTEXT
 sección de gap). Si se decide construirlo, `Prompt de Money Suite.md` tiene un diseño de
 referencia completo (`payment_status` enum `captured/held/released/disputed`, integración
 Mercado Pago) que puede usarse como punto de partida técnico — pero requiere aprobación de
-negocio antes de implementarse, no está en el alcance de ninguna etapa de `BUILD_ORDER.md`
+negocio antes de implementarse, no está en el alcance de ninguna etapa de `PLAN_HASTA_PRODUCCION.md`
 todavía.

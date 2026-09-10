@@ -310,7 +310,7 @@ export function PerfilTab({ asistente, onActualizado }) {
 }
 
 // Catálogo configurable por prestadora (Configuración > Documentos de Asistentes) — reemplaza
-// las 3 columnas fijas vencimiento_monotributo/art/seguro (ver docs/PENDIENTES.md #18 punto 1,
+// las 3 columnas fijas vencimiento_monotributo/art/seguro (ver docs/PLAN_HASTA_PRODUCCION.md pasos 104 y 105,
 // supabase/migrations/).
 function DocumentosVencimiento({ asistenteId }) {
   const { t } = useLocale();

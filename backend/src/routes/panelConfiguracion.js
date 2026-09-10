@@ -145,7 +145,7 @@ panelConfiguracionRouter.delete('/escalada-relevo/:id', async (req, res) => {
 });
 
 // --- Servicios: etapas del Proceso de Incorporación de Asistentes, configurables por
-//     prestadora (pendiente #18 candidato 7, docs/PENDIENTES.md — ver
+//     prestadora (pendiente #18 candidato 7, docs/PLAN_HASTA_PRODUCCION.md — ver
 //     supabase/migrations/). Alta/edición/reordenamiento
 //     desde el Panel; sin DELETE — se discontinúa con el toggle "activa" para no romper
 //     verificaciones_asistente ya existentes que referencian esa etapa. ---
@@ -620,7 +620,7 @@ panelConfiguracionRouter.delete('/whatsapp/plantillas/:id', async (req, res) => 
 });
 
 // --- Catálogo de tipos de documento de Asistente (vencimientos a trackear) + plazo de aviso
-//     configurable por prestadora (pendiente #18 punto 1, docs/PENDIENTES.md — ver
+//     configurable por prestadora (pendiente #18 punto 1, docs/PLAN_HASTA_PRODUCCION.md — ver
 //     supabase/migrations/). El plazo vive en la tabla "prestadoras",
 //     de gestión exclusiva de superadmin por RLS (schema_multitenant_01.sql) — se expone acá
 //     porque el backend usa la service role key y aplica el mismo scoping por prestadora que
@@ -693,7 +693,7 @@ panelConfiguracionRouter.patch('/modo-control-matricula', async (req, res) => {
 });
 
 // --- Catálogo de motivos de aviso previo de guardia, configurable por prestadora
-//     (pendiente #18 candidato 3, docs/PENDIENTES.md — ver
+//     (pendiente #18 candidato 3, docs/PLAN_HASTA_PRODUCCION.md — ver
 //     supabase/migrations/). Mismo patrón que
 //     /documentos-tipo. ---
 panelConfiguracionRouter.get('/motivos-aviso-previo', async (req, res) => {
@@ -731,7 +731,7 @@ panelConfiguracionRouter.patch('/motivos-aviso-previo/:id', async (req, res) => 
 });
 
 // --- Horizonte de generación de guardias de series abiertas (pendiente #18 punto 2,
-//     docs/PENDIENTES.md) — cron backend/src/utils/generacionSeriesGuardia.js. Mismo patrón
+//     docs/PLAN_HASTA_PRODUCCION.md) — cron backend/src/utils/generacionSeriesGuardia.js. Mismo patrón
 //     que /documentos-tipo/plazo-aviso: valor en "prestadoras", expuesto acá para reusar el
 //     scoping por prestadora ya resuelto en este router. ---
 panelConfiguracionRouter.get('/guardias/horizonte-generacion', async (req, res) => {

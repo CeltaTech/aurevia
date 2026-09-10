@@ -15,7 +15,7 @@ const ESCALAS_FIXTURE = [
 ];
 
 // Misma estructura y valores que supabase/migrations/ (seed AR) —
-// la fórmula misma es dato, ver pendiente #72 en docs/PENDIENTES.md.
+// la fórmula misma es dato, ver pendiente #72 en docs/PLAN_HASTA_PRODUCCION.md.
 const FORMULAS_FIXTURE = [
   {
     jurisdiccion: 'AR', causal: 'renuncia', vigencia_desde: '2020-01-01', vigencia_hasta: null,

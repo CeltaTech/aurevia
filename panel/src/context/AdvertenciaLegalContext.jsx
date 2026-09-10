@@ -7,7 +7,7 @@ import { useModalAccesible } from '../hooks/useModalAccesible';
 
 const AdvertenciaLegalContext = createContext(null);
 
-// Infraestructura genérica del pendiente #51 (docs/PENDIENTES.md) / CLAUDE.md §3.
+// Infraestructura genérica del pendiente #51 (docs/PLAN_HASTA_PRODUCCION.md) / CLAUDE.md §3.
 // Primer consumidor real: Medicacion.jsx, función 'medicacion_via_sin_matricula' (aceptar
 // una indicación cuya vía requiere una matrícula que ningún Asistente asignado tiene
 // vigente). Cualquier función nueva de gestión de Asistentes (rankings, penalización de

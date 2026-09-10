@@ -6,7 +6,7 @@ import { exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { exigeDelCirculo } from '../utils/accesosDelCirculo.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
 
-// Cierra pendiente #62 (docs/PENDIENTES.md): la Familia solicita la indicación de
+// Cierra pendiente #62 (docs/PLAN_HASTA_PRODUCCION.md): la Familia solicita la indicación de
 // medicación desde su propia PWA (consentimiento implícito por venir de su sesión
 // autenticada + timestamp) — el Panel decide aceptar/rechazar (panelMedicacion.js). Sin
 // esto, la indicación queda en 'pendiente' y no llega a las órdenes del Asistente.

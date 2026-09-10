@@ -149,4 +149,4 @@ sin `DOTENV_CONFIG_PATH`. Se corta, se vuelve a arrancar con la variable puesta.
 
 - [`CLAUDE.md`](../CLAUDE.md) — las reglas que no se negocian: aislamiento entre
   Prestadoras, glosario obligatorio, nada de texto escrito a mano en el código.
-- [`docs/PENDIENTES.md`](../docs/PENDIENTES.md) — lo que está abierto.
+- [`docs/PLAN_HASTA_PRODUCCION.md`](../docs/PLAN_HASTA_PRODUCCION.md) — lo que está abierto.

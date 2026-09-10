@@ -1,4 +1,4 @@
-// Pendiente #85 (docs/PENDIENTES.md), Grupo 3 Marketplace — registro de adaptadores de
+// Pendiente #85 (docs/PLAN_HASTA_PRODUCCION.md), Grupo 3 Marketplace — registro de adaptadores de
 // pasarela de pago. Un solo punto de verdad (CLAUDE.md §7 regla 12): cualquier ruta que
 // necesite operar sobre una suscripción llama a `obtenerAdaptador(proveedor)`, nunca
 // importa un adaptador puntual por su nombre de proveedor.

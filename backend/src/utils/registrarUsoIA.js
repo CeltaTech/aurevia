@@ -2,7 +2,7 @@ import { supabase } from '../db/connection.js';
 
 // Punto único de verdad para calcular el costo real de una llamada a la IA (CLAUDE.md
 // §7.12 — evita repetir esta cuenta en alertasIA.js/reporteIA.js/importacionIA.js/
-// iaWhatsapp.js) y para el pendiente #84 (docs/PENDIENTES.md): registro de uso de IA por
+// iaWhatsapp.js) y para el pendiente #84 (docs/PLAN_HASTA_PRODUCCION.md): registro de uso de IA por
 // Prestadora, nunca visible en el panel de la propia Prestadora (CLAUDE.md §2).
 //
 // El costo nunca se estima ni se hardcodea (CLAUDE.md §7.10): se toma tokens_entrada/

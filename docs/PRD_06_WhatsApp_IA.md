@@ -7,7 +7,7 @@
 > se aplicó y verificó contra Supabase real, se desplegó y se probó en navegador real contra
 > el Panel desplegado. (El Panel se servía entonces desde Vercel; desde el 2026-07-31 vive en
 > Cloudflare Pages, en `gestion.careonys.com`.) Ver pendiente #9 de
-> `docs/PENDIENTES.md` (🟢 Resuelto 2026-07-13), que tiene el detalle completo de la
+> `docs/PLAN_HASTA_PRODUCCION.md` (🟢 Resuelto 2026-07-13), que tiene el detalle completo de la
 > implementación y de lo explícitamente diferido (envío real a Asistentes y endurecimiento
 > del webhook para producción, a probar con una prestadora real con cuenta Meta activa).
 
@@ -175,7 +175,7 @@ de Claude Code, no una decisión tomada:
   cubierto por el punto 4 de este documento (el agente redacta/propone texto).
 - **Sí, más adelante, para sugerir el mejor suplente disponible** en la fase automática en vez
   de seguir siempre el orden fijo de prioridad — pero esto depende de tener datos históricos
-  suficientes, por eso ya figura como diferido en `docs/BUILD_ORDER.md` ("IA Niveles 3-5 —
+  suficientes, por eso ya figura como diferido en `docs/PLAN_HASTA_PRODUCCION.md` ("IA Niveles 3-5 —
   matching").
 - **No, para decidir si/cuándo pasar de una fase a la otra** (Coordinador 1 → Coordinador 2 →
   fase automática) — esto tiene que seguir siendo una regla determinística por tiempo, igual
@@ -196,12 +196,12 @@ de Claude Code, no una decisión tomada:
 
 ## Cómo se relaciona con el resto del proyecto
 
-- Pendiente #9 (`docs/PENDIENTES.md`) — remite acá para su cierre.
+- Pendiente #9 (`docs/PLAN_HASTA_PRODUCCION.md`) — remite acá para su cierre.
 - Pestaña "Servicios" del Módulo 8, ya construida (pendiente #8, resuelto) — este documento
   extiende la pestaña "Notificaciones" del mismo módulo, no crea una pestaña nueva.
 - `docs/PRD_02_Panel_Admin.md:91-94` (Continuidad de guardia, Parte 2 de Módulo 6) — el caso
   de uso principal que dispara el primer evento de WhatsApp saliente.
-- Pendiente #16 (`docs/PENDIENTES.md`) — auditoría de qué otras políticas deberían
+- Pendiente #16 (`docs/PLAN_HASTA_PRODUCCION.md`) — auditoría de qué otras políticas deberían
   parametrizarse por prestadora; este documento es un ejemplo puntual de ese mismo principio
   aplicado a un canal de mensajería.
 - Memoria de sesión `project_ia_oportunidades` y `feedback_tres_relaciones_distintas` — este

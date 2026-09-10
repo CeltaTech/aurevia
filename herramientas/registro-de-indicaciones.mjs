@@ -6,7 +6,7 @@
    abrir y leer solo, sin depender de que Claude Code se acuerde de nada.
 
    Por qué existe: el 2026-08-03 apareció que una indicación hablada tiempo atrás —el
-   pase de guardia por QR— nunca había quedado registrada en `docs/PENDIENTES.md`.
+   pase de guardia por QR— nunca había quedado registrada en `docs/PLAN_HASTA_PRODUCCION.md`.
    Existía como tarea de sesión, y las tareas de sesión se borran cuando la sesión se
    cierra. La memoria de Claude Code no es un lugar donde guardar cosas. El registro de
    la conversación sí lo es, y este archivo lo convierte en algo legible.

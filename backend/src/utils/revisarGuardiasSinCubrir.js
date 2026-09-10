@@ -4,7 +4,7 @@ import { necesitaNotificar } from './insistencia.js';
 import { pacientesDeGuardias } from './pacientesDeGuardia.js';
 
 // Aviso al Coordinador cuando se viene una guardia que todavía no tiene a nadie
-// (pendiente #106, docs/PENDIENTES.md).
+// (pendiente #106, docs/PLAN_HASTA_PRODUCCION.md).
 //
 // Por qué hacía falta un proceso aparte y no alcanzaba con tocar el que ya existía: los
 // tres avisos de revisarRecordatoriosPush.js filtran `.not('asistente_id', 'is', null)`

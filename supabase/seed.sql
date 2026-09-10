@@ -4,7 +4,7 @@
 -- PARA QUÉ SIRVE. La base local se crea vacía: tiene todas las tablas pero
 -- ninguna fila. Sin una Prestadora y sin un usuario no se puede ni iniciar
 -- sesión, así que ninguna pantalla se puede mirar. Hasta ahora eso se
--- resolvía escribiendo filas a mano cada vez (ver `docs/PENDIENTES.md`, #111).
+-- resolvía escribiendo filas a mano cada vez (ver `docs/PLAN_HASTA_PRODUCCION.md`,).
 -- Este archivo lo deja hecho de una vez y para siempre.
 --
 -- CÓMO SE USA. Un solo comando, parado en la raíz de este repositorio:

@@ -44,7 +44,7 @@ export function CostosIA() {
   );
 }
 
-// Pendiente #84 (docs/PENDIENTES.md): cambios de precio de IA detectados por la rutina
+// Pendiente #84 (docs/PLAN_HASTA_PRODUCCION.md): cambios de precio de IA detectados por la rutina
 // mensual (verificarPreciosIA.js) — nunca se aplican solos, quedan acá esperando
 // confirmación explícita (CLAUDE.md §6).
 function CambiosPrecioIASeccion() {

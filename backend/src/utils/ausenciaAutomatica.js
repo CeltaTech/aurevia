@@ -1,7 +1,7 @@
 import { supabase } from '../db/connection.js';
 import { marcarAusenteYCrearIncidente } from './marcarAusente.js';
 
-// Detección automática de ausencia (pendiente #20 de docs/PENDIENTES.md, diseñado con el
+// Detección automática de ausencia (pendiente #20 de docs/PLAN_HASTA_PRODUCCION.md, diseñado con el
 // Desarrollador el 2026-07-12): reemplaza al botón manual "marcar ausente" de
 // GuardiaAcciones.jsx como mecanismo principal — el botón queda como excepción/override
 // para casos que este proceso no haya detectado solo. Corre cada pocos minutos (ver

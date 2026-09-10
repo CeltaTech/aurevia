@@ -24,7 +24,7 @@ function requiereSuperadmin(req, res, next) {
 panelCostosIARouter.use(requiereRolPanel, requiereSuperadmin);
 
 // ============================================================================
-// Uso de IA por Prestadora (pendiente #84, docs/PENDIENTES.md) — costo real en dólares,
+// Uso de IA por Prestadora (pendiente #84, docs/PLAN_HASTA_PRODUCCION.md) — costo real en dólares,
 // calculado en backend/src/utils/registrarUsoIA.js a partir de tokens reales y el precio
 // oficial vigente a la fecha de cada llamada. Nunca visible para la propia Prestadora
 // (CLAUDE.md §2) — solo se resume acá.

@@ -124,6 +124,22 @@ nace en `interno`, y cualquiera que se quede en `public` y llame a una de ahí l
 y la mudanza en
 `supabase/migrations/20260904090000_las_funciones_internas_salen_del_esquema_publicado.sql`.
 
+**Y lo que llama un disparador tiene que estar del lado de adentro.** Un disparador que no es
+`SECURITY DEFINER` corre con el rol de quien está escribiendo, así que lo que llama por dentro se
+comprueba contra ese rol y no contra su dueño. Si la función que llama está cerrada a
+`authenticated`, ninguna persona con sesión puede escribir en esa tabla: el síntoma es
+`42501 permission denied for function`, y así estuvieron catorce tablas hasta la migración
+`20260910190000_lo_que_llama_un_disparador_no_se_lo_pide_prestado_a_quien_inserta.sql`. La salida
+no es abrirle la función a `authenticated` en `public` —eso la convierte en dirección web— sino
+mudarla a `interno` y darle el permiso ahí. **No se convierte el disparador en `SECURITY
+DEFINER`**: sumaría código corriendo con privilegio de dueño y le sacaría la protección por fila a
+las consultas que hace por dentro.
+
+**Ninguna prueba del motor ve esto**, porque el motor entra con la llave de servicio, que puede
+ejecutar todo. Lo prueba `scripts/probar_altas_con_sesion.mjs`, que da de alta con el pase de una
+persona y además le pregunta a la base si algún disparador quedó pidiendo un permiso que no
+tiene. Se corre con la base local levantada, junto con `scripts/probar_aislamiento.mjs`.
+
 **El motor entra a la base con la llave maestra, y eso es una decisión, no un olvido.** Las dos
 aplicaciones de teléfono no consultan la base: le piden todo al motor, y el motor entra con la
 llave de servicio, que se saltea la protección por fila. Lo que aísla una Prestadora de otra son

@@ -1065,5 +1065,6 @@ BEGIN
   RAISE NOTICE '  Cuidar del Sur  -> admin@sur.local / coordinadora@sur.local / asistente.sur@sur.local / familia.rios@sur.local';
   RAISE NOTICE 'Los correos que manda el backend quedan en http://127.0.0.1:54424';
   RAISE NOTICE 'Para comprobar que ninguna ve datos de la otra: node scripts/probar_aislamiento.mjs';
+  RAISE NOTICE 'Para comprobar que se puede dar de alta desde el Panel: node scripts/probar_altas_con_sesion.mjs';
   RAISE NOTICE '';
 END $$;

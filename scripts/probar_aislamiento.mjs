@@ -226,6 +226,13 @@ const PACIENTES_DEL_ASISTENTE = `
 const PACIENTES_DE_LA_FAMILIA = `
   SELECT p.id FROM pacientes p WHERE p.familia_id = '{p}' AND NOT p.pendiente_conformidad`;
 
+// El Servicio no guarda a quién se lo contrató en una columna «familia»: guarda de qué clase es
+// el Cliente y cuál, porque puede no ser una Familia. Acá se pide el conjunto por esas dos
+// columnas, que es lo que la base tiene, y no por la vieja `familia_id`: si la política mirara
+// una y la prueba la otra, las dos podrían estar mal a la vez y darse verde.
+const SERVICIOS_DE_LA_FAMILIA = `
+  SELECT id FROM servicios WHERE tipo_contratante = 'familia' AND contratante_id = '{p}'`;
+
 const ASISTENTES_DE_LA_FAMILIA = `
   SELECT DISTINCT g.asistente_id
     FROM guardia_pacientes gp
@@ -269,6 +276,12 @@ const LO_QUE_VE_CADA_UNO = [
     PACIENTES_DE_LA_FAMILIA],
 
   ['prestadoras', SU_PRESTADORA('prestadoras'), SU_PRESTADORA('prestadoras')],
+
+  // El Asistente no ve ningún Servicio: no hay política que se lo permita, y no la tiene que
+  // haber. La Familia ve los suyos y ninguno más — en la base hay otras Familias de su misma
+  // Prestadora con Servicio propio, así que una política que sólo mirara la Prestadora daría
+  // de más acá y la prueba lo diría.
+  ['servicios', NADA, SERVICIOS_DE_LA_FAMILIA],
 
   ['certificados', `SELECT id FROM certificados WHERE asistente_id = '{p}'`,
     `SELECT id FROM certificados WHERE asistente_id IN (${ASISTENTES_DE_LA_FAMILIA})`],

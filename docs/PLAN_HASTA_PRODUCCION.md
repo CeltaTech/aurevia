@@ -1,6 +1,6 @@
 # PLAN HASTA PRODUCCIÓN — Careonys
 
-**Una sola lista, del 1 al 138, en orden.** Se hace el 1, después el 2, y así hasta el final.
+**Una sola lista, del 1 al 137, en orden.** Se hace el 1, después el 2, y así hasta el final.
 
 - Los pasos que empiezan con **Usted** los contesta o los hace el Desarrollador. Los demás los hago yo.
 - **Un paso terminado se borra de este archivo.** No se marca como hecho: se saca.
@@ -29,89 +29,87 @@
 
 ## El cimiento: el Servicio
 
-*Cómo se hacen los pasos 5 a 8, que mueven datos que ya están cargados:* primero se agregan las columnas nuevas **sin sacar las viejas**; después se rellenan con lo que ya hay; después se comprueba fila por fila contra la base, y **si no cuadra se para ahí**; recién entonces el código pasa a leer las nuevas; y las viejas se borran en una migración posterior, aparte. *Y tres cosas que el diseño da por sentadas:* el calendario es de cada prestación, no del Servicio; no toda prestación se convierte en una Guardia —un traslado o una limpieza se facturan sin ninguna—; y un mismo Cliente puede tener varios Servicios abiertos a la vez, sin que el producto le imponga cuántos.
+*Cómo se hacen los pasos 5 a 7, que mueven datos que ya están cargados:* primero se agregan las columnas nuevas **sin sacar las viejas**; después se rellenan con lo que ya hay; después se comprueba fila por fila contra la base, y **si no cuadra se para ahí**; recién entonces el código pasa a leer las nuevas; y las viejas se borran en una migración posterior, aparte. *Y tres cosas que el diseño da por sentadas:* el calendario es de cada prestación, no del Servicio; no toda prestación se convierte en una Guardia —un traslado o una limpieza se facturan sin ninguna—; y un mismo Cliente puede tener varios Servicios abiertos a la vez, sin que el producto le imponga cuántos.
 
 *Las tres preguntas que trababan estos pasos ya están contestadas.* **El precio, el calendario y el cierre pasan a colgar del Servicio**, no del Paciente. **El Cliente puede no ser una Familia**: el glosario ya lo define como Cliente Contratante —una Familia, una Obra Social o cualquier otro que contrate—, en pantalla se dice «Cliente» a secas y en la base el identificador es `contratante`; y un mismo Servicio puede cuidar a más de un Paciente. **Los motivos de cierre son un catálogo de cada Prestadora**, que puede agregar y también quitar los que vienen de fábrica; salen de fábrica siete: fin de demanda, fallecimiento, internación del Paciente, la Familia da de baja, se cortó el pago o la cobertura, se mudó fuera de la zona, y otro.
 
-**5.** `servicio_id` en `series_guardias`, y que el motor nocturno lo copie a cada guardia. Es el eslabón que falta: hoy se lee en todas partes y no se escribe en ninguna, así que las guardias nacen sin Servicio.
+**5.** Mudar el precio, el calendario y el cierre del Paciente al Servicio. En la misma migración se reescriben las dos políticas de cierre del Coordinador, que hoy dependen de que exista una fila de cierre de ese Paciente.
 
-**6.** Mudar el precio, el calendario y el cierre del Paciente al Servicio. En la misma migración se reescriben las dos políticas de cierre del Coordinador, que hoy dependen de que exista una fila de cierre de ese Paciente.
+**6.** Motivos de cierre configurables por Prestadora: quitar el CHECK con los tres valores fijos.
 
-**7.** Motivos de cierre configurables por Prestadora: quitar el CHECK con los tres valores fijos.
-
-**8.** Sacar las columnas viejas que quedaron de los tres pasos anteriores, en una migración aparte y recién cuando ninguna pantalla las lea: `servicios.familia_id` con su índice y su clave foránea, y la parte del disparador `interno.exigir_contratante_del_servicio()` que las mantenía sincronizadas. Antes de sacar cada una se comprueba contra el código que nadie la nombre.
+**7.** Sacar las columnas viejas que quedaron de los dos pasos anteriores, en una migración aparte y recién cuando ninguna pantalla las lea: `servicios.familia_id` con su índice y su clave foránea, y la parte del disparador `interno.exigir_contratante_del_servicio()` que las mantenía sincronizadas. Antes de sacar cada una se comprueba contra el código que nadie la nombre.
 
 ---
 
 ## El dinero
 
-**9.** Dar de alta la suscripción en la pasarela y armar el cobro de cada período. Hoy `crearSuscripcion`, `generarCobroQr` y `generarCupon` no los llama nadie, y todo cobro se carga a mano.
+**8.** Dar de alta la suscripción en la pasarela y armar el cobro de cada período. Hoy `crearSuscripcion`, `generarCobroQr` y `generarCupon` no los llama nadie, y todo cobro se carga a mano.
 
-**10.** Baja en un clic: la columna `cancelada_en` sólo se lee, nadie la escribe desde una pantalla.
+**9.** Baja en un clic: la columna `cancelada_en` sólo se lee, nadie la escribe desde una pantalla.
 
-**11.** Corte diferido al fin del período pagado.
+**10.** Corte diferido al fin del período pagado.
 
-**12.** Aviso previo antes del primer cobro: `trial_fin` nunca se lee.
+**11.** Aviso previo antes del primer cobro: `trial_fin` nunca se lee.
 
-**13.** Período de gracia y reintentos. Hoy un cobro que falla suspende en el acto (`backend/src/routes/webhooksPasarelas.js:141-143`).
+**12.** Período de gracia y reintentos. Hoy un cobro que falla suspende en el acto (`backend/src/routes/webhooksPasarelas.js:141-143`).
 
-**14.** Que la factura mire las fechas de vigencia y el precio pactado del paquete. Hoy arma el total sin ningún filtro de fecha y nunca consulta `paquetes_prestaciones` (`panel/src/pages/Facturacion.jsx:120-175`).
+**13.** Que la factura mire las fechas de vigencia y el precio pactado del paquete. Hoy arma el total sin ningún filtro de fecha y nunca consulta `paquetes_prestaciones` (`panel/src/pages/Facturacion.jsx:120-175`).
 
-**15.** Sacar `precio_addon` y `moneda_addon` de `catalogo_modulos`: es concepto comercial adentro del producto.
+**14.** Sacar `precio_addon` y `moneda_addon` de `catalogo_modulos`: es concepto comercial adentro del producto.
 
-**16. Usted** — El ciclo de cobranza a obras sociales: hoy sólo existen validado y anulado. ¿Qué estados hacen falta — presentación, débito, conciliación?
+**15. Usted** — El ciclo de cobranza a obras sociales: hoy sólo existen validado y anulado. ¿Qué estados hacen falta — presentación, débito, conciliación?
 
-**17.** Construir ese ciclo.
+**16.** Construir ese ciclo.
 
-**18.** Que la Familia vea su factura desglosada en la aplicación. La base está entera; falta la ventanilla.
+**17.** Que la Familia vea su factura desglosada en la aplicación. La base está entera; falta la ventanilla.
 
-**19. Usted** — ¿Se agrega una tercera vía de pago, con un intermediario que reciba en bloque y redistribuya? Si es sí, antes hay que resolver si eso cambia quién ejerce el control (art. 23 LCT).
+**18. Usted** — ¿Se agrega una tercera vía de pago, con un intermediario que reciba en bloque y redistribuya? Si es sí, antes hay que resolver si eso cambia quién ejerce el control (art. 23 LCT).
 
 ---
 
 ## Que los avisos lleguen
 
-**20.** Los avisos del motor en los tres idiomas. Hoy el castellano está escrito adentro del código en seis archivos.
+**19.** Los avisos del motor en los tres idiomas. Hoy el castellano está escrito adentro del código en seis archivos.
 
-**21.** Canal único de avisos empujados al Panel. Hoy una pantalla pregunta cada 12 segundos y no hay ningún canal en vivo.
+**20.** Canal único de avisos empujados al Panel. Hoy una pantalla pregunta cada 12 segundos y no hay ningún canal en vivo.
 
-**22.** Enviar la plantilla a Meta y guardar el identificador que devuelve. Hoy sólo cambia un estado guardado.
+**21.** Enviar la plantilla a Meta y guardar el identificador que devuelve. Hoy sólo cambia un estado guardado.
 
-**23.** Traer de Meta el resultado de la aprobación. Hoy «aprobada» y «rechazada» sólo cambian si alguien los escribe a mano.
+**22.** Traer de Meta el resultado de la aprobación. Hoy «aprobada» y «rechazada» sólo cambian si alguien los escribe a mano.
 
-**24.** Enviar por plantilla de verdad. Hoy `backend/src/utils/whatsapp.js:44-49` arma siempre texto suelto.
+**23.** Enviar por plantilla de verdad. Hoy `backend/src/utils/whatsapp.js:44-49` arma siempre texto suelto.
 
-**25.** Redacción y corrección de plantillas por IA. La columna `motivo_rechazo` existe y no la lee nadie.
+**24.** Redacción y corrección de plantillas por IA. La columna `motivo_rechazo` existe y no la lee nadie.
 
-**26.** El vencimiento de documentos avisa por el catálogo, con su casilla de WhatsApp habilitada.
+**25.** El vencimiento de documentos avisa por el catálogo, con su casilla de WhatsApp habilitada.
 
-**27. Usted** — ¿Qué situaciones puede contestar la IA sola? Hoy la única regla es el criterio del modelo.
+**26. Usted** — ¿Qué situaciones puede contestar la IA sola? Hoy la única regla es el criterio del modelo.
 
-**28.** Hacerlo configurable por Prestadora, según lo contestado.
+**27.** Hacerlo configurable por Prestadora, según lo contestado.
 
-**29.** Que la fase automática recorra `configuracion_escalada_relevo`. Hoy sólo avisa que se llegó al umbral.
+**28.** Que la fase automática recorra `configuracion_escalada_relevo`. Hoy sólo avisa que se llegó al umbral.
 
-**30.** Poder ordenar los tres pasos de la escalada — insistir, Coordinador de respaldo, fase automática. Hoy el orden está fijo en el código.
+**29.** Poder ordenar los tres pasos de la escalada — insistir, Coordinador de respaldo, fase automática. Hoy el orden está fijo en el código.
 
-**31. Usted** — ¿Se saca el tope de una semana hacia atrás de la ventana de aviso de guardias sin cerrar?
+**30. Usted** — ¿Se saca el tope de una semana hacia atrás de la ventana de aviso de guardias sin cerrar?
 
-**32.** Sacarlo, si corresponde.
+**31.** Sacarlo, si corresponde.
 
-**33. Usted** — Pase de guardia, dos preguntas: cuando la llegada queda sin comprobar, ¿se le avisa igual a la Familia? Y un relevo, ¿cierra una guardia y abre la siguiente en un solo acto, o quedan dos constancias?
+**32. Usted** — Pase de guardia, dos preguntas: cuando la llegada queda sin comprobar, ¿se le avisa igual a la Familia? Y un relevo, ¿cierra una guardia y abre la siguiente en un solo acto, o quedan dos constancias?
 
-**34.** Ajustar el pase de guardia según lo contestado.
+**33.** Ajustar el pase de guardia según lo contestado.
 
 ---
 
 ## Derechos escritos que la persona no puede ejercer
 
-**35.** Pantalla del descargo del Asistente ante una calificación negativa. Existe en el motor y en la base; la aplicación no llama a esas rutas.
+**34.** Pantalla del descargo del Asistente ante una calificación negativa. Existe en el motor y en la base; la aplicación no llama a esas rutas.
 
-**36.** Que el Asistente vea sus propias calificaciones.
+**35.** Que el Asistente vea sus propias calificaciones.
 
-**37.** El interruptor de disponibilidad en manos del Asistente. Hoy lo maneja el Panel.
+**36.** El interruptor de disponibilidad en manos del Asistente. Hoy lo maneja el Panel.
 
-**38.** Que la Familia vea el estado documental del Asistente que contrató.
+**37.** Que la Familia vea el estado documental del Asistente que contrató.
 
 ---
 
@@ -119,47 +117,47 @@
 
 Existe el andamiaje —base, disparadores, cobros, consentimiento— y no existe la modalidad. **Hoy la Familia no puede buscar un Asistente, ni verlo, ni hablarle, ni contratarlo.**
 
-**39.** Búsqueda y perfiles públicos de Asistentes en la aplicación de la Familia, con insignias de verificación y calificación.
+**38.** Búsqueda y perfiles públicos de Asistentes en la aplicación de la Familia, con insignias de verificación y calificación.
 
-**40.** Chat interno y videollamada entre Familia y Asistente, con el contacto tapado hasta que se activa la suscripción.
+**39.** Chat interno y videollamada entre Familia y Asistente, con el contacto tapado hasta que se activa la suscripción.
 
-**41.** La activación al intentar ver el contacto, con confirmación antes de cobrar.
+**40.** La activación al intentar ver el contacto, con confirmación antes de cobrar.
 
-**42.** Prioridad de acceso al pool ante una baja.
+**41.** Prioridad de acceso al pool ante una baja.
 
-**43.** Contenido para cuidadores familiares.
+**42.** Contenido para cuidadores familiares.
 
 ---
 
 ## Los huecos del Panel
 
-**44.** Guardias en curso en el resumen del mes.
+**43.** Guardias en curso en el resumen del mes.
 
-**45.** Alertas de IA sin resolver en el resumen. El cálculo ya existe en otra pantalla.
+**44.** Alertas de IA sin resolver en el resumen. El cálculo ya existe en otra pantalla.
 
-**46.** Guardias y vínculos activos en el desglose por modalidad. Hoy sólo desglosa ausentes sin relevo previo.
+**45.** Guardias y vínculos activos en el desglose por modalidad. Hoy sólo desglosa ausentes sin relevo previo.
 
-**47. Usted** — Dos preguntas de la Solicitud: ¿cómo se le presenta la Asistente nueva a la Familia — aviso sin respuesta, aceptación explícita, o fuera del sistema? ¿Y se construye la vista mapa del plantel por zona, o se saca?
+**46. Usted** — Dos preguntas de la Solicitud: ¿cómo se le presenta la Asistente nueva a la Familia — aviso sin respuesta, aceptación explícita, o fuera del sistema? ¿Y se construye la vista mapa del plantel por zona, o se saca?
 
-**48.** Sugerir y asignar Asistente parado en la Solicitud. Hoy sólo se asigna desde Guardias; la geocodificación que hacía falta ya está construida.
+**47.** Sugerir y asignar Asistente parado en la Solicitud. Hoy sólo se asigna desde Guardias; la geocodificación que hacía falta ya está construida.
 
-**49.** Vista mapa del plantel por zona, si va. No hay ninguna librería de mapas en el Panel.
+**48.** Vista mapa del plantel por zona, si va. No hay ninguna librería de mapas en el Panel.
 
-**50.** Columnas de especialidades, documentación y guardias activas en la lista de Asistentes.
+**49.** Columnas de especialidades, documentación y guardias activas en la lista de Asistentes.
 
-**51.** Filtros por zona y por especialidad en esa misma lista.
+**50.** Filtros por zona y por especialidad en esa misma lista.
 
-**52.** Guardias históricas en el perfil del Asistente.
+**51.** Guardias históricas en el perfil del Asistente.
 
-**53.** Evaluaciones recibidas en el perfil. Ya existen en la pantalla de Calificaciones.
+**52.** Evaluaciones recibidas en el perfil. Ya existen en la pantalla de Calificaciones.
 
-**54.** Pantalla para administrar `excepciones_familiar_relevo`. La tabla existe y no tiene interfaz.
+**53.** Pantalla para administrar `excepciones_familiar_relevo`. La tabla existe y no tiene interfaz.
 
-**55.** Las cinco observaciones de apariencia: el domicilio no abre el mapa del teléfono; la medicación sigue detrás de un botón; la aplicación de Familia abre en la lista de Pacientes; la lista de reportes no muestra ánimo, ni incidentes, ni signos; y las dos aplicaciones nunca pasaron por su etapa de diseño.
+**54.** Las cinco observaciones de apariencia: el domicilio no abre el mapa del teléfono; la medicación sigue detrás de un botón; la aplicación de Familia abre en la lista de Pacientes; la lista de reportes no muestra ánimo, ni incidentes, ni signos; y las dos aplicaciones nunca pasaron por su etapa de diseño.
 
-**56. Usted** — Rotación y retención de Asistentes: ¿cuál es la fórmula y cuál el umbral?
+**55. Usted** — Rotación y retención de Asistentes: ¿cuál es la fórmula y cuál el umbral?
 
-**57.** Ponerlo en el tablero. Se calcula desde `ceses` y `asistentes`, sin tabla nueva.
+**56.** Ponerlo en el tablero. Se calcula desde `ceses` y `asistentes`, sin tabla nueva.
 
 ---
 
@@ -167,23 +165,23 @@ Existe el andamiaje —base, disparadores, cobros, consentimiento— y no existe
 
 Acá hay tres columnas que existen en la base y **nadie escribe nunca**, así que la cobertura de una ausencia hoy queda desconectada de las guardias que esa ausencia dejó sin Asistente.
 
-**58.** Al cargar una ausencia, escribir qué guardias quedan afectadas por ese rango de fechas. La columna `guardias_afectadas` existe (`supabase/migrations/20260819160000_foto_de_la_base.sql:1222`) y no la escribe ningún archivo.
+**57.** Al cargar una ausencia, escribir qué guardias quedan afectadas por ese rango de fechas. La columna `guardias_afectadas` existe (`supabase/migrations/20260819160000_foto_de_la_base.sql:1222`) y no la escribe ningún archivo.
 
-**59.** Un sustituto por cada guardia afectada, no uno por ausencia. Hoy se inserta una sola fila y `guardia_original_id` queda vacía (`panel/src/pages/asistentes/AusenciasCoberturaTab.jsx:126-131`).
+**58.** Un sustituto por cada guardia afectada, no uno por ausencia. Hoy se inserta una sola fila y `guardia_original_id` queda vacía (`panel/src/pages/asistentes/AusenciasCoberturaTab.jsx:126-131`).
 
-**60.** Al cerrar la ausencia, recalcular los días computados. `dias_computados` sólo se lee al armar el documento de cese; nadie la escribe.
+**59.** Al cerrar la ausencia, recalcular los días computados. `dias_computados` sólo se lee al armar el documento de cese; nadie la escribe.
 
-**61.** Avisar al Coordinador y a la Familia el cambio de Asistente asignado. Hoy se inserta la cobertura y no se avisa a nadie.
+**60.** Avisar al Coordinador y a la Familia el cambio de Asistente asignado. Hoy se inserta la cobertura y no se avisa a nadie.
 
-**62.** Que ninguna guardia de cobertura pase a activa sin sustituto asignado.
+**61.** Que ninguna guardia de cobertura pase a activa sin sustituto asignado.
 
-**63.** Guardar los documentos de cese generados. Hoy el PDF se descarga y se pierde: `ceses.documentos_generados` nunca se escribe (`panel/src/lib/generarDocumentoCese.js:208-210`).
+**62.** Guardar los documentos de cese generados. Hoy el PDF se descarga y se pierde: `ceses.documentos_generados` nunca se escribe (`panel/src/lib/generarDocumentoCese.js:208-210`).
 
-**64.** El Simulador compara el costo mensual de monotributo contra el de dependencia. Hoy sólo proyecta el costo de un despido a 3, 6, 12 y 24 meses.
+**63.** El Simulador compara el costo mensual de monotributo contra el de dependencia. Hoy sólo proyecta el costo de un despido a 3, 6, 12 y 24 meses.
 
-**65.** El Simulador incluye el costo de la cobertura en sus proyecciones.
+**64.** El Simulador incluye el costo de la cobertura en sus proyecciones.
 
-**66.** Que el indicador de riesgo de dependencia se recalcule solo cuando cambian los datos del Asistente. Hoy los siete indicadores se tildan a mano.
+**65.** Que el indicador de riesgo de dependencia se recalcule solo cuando cambian los datos del Asistente. Hoy los siete indicadores se tildan a mano.
 
 ---
 
@@ -191,182 +189,182 @@ Acá hay tres columnas que existen en la base y **nadie escribe nunca**, así qu
 
 Hoy hay una ruta de motor que acepta doce campos y **ninguna pantalla que la use**: no existe el formulario de postulación.
 
-**67. Usted** — ¿Dónde vive el formulario público de postulación? No va en `careonys.com`, que le vende software a las Prestadoras: quien busca trabajo de cuidador se postula en la empresa que lo va a contratar. ¿En el sitio de cada Prestadora, con dirección propia?
+**66. Usted** — ¿Dónde vive el formulario público de postulación? No va en `careonys.com`, que le vende software a las Prestadoras: quien busca trabajo de cuidador se postula en la empresa que lo va a contratar. ¿En el sitio de cada Prestadora, con dirección propia?
 
-**68.** Construir el formulario con todos los campos que faltan: fecha de nacimiento y control de mayoría de edad, domicilio con mapa, localidad, nacionalidad, CUIL, género, foto de perfil, situación ante AFIP, obra social, estudios y cursos, experiencia laboral, referencias, experiencia clínica, distancia máxima desde el domicilio y disponibilidad para urgencias, con retiro y sin retiro.
+**67.** Construir el formulario con todos los campos que faltan: fecha de nacimiento y control de mayoría de edad, domicilio con mapa, localidad, nacionalidad, CUIL, género, foto de perfil, situación ante AFIP, obra social, estudios y cursos, experiencia laboral, referencias, experiencia clínica, distancia máxima desde el domicilio y disponibilidad para urgencias, con retiro y sin retiro.
 
-**69. Usted** — ¿Se le bloquea la asignación de guardias a quien no está inscripto en monotributo, o se avisa y decide la Prestadora? La regla del producto dice avisar, no bloquear, así que el PRD y la regla no coinciden.
+**68. Usted** — ¿Se le bloquea la asignación de guardias a quien no está inscripto en monotributo, o se avisa y decide la Prestadora? La regla del producto dice avisar, no bloquear, así que el PRD y la regla no coinciden.
 
-**70.** Construirlo según lo contestado.
+**69.** Construirlo según lo contestado.
 
-**71.** Verificación de identidad comparando la foto del documento con la foto de perfil. Hoy cada etapa se marca a mano.
+**70.** Verificación de identidad comparando la foto del documento con la foto de perfil. Hoy cada etapa se marca a mano.
 
-**72.** Etapa de referencias laborales, con un mínimo verificado. El catálogo tiene cinco etapas y ninguna es ésta.
+**71.** Etapa de referencias laborales, con un mínimo verificado. El catálogo tiene cinco etapas y ninguna es ésta.
 
-**73.** Porcentaje de avance del aspirante, en vez de una lista de etapas sin contador.
+**72.** Porcentaje de avance del aspirante, en vez de una lista de etapas sin contador.
 
-**74. Usted** — El programa de capacitación: qué contenido lleva, cuántas preguntas y qué nota se necesita para aprobar. Hoy «capacitación» es sólo el nombre de una etapa.
+**73. Usted** — El programa de capacitación: qué contenido lleva, cuántas preguntas y qué nota se necesita para aprobar. Hoy «capacitación» es sólo el nombre de una etapa.
 
-**75.** Construirlo.
+**74.** Construirlo.
 
-**76.** Totales en la pantalla de Postulantes: cuántos hay, cuántos pendientes, en verificación, aprobados, rechazados.
+**75.** Totales en la pantalla de Postulantes: cuántos hay, cuántos pendientes, en verificación, aprobados, rechazados.
 
-**77.** Las columnas y los filtros que faltan: honorario pretendido y canal de llegada; y filtrar por franja horaria, urgencias, distancia máxima, condición fiscal, rango de honorario y tipo de servicio.
+**76.** Las columnas y los filtros que faltan: honorario pretendido y canal de llegada; y filtrar por franja horaria, urgencias, distancia máxima, condición fiscal, rango de honorario y tipo de servicio.
 
-**78.** Videollamada de entrevista adentro de la aplicación, para que la Prestadora entreviste a un postulante sin pasarse teléfono ni correo. Hoy «entrevista» es una casilla que alguien marca a mano.
+**77.** Videollamada de entrevista adentro de la aplicación, para que la Prestadora entreviste a un postulante sin pasarse teléfono ni correo. Hoy «entrevista» es una casilla que alguien marca a mano.
 
 ---
 
 ## Las dos aplicaciones
 
-**79.** Botón de reporte de emergencia en la Guardia Activa, con aviso inmediato al Coordinador. La palabra no aparece en ninguna línea de la aplicación del Asistente.
+**78.** Botón de reporte de emergencia en la Guardia Activa, con aviso inmediato al Coordinador. La palabra no aparece en ninguna línea de la aplicación del Asistente.
 
-**80.** Dictado por micrófono para el reporte diario. Hoy hay una caja de texto y nada más.
+**79.** Dictado por micrófono para el reporte diario. Hoy hay una caja de texto y nada más.
 
-**81.** Mi Perfil del Asistente completo: foto, especialidades, situación de monotributo, seguro con su vencimiento, Certificado de Aptitud para ver y compartir, e historial de evaluaciones recibidas. Hoy no muestra ninguno de los seis.
+**80.** Mi Perfil del Asistente completo: foto, especialidades, situación de monotributo, seguro con su vencimiento, Certificado de Aptitud para ver y compartir, e historial de evaluaciones recibidas. Hoy no muestra ninguno de los seis.
 
-**82.** La alerta por salida del domicilio: medio de transporte habitual y tiempo de viaje real. Hoy se usa una única velocidad media y distancia en línea recta, y la cuenta mide llegada tarde, no que el Asistente siga en su casa.
+**81.** La alerta por salida del domicilio: medio de transporte habitual y tiempo de viaje real. Hoy se usa una única velocidad media y distancia en línea recta, y la cuenta mide llegada tarde, no que el Asistente siga en su casa.
 
-**83.** Especialidades y botón de contacto en «Asistente Asignado». Hoy muestra foto, nombre y tipo.
+**82.** Especialidades y botón de contacto en «Asistente Asignado». Hoy muestra foto, nombre y tipo.
 
-**84.** Botón para contactar al Coordinador en la pantalla de Alertas de la Familia.
+**83.** Botón para contactar al Coordinador en la pantalla de Alertas de la Familia.
 
-**85. Usted** — El PRD promete exportar el reporte a PDF en la aplicación de la Familia, y más adelante dice que la Familia no accede al informe. ¿Cuál de las dos vale?
+**84. Usted** — El PRD promete exportar el reporte a PDF en la aplicación de la Familia, y más adelante dice que la Familia no accede al informe. ¿Cuál de las dos vale?
 
 ---
 
 ## Configuración que todavía está escrita en el código
 
-**86.** Los umbrales del semáforo de guardia salen de la configuración de la Prestadora, que ya los tiene guardados (`panel/src/lib/semaforoGuardia.js:45-52`).
+**85.** Los umbrales del semáforo de guardia salen de la configuración de la Prestadora, que ya los tiene guardados (`panel/src/lib/semaforoGuardia.js:45-52`).
 
-**87.** Que `cuentasPanel.js` y `panelImportacion.js` lean `etapas_incorporacion_asistente`, como ya hace `panelCuentas.js`.
+**86.** Que `cuentasPanel.js` y `panelImportacion.js` lean `etapas_incorporacion_asistente`, como ya hace `panelCuentas.js`.
 
-**88. Usted** — Los otros nueve valores fijos que quedan, de a uno: se los muestro con su archivo y su renglón y se contesta cuál va a configuración y cuál se queda.
+**87. Usted** — Los otros nueve valores fijos que quedan, de a uno: se los muestro con su archivo y su renglón y se contesta cuál va a configuración y cuál se queda.
 
-**89.** Mover los que corresponda.
+**88.** Mover los que corresponda.
 
-**90.** Especialidades a un catálogo por Prestadora, igual que ya están las zonas. Hoy viven en el archivo de traducciones.
+**89.** Especialidades a un catálogo por Prestadora, igual que ya están las zonas. Hoy viven en el archivo de traducciones.
 
-**91.** Leer un aviso de ausencia en texto libre y sugerir la categoría. El catálogo por Prestadora ya está construido; falta la mitad de IA.
+**90.** Leer un aviso de ausencia en texto libre y sugerir la categoría. El catálogo por Prestadora ya está construido; falta la mitad de IA.
 
-**92. Usted** — ¿Cooperativa como tercera modalidad de vínculo?
+**91. Usted** — ¿Cooperativa como tercera modalidad de vínculo?
 
-**93.** Construirla: migración que abra tres CHECK, filas de conceptos y fórmulas de cese.
+**92.** Construirla: migración que abra tres CHECK, filas de conceptos y fórmulas de cese.
 
-**94. Usted** — Nivel de complejidad: ¿qué significa cada uno de los tres? ¿Condiciona qué tipo de Asistente se admite? Hoy se carga y se edita, y el cálculo de candidatos no lo mira.
+**93. Usted** — Nivel de complejidad: ¿qué significa cada uno de los tres? ¿Condiciona qué tipo de Asistente se admite? Hoy se carga y se edita, y el cálculo de candidatos no lo mira.
 
-**95.** Que el cálculo de candidatos lo use.
+**94.** Que el cálculo de candidatos lo use.
 
-**96. Usted** — Verificar matrícula: ¿alcanza con mirar el archivo, o hay que comprobar contra el registro del colegio profesional? La mitad técnica está construida.
+**95. Usted** — Verificar matrícula: ¿alcanza con mirar el archivo, o hay que comprobar contra el registro del colegio profesional? La mitad técnica está construida.
 
-**97.** Construir la verificación según lo contestado.
+**96.** Construir la verificación según lo contestado.
 
-**98. Usted** — Accesibilidad: el código está hecho, falta la respuesta legal. `docs/legal/argentina.md` no la menciona.
+**97. Usted** — Accesibilidad: el código está hecho, falta la respuesta legal. `docs/legal/argentina.md` no la menciona.
 
-**99. Usted** — El Certificado de Aptitud impreso: ¿qué lleva? Hoy la pantalla genera el código de barras y ahí termina.
+**98. Usted** — El Certificado de Aptitud impreso: ¿qué lleva? Hoy la pantalla genera el código de barras y ahí termina.
 
-**100.** Armarlo, y agregar la subida del certificado a un depósito de archivos, creado por migración con sus políticas. Hoy sólo se guardan fechas.
+**99.** Armarlo, y agregar la subida del certificado a un depósito de archivos, creado por migración con sus políticas. Hoy sólo se guardan fechas.
 
 ---
 
 ## Datos personales
 
-**101. Usted** — Protección de datos personales: el texto lo tiene que dar el Desarrollador. `docs/legal/argentina.md` tiene ocho secciones y ninguna es de esto. Sin documento no hay aviso.
+**100. Usted** — Protección de datos personales: el texto lo tiene que dar el Desarrollador. `docs/legal/argentina.md` tiene ocho secciones y ninguna es de esto. Sin documento no hay aviso.
 
-**102.** El aviso, y qué se hace con los datos de un Servicio cerrado hace años, que hoy no se purgan nunca.
+**101.** El aviso, y qué se hace con los datos de un Servicio cerrado hace años, que hoy no se purgan nunca.
 
-**103. Usted** — La ubicación de las personas: cuatro preguntas para el profesional legal. En los 21 archivos de `docs/legal/` no aparece ni una vez «ubicación», «GPS» ni la ley 25.326. El registro del consentimiento está construido; los textos sembrados son de relleno. **Mientras no haya respuesta, el seguimiento no se enciende con nadie real.**
+**102. Usted** — La ubicación de las personas: cuatro preguntas para el profesional legal. En los 21 archivos de `docs/legal/` no aparece ni una vez «ubicación», «GPS» ni la ley 25.326. El registro del consentimiento está construido; los textos sembrados son de relleno. **Mientras no haya respuesta, el seguimiento no se enciende con nadie real.**
 
-**104.** Sembrar los textos reales y encender el seguimiento y el aviso de demora en el trayecto.
+**103.** Sembrar los textos reales y encender el seguimiento y el aviso de demora en el trayecto.
 
 ---
 
 ## Respaldo, continuidad y secretos
 
-**105.** Mapa de secretos en `docs/`: qué secreto existe, para qué sirve, dónde vive y cuándo se rotó, **sin un solo valor adentro**.
+**104.** Mapa de secretos en `docs/`: qué secreto existe, para qué sirve, dónde vive y cuándo se rotó, **sin un solo valor adentro**.
 
-**106. Usted** — El alta del gestor de contraseñas, y completar las cinco filas en blanco de `celtatech/docs/CUENTAS.md`.
+**105. Usted** — El alta del gestor de contraseñas, y completar las cinco filas en blanco de `celtatech/docs/CUENTAS.md`.
 
-**107.** Rotar clave por clave lo que corresponda, decidiéndolo de a una. Si se rota la clave secreta de Supabase, se actualiza en Railway en el mismo acto.
+**106.** Rotar clave por clave lo que corresponda, decidiéndolo de a una. Si se rota la clave secreta de Supabase, se actualiza en Railway en el mismo acto.
 
-**108.** Copiar a R2 y a B2 los seis depósitos de archivos. Hoy el respaldo sube sólo el volcado de la base: **la base se restaura y las fotos y las prescripciones no.**
+**107.** Copiar a R2 y a B2 los seis depósitos de archivos. Hoy el respaldo sube sólo el volcado de la base: **la base se restaura y las fotos y las prescripciones no.**
 
-**109.** Repetir la prueba de restauración. La que existe verificó 30 tablas y hoy el esquema tiene 105.
+**108.** Repetir la prueba de restauración. La que existe verificó 30 tablas y hoy el esquema tiene 105.
 
-**110.** Actualizar el runbook de correo: describe una sola casilla compartida y el producto ya manda con remitente por Prestadora.
+**109.** Actualizar el runbook de correo: describe una sola casilla compartida y el producto ya manda con remitente por Prestadora.
 
-**111.** Dirección técnica de la empresa que reemplace a `soporte@careonys.com`, y pasar los vencimientos de julio de 2027 a un calendario.
+**110.** Dirección técnica de la empresa que reemplace a `soporte@careonys.com`, y pasar los vencimientos de julio de 2027 a un calendario.
 
 ---
 
 ## Marca y dominio por Prestadora
 
-**112. Usted** — ¿Cada Prestadora tiene dominio o subdominio propio? ¿Alcanza con nombre y logo, o también remitente y dominio? ¿Y qué ve una Familia que tiene dos Servicios de modalidades distintas?
+**111. Usted** — ¿Cada Prestadora tiene dominio o subdominio propio? ¿Alcanza con nombre y logo, o también remitente y dominio? ¿Y qué ve una Familia que tiene dos Servicios de modalidades distintas?
 
-**113.** Que la pantalla de ingreso muestre la marca de la Prestadora y no la del producto.
+**112.** Que la pantalla de ingreso muestre la marca de la Prestadora y no la del producto.
 
-**114.** Que la conversación quede guardada adentro del producto.
+**113.** Que la conversación quede guardada adentro del producto.
 
-**115.** Dominio propio, si va.
+**114.** Dominio propio, si va.
 
 ---
 
 ## Módulos
 
-**116. Usted** — ¿Dónde corre un módulo y contra qué base? Hoy `Modulos\` está vacía. De esto depende si la facturación y la cobranza salen a un módulo — la costura ya está sana — y si con eso se cierran sin construir los adaptadores de pasarela.
+**115. Usted** — ¿Dónde corre un módulo y contra qué base? Hoy `Modulos\` está vacía. De esto depende si la facturación y la cobranza salen a un módulo — la costura ya está sana — y si con eso se cierran sin construir los adaptadores de pasarela.
 
-**117.** Sacar la facturación y la cobranza a un módulo, si corresponde.
+**116.** Sacar la facturación y la cobranza a un módulo, si corresponde.
 
 ---
 
 ## Decisiones que no traban nada empezado
 
-**118. Usted** — Subcontratación: no existe ninguna tabla de Empresa subcontratada y el Panel no la ofrece a propósito. La precondición era no abrirla hasta que una Prestadora real lo pida. ¿Sigue valiendo?
+**117. Usted** — Subcontratación: no existe ninguna tabla de Empresa subcontratada y el Panel no la ofrece a propósito. La precondición era no abrirla hasta que una Prestadora real lo pida. ¿Sigue valiendo?
 
-**119. Usted** — Un tercero que sólo mira: ¿cómo entra un financiador que sólo consulta? Un cuarto rol, un Coordinador de sólo lectura desde el catálogo de permisos, o no se hace.
+**118. Usted** — Un tercero que sólo mira: ¿cómo entra un financiador que sólo consulta? Un cuarto rol, un Coordinador de sólo lectura desde el catálogo de permisos, o no se hace.
 
-**120. Usted** — ¿Careonys va a atender establecimientos donde conviven Pacientes de Familias distintas — una residencia, un geriátrico? Si es más adelante, alcanza con dejarlo dicho.
+**119. Usted** — ¿Careonys va a atender establecimientos donde conviven Pacientes de Familias distintas — una residencia, un geriátrico? Si es más adelante, alcanza con dejarlo dicho.
 
-**121. Usted** — ¿Diez pedidos por minuto y por persona es el número? El contador compartido hace falta el día que el motor se reparta en varios servicios; hoy corre en uno solo.
+**120. Usted** — ¿Diez pedidos por minuto y por persona es el número? El contador compartido hace falta el día que el motor se reparta en varios servicios; hoy corre en uno solo.
 
-**122. Usted** — El tope de uso de IA por plan **no se puede construir como está escrito**: pide un tope por plan comercial adentro de Careonys, y eso choca con la regla de que el producto no restringe por razones comerciales. La medición sí existe. O se reescribe como tope técnico sin nombre de plan, o el tope vive en CeltaTech.
+**121. Usted** — El tope de uso de IA por plan **no se puede construir como está escrito**: pide un tope por plan comercial adentro de Careonys, y eso choca con la regla de que el producto no restringe por razones comerciales. La medición sí existe. O se reescribe como tope técnico sin nombre de plan, o el tope vive en CeltaTech.
 
-**123. Usted** — ¿Qué se corta cuando un cliente deja de pagar, siendo que lo que presta es cuidado de personas? Tres respuestas: cuánto sigue funcionando, por cuánto tiempo, y qué se corta primero para que lo sufra quien no paga y no la persona cuidada. Hoy no hay ningún interruptor de suspensión, y hasta que esto no esté contestado no se construye.
+**122. Usted** — ¿Qué se corta cuando un cliente deja de pagar, siendo que lo que presta es cuidado de personas? Tres respuestas: cuánto sigue funcionando, por cuánto tiempo, y qué se corta primero para que lo sufra quien no paga y no la persona cuidada. Hoy no hay ningún interruptor de suspensión, y hasta que esto no esté contestado no se construye.
 
-**124. Usted** — ¿Los idiomas siguen en un archivo o pasan a la base? De esto depende si sumar un idioma es una publicación o una carga de datos.
+**123. Usted** — ¿Los idiomas siguen en un archivo o pasan a la base? De esto depende si sumar un idioma es una publicación o una carga de datos.
 
-**125. Usted** — El puntaje interno de calidad del Asistente, que sólo ve el Admin: ¿sigue en pie ahora que existen las estrellas que pone la Familia? Si sigue, faltan dos respuestas: qué lo compone, y la garantía de que ninguna acción automática dependa de él. El lugar donde iría ya está hecho (`datos_reservados_asistente` y su permiso).
+**124. Usted** — El puntaje interno de calidad del Asistente, que sólo ve el Admin: ¿sigue en pie ahora que existen las estrellas que pone la Familia? Si sigue, faltan dos respuestas: qué lo compone, y la garantía de que ninguna acción automática dependa de él. El lugar donde iría ya está hecho (`datos_reservados_asistente` y su permiso).
 
-**126. Usted** — El alta y la baja de Prestadoras: el Marketplace expone una puerta firmada para que CeltaTech dé de alta y de baja clientes; Careonys no tiene nada parecido. ¿Se construye la misma, o se siguen dando de alta a mano?
+**125. Usted** — El alta y la baja de Prestadoras: el Marketplace expone una puerta firmada para que CeltaTech dé de alta y de baja clientes; Careonys no tiene nada parecido. ¿Se construye la misma, o se siguen dando de alta a mano?
 
-**127. Usted** — El acompañamiento online: ¿prestación más, o guardia sin domicilio? Si es guardia, hay que decidir qué reemplaza al fichaje por ubicación.
+**126. Usted** — El acompañamiento online: ¿prestación más, o guardia sin domicilio? Si es guardia, hay que decidir qué reemplaza al fichaje por ubicación.
 
-**128. Usted** — El «Gestor del cuidado»: ¿rol nuevo, variante de Coordinador, o entrada en el catálogo de permisos por Prestadora? La tercera no rompe la regla de los tres roles de Panel; las dos primeras sí. Hoy el Coordinador se asigna por guardia, no por Familia.
+**127. Usted** — El «Gestor del cuidado»: ¿rol nuevo, variante de Coordinador, o entrada en el catálogo de permisos por Prestadora? La tercera no rompe la regla de los tres roles de Panel; las dos primeras sí. Hoy el Coordinador se asigna por guardia, no por Familia.
 
-**129. Usted** — Cursos para familias: ¿va o no va? Si es contenido pago, el precio y el paquete son de CeltaTech y no entran acá.
+**128. Usted** — Cursos para familias: ¿va o no va? Si es contenido pago, el precio y el paquete son de CeltaTech y no entran acá.
 
-**130. Usted** — La regla de los archivos dice «nunca público» y hay un depósito público construido (`marca-prestadoras`); los otros cinco son privados. ¿La regla admite la excepción, o se cierra el depósito?
+**129. Usted** — La regla de los archivos dice «nunca público» y hay un depósito público construido (`marca-prestadoras`); los otros cinco son privados. ¿La regla admite la excepción, o se cierra el depósito?
 
 ---
 
 ## El sitio web
 
-**131. Usted** — ¿Se autoriza construir `careonys.com` según `docs/PRD_01_Sitio_Web.md`? El PRD ya está entero. Hoy `sitio-web/` es una página que dice «En construcción».
+**130. Usted** — ¿Se autoriza construir `careonys.com` según `docs/PRD_01_Sitio_Web.md`? El PRD ya está entero. Hoy `sitio-web/` es una página que dice «En construcción».
 
-**132.** Construirlo.
+**131.** Construirlo.
 
 ---
 
 ## Cierre
 
-**133.** Entrar con huella o cara en las dos aplicaciones. Hoy no hay una sola línea de eso en ninguna carpeta.
+**132.** Entrar con huella o cara en las dos aplicaciones. Hoy no hay una sola línea de eso en ninguna carpeta.
 
-**134. Usted** — El documento de roles generado desde la base: ¿para quién es, interno de CeltaTech o manual para la Prestadora?
+**133. Usted** — El documento de roles generado desde la base: ¿para quién es, interno de CeltaTech o manual para la Prestadora?
 
-**135.** Generarlo.
+**134.** Generarlo.
 
-**136.** Actualizar `docs/CONTEXT.md`. Hoy dice cuatro cosas que ya no son ciertas: que el Módulo 6 no tiene rutas ni pantallas, que el correo sale de una sola cuenta compartida, que no hay forma de que la Prestadora le cobre a las Familias, y su mapa de módulos describe un producto mucho más chico que el real.
+**135.** Actualizar `docs/CONTEXT.md`. Hoy dice cuatro cosas que ya no son ciertas: que el Módulo 6 no tiene rutas ni pantallas, que el correo sale de una sola cuenta compartida, que no hay forma de que la Prestadora le cobre a las Familias, y su mapa de módulos describe un producto mucho más chico que el real.
 
-**137.** Borrar la sección 9 de `celtatech/docs/SUGERENCIAS_DESDE_EL_MARKETPLACE.md`: describe un riesgo que ya no existe.
+**136.** Borrar la sección 9 de `celtatech/docs/SUGERENCIAS_DESDE_EL_MARKETPLACE.md`: describe un riesgo que ya no existe.
 
-**138.** Correr las pruebas y publicar.
+**137.** Correr las pruebas y publicar.

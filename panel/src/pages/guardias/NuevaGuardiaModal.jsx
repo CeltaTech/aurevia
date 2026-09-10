@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
@@ -24,6 +24,10 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
   // A quiénes atiende el turno. Es una lista y no un valor suelto porque una guardia puede
   // cubrir a más de una persona: un matrimonio en su casa, o un grupo en un asilo.
   const [pacienteIds, setPacienteIds] = useState([]);
+  // De qué Servicio es el turno. Es lo que hace que después se pueda facturar y que la pantalla
+  // del Servicio muestre sus guardias: sin esto la guardia nace suelta.
+  const [servicios, setServicios] = useState([]);
+  const [servicioId, setServicioId] = useState('');
   const [modalidad, setModalidad] = useState('');
   const [horaInicio, setHoraInicio] = useState('');
   const [horaFin, setHoraFin] = useState('');
@@ -36,7 +40,12 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
 
   useEffect(() => {
     async function cargarListas() {
-      const [{ data: asistentesData }, { data: pacientesData }, { data: prestadoraData }] = await Promise.all([
+      const [
+        { data: asistentesData },
+        { data: pacientesData },
+        { data: prestadoraData },
+        { data: serviciosData },
+      ] = await Promise.all([
         // Una guardia nueva solo se le puede dar a quien sigue en el plantel. Esta lista no
         // muestra a nadie, solo llena el desplegable de quién la toma, así que se filtra en la
         // consulta. El valor sale de `ESTADO_ACTIVO`, la misma constante que contesta
@@ -46,17 +55,54 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
         supabase.from('asistentes').select('id, nombre').eq('estado', ESTADO_ACTIVO).order('nombre'),
         // Se pide también el domicilio: cuando dos personas viven en la misma casa, verlo al
         // lado del nombre es lo que hace evidente que ese turno los cubre a los dos.
-        supabase.from('pacientes').select('id, nombre, domicilio').is('deleted_at', null).order('nombre'),
+        // `familia_id` viene porque es lo que decide qué Servicios se le pueden ofrecer al
+        // turno: un Servicio sólo factura Pacientes de quien lo contrató.
+        supabase
+          .from('pacientes')
+          .select('id, nombre, domicilio, familia_id')
+          .is('deleted_at', null)
+          .order('nombre'),
         supabase.from('prestadoras').select('dias_generacion_series_guardia').eq('id', prestadoraId).single(),
+        supabase
+          .from('servicios')
+          .select('id, etiqueta, tipo_contratante, contratante_id')
+          .eq('estado', 'vigente')
+          .order('etiqueta'),
       ]);
       setAsistentes(asistentesData ?? []);
       setPacientes(pacientesData ?? []);
+      setServicios(serviciosData ?? []);
       if (prestadoraData?.dias_generacion_series_guardia) {
         setDiasGeneracion(prestadoraData.dias_generacion_series_guardia);
       }
     }
     cargarListas();
   }, [prestadoraId]);
+
+  // Qué Servicios se le pueden ofrecer a este turno. La base ya lo controla —un Servicio sólo
+  // factura Pacientes de quien lo contrató—, así que acá no se inventa la regla: se muestra
+  // solamente lo que la base va a aceptar, para que nadie elija algo que después rebota.
+  // Si el turno cubre a gente de Familias distintas no hay ningún Servicio en común, y la lista
+  // sale vacía a propósito.
+  const serviciosDisponibles = useMemo(() => {
+    const familias = [
+      ...new Set(
+        pacienteIds.map((id) => pacientes.find((p) => p.id === id)?.familia_id).filter(Boolean),
+      ),
+    ];
+    if (familias.length !== 1) return [];
+    return servicios.filter(
+      (s) => s.tipo_contratante === 'familia' && s.contratante_id === familias[0],
+    );
+  }, [pacienteIds, pacientes, servicios]);
+
+  // Cambiar de Paciente puede dejar elegido un Servicio que ya no corresponde. Se limpia solo,
+  // porque si no se manda algo que la base rechaza y el mensaje no explica por qué.
+  useEffect(() => {
+    if (servicioId && !serviciosDisponibles.some((s) => s.id === servicioId)) {
+      setServicioId('');
+    }
+  }, [servicioId, serviciosDisponibles]);
 
   function togglePaciente(id) {
     setPacienteIds((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
@@ -111,6 +157,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
           prestadora_id: prestadoraId,
           asistente_id: asistenteId || null,
           paciente_id: primero,
+          servicio_id: servicioId || null,
           fecha,
           hora_inicio: horaInicio,
           hora_fin: horaFin,
@@ -151,6 +198,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
         prestadora_id: prestadoraId,
         asistente_id: asistenteId || null,
         paciente_id: primero,
+        servicio_id: servicioId || null,
         dias_semana: diasSemana,
         hora_inicio: horaInicio,
         hora_fin: horaFin,
@@ -182,6 +230,10 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
       }
     }
 
+    // El Servicio no se repite acá: lo copia la base desde la serie, para que las guardias que
+    // genera esta pantalla y las que genera el motor de noche salgan iguales sin que la regla
+    // esté escrita dos veces. Ver la migración
+    // 20260910200000_la_guardia_hereda_el_servicio_de_su_serie.sql.
     const fechas = generarFechasSerie(vigenteDesde, vigenteHasta, diasSemana);
     const filasGuardias = fechas.map((f) => ({
       prestadora_id: prestadoraId,
@@ -290,6 +342,26 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
             )}
           </div>
           <p className="panel-explicacion">{t.guardias.nueva_guardia.pacientes_ayuda}</p>
+
+          <FormField
+            label={t.guardias.nueva_guardia.servicio}
+            name="servicio_id"
+            type="select"
+            value={servicioId}
+            onChange={(e) => setServicioId(e.target.value)}
+          >
+            <option value="">{t.guardias.nueva_guardia.sin_servicio}</option>
+            {serviciosDisponibles.map((s) => (
+              <option key={s.id} value={s.id}>{s.etiqueta || s.id}</option>
+            ))}
+          </FormField>
+          <p className="panel-explicacion">
+            {pacienteIds.length === 0
+              ? t.guardias.nueva_guardia.servicio_elegir_paciente
+              : serviciosDisponibles.length === 0
+                ? t.guardias.nueva_guardia.servicio_sin_ninguno
+                : t.guardias.nueva_guardia.servicio_ayuda}
+          </p>
 
           <FormField
             label={t.guardias.nueva_guardia.modalidad}

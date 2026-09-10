@@ -86,6 +86,9 @@ export async function extenderSeriesGuardiaAbiertas() {
       const fechasFaltantes = generarFechasFaltantes(desdeExclusive, limiteISO, serie.dias_semana);
       if (fechasFaltantes.length === 0) continue;
 
+      // El Servicio no se copia acá: lo copia la base desde la serie, en el mismo lugar donde lo
+      // copia para las guardias que crea el Panel. Ver la migración
+      // 20260910200000_la_guardia_hereda_el_servicio_de_su_serie.sql.
       const filas = fechasFaltantes.map((fecha) => ({
         prestadora_id: prestadoraId,
         serie_id: serie.id,

@@ -51,6 +51,12 @@ const ESTADO_POR_MOTIVO = {
   codigo_incorrecto: 400,
   codigo_vencido: 400,
   demasiados_intentos: 429,
+  // Apagar una modalidad de negocio que todavía tiene algo colgando. Es 409 por lo mismo que
+  // un correo ya tomado: el pedido está bien armado, lo que pasa es que choca con algo que ya
+  // existe y que hay que resolver antes.
+  modalidad_con_asistentes: 409,
+  modalidad_con_suscripciones: 409,
+  modalidad_con_asistentes_y_suscripciones: 409,
   // El tope de pedidos por minuto (pendiente #177). Es el mismo 429 que los intentos agotados,
   // porque para la web es la misma situación —"probó demasiadas veces"—, pero el motivo es otro
   // y la pantalla dice otra cosa: los intentos agotados no se arreglan esperando, y esto sí.

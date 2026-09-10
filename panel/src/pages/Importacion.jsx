@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { usePermisos } from '../context/PermisosContext';
 import { supabase } from '../lib/supabaseClient';
@@ -7,6 +7,7 @@ import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { mensajeDeError } from '../lib/errores';
 import { con } from '../lib/textos';
+import { tomarPlanillaAnalizada } from '../lib/planillaAnalizada';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -42,6 +43,18 @@ export function Importacion() {
   const [revision, setRevision] = useState(null);
   const [revisionFinal, setRevisionFinal] = useState(null);
   const [confirmandoRechazo, setConfirmandoRechazo] = useState(false);
+
+  // Si se llegó desde la guía de primeros pasos, la planilla ya fue leída allá: se arranca en
+  // el paso de revisar el mapeo, sin volver a pedir el archivo ni a preguntarle a la IA por el
+  // mismo contenido. Al entrar por el menú no hay nada guardado y la pantalla empieza de cero.
+  useEffect(() => {
+    const previa = tomarPlanillaAnalizada();
+    if (!previa) return;
+    setTipo(previa.tipo);
+    setAnalisis(previa.analisis);
+    setMapeo(previa.analisis.mapeoPropuesto);
+    setPaso(2);
+  }, []);
 
   if (cargado && !puede('importar_datos_masivos')) {
     return <Alert variant="error">{t.comun.sin_permiso || t.comun.error_generico}</Alert>;

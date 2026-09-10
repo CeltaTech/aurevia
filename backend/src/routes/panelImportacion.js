@@ -7,7 +7,11 @@ import {
   crearAsistenteDirecto, crearFamiliaDirecta,
   activarVerificacionAltaAsistente, revertirAsistenteImportado, revertirFamiliaImportada,
 } from '../utils/cuentasPanel.js';
-import { parsearArchivo, intentarParsearSQL, evaluarViabilidadIA, proponerMapeoIA, CAMPOS_IMPORTACION } from '../utils/importacionIA.js';
+import {
+  parsearArchivo, intentarParsearSQL, evaluarViabilidadIA, proponerMapeoIA,
+  CAMPOS_IMPORTACION, CAMPOS_LISTA, valorDesdeFila,
+} from '../utils/importacionIA.js';
+import { proponerConfiguracionInicial } from '../utils/propuestaConfiguracionInicial.js';
 
 export const panelImportacionRouter = Router();
 
@@ -31,6 +35,59 @@ function manejarErrorMulter(err, req, res, next) {
   next();
 }
 
+const AVISO_ESTRUCTURA_VIA_IA =
+  'La estructura de este archivo fue interpretada por IA — conviene revisar el mapeo con especial atención antes de confirmar';
+
+// Las tres capas de lectura, en un solo lugar. Están escritas acá y no adentro de una ruta
+// porque las usan dos: la que analiza para importar y la que propone la configuración inicial
+// desde la guía de primeros pasos. Copiar la cadena habría dejado dos lecturas que se separan
+// (celtatech/CLAUDE.md §8, punto único de verdad).
+//
+// Devuelve `{ ok: false, motivo }` cuando ninguna capa pudo interpretar el archivo; ese motivo
+// ya está escrito para mostrarse en pantalla.
+async function leerPlanillaSubida({ tipo, archivo, prestadoraId }) {
+  try {
+    return { ok: true, viaIA: false, ...parsearArchivo(archivo.buffer, archivo.originalname) };
+  } catch {
+    const resultadoSQL = intentarParsearSQL(archivo.buffer);
+    if (resultadoSQL) return { ok: true, viaIA: false, ...resultadoSQL };
+
+    const viabilidad = await evaluarViabilidadIA({
+      tipo, nombreArchivo: archivo.originalname, buffer: archivo.buffer, prestadoraId,
+    });
+    if (!viabilidad.viable) return { ok: false, motivo: viabilidad.motivo };
+    return { ok: true, viaIA: true, headers: viabilidad.headers, filas: viabilidad.filas };
+  }
+}
+
+// Lo anterior más el mapeo propuesto por IA: exactamente lo que devuelve `/analizar`, para que
+// la guía de primeros pasos pueda pasarle su lectura a la pantalla de importación sin que el
+// archivo se lea —ni se le pregunte a la IA— dos veces.
+async function analizarPlanillaSubida({ tipo, archivo, prestadoraId }) {
+  const lectura = await leerPlanillaSubida({ tipo, archivo, prestadoraId });
+  if (!lectura.ok) return lectura;
+
+  const { mapeo, advertencias } = await proponerMapeoIA({
+    tipo, headers: lectura.headers, filasMuestra: lectura.filas, prestadoraId,
+  });
+
+  return {
+    ok: true,
+    analisis: {
+      headers: lectura.headers,
+      filas: lectura.filas,
+      mapeoPropuesto: mapeo,
+      advertencias: lectura.viaIA ? [AVISO_ESTRUCTURA_VIA_IA, ...advertencias] : advertencias,
+      camposDisponibles: CAMPOS_IMPORTACION[tipo],
+      archivoNombre: archivo.originalname,
+    },
+  };
+}
+
+function tipoValido(tipo) {
+  return ['asistente', 'familia'].includes(tipo);
+}
+
 // Sube un archivo (Excel/CSV), lo interpreta y devuelve un mapeo propuesto por IA para que
 // el Admin_prestadora lo revise/corrija antes de confirmar nada (ver Fase 3 del plan
 // aprobado — no se crea ningún dato todavía en este paso).
@@ -42,65 +99,78 @@ panelImportacionRouter.post(
   manejarErrorMulter,
   async (req, res) => {
     const { tipo } = req.body;
-    if (!['asistente', 'familia'].includes(tipo)) {
+    if (!tipoValido(tipo)) {
       return res.status(400).json({ error: 'Tipo de importación inválido' });
     }
     if (!req.file) {
       return res.status(400).json({ error: 'Falta el archivo' });
     }
 
-    let headers;
-    let filas;
-    let viaIA = false;
-
     try {
-      ({ headers, filas } = parsearArchivo(req.file.buffer, req.file.originalname));
-    } catch {
-      const resultadoSQL = intentarParsearSQL(req.file.buffer);
-      if (resultadoSQL) {
-        ({ headers, filas } = resultadoSQL);
-      } else {
-        const viabilidad = await evaluarViabilidadIA({
-          tipo, nombreArchivo: req.file.originalname, buffer: req.file.buffer, prestadoraId: req.usuarioPanel?.prestadoraId,
-        });
-        if (!viabilidad.viable) {
-          return res.status(400).json({ error: viabilidad.motivo });
-        }
-        ({ headers, filas } = viabilidad);
-        viaIA = true;
-      }
-    }
-
-    try {
-      const { mapeo, advertencias } = await proponerMapeoIA({ tipo, headers, filasMuestra: filas, prestadoraId: req.usuarioPanel?.prestadoraId });
-      res.json({
-        headers,
-        filas,
-        mapeoPropuesto: mapeo,
-        advertencias: viaIA
-          ? ['La estructura de este archivo fue interpretada por IA — conviene revisar el mapeo con especial atención antes de confirmar', ...advertencias]
-          : advertencias,
-        camposDisponibles: CAMPOS_IMPORTACION[tipo],
-        archivoNombre: req.file.originalname,
+      const resultado = await analizarPlanillaSubida({
+        tipo, archivo: req.file, prestadoraId: req.usuarioPanel?.prestadoraId,
       });
+      if (!resultado.ok) {
+        return res.status(400).json({ error: resultado.motivo });
+      }
+      res.json(resultado.analisis);
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
   }
 );
 
-const CAMPOS_ASISTENTE_ARRAY = new Set(['zonas']);
-const CAMPOS_FAMILIA_ARRAY = new Set(['patologiasPaciente']);
+// La guía de primeros pasos, con una planilla que la Prestadora ya tiene.
+//
+// Lee el archivo con la misma cadena de arriba y contesta qué configuración inicial traería:
+// cuántas filas, y —para una planilla de Asistentes— qué zonas de cobertura y qué tipos de
+// Asistente nombra que todavía no estén configurados. Eso último es lo que la importación no
+// crea sola, y descubrirlo antes evita tener que corregir ficha por ficha después.
+//
+// No crea nada. Devuelve además el análisis entero para que la pantalla de importación siga
+// desde donde quedó, sin volver a leer el archivo.
+panelImportacionRouter.post(
+  '/propuesta-inicial',
+  requiereRolPanel,
+  requierePermiso('importar_datos_masivos'),
+  upload.single('archivo'),
+  manejarErrorMulter,
+  async (req, res) => {
+    const { tipo } = req.body;
+    if (!tipoValido(tipo)) {
+      return res.status(400).json({ error: 'Tipo de importación inválido' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: 'Falta el archivo' });
+    }
 
-function valorDesdeFila(fila, mapeo, campo, esArray) {
-  const columna = Object.keys(mapeo).find((col) => mapeo[col] === campo);
-  if (!columna) return esArray ? [] : undefined;
-  const valor = fila[columna];
-  if (esArray) {
-    return String(valor ?? '').split(',').map((v) => v.trim()).filter(Boolean);
+    const prestadoraId = req.usuarioPanel?.prestadoraId;
+
+    try {
+      const resultado = await analizarPlanillaSubida({ tipo, archivo: req.file, prestadoraId });
+      if (!resultado.ok) {
+        return res.status(400).json({ error: resultado.motivo });
+      }
+
+      const propuesta = await proponerConfiguracionInicial({
+        tipo,
+        filas: resultado.analisis.filas,
+        mapeo: resultado.analisis.mapeoPropuesto,
+        prestadoraId,
+      });
+
+      res.json({
+        tipo,
+        archivoNombre: resultado.analisis.archivoNombre,
+        ...propuesta,
+        advertencias: resultado.analisis.advertencias,
+        analisis: resultado.analisis,
+      });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
   }
-  return valor === '' || valor == null ? undefined : valor;
-}
+);
 
 // Confirma la importación: recorre cada fila del archivo (ya con el mapeo corregido por el
 // Admin_prestadora) y reutiliza exactamente crearAsistenteDirecto/crearFamiliaDirecta — el
@@ -148,13 +218,13 @@ panelImportacionRouter.post(
         if (tipo === 'asistente') {
           const datos = { prestadoraId, usuarioPanelId: req.usuarioPanel.id, importacionId: lote.id };
           for (const campo of CAMPOS_IMPORTACION.asistente) {
-            datos[campo] = valorDesdeFila(fila, mapeo, campo, CAMPOS_ASISTENTE_ARRAY.has(campo));
+            datos[campo] = valorDesdeFila(fila, mapeo, campo, CAMPOS_LISTA.asistente.has(campo));
           }
           await crearAsistenteDirecto(datos);
         } else {
           const datos = { prestadoraId, importacionId: lote.id };
           for (const campo of CAMPOS_IMPORTACION.familia) {
-            datos[campo] = valorDesdeFila(fila, mapeo, campo, CAMPOS_FAMILIA_ARRAY.has(campo));
+            datos[campo] = valorDesdeFila(fila, mapeo, campo, CAMPOS_LISTA.familia.has(campo));
           }
           await crearFamiliaDirecta(datos);
         }

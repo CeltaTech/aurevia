@@ -3,7 +3,8 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { supabase } from '../db/connection.js';
 import { accionesDePermisos } from '../utils/permisos.js';
-import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
+import { exigirAdministracion, exigirAdminDePrestadora } from '../middleware/exigirAdministracion.js';
+import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { avisoDelCatalogo, mezclarAvisosConCatalogo, VALORES_POR_DEFECTO_AVISO } from '../utils/catalogoAvisos.js';
 import { cosaDelCatalogo, mezclarVisibilidadConCatalogo } from '../utils/catalogoVisibilidad.js';
 import { LIMITES_ALERTAS_IA, VALORES_POR_DEFECTO_ALERTAS_IA } from '../utils/revisarAlertasIA.js';
@@ -442,7 +443,22 @@ panelConfiguracionRouter.patch('/visibilidad-app/:clave', async (req, res) => {
 // --- WhatsApp: credenciales de Meta Cloud API (Supabase Vault, ver
 //     supabase/migrations/ — el token nunca vuelve a
 //     mostrarse en el Panel una vez guardado) ---
-panelConfiguracionRouter.get('/whatsapp', async (req, res) => {
+//
+// Acá se cierra más que en el resto del router. El candado de arriba
+// (`soloAdministracion`) deja pasar a Superadmin, y para casi toda la configuración está bien:
+// Superadmin es quien da soporte. Pero estas tres claves son con las que la Prestadora habla
+// con Meta, y Superadmin es un rol técnico de CeltaTech: no tiene por qué poder leer si están
+// cargadas ni, mucho menos, reemplazarlas. La sesión de soporte técnico tampoco lo habilita —
+// existe para mirar los datos de una Organización por vez y queda auditada, no para alcanzar
+// sus credenciales (`panel/src/lib/roles.js`, `esAdminDePrestadora`).
+//
+// Se agrega encima del de router en vez de tocar aquél, porque aquél protege bien al resto de
+// la configuración y ahí Superadmin sí tiene que entrar. Sumar un candado nunca abre nada.
+const soloAdminDePrestadora = exigirAdminDePrestadora(
+  'Las credenciales de WhatsApp son de la Prestadora: solo Admin puede verlas y cambiarlas'
+);
+
+panelConfiguracionRouter.get('/whatsapp', soloAdminDePrestadora, async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
   const { data, error } = await supabase
     .from('configuracion_whatsapp_prestadora')
@@ -477,7 +493,7 @@ panelConfiguracionRouter.get('/whatsapp', async (req, res) => {
   });
 });
 
-panelConfiguracionRouter.patch('/whatsapp', async (req, res) => {
+panelConfiguracionRouter.patch('/whatsapp', soloAdminDePrestadora, async (req, res) => {
   const { activo, numero_telefono, waba_id, phone_number_id, token, app_secret, verify_token } = req.body;
   const prestadoraId = req.usuarioPanel.prestadoraId;
 
@@ -527,7 +543,16 @@ panelConfiguracionRouter.patch('/whatsapp', async (req, res) => {
 // --- Email: remitente SMTP propio por Prestadora (pendiente #18 candidato 8, Supabase
 //     Vault, mismo patrón que /whatsapp — la contraseña nunca vuelve a mostrarse en el
 //     Panel una vez guardada) ---
-panelConfiguracionRouter.get('/email-remitente', async (req, res) => {
+//
+// Y por ser el mismo patrón que WhatsApp, lleva el mismo candado angosto: la contraseña del
+// correo saliente es la clave con la que la Prestadora habla con su proveedor de correo, así
+// que Superadmin queda afuera de leerla y de reemplazarla. El texto del error es propio, porque
+// quien recibe la negativa tiene que entender qué le negaron.
+const soloAdminDePrestadoraCorreo = exigirAdminDePrestadora(
+  'La contraseña del correo saliente es de la Prestadora: solo Admin puede verla y cambiarla'
+);
+
+panelConfiguracionRouter.get('/email-remitente', soloAdminDePrestadoraCorreo, async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
   const { data, error } = await supabase
     .from('configuracion_email_prestadora')
@@ -542,7 +567,7 @@ panelConfiguracionRouter.get('/email-remitente', async (req, res) => {
   });
 });
 
-panelConfiguracionRouter.patch('/email-remitente', async (req, res) => {
+panelConfiguracionRouter.patch('/email-remitente', soloAdminDePrestadoraCorreo, async (req, res) => {
   const { activo, direccion_remitente, usuario_smtp, host, puerto, password } = req.body;
   const prestadoraId = req.usuarioPanel.prestadoraId;
 
@@ -962,7 +987,68 @@ panelConfiguracionRouter.patch('/politica-verificacion', async (req, res) => {
 //     solo existe en el CHECK de la tabla para no requerir otra migración cuando se diseñe.
 //     Hasta el 2026-08-07 ese valor se llamaba 'cooperativa', que nombraba otra cosa
 //     (pendiente #115).
-const MODALIDADES_DISPONIBLES = ['directa', 'marketplace'];
+const MODALIDAD_MARKETPLACE = 'marketplace';
+const MODALIDADES_DISPONIBLES = ['directa', MODALIDAD_MARKETPLACE];
+
+// Una suscripción del Marketplace sigue en curso mientras esté en período de prueba o al día.
+// Vencida o cancelada ya no ata nada: se apagó sola.
+const SUSCRIPCIONES_EN_CURSO = ['trial', 'activa'];
+
+/**
+ * Qué impide apagar una modalidad, o `null` si no impide nada.
+ *
+ * POR QUÉ EXISTE. Hasta hoy el casillero se apagaba sin mirar nada, y apagarlo no era un
+ * ajuste de pantalla: la Prestadora quedaba con Asistentes trabajando en una forma que su
+ * propia configuración ya no habilita —la base les frena la próxima asignación de guardia con
+ * un error que nadie pidió— y, en el Marketplace, con Familias pagando una suscripción cuya
+ * pantalla de cobros acaba de desaparecer del Panel.
+ *
+ * Devuelve un **motivo**, que es un código: la frase que lee la persona vive en las
+ * traducciones, en los tres idiomas, y nunca sale escrita desde acá (CLAUDE.md §8). Ninguno de
+ * los tres códigos nombra una tabla ni una columna.
+ *
+ * Los dos vínculos que atan, y por qué son ésos:
+ *   * **Asistentes** con vínculo vigente que trabajan en esa modalidad. Un Asistente cesado o
+ *     dado de baja no ata nada.
+ *   * **Suscripciones** del Marketplace todavía en curso. Sólo existen en esa modalidad, así
+ *     que en prestación directa no se pregunta.
+ *
+ * No devuelve cuántos son a propósito: quien apaga necesita saber qué revisar, y la lista de
+ * Asistentes y la de suscripciones ya están, cada una en su pantalla.
+ */
+async function loQueImpideApagar(prestadoraId, modalidad) {
+  const [asistentes, suscripciones] = await Promise.all([
+    supabase
+      .from('asistentes')
+      .select('id')
+      .eq('prestadora_id', prestadoraId)
+      .eq('estado', 'activo')
+      .is('deleted_at', null)
+      .contains('canales', [modalidad])
+      .limit(1),
+    modalidad === MODALIDAD_MARKETPLACE
+      ? supabase
+          .from('suscripciones_marketplace')
+          .select('id')
+          .eq('prestadora_id', prestadoraId)
+          .in('estado', SUSCRIPCIONES_EN_CURSO)
+          .limit(1)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  // Si no se pudo preguntar, no se contesta que no impide nada: se levanta el error y la ruta
+  // deja la modalidad como está (CLAUDE.md §5, «todo control de acceso falla cerrado»).
+  if (asistentes.error) throw asistentes.error;
+  if (suscripciones.error) throw suscripciones.error;
+
+  const hayAsistentes = Boolean(asistentes.data?.length);
+  const haySuscripciones = Boolean(suscripciones.data?.length);
+
+  if (hayAsistentes && haySuscripciones) return 'modalidad_con_asistentes_y_suscripciones';
+  if (haySuscripciones) return 'modalidad_con_suscripciones';
+  if (hayAsistentes) return 'modalidad_con_asistentes';
+  return null;
+}
 
 panelConfiguracionRouter.get('/modalidades', async (req, res) => {
   const { data, error } = await supabase
@@ -988,6 +1074,24 @@ panelConfiguracionRouter.patch('/modalidades/:modalidad', async (req, res) => {
   if (typeof activa !== 'boolean') {
     return res.status(400).json({ error: 'Falta indicar activa (boolean)' });
   }
+
+  // Apagar sí se comprueba; encender no tiene nada que romper.
+  if (!activa) {
+    let motivo;
+    try {
+      motivo = await loQueImpideApagar(req.usuarioPanel.prestadoraId, modalidad);
+    } catch (e) {
+      // No se pudo comprobar qué depende de la modalidad. Se deja como está: apagarla sin
+      // haber mirado es justamente lo que esta comprobación vino a impedir. El texto crudo de
+      // la base queda en el registro del servidor y no sube a la pantalla (CLAUDE.md §6).
+      console.error(`No se pudo comprobar qué depende de la modalidad ${modalidad}:`, e.message);
+      return res.status(500).json({ error: 'No se pudo comprobar qué depende de esta modalidad' });
+    }
+    if (motivo) {
+      return responderError(res, new ErrorConMotivo(motivo, `modalidad ${modalidad} todavía en uso`));
+    }
+  }
+
   const ahora = new Date().toISOString();
   const { error } = await supabase.from('prestadora_modalidades').upsert(
     {

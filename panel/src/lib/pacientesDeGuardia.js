@@ -51,6 +51,55 @@ export async function cargarPacientesDeGuardias(idsGuardias) {
   return mapa;
 }
 
+/**
+ * Las guardias que atienden a alguno de estos Pacientes.
+ *
+ * Es la pregunta al revés de `cargarPacientesDeGuardias`, y vive acá por el mismo motivo: hay
+ * dos lugares donde puede estar escrito a quién atiende una guardia —la tabla
+ * `guardia_pacientes` y la columna vieja `guardias.paciente_id`—, y este archivo es el único
+ * que sabe que el segundo existe. Una pantalla que preguntara sólo por uno de los dos se
+ * saltearía guardias sin avisar.
+ *
+ * `seleccion` son las columnas que se piden de `guardias`, y tiene que incluir `id`: es la
+ * clave con la que se juntan los dos caminos sin repetir ninguna guardia.
+ *
+ * `afinar` es lo que cada pantalla le agrega a la consulta —un rango de fechas, un orden, un
+ * tope—. Se aplica a los dos caminos por igual, que es justamente el motivo por el que se
+ * recibe acá y no se arma afuera: una condición puesta en uno solo dejaría afuera guardias
+ * sin que nadie se entere.
+ */
+export async function cargarGuardiasDePacientes(idsPacientes, seleccion = '*', afinar = (c) => c) {
+  const ids = [...new Set((idsPacientes ?? []).filter(Boolean))];
+  if (ids.length === 0) return [];
+
+  const { data: vinculos, error: errorVinculos } = await supabase
+    .from('guardia_pacientes')
+    .select('guardia_id')
+    .in('paciente_id', ids);
+
+  if (errorVinculos) throw errorVinculos;
+
+  const idsGuardias = [...new Set((vinculos ?? []).map((v) => v.guardia_id).filter(Boolean))];
+
+  const [porLista, porColumnaVieja] = await Promise.all([
+    idsGuardias.length
+      ? afinar(supabase.from('guardias').select(seleccion).in('id', idsGuardias))
+      : Promise.resolve({ data: [], error: null }),
+    afinar(supabase.from('guardias').select(seleccion).in('paciente_id', ids)),
+  ]);
+
+  if (porLista.error) throw porLista.error;
+  if (porColumnaVieja.error) throw porColumnaVieja.error;
+
+  // Las mismas guardias pueden venir por los dos caminos: se juntan por id para que ninguna
+  // aparezca dos veces en la pantalla.
+  const porId = new Map();
+  for (const guardia of [...(porLista.data ?? []), ...(porColumnaVieja.data ?? [])]) {
+    if (guardia?.id) porId.set(guardia.id, guardia);
+  }
+  return [...porId.values()];
+}
+
 /** Lo mismo, para las series de guardias (la plantilla que las genera). */
 export async function cargarPacientesDeSeries(idsSeries) {
   const ids = [...new Set((idsSeries ?? []).filter(Boolean))];

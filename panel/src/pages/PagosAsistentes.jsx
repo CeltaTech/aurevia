@@ -23,6 +23,7 @@ import { formatearImporte } from '../lib/dinero';
 import { mensajeDeError } from '../lib/errores';
 import { esAdminOSuperior } from '../lib/roles';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { AvisoEscalasProvisorias } from '../components/AvisoEscalasProvisorias';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
@@ -801,26 +802,31 @@ function ConceptoModal({ concepto, onCerrar, onGuardado }) {
         )}
 
         {campos.escala_tipo && (
-          <FormField
-            label={t.pagos_asistentes.concepto_escala}
-            name="concepto_escala"
-            type="select"
-            value={datos.escala_tipo}
-            onChange={(e) => cambiar('escala_tipo', e.target.value)}
-            required
-            ayuda={
-              estadoEscalas === 'listo' && tiposDeEscala.length === 0
-                ? t.pagos_asistentes.concepto_sin_escalas
-                : t.pagos_asistentes.concepto_escala_ayuda
-            }
-          >
-            <option value="">{t.comun.seleccionar}</option>
-            {tiposDeEscala.map((tipo) => (
-              <option key={tipo} value={tipo}>
-                {tipo}
-              </option>
-            ))}
-          </FormField>
+          <>
+            <FormField
+              label={t.pagos_asistentes.concepto_escala}
+              name="concepto_escala"
+              type="select"
+              value={datos.escala_tipo}
+              onChange={(e) => cambiar('escala_tipo', e.target.value)}
+              required
+              ayuda={
+                estadoEscalas === 'listo' && tiposDeEscala.length === 0
+                  ? t.pagos_asistentes.concepto_sin_escalas
+                  : t.pagos_asistentes.concepto_escala_ayuda
+              }
+            >
+              <option value="">{t.comun.seleccionar}</option>
+              {tiposDeEscala.map((tipo) => (
+                <option key={tipo} value={tipo}>
+                  {tipo}
+                </option>
+              ))}
+            </FormField>
+            {/* El concepto va a tomar su valor de una de estas escalas todos los meses: si
+                todavía son provisorias, se dice en el momento de elegirla y no después. */}
+            <AvisoEscalasProvisorias escalas={escalas} />
+          </>
         )}
 
         <FormField

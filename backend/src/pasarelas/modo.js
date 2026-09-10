@@ -4,7 +4,17 @@
 // y transfiere — no existe un objeto "suscripción" recurrente en Modo, cada período se
 // resuelve como un cobro independiente que el webhook confirma.
 
+import { comprobarFirmaSinEsquemaPublicado, MOTIVO } from './firmaWebhook.js';
+
 const API_BASE = process.env.MODO_API_BASE || 'https://api.modo.com.ar';
+
+/** Modo no publica cómo firma sus avisos de cobro —el sitio de integraciones para comercios no
+ *  tiene sección de notificaciones—, así que acá no se reproduce ningún esquema suyo: se le
+ *  exige el que declara este producto (`comprobarFirmaSinEsquemaPublicado`). La marca sigue
+ *  siendo `true` porque lo que decide es lo mismo de siempre: sin secreto de firma cargado, los
+ *  avisos de este proveedor se rechazan, y el Panel tiene que pedírselo a la Prestadora y
+ *  avisarle cuando falta. */
+export const REQUIERE_SECRETO_FIRMA = true;
 
 export async function crearSuscripcion({ suscripcionId }) {
   // No hay nada que crear del lado de Modo al dar de alta la suscripción — el cobro real
@@ -33,10 +43,36 @@ export async function generarCobroQr({ credencial, monto, referencia }) {
   return { qrUrl: data.qr_url, referenciaExterna: data.id };
 }
 
-export function verificarWebhook({ body }) {
+/**
+ * Comprueba que el aviso vino firmado y recién ahí lo interpreta (pendiente #9 del plan).
+ *
+ * Antes acá alcanzaba con que el aviso trajera un identificador: `valido: Boolean(body?.id)`.
+ * Como la dirección del webhook es pública, eso quería decir que cualquiera que golpeara la
+ * puerta con `{"id": "…", "estado": "aprobado"}` daba por cobrada una suscripción.
+ *
+ * Modo no publica ningún esquema de firma, así que no se le reproduce uno inventado: se le
+ * exige el que declara este producto, y sin secreto de firma cargado se rechaza todo. El
+ * porqué entero está en `firmaWebhook.js`, en `comprobarFirmaSinEsquemaPublicado`.
+ */
+export function verificarWebhook({ secretoFirma, headers, cuerpoCrudo, body, ahoraMs }) {
+  const comprobacion = comprobarFirmaSinEsquemaPublicado({
+    secretoFirma,
+    secretoDeAmbiente: process.env.MODO_SECRETO_FIRMA_WEBHOOK,
+    headers,
+    cuerpoCrudo,
+    ahoraMs,
+  });
+  if (!comprobacion.valido) {
+    return { valido: false, motivo: comprobacion.motivo, referenciaExterna: null, estado: 'pendiente' };
+  }
+
   const referenciaExterna = body?.id;
+  if (!referenciaExterna) {
+    return { valido: false, motivo: MOTIVO.SIN_REFERENCIA, referenciaExterna: null, estado: 'pendiente' };
+  }
+
   const mapa = { aprobado: 'exitoso', rechazado: 'fallido', pendiente: 'pendiente' };
-  return { valido: Boolean(referenciaExterna), referenciaExterna, estado: mapa[body?.estado] || 'pendiente' };
+  return { valido: true, motivo: null, referenciaExterna, estado: mapa[body?.estado] || 'pendiente' };
 }
 
 export async function consultarEstado({ credencial, referenciaExterna }) {

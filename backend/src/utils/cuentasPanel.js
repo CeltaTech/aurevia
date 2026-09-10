@@ -55,9 +55,13 @@ function comparable(texto) {
 // mal deja trabajando a alguien que no debería. El que entra sin tipo aparece después en la
 // lista de Asistentes, marcado, para que una persona lo complete — se ve, no se esconde.
 export async function resolverTipoAsistentePorNombre(texto, prestadoraId) {
-  const buscado = comparable(texto);
-  if (!buscado) return null;
+  if (!comparable(texto)) return null;
+  return resolverTipoAsistenteEnCatalogo(texto, await catalogoDeTiposAsistente(prestadoraId));
+}
 
+// Los tipos que esa Prestadora puede usar: los cuatro de fábrica (sin Prestadora) más los
+// propios. El filtro por Prestadora va escrito acá a mano por el mismo motivo que arriba.
+export async function catalogoDeTiposAsistente(prestadoraId) {
   const { data, error } = await supabase
     .from('tipos_asistente')
     .select('id, clave, nombre, prestadora_id')
@@ -65,8 +69,18 @@ export async function resolverTipoAsistentePorNombre(texto, prestadoraId) {
     .eq('activo', true);
 
   if (error) throw new Error(error.message);
+  return data || [];
+}
 
-  const encontrados = (data || []).filter((tipo) =>
+// La comparación sola, sin ir a la base. Existe aparte para que quien tenga que preguntar por
+// muchos nombres de una sola planilla lea el catálogo una vez y no una vez por nombre — y sobre
+// todo para que la regla de arriba, que decide si un Asistente entra con tipo o sin él, siga
+// escrita en un solo lugar.
+export function resolverTipoAsistenteEnCatalogo(texto, catalogo) {
+  const buscado = comparable(texto);
+  if (!buscado) return null;
+
+  const encontrados = (catalogo || []).filter((tipo) =>
     comparable(tipo.nombre) === buscado || (!tipo.prestadora_id && comparable(tipo.clave) === buscado),
   );
 

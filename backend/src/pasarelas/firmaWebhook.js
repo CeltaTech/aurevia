@@ -3,9 +3,12 @@
 // Stripe y Mercado Pago firman sus avisos de la misma forma: una cabecera con un instante y
 // una o más firmas, y un HMAC-SHA256 calculado con un secreto que solo conocen ellos y la
 // Prestadora. Cambian el nombre de la cabecera, el nombre del instante y qué texto se firma;
-// el resto es idéntico. Por eso la comprobación vive acá una sola vez y los dos adaptadores
-// la llaman (regla 12 del §7 de CLAUDE.md), en vez de repetir el mismo cálculo dos veces con
-// dos criterios que se despegan con el tiempo.
+// el resto es idéntico. Por eso la comprobación vive acá una sola vez y todos los adaptadores
+// la llaman (regla 12 del §7 de CLAUDE.md), en vez de repetir el mismo cálculo una vez por
+// proveedor con criterios que se despegan con el tiempo.
+//
+// Modo y el PSP que tramita el DEBIN no publican ningún esquema de firma. Cómo se los trata
+// —y por qué no se les inventa uno— está más abajo, en `comprobarFirmaSinEsquemaPublicado`.
 //
 // Tres cosas que no se negocian:
 //
@@ -115,6 +118,73 @@ export function secretosIguales(recibido, esperado) {
   const resumenRecibido = createHmac('sha256', llave).update(String(recibido), 'utf8').digest();
   const resumenEsperado = createHmac('sha256', llave).update(String(esperado), 'utf8').digest();
   return timingSafeEqual(resumenRecibido, resumenEsperado);
+}
+
+// ---------------------------------------------------------------------------
+// Los proveedores que no publican cómo firman (pendiente #9 del plan)
+//
+// Stripe y Mercado Pago publican su esquema de firma, y por eso los dos adaptadores de más
+// arriba pueden reproducirlo exactamente. **Modo y el PSP que tramita el DEBIN no publican
+// ninguno**: se buscó en la documentación abierta de los dos —el sitio de integraciones de
+// Modo (`merchants.modo.com.ar/docs`, cuyo índice entero es Introducción, Botón de Pago,
+// Plugins, Plugins externos, APK de prueba, UX del flujo de pago, preguntas frecuentes y
+// soporte) y la documentación de PSP de DEBIN, que documenta consultar el estado y no notificar—
+// y en ninguna de las dos hay cabecera de firma, algoritmo ni texto firmado.
+//
+// **No se inventa un algoritmo y se le pone el nombre del proveedor.** Escribir «Modo firma
+// así» sin haberlo leído en ningún lado es peor que no comprobar nada: el que viene detrás lo
+// lee como un hecho. Entonces lo que se hace es lo único honesto:
+//
+//   - **Sin secreto configurado, se rechaza todo aviso.** Es el estado en el que salen las dos
+//     hoy, y es a propósito: prefiero que no entre ninguno a que entre cualquiera.
+//   - **Con secreto configurado, se comprueba contra la convención que declara este producto**
+//     —la de acá abajo—, que no sale de la documentación de ningún proveedor y por eso no se
+//     escribe con el nombre de ninguno. Es la misma cuenta que ya hacen Stripe y Mercado Pago,
+//     reutilizada, no una segunda.
+//
+// Consecuencia, escrita para que no sorprenda: mientras no se confirme con el proveedor cómo
+// firma de verdad, **un aviso auténtico de Modo o del PSP también se va a rechazar**. Eso es el
+// control fallando cerrado, no un defecto. El día que se confirme el esquema real, el adaptador
+// de ese proveedor deja de llamar a esta función y reproduce el suyo, igual que Stripe.
+// ---------------------------------------------------------------------------
+
+/** La cabecera y la forma que este producto le exige a un proveedor que no publica ninguna:
+ *  `ts=<instante>,v1=<hmac-sha256 en hexadecimal>`, calculado sobre `<instante>.<cuerpo crudo>`.
+ *  El nombre de la cabecera es el de uso corriente en el mercado local; el instante se llama
+ *  `ts` por lo mismo. */
+export const CABECERA_CONVENCION_PROPIA = 'x-signature';
+
+/**
+ * La comprobación para un proveedor cuyo esquema de firma no está publicado.
+ *
+ * @param secretoFirma      el secreto guardado para esa Prestadora y ese proveedor (Vault)
+ * @param secretoDeAmbiente el secreto del ambiente, para el despliegue que todavía no cargó
+ *                          uno por Prestadora. Se usa **sólo si no hay el de la Prestadora**:
+ *                          un secreto compartido prueba quién firmó, no para qué Prestadora,
+ *                          así que el de la Prestadora siempre gana.
+ * @returns `{ valido, motivo }`, con los mismos motivos que el resto del archivo
+ */
+export function comprobarFirmaSinEsquemaPublicado({
+  secretoFirma,
+  secretoDeAmbiente,
+  headers,
+  cuerpoCrudo,
+  ahoraMs,
+}) {
+  // Sin los bytes tal cual llegaron no hay nada que firmar. No se rearma el cuerpo a partir del
+  // objeto leído: eso da un texto parecido y una firma distinta.
+  if (!Buffer.isBuffer(cuerpoCrudo)) return { valido: false, motivo: MOTIVO.CUERPO_AUSENTE };
+
+  const secreto = secretoFirma || secretoDeAmbiente;
+  if (!secreto) return { valido: false, motivo: MOTIVO.SECRETO_AUSENTE };
+
+  return comprobarFirma({
+    secreto,
+    cabecera: headers?.[CABECERA_CONVENCION_PROPIA],
+    claveDelInstante: 'ts',
+    textoFirmado: (instante) => [`${instante}.`, cuerpoCrudo],
+    ahoraMs,
+  });
 }
 
 /**

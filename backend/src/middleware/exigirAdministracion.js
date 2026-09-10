@@ -1,4 +1,4 @@
-import { esAdminOSuperior } from '../utils/roles.js';
+import { esAdminOSuperior, esAdminDePrestadora } from '../utils/roles.js';
 
 /* El candado de "esto es de la administración de la Prestadora".
    ==========================================================================
@@ -26,6 +26,40 @@ import { esAdminOSuperior } from '../utils/roles.js';
 export function exigirAdministracion(mensaje) {
   return function soloAdministracion(req, res, next) {
     if (!esAdminOSuperior(req.usuarioPanel?.rol)) {
+      return res.status(403).json({ error: mensaje });
+    }
+    next();
+  };
+}
+
+/* El candado más angosto: esto es de la Prestadora y de nadie más.
+   ==========================================================================
+
+   El de arriba deja pasar a Superadmin, y está bien que lo haga: Superadmin es quien da
+   soporte y necesita ver y arreglar la configuración de una Prestadora. Pero hay un puñado de
+   cosas donde no corresponde, y son **los secretos de la Prestadora**: la clave con la que
+   ella habla con un tercero. Superadmin es un rol técnico de CeltaTech, y CeltaTech no tiene
+   por qué poder leer ni reemplazar esa clave. La sesión de soporte técnico tampoco lo
+   habilita: esa sesión existe para mirar los datos de una Organización por vez y queda
+   auditada, no para alcanzar sus credenciales.
+
+   Se usa igual que el otro, y también va DESPUÉS de requiereRolPanel:
+
+     const soloAdminDePrestadora = exigirAdminDePrestadora('Solo Admin puede ver esta clave');
+     router.get('/whatsapp', soloAdminDePrestadora, async (req, res) => { ... });
+
+   Cuando la ruta ya está detrás de `exigirAdministracion` a nivel de router, éste se agrega
+   encima en la ruta puntual: el de afuera dice «esto es de la administración» y el de adentro
+   «y además, de esta parte Superadmin queda afuera». Sumar candados nunca abre nada, y así el
+   resto de las rutas del router no cambia de comportamiento.
+
+   Quién es quién sale del mismo punto único de verdad que el resto
+   (utils/roles.js, copia de panel/src/lib/roles.js), no de comparar contra
+   `'admin_prestadora'` acá adentro. Ante un rol ausente o desconocido, niega: `undefined`
+   no es `'admin_prestadora'` (CLAUDE.md §5, «todo control de acceso falla cerrado»). */
+export function exigirAdminDePrestadora(mensaje) {
+  return function soloAdminDePrestadora(req, res, next) {
+    if (!esAdminDePrestadora(req.usuarioPanel?.rol)) {
       return res.status(403).json({ error: mensaje });
     }
     next();

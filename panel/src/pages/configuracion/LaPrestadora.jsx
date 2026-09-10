@@ -3,6 +3,8 @@ import { con } from '../../lib/textos';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useModalidades } from '../../context/ModalidadesContext';
 import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
+import { useAuth } from '../../context/AuthContext';
+import { esAdminDePrestadora } from '../../lib/roles';
 import { supabase } from '../../lib/supabaseClient';
 import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion';
 import { Button } from '../../components/ui/Button';
@@ -332,8 +334,23 @@ function NuevaZona({ onClose, onCreada }) {
   );
 }
 
+/* Con qué cobra esta Prestadora.
+   ==========================================================================
+
+   La lista de qué pasarelas están conectadas la ve toda la administración, Superadmin incluido:
+   es lo que hace falta para dar soporte cuando a una Prestadora no le entran los cobros. Lo que
+   no: cargar y reemplazar la credencial y el secreto de firma. Son secretos de la Prestadora,
+   igual que el token de WhatsApp y que la contraseña del correo saliente, y Superadmin es un rol
+   técnico de CeltaTech. La sesión de soporte técnico tampoco lo habilita.
+
+   Quien decide de verdad es el motor (`backend/src/routes/panelMarketplace.js`, el PATCH de la
+   pasarela y el PUT del secreto de firma): escribiendo la dirección a mano se llega igual, y ahí
+   se niega. Esto de acá es para no mostrar botones que no van a poder guardar, y para que quien
+   los busca entienda por qué no están. */
 function TabPasarela() {
   const { t } = useLocale();
+  const { usuario } = useAuth();
+  const puedeTocarLasCredenciales = esAdminDePrestadora(usuario?.rol);
   const [pasarelas, setPasarelas] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -425,6 +442,7 @@ function TabPasarela() {
     <div>
       <h2>{t.configuracion.pasarela_titulo}</h2>
       <p className="panel-explicacion">{t.configuracion.pasarela_explicacion}</p>
+      {!puedeTocarLasCredenciales && <Alert variant="info">{t.configuracion.pasarela_credenciales_solo_admin}</Alert>}
       <EstadoLista estado={estado} error={error} vacio={pasarelas.length === 0} recargar={recargar}>
         {error && <Alert variant="error">{error}</Alert>}
         <table className="panel-tabla">
@@ -454,7 +472,7 @@ function TabPasarela() {
                       )}
                     </td>
                     <td>
-                      {fila.activo ? (
+                      {!puedeTocarLasCredenciales ? null : fila.activo ? (
                         <Button
                           variant="secondary"
                           onClick={() => desactivar(fila.proveedor)}
@@ -482,7 +500,7 @@ function TabPasarela() {
                       {/* Solo cuando la pasarela ya está conectada: si todavía no lo está, el
                           secreto se pide en el mismo formulario que la credencial y este botón
                           sería un segundo trámite para lo mismo. */}
-                      {fila.activo && fila.requiere_secreto_firma && (
+                      {puedeTocarLasCredenciales && fila.activo && fila.requiere_secreto_firma && (
                         <Button
                           variant="secondary"
                           onClick={() => {

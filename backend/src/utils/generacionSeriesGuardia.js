@@ -21,9 +21,9 @@ function generarFechasFaltantes(desdeExclusiveISO, hastaInclusiveISO, diasSemana
 // Mantiene siempre `dias_generacion_series_guardia` días de guardias concretas generadas por
 // delante de "hoy" para cada serie abierta (`vigente_hasta IS NULL`) — sin esto, la generación
 // única que hace NuevaGuardiaModal.jsx al crear la serie deja de producir guardias nuevas en
-// silencio pasado ese horizonte. Proceso 100% interno, nunca visible en ninguna pantalla (ver
-// docs/PLAN_HASTA_PRODUCCION.md pasos 104 y 105). Corre una vez por día
-// (ver server.js), mismo patrón de recorrido por prestadora que revisarVencimientos.
+// silencio pasado ese horizonte. Proceso 100% interno, nunca visible en ninguna pantalla. Corre
+// una vez por día (ver server.js), mismo patrón de recorrido por prestadora que
+// revisarVencimientos.
 export async function extenderSeriesGuardiaAbiertas() {
   const { data: prestadoras, error: errorPrestadoras } = await supabase
     .from('prestadoras')

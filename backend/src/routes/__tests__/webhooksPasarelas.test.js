@@ -22,6 +22,14 @@ const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const COBRO = '55555555-5555-5555-5555-555555555555';
 const SUSCRIPCION = '66666666-6666-6666-6666-666666666666';
 const SECRETO = 'whsec_un_secreto_de_mentira_para_la_prueba';
+const SECRETO_DE_AMBIENTE = 'un_secreto_de_ambiente_de_mentira';
+
+/** Las variables de ambiente de los rieles que no publican esquema de firma (paso 9). */
+const SECRETOS_DE_AMBIENTE = [
+  'MODO_SECRETO_FIRMA_WEBHOOK',
+  'DEBIN_SECRETO_FIRMA_WEBHOOK',
+  'COBRANZA_EFECTIVO_SECRETO_FIRMA_WEBHOOK',
+];
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
@@ -139,6 +147,10 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/cobros_marketplace', () => [{ id: COBRO, suscripcion_id: SUSCRIPCION }]);
   respuestas.set('PATCH /rest/v1/cobros_marketplace', () => []);
   respuestas.set('PATCH /rest/v1/suscripciones_marketplace', () => []);
+  // Los tres rieles sin esquema publicado miran un secreto de ambiente cuando la Prestadora no
+  // cargó el suyo. La máquina donde corre esto puede tenerlo puesto, así que cada prueba
+  // arranca sin ninguno y lo pone la que quiera probarlo.
+  for (const variable of SECRETOS_DE_AMBIENTE) delete process.env[variable];
 });
 
 function escrituras() {
@@ -344,5 +356,151 @@ describe('el aviso de Mercado Pago, que no dice si la plata entró', () => {
     assert.equal(respuesta.status, 401);
     assert.equal(consultasAlProveedor.length, 0);
     assert.equal(escrituras().length, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Los rieles que no publican cómo firman: Modo, DEBIN y la red de cobranza extrabancaria
+// (paso 9 del plan)
+//
+// Hasta ahora los tres daban por bueno cualquier aviso que trajera un identificador
+// —`valido: Boolean(body?.id)`—, y la dirección es pública: alcanzaba con golpear la puerta
+// con `{"id": "…", "estado": "aprobado"}` para dar por cobrada una suscripción. Ninguno de los
+// tres proveedores publica su esquema de firma, así que no se les reprodujo ninguno: se les
+// exige la convención que declara este producto (`firmaWebhook.js`,
+// `comprobarFirmaSinEsquemaPublicado`) y, sin secreto cargado, se rechaza todo.
+//
+// Lo que se prueba de cada uno es lo mismo y en el mismo orden: sin secreto no entra nada, con
+// firma inventada tampoco, y con la firma bien hecha entra y recién ahí se toca la fila del
+// cobro. Si alguna vez se vuelve al `Boolean(body?.id)`, las tres primeras pasan a devolver 200
+// y estas pruebas se caen.
+// ---------------------------------------------------------------------------
+
+const RIELES_SIN_ESQUEMA = [
+  { proveedor: 'modo', variable: 'MODO_SECRETO_FIRMA_WEBHOOK', aviso: { id: 'MODO-1', estado: 'aprobado' } },
+  { proveedor: 'debin', variable: 'DEBIN_SECRETO_FIRMA_WEBHOOK', aviso: { id: 'DEBIN-1', estado: 'debitado' } },
+  {
+    proveedor: 'cobranza_efectivo',
+    variable: 'COBRANZA_EFECTIVO_SECRETO_FIRMA_WEBHOOK',
+    aviso: { id: 'CUPON-1', estado: 'pagado' },
+  },
+];
+
+/** La convención que declara este producto: `ts=<instante>,v1=<hmac>` sobre `<instante>.<cuerpo>`. */
+function cabeceraDeConvencionPropia(cuerpo, { secreto = SECRETO, instante = Math.floor(Date.now() / 1000) } = {}) {
+  const firma = createHmac('sha256', secreto).update(`${instante}.`).update(cuerpo).digest('hex');
+  return `ts=${instante},v1=${firma}`;
+}
+
+async function avisarRiel(proveedor, cuerpo, { firma } = {}) {
+  const respuesta = await fetch(`${DIRECCION}/${proveedor}/${PRESTADORA}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(firma === null ? {} : { 'x-signature': firma ?? cabeceraDeConvencionPropia(cuerpo) }),
+    },
+    body: cuerpo,
+  });
+  return { estado: respuesta.status, cuerpo: await respuesta.json() };
+}
+
+for (const { proveedor, variable, aviso } of RIELES_SIN_ESQUEMA) {
+  const CRUDO_RIEL = Buffer.from(JSON.stringify(aviso), 'utf8');
+
+  describe(`el aviso de cobro de ${proveedor}, que no publica esquema de firma`, () => {
+    it('sin firma alguna se rechaza con 401 y no toca ninguna fila', async () => {
+      const { estado, cuerpo } = await avisarRiel(proveedor, CRUDO_RIEL, { firma: null });
+      assert.equal(estado, 401);
+      assert.equal(cuerpo.error, 'Aviso no autenticado');
+      assert.equal(escrituras().length, 0);
+    });
+
+    it('con una firma inventada se rechaza con 401 y no toca ninguna fila', async () => {
+      const instante = Math.floor(Date.now() / 1000);
+      const { estado } = await avisarRiel(proveedor, CRUDO_RIEL, { firma: `ts=${instante},v1=${'a'.repeat(64)}` });
+      assert.equal(estado, 401);
+      assert.equal(escrituras().length, 0);
+    });
+
+    it('firmado con otro secreto se rechaza con 401 y no toca ninguna fila', async () => {
+      const firma = cabeceraDeConvencionPropia(CRUDO_RIEL, { secreto: 'otro_secreto_de_mentira' });
+      const { estado } = await avisarRiel(proveedor, CRUDO_RIEL, { firma });
+      assert.equal(estado, 401);
+      assert.equal(escrituras().length, 0);
+    });
+
+    it('con un instante viejo se rechaza con 401, aunque la firma esté bien hecha', async () => {
+      const viejo = Math.floor(Date.now() / 1000) - 6 * 60;
+      const firma = cabeceraDeConvencionPropia(CRUDO_RIEL, { instante: viejo });
+      const { estado } = await avisarRiel(proveedor, CRUDO_RIEL, { firma });
+      assert.equal(estado, 401);
+      assert.equal(escrituras().length, 0);
+    });
+
+    it('sin ningún secreto configurado se rechaza TODO aviso, aun bien armado', async () => {
+      // Es la posición de fábrica y es a propósito: mientras no se sepa cómo firma el proveedor
+      // de verdad, prefiero que no entre ninguno a que entre cualquiera.
+      respuestas.set('POST /rest/v1/rpc/leer_secreto_firma_pasarela_pago', () => null);
+      const { estado } = await avisarRiel(proveedor, CRUDO_RIEL);
+      assert.equal(estado, 401);
+      assert.equal(escrituras().length, 0);
+      assert.ok(anotados.some((linea) => linea.includes('secreto_de_firma_no_guardado')));
+    });
+
+    it('el motivo del rechazo queda anotado del lado del servidor y no viaja en la respuesta', async () => {
+      const { cuerpo } = await avisarRiel(proveedor, CRUDO_RIEL, { firma: null });
+      assert.deepEqual(Object.keys(cuerpo), ['error']);
+      assert.equal(cuerpo.error, 'Aviso no autenticado');
+      assert.ok(anotados.some((linea) => linea.includes('cabecera_de_firma_ausente')));
+    });
+
+    it('con la firma bien hecha se acepta, marca el cobro y deja la suscripción activa', async () => {
+      const { estado, cuerpo } = await avisarRiel(proveedor, CRUDO_RIEL);
+      assert.equal(estado, 200);
+      assert.deepEqual(cuerpo, { ok: true });
+
+      const cobro = escrituras().find((l) => l.clave.endsWith('/cobros_marketplace'));
+      assert.equal(cobro.cuerpo.estado_cobro, 'exitoso');
+      const suscripcion = escrituras().find((l) => l.clave.endsWith('/suscripciones_marketplace'));
+      assert.equal(suscripcion.cuerpo.estado, 'activa');
+    });
+
+    it('un aviso rechazado deja el cobro exactamente como estaba', async () => {
+      // La otra mitad de la prueba de arriba: que el 401 no sea solo un código, sino que la
+      // fila del cobro no se haya mirado siquiera.
+      await avisarRiel(proveedor, CRUDO_RIEL, { firma: `ts=1,v1=${'b'.repeat(64)}` });
+      assert.equal(llamadas.filter((l) => l.clave === 'GET /rest/v1/cobros_marketplace').length, 0);
+      assert.equal(escrituras().length, 0);
+    });
+
+    it('el secreto de ambiente sirve solo cuando la Prestadora no cargó el suyo', async () => {
+      // El de la Prestadora es el que ata la firma a esa Prestadora, así que gana siempre. El
+      // de ambiente es la red para el despliegue que todavía no cargó ninguno.
+      process.env[variable] = SECRETO_DE_AMBIENTE;
+      respuestas.set('POST /rest/v1/rpc/leer_secreto_firma_pasarela_pago', () => null);
+
+      const conElDeAmbiente = await avisarRiel(proveedor, CRUDO_RIEL, {
+        firma: cabeceraDeConvencionPropia(CRUDO_RIEL, { secreto: SECRETO_DE_AMBIENTE }),
+      });
+      assert.equal(conElDeAmbiente.estado, 200);
+
+      // Y con el de la Prestadora cargado, el de ambiente ya no alcanza.
+      respuestas.set('POST /rest/v1/rpc/leer_secreto_firma_pasarela_pago', () => SECRETO);
+      const otraVezConElDeAmbiente = await avisarRiel(proveedor, CRUDO_RIEL, {
+        firma: cabeceraDeConvencionPropia(CRUDO_RIEL, { secreto: SECRETO_DE_AMBIENTE }),
+      });
+      assert.equal(otraVezConElDeAmbiente.estado, 401);
+    });
+  });
+}
+
+describe('los tres rieles sin esquema publicado piden secreto de firma', () => {
+  it('el Panel se entera de que se lo tiene que pedir a la Prestadora', async () => {
+    // Sin esto, la pantalla de pasarelas no le pide el secreto a nadie y los tres rieles quedan
+    // rechazando todo sin que se entienda por qué (`panelMarketplace.js`, `requiere_secreto_firma`).
+    const { requiereSecretoFirma } = await import('../../pasarelas/index.js');
+    for (const { proveedor } of RIELES_SIN_ESQUEMA) {
+      assert.equal(requiereSecretoFirma(proveedor), true, `${proveedor} tiene que pedir secreto de firma`);
+    }
   });
 });

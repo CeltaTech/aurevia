@@ -22,12 +22,12 @@
 
 - Las 3 modalidades de trabajo de una Prestadora — **prestación directa**, **marketplace**
   y **cooperativa** — son combinables entre sí, no mutuamente excluyentes
-  (`docs/PRD_07_Modalidad_Marketplace.md:22-24`, `docs/PLAN_HASTA_PRODUCCION.md` pendiente #85).
+  (`docs/PRD_07_Modalidad_Marketplace.md:22-24`).
 - El plantel de Asistentes, el Proceso de Incorporación de Asistentes y el control de
   personal (vínculo/cese/score de riesgo/ausencias) son **infraestructura común** a
   prestación directa y marketplace — "un solo plantel, un solo proceso de verificación,
   una sola base de Asistentes certificados, sea cual sea el canal por el que después
-  trabajen" (`docs/PLAN_HASTA_PRODUCCION.md` pendiente #13, texto literal).
+  trabajen" (`docs/PRD_07_Modalidad_Marketplace.md:191`).
 - El campo técnico que ya soporta esto es `asistentes.canales TEXT[]` (default
   `['directo','marketplace']`, `docs/DATA_MODEL.md:219-227`) — un Asistente puede estar en
   uno, otro o ambos canales. Por qué no está en uno de ellos se registra en
@@ -39,7 +39,8 @@
   `visible_publica`, nunca edita el contenido ni dispara acción automática.
 - Cooperativas está confirmada como **post-MVP**, todavía sin motor de liquidación propio
   — `calcularCese` y el vínculo dual actual (monotributo/dependencia) no la contemplan
-  (`docs/PLAN_HASTA_PRODUCCION.md` pendiente #53). Este documento la incluye en el esquema de
+  (ver, en `docs/PLAN_HASTA_PRODUCCION.md`, la Cooperativa como tercera modalidad de vínculo).
+  Este documento la incluye en el esquema de
   navegación (para que el hueco no se olvide) pero no diseña su funcionalidad interna.
 - Glosario obligatorio de `CLAUDE.md` §4: usar siempre "Familia", "Asistente", "Guardia",
   "Prestadora", "Vínculo/Cese" — nunca "cliente", "empleado", "turno". Este documento y la
@@ -54,7 +55,7 @@
 - Ya existe un mecanismo de activación de funciones por Prestadora que resuelve el mismo
   problema de fondo ("¿qué le muestro a esta Prestadora?"): `catalogo_modulos` /
   `plan_modulos` / `prestadora_modulos`, construido para planes y add-ons
-  (`docs/PLAN_HASTA_PRODUCCION.md` pendiente #79). CLAUDE.md §7 regla 12 exige no duplicar un patrón de
+  ya construido. CLAUDE.md exige no duplicar un patrón de
   decisión que ya tiene un punto único de verdad — ver §5 más abajo, donde se propone
   reusar ese mismo mecanismo para las modalidades en vez de construir un toggle paralelo.
 
@@ -71,7 +72,8 @@ Resultado: **4 grupos**, no 3.
 
 ### Grupo 0 — Panel de control (siempre visible, sin importar qué modalidades tenga activas)
 
-- **Dashboard** — hoy agregado por métrica suelta (`docs/PLAN_HASTA_PRODUCCION.md` pendiente #83); se
+- **Dashboard** — hoy agregado por métrica suelta (ver, en `docs/PLAN_HASTA_PRODUCCION.md`, el
+  paso «Guardias y vínculos activos en el desglose por modalidad»); se
   propone que la sección "Alertas y continuidad" ya existente muestre también, cuando haya
   2+ modalidades activas, un resumen mínimo por modalidad (cuántas Guardias/vínculos activos
   bajo cada una) — sin tabla nueva, derivado en vivo del mismo patrón que ya usa el
@@ -129,7 +131,8 @@ existe en el menú actual, es la parte que más código nuevo va a requerir:
 ### Grupo 4 — Cooperativas
 
 Visible solo si la Prestadora tiene esta modalidad activa. Post-MVP
-(`docs/PLAN_HASTA_PRODUCCION.md` pendiente #53) — se deja el espacio de menú reservado (placeholder,
+(ver, en `docs/PLAN_HASTA_PRODUCCION.md`, la Cooperativa como tercera modalidad de vínculo) — se
+deja el espacio de menú reservado (placeholder,
 sin funcionalidad interna todavía) para que el "grupo fundamental" exista en la navegación
 desde el día en que se prenda el toggle, aunque hoy no tenga pantallas propias más allá de
 un aviso de "en construcción".
@@ -226,4 +229,4 @@ se diseñe cooperativa en profundidad, revisar el `CHECK` de `asistentes.canales
 
 **Próximo paso**: abrir el control de características de `CLAUDE.md` §12 (✅/⚠️/❌ por
 funcionalidad) antes de escribir código de `panel/src`, `backend/src` o cualquier migración
-de Supabase. Corresponde actualizar `docs/PLAN_HASTA_PRODUCCION.md` pendiente #85 con este resultado.
+de Supabase.

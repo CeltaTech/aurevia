@@ -29,3 +29,16 @@ export function esAdminOSuperior(rol) {
 }
 
 export const ROLES_PANEL = [...ROLES_ADMINISTRACION, 'coordinador'];
+
+// Y hay un puñado de cosas donde Superadmin NO tiene el acceso de Admin_prestadora, que es la
+// excepción a lo que dice el párrafo de arriba: **los secretos de la Prestadora**. Superadmin es
+// un rol técnico de CeltaTech, y CeltaTech no tiene por qué poder leer ni reemplazar la clave con
+// la que una Prestadora habla con un tercero. La sesión de soporte técnico tampoco lo habilita:
+// esa sesión existe para mirar los datos de una Organización por vez y queda auditada, no para
+// alcanzar sus credenciales.
+//
+// Se pregunta por acá y no comparando contra `'admin_prestadora'` suelto en cada pantalla y cada
+// ruta, por lo mismo de siempre: el día que esta lista cambie tiene que cambiar en un solo lugar.
+export function esAdminDePrestadora(rol) {
+  return rol === 'admin_prestadora';
+}

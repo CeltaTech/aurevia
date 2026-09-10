@@ -140,7 +140,8 @@ contestar antes esa objeción.**
 
 **Ninguna palabra de Careonys entra en un módulo** —Prestadora, Guardia, Paciente, Servicio— si el
 otro producto no la tiene. Todavía no hay ningún módulo; sacar una pieza de acá para convertirla
-en uno entra por `..\..\CLAUDE.md` §11, nunca como parte de otra tarea. Anotado en `docs/PLAN_HASTA_PRODUCCION.md paso 131`.
+en uno entra por `..\..\CLAUDE.md` §11, nunca como parte de otra tarea. Anotado en
+`docs/PLAN_HASTA_PRODUCCION.md`, sección «Módulos».
 
 **Nunca datos reales en pruebas: se usa Sandbox y datos inventados.**
 

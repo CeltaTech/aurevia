@@ -14,6 +14,7 @@ import { TONO, claseBadgeTono } from '../../lib/tonos';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
+import { AvisoEscalasProvisorias } from '../../components/AvisoEscalasProvisorias';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import {
@@ -194,6 +195,9 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
       ) : (
         <>
           <h2>{t.asistentes.tabs.registrar_cese}</h2>
+          {/* El aviso va acá y no arriba de todo: en el historial los montos ya se liquidaron
+              y no hay nada que confirmar; lo que todavía se puede confirmar es este cálculo. */}
+          <AvisoEscalasProvisorias escalas={escalasCrudas} />
           {error && <Alert variant="error">{error}</Alert>}
 
           <FormField label={t.asistentes.cese.fecha} name="fecha_cese" type="date" value={fechaCese} onChange={(e) => { setFechaCese(e.target.value); setResultado(null); }} />

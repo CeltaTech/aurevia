@@ -518,6 +518,19 @@ h2 {
   font-size: 0.85rem;
 }
 
+/* Arrancar la configuración inicial desde una planilla que la Prestadora ya tiene. Cuelga
+   debajo de los pasos, separada por una línea, para que se lea como otro camino hacia lo
+   mismo y no como un paso más de la lista. */
+.onboarding-planilla {
+  border-top: 1px solid var(--borde-card);
+  margin-top: 1.1rem;
+  padding-top: 1.1rem;
+}
+
+.onboarding-planilla h3 {
+  margin: 0 0 0.2rem;
+}
+
 /* ---------- Métricas del dashboard ---------- */
 
 .dashboard-metricas {

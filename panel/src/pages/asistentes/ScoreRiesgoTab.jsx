@@ -7,10 +7,13 @@ import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
+import { AvisoEscalasProvisorias } from '../../components/AvisoEscalasProvisorias';
 
 export function ScoreRiesgoTab({ asistente, onActualizado }) {
   const { t } = useLocale();
-  const { filas: escalasCrudas, estado } = useEscalasLegales();
+  // La Prestadora va sí o sí: sin ella el hook no consulta nada y el estado se queda en
+  // "cargando" para siempre —el puntaje da 0 y el botón de guardar nunca se enciende—.
+  const { filas: escalasCrudas, estado } = useEscalasLegales(asistente.prestadora_id);
   const [indicadores, setIndicadores] = useState(asistente.indicadores_riesgo ?? {});
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
@@ -50,6 +53,8 @@ export function ScoreRiesgoTab({ asistente, onActualizado }) {
     <div>
       <h2>{t.asistentes.score.titulo}</h2>
       <Alert variant="info">{t.asistentes.score.explicacion}</Alert>
+      {/* El puntaje sale de pesos que hoy son provisorios: se dice antes de mostrarlo. */}
+      <AvisoEscalasProvisorias escalas={escalasCrudas} />
       {error && <Alert variant="error">{error}</Alert>}
       {advertencias.map((a, i) => <Alert key={i} variant="error">{a}</Alert>)}
 

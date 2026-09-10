@@ -8,6 +8,7 @@ import { formatearImporte } from '../../lib/dinero';
 import { calcularCese } from '../../lib/calcularCese';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { Alert } from '../../components/ui/Alert';
+import { AvisoEscalasProvisorias } from '../../components/AvisoEscalasProvisorias';
 
 const ANTIGUEDADES_MESES = [3, 6, 12, 24];
 
@@ -75,6 +76,9 @@ export function SimuladorVinculoTab({ asistente }) {
     <div>
       <h2>{t.asistentes.simulador.titulo}</h2>
       <Alert variant="info">{t.asistentes.simulador.explicacion}</Alert>
+      {/* Las proyecciones se calculan con estas escalas: el aviso va arriba de la tabla, no
+          después, para que no se lea un número antes de saber de dónde sale. */}
+      <AvisoEscalasProvisorias escalas={escalasCrudas} />
 
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         {proyecciones && (

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
+import { useAuth } from '../../context/AuthContext';
+import { esAdminDePrestadora } from '../../lib/roles';
 import { supabase } from '../../lib/supabaseClient';
 import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion';
 import { DIRECCION_DEL_MOTOR } from '../../lib/apiPanel';
@@ -359,7 +361,33 @@ function TabAlertasIA() {
   );
 }
 
+/* La casilla desde la que sale el correo de esta Prestadora, y su contraseña.
+   ==========================================================================
+
+   Mismo criterio que las credenciales de WhatsApp, y por el mismo motivo: la contraseña del
+   correo saliente es la clave con la que esta Prestadora habla con su proveedor de correo, y
+   Superadmin es un rol técnico de CeltaTech. La sesión de soporte técnico tampoco lo habilita.
+
+   Quien decide de verdad es el motor (`backend/src/routes/panelConfiguracion.js`, las dos rutas
+   `/email-remitente`): escribiendo la dirección a mano se llega igual, y ahí se niega. Esto de
+   acá es para que no se le muestre a Superadmin un formulario que no va a poder guardar, y para
+   que entienda por qué no lo ve. */
 function TabEmailRemitente() {
+  const { t } = useLocale();
+  const { usuario } = useAuth();
+
+  if (!esAdminDePrestadora(usuario?.rol)) {
+    return (
+      <div>
+        <h2>{t.configuracion.email_remitente_titulo}</h2>
+        <Alert variant="info">{t.configuracion.email_remitente_solo_admin}</Alert>
+      </div>
+    );
+  }
+  return <TabEmailRemitenteCredenciales />;
+}
+
+function TabEmailRemitenteCredenciales() {
   const { t } = useLocale();
   const [form, setForm] = useState(null);
   const [password, setPassword] = useState('');
@@ -614,10 +642,34 @@ function TabAvisoGuardiaSinCubrir() {
   );
 }
 
+/* Todo lo de WhatsApp, con una parte que no es para cualquiera de los que entran acá.
+   ==========================================================================
+
+   Las plantillas y la escalada al Coordinador son configuración: quien administra la
+   Prestadora las toca, y Superadmin también, porque es quien da soporte. Las credenciales no:
+   son las claves con las que esta Prestadora habla con Meta, y Superadmin es un rol técnico de
+   CeltaTech. La sesión de soporte técnico tampoco lo habilita.
+
+   Quien decide de verdad es el motor (`backend/src/routes/panelConfiguracion.js`, las dos rutas
+   `/whatsapp`): escribiendo la dirección a mano se llega igual, y ahí se niega. Esto de acá es
+   para que no se le muestre a Superadmin un formulario que no va a poder guardar, y para que
+   entienda por qué no lo ve — una pantalla que esconde algo sin decirlo se lee como una falla
+   del sistema. */
 function TabWhatsapp() {
+  const { t } = useLocale();
+  const { usuario } = useAuth();
+  const puedeVerLasCredenciales = esAdminDePrestadora(usuario?.rol);
+
   return (
     <div>
-      <TabWhatsappCredenciales />
+      {puedeVerLasCredenciales ? (
+        <TabWhatsappCredenciales />
+      ) : (
+        <div>
+          <h2>{t.configuracion.whatsapp_credenciales_titulo}</h2>
+          <Alert variant="info">{t.configuracion.whatsapp_credenciales_solo_admin}</Alert>
+        </div>
+      )}
       <TabWhatsappPlantillas />
       <TabWhatsappEscaladaCoordinador />
     </div>

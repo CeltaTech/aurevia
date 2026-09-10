@@ -1,12 +1,14 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usePermisos } from '../../context/PermisosContext';
+import { useModalidades } from '../../context/ModalidadesContext';
 import { useLocale } from '../../i18n/LocaleContext';
 import { esAdminOSuperior, ROLES_PANEL } from '../../lib/roles';
 
-export function ProtectedRoute({ children, soloAdmin = false, roles = null, permiso = null }) {
+export function ProtectedRoute({ children, soloAdmin = false, roles = null, permiso = null, modalidad = null }) {
   const { session, usuario, cargando, mfaEstado } = useAuth();
   const { puede, cargado: permisosCargados } = usePermisos();
+  const { tieneModalidad, cargado: modalidadesCargadas } = useModalidades();
   const { t } = useLocale();
 
   if (cargando) {
@@ -40,6 +42,22 @@ export function ProtectedRoute({ children, soloAdmin = false, roles = null, perm
   if (permiso && !esAdminOSuperior(usuario.rol)) {
     if (!permisosCargados) return <div className="pantalla-cargando">{t.comun.cargando}</div>;
     if (!puede(permiso)) return <Navigate to="/" replace />;
+  }
+
+  // Candado por modalidad de negocio. No es un candado por rol y no tiene excepción para el
+  // Admin: una pantalla de Marketplace no existe en una Prestadora que trabaja solamente en
+  // prestación directa, la mire quien la mire. El menú ya esconde estos enlaces
+  // (`layout/Layout.jsx`), pero esconder un enlace no impide escribir la dirección a mano.
+  //
+  // Esto es para no mostrar lo que no corresponde. **El candado de verdad está en el motor**
+  // (`backend/src/middleware/exigirModalidad.js`), que es lo único que no se puede saltear.
+  //
+  // Mismo criterio de espera que el permiso, y por el mismo motivo: mientras no se sepa qué
+  // modalidades tiene la Prestadora, no se entra. Si algo falla, la pantalla no se abre, que
+  // es el lado correcto para equivocarse.
+  if (modalidad) {
+    if (!modalidadesCargadas) return <div className="pantalla-cargando">{t.comun.cargando}</div>;
+    if (!tieneModalidad(modalidad)) return <Navigate to="/" replace />;
   }
 
   return children;

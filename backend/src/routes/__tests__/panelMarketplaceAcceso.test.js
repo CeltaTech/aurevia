@@ -22,6 +22,7 @@ import { createServer } from 'node:http';
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const USUARIO = '22222222-2222-2222-2222-222222222222';
 const SUSCRIPCION = '33333333-3333-3333-3333-333333333333';
+const SESION_SOPORTE = '44444444-4444-4444-4444-444444444444';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
@@ -30,6 +31,10 @@ let llamadas = [];
 
 let rolDelUsuario = 'admin_prestadora';
 let prestadoraDelUsuario = PRESTADORA;
+/** Qué contesta la base cuando se le pregunta si esta Prestadora tiene la modalidad encendida. */
+let modalidadMarketplace = true;
+/** Con sesión de soporte abierta, un Superadmin queda parado adentro de esta Prestadora. */
+let sesionDeSoporteAbierta = false;
 
 const baseFalsa = createServer((req, res) => {
   let crudo = '';
@@ -86,13 +91,35 @@ async function pedir(metodo, ruta, cuerpo) {
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
 
+const dentroDeUnRato = () => new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
 beforeEach(() => {
   llamadas = [];
   rolDelUsuario = 'admin_prestadora';
   prestadoraDelUsuario = PRESTADORA;
+  modalidadMarketplace = true;
+  sesionDeSoporteAbierta = false;
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: prestadoraDelUsuario }]);
+  respuestas.set('POST /rest/v1/rpc/prestadora_tiene_modalidad_activa', () => modalidadMarketplace);
+  // El segundo factor no es lo que se prueba acá: se lo deja apagado para que el camino llegue
+  // hasta el candado del rol.
+  respuestas.set('GET /rest/v1/configuracion_plataforma', () => [{ mfa_admin_obligatorio: false }]);
+  respuestas.set('GET /rest/v1/sesiones_soporte_tecnico', () =>
+    sesionDeSoporteAbierta
+      ? [
+          {
+            id: SESION_SOPORTE,
+            prestadora_id: PRESTADORA,
+            expira_at: dentroDeUnRato(),
+            ultima_actividad_at: new Date().toISOString(),
+          },
+        ]
+      : []
+  );
+  respuestas.set('PATCH /rest/v1/sesiones_soporte_tecnico', () => []);
+  respuestas.set('POST /rest/v1/auditoria_soporte_tecnico', () => []);
 });
 
 /** Las tablas y funciones que sólo se tocan cuando la ruta llegó a hacer su trabajo. */
@@ -147,9 +174,33 @@ describe('lo que sí es del Coordinador', () => {
 
   it('ve la auditoría de advertencias legales', async () => {
     rolDelUsuario = 'coordinador';
+    // Cuáles son las funciones de riesgo lo dice la base, no una lista escrita en el motor
+    // (CLAUDE.md §8): la ruta lee el catálogo antes de filtrar la auditoría.
+    respuestas.set('GET /rest/v1/catalogo_funciones_marketplace', () => [
+      { clave: 'ranking_plataforma', orden: 1 },
+    ]);
     respuestas.set('GET /rest/v1/auditoria_advertencias_legales', () => []);
     const { estado } = await pedir('GET', '/auditoria-legal');
     assert.equal(estado, 200);
+  });
+
+  it('ve las funciones de riesgo legal, y no las puede encender', async () => {
+    rolDelUsuario = 'coordinador';
+    respuestas.set('GET /rest/v1/catalogo_funciones_marketplace', () => [
+      { clave: 'ranking_plataforma', orden: 1 },
+    ]);
+    respuestas.set('GET /rest/v1/configuracion_funciones_marketplace', () => []);
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ pais: 'AR' }]);
+    respuestas.set('GET /rest/v1/advertencias_legales', () => []);
+
+    const lectura = await pedir('GET', '/funciones-riesgo');
+    assert.equal(lectura.estado, 200);
+    assert.equal(lectura.cuerpo.funciones.length, 1);
+
+    const escritura = await pedir('PUT', '/funciones-riesgo/ranking_plataforma', { activa: true });
+    assert.equal(escritura.estado, 403);
+    const escrituras = llamadas.filter((l) => l.clave === 'POST /rest/v1/configuracion_funciones_marketplace');
+    assert.deepEqual(escrituras, [], 'el motor guardó el encendido antes de negarlo');
   });
 });
 
@@ -177,5 +228,114 @@ describe('sin Prestadora activa no hay Marketplace', () => {
     const { estado, cuerpo } = await pedir('GET', '/calificaciones');
     assert.equal(estado, 400);
     assert.match(cuerpo.error, /entrar a una prestadora/);
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Paso 7 del plan. Hasta acá el Marketplace se abría por rol: una Prestadora que trabaja
+// solamente en prestación directa —que nunca contrató el Marketplace— entraba a todas estas
+// rutas con sólo escribir la dirección, porque el único candado era quién es la persona, no
+// qué contrató la Prestadora. El menú del Panel ya escondía los enlaces, pero esconder un
+// enlace no impide escribir una dirección.
+//
+// Se prueba con las dos mitades del router —la de la plata y la que sí es del Coordinador—,
+// porque el candado es del router entero y no de la mitad administrativa.
+
+describe('sin la modalidad Marketplace no se entra', () => {
+  const TODAS_LAS_RUTAS = [
+    ...RUTAS_DE_PLATA,
+    ['GET', '/calificaciones', undefined],
+    ['GET', '/auditoria-legal', undefined],
+  ];
+
+  for (const [metodo, ruta, cuerpo] of TODAS_LAS_RUTAS) {
+    it(`${metodo} ${ruta}`, async () => {
+      modalidadMarketplace = false;
+      const { estado, cuerpo: respuesta } = await pedir(metodo, ruta, cuerpo);
+      assert.equal(estado, 403);
+      // El motivo es lo que le permite al Panel mostrar la frase traducida en el idioma de
+      // quien mira. Sin él la pantalla sólo puede decir "no tiene permiso", que acá es falso:
+      // el permiso lo tiene, lo que falta es la modalidad.
+      assert.equal(respuesta.motivo, 'modalidad_no_activa');
+      // Y el mensaje no nombra ninguna tabla ni columna de la base (CLAUDE.md §6).
+      assert.doesNotMatch(respuesta.error, /prestadora_modalidades|select|column|relation/i);
+      noTocoLaPlata();
+    });
+  }
+
+  it('niega igual si la base no pudo contestar', async () => {
+    // Falla cerrado (CLAUDE.md §5): ante un dato que no se pudo resolver, se deniega. La
+    // respuesta sin preparar hace que la base de mentira conteste un error.
+    respuestas.delete('POST /rest/v1/rpc/prestadora_tiene_modalidad_activa');
+    const { estado, cuerpo } = await pedir('GET', '/suscripciones');
+    assert.equal(estado, 403);
+    assert.equal(cuerpo.motivo, 'modalidad_no_activa');
+    noTocoLaPlata();
+  });
+
+  it('niega igual si la respuesta viene vacía', async () => {
+    // El caso que rompe los candados escritos a la ligera: `null` no es `false`, y una
+    // comparación floja lo dejaría pasar.
+    modalidadMarketplace = null;
+    const { estado, cuerpo } = await pedir('GET', '/suscripciones');
+    assert.equal(estado, 403);
+    assert.equal(cuerpo.motivo, 'modalidad_no_activa');
+    noTocoLaPlata();
+  });
+
+  it('le pregunta a la base por esta Prestadora y por esta modalidad', async () => {
+    // Que la pregunta se arme con la Prestadora de la sesión —y no con una que venga en el
+    // pedido— es lo que impide que alguien conteste por otra.
+    modalidadMarketplace = false;
+    await pedir('GET', '/suscripciones');
+    const pregunta = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/prestadora_tiene_modalidad_activa');
+    assert.ok(pregunta, 'el motor no le preguntó a la base si la modalidad está activa');
+    assert.deepEqual(pregunta.cuerpo, { p_prestadora_id: PRESTADORA, p_modalidad: 'marketplace' });
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Y adentro de la plata hay una parte más angosta todavía: las credenciales con las que la
+// Prestadora cobra. Son un secreto de ella, igual que el token de WhatsApp y que la contraseña
+// del correo saliente, así que Superadmin queda afuera de cargarlas y de reemplazarlas aunque
+// tenga la sesión de soporte abierta. Las pruebas se hacen con esa sesión ABIERTA a propósito:
+// sin ella, Superadmin no está parado en ninguna Prestadora y la ruta corta antes por otro
+// motivo; el caso que importa es el de adentro de la sesión de soporte.
+
+const RUTAS_DE_LAS_CREDENCIALES_DE_COBRO = [
+  ['PUT', '/pasarela/mercadopago/secreto-firma', { secretoFirma: 'lo que sea' }],
+  ['PATCH', '/pasarela/mercadopago', { activo: true }],
+];
+
+describe('Superadmin no llega a las credenciales de cobro de una Prestadora', () => {
+  for (const [metodo, ruta, cuerpo] of RUTAS_DE_LAS_CREDENCIALES_DE_COBRO) {
+    it(`${metodo} ${ruta}, aun con la sesión de soporte abierta`, async () => {
+      rolDelUsuario = 'superadmin';
+      prestadoraDelUsuario = null;
+      sesionDeSoporteAbierta = true;
+
+      const { estado, cuerpo: respuesta } = await pedir(metodo, ruta, cuerpo);
+      assert.equal(estado, 403);
+      // El mensaje explica de quién son las credenciales, y no nombra ninguna tabla ni columna
+      // de la base (CLAUDE.md §6).
+      assert.match(respuesta.error, /credenciales de cobro/i);
+      assert.doesNotMatch(respuesta.error, /prestadora_pasarela_pago|credenciales_pasarela|select|column|relation|vault/i);
+      noTocoLaPlata();
+    });
+  }
+
+  it('pero sigue viendo qué pasarelas están conectadas, que es lo que necesita para dar soporte', async () => {
+    // El candado angosto es de las dos rutas que escriben la credencial y de ninguna más: si se
+    // hubiera cerrado el riel entero, Superadmin dejaría de poder ayudar a una Prestadora a
+    // entender por qué no le entran los cobros.
+    rolDelUsuario = 'superadmin';
+    prestadoraDelUsuario = null;
+    sesionDeSoporteAbierta = true;
+    respuestas.set('GET /rest/v1/prestadora_pasarela_pago', () => []);
+    respuestas.set('GET /rest/v1/credenciales_pasarela_pago', () => []);
+
+    const { estado, cuerpo } = await pedir('GET', '/pasarela');
+    assert.equal(estado, 200);
+    assert.ok(Array.isArray(cuerpo.pasarelas));
   });
 });

@@ -8,22 +8,26 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 import { proveedoresDisponibles, obtenerAdaptador, requiereSecretoFirma } from '../pasarelas/index.js';
 import { tokenQrCobroValido } from '../utils/qrCobroEfectivo.js';
-import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
+import { exigirAdministracion, exigirAdminDePrestadora } from '../middleware/exigirAdministracion.js';
+import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
+import { exigirModalidad } from '../middleware/exigirModalidad.js';
+import { advertenciaVigente, advertenciasVigentes, registrarAviso } from '../utils/advertenciaLegal.js';
 
 export const panelMarketplaceRouter = Router();
 
 panelMarketplaceRouter.use(requiereRolPanel);
 
 // Todo lo de marketplace pasa adentro de una Prestadora. Superadmin sin sesión de soporte
-// abierta no está parado en ninguna, y entonces no hay sobre qué operar.
-function exigirPrestadoraActiva(req, res, next) {
-  if (!req.usuarioPanel.prestadoraId) {
-    return res.status(400).json({ error: 'Hace falta entrar a una prestadora antes de operar sobre marketplace' });
-  }
-  next();
-}
+// abierta no está parado en ninguna, y entonces no hay sobre qué operar. El corte lo pone el
+// middleware compartido con el resto de los routers: hasta hoy este archivo tenía su propia
+// copia de la misma condición, con otro texto (CLAUDE.md §8, «ningún patrón repetido sin punto
+// único de verdad»).
+panelMarketplaceRouter.use(exigirOrganizacionActiva);
 
-panelMarketplaceRouter.use(exigirPrestadoraActiva);
+// Y todo lo de acá adentro existe solamente si la Prestadora tiene encendida la modalidad
+// Marketplace. Que el menú del Panel no muestre estos enlaces no alcanza: escribiendo la
+// dirección a mano se entraba igual. El candado de verdad es éste (middleware/exigirModalidad.js).
+panelMarketplaceRouter.use(exigirModalidad('marketplace'));
 
 // La plata del Marketplace es de la administración de la Prestadora, no del Coordinador
 // (Desarrollador, 2026-09-04: «absolutamente no puede ni debe»). Alcanza a las dos mitades:
@@ -37,6 +41,17 @@ panelMarketplaceRouter.use(exigirPrestadoraActiva);
 // control se escribe una sola vez (middleware/exigirAdministracion.js) y lo único que se
 // decide acá es a qué rutas se le pide.
 const soloAdministracion = exigirAdministracion('Rol sin permiso');
+
+// Y adentro de la plata hay una parte que ni siquiera es de la administración en general: las
+// credenciales con las que la Prestadora cobra. Son secretos de ella, igual que el token de
+// WhatsApp y que la contraseña del correo saliente, así que Superadmin también queda afuera de
+// cargarlas y de reemplazarlas. Superadmin es un rol técnico de CeltaTech, y CeltaTech no tiene
+// por qué poder tocar con qué credencial cobra una Prestadora. Se suma encima del candado de
+// administración en las dos rutas que las escriben; el resto del riel —ver qué pasarelas están
+// conectadas, los cobros, las suscripciones— no cambia (middleware/exigirAdministracion.js).
+const soloAdminDePrestadora = exigirAdminDePrestadora(
+  'Las credenciales de cobro son de la Prestadora: solo Admin puede cargarlas y cambiarlas'
+);
 
 // ============================================================================
 // Pasarela de pago — la Prestadora activa uno o varios de los 6 rieles, cada uno con su
@@ -84,7 +99,7 @@ panelMarketplaceRouter.get('/pasarela', soloAdministracion, async (req, res) => 
 // queda para el caso que sí es aparte: cambiar el secreto de una pasarela ya conectada,
 // porque se rota cada tanto sin tocar la credencial. Se guarda en la misma caja fuerte que
 // la credencial y no se vuelve a mostrar.
-panelMarketplaceRouter.put('/pasarela/:proveedor/secreto-firma', soloAdministracion, async (req, res) => {
+panelMarketplaceRouter.put('/pasarela/:proveedor/secreto-firma', soloAdministracion, soloAdminDePrestadora, async (req, res) => {
   const { proveedor } = req.params;
   const { secretoFirma } = req.body || {};
 
@@ -105,7 +120,7 @@ panelMarketplaceRouter.put('/pasarela/:proveedor/secreto-firma', soloAdministrac
   res.json({ ok: true });
 });
 
-panelMarketplaceRouter.patch('/pasarela/:proveedor', soloAdministracion, async (req, res) => {
+panelMarketplaceRouter.patch('/pasarela/:proveedor', soloAdministracion, soloAdminDePrestadora, async (req, res) => {
   const { proveedor } = req.params;
   const { activo, credencial, secretoFirma } = req.body || {};
 
@@ -352,28 +367,147 @@ panelMarketplaceRouter.patch('/calificaciones/:id/visibilidad', async (req, res)
 });
 
 // ============================================================================
-// Auditoría legal de marketplace — lectura de auditoria_advertencias_legales acotada a las
-// 5 funcion_clave de riesgo alto de marketplace (schema_marketplace_advertencias_seed.sql).
-// Sin toggles reales todavía que la escriban (mismo estado que el resto de
-// advertencias_legales, ver schema_advertencias_legales_01.sql:1-9) — esta lista queda lista
-// para cuando esos toggles se construyan, sin volver a tocar esta ruta.
+// Las cinco funciones de riesgo legal de marketplace
+//
+// QUÉ SON. `docs/legal/argentina.md` describe cinco funciones de la modalidad marketplace
+// que, en Argentina, acercan el vínculo con el Asistente a una relación de dependencia:
+// el ranking calculado por la plataforma, la consecuencia automática atada a la calificación,
+// el precio u horario fijado por la plataforma, la exclusividad y la mediación de conflictos.
+// Cada una tiene su texto de aviso escrito en ese documento, y desde la migración
+// 20260910140000 esos cinco textos están cargados en `advertencias_legales`.
+//
+// CUÁL ES LA LISTA. Sale de la base, de `catalogo_funciones_marketplace`, y no de una lista
+// escrita acá: los catálogos salen de la base (CLAUDE.md §8). Hasta el 2026-09-10 estaba
+// escrita en este archivo, y la tabla que la guarda no existía; ahora la usan las tres rutas
+// de abajo desde un solo lugar.
 // ============================================================================
 
-const FUNCIONES_CLAVE_MARKETPLACE = [
-  'ranking_plataforma',
-  'consecuencia_automatica_calificacion',
-  'precio_horario_fijado_plataforma',
-  'exclusividad_marketplace',
-  'mediacion_conflictos_marketplace',
-];
+/** Las funciones de riesgo, en el orden en que las escribe el documento legal. */
+async function catalogoDeFuncionesDeRiesgo() {
+  return supabase
+    .from('catalogo_funciones_marketplace')
+    .select('clave, orden')
+    .order('orden', { ascending: true });
+}
+
+/* El detalle crudo de la base nombra tablas, columnas y restricciones, así que queda en el
+   registro del servidor y no viaja al navegador (CLAUDE.md §6). La pantalla no lo necesita:
+   traduce por el código de respuesta (panel/src/lib/errores.js). */
+function fallaDelSistema(res, donde, error) {
+  console.error(`Marketplace, ${donde}:`, error.message);
+  return res.status(500).json({ error: 'No se pudo completar la operación' });
+}
+
+// ----------------------------------------------------------------------------
+// Encender y apagar cada función — el aviso avisa, no bloquea
+// ----------------------------------------------------------------------------
+//
+// AVISA, NO BLOQUEA (CLAUDE.md §7). Encender cualquiera de las cinco siempre se puede. Lo que
+// hace el motor es mostrar el aviso escrito para la jurisdicción de esa Prestadora —si esa
+// jurisdicción tiene documento— y dejar registrado que se avisó, cuándo y a quién. Si el país
+// no tiene documento, no hay aviso y la función se enciende igual: no se improvisa un texto
+// por parecido con otro país, y la falta de texto nunca se convierte en un impedimento.
+//
+// Y ninguna de las cinco queda apagada por decisión del sistema: nacen apagadas porque nadie
+// las encendió, que no es lo mismo. Encenderlas es un clic.
+//
+// POR QUÉ EL REGISTRO SE ESCRIBE ACÁ Y NO EN LA PANTALLA: ver utils/advertenciaLegal.js.
+
+panelMarketplaceRouter.get('/funciones-riesgo', async (req, res) => {
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+
+  const { data: catalogo, error: errorCatalogo } = await catalogoDeFuncionesDeRiesgo();
+  if (errorCatalogo) return fallaDelSistema(res, 'catálogo de funciones de riesgo', errorCatalogo);
+
+  const { data: guardadas, error } = await supabase
+    .from('configuracion_funciones_marketplace')
+    .select('funcion_clave, activa, advertida_en')
+    .eq('prestadora_id', prestadoraId);
+  if (error) return fallaDelSistema(res, 'funciones de riesgo encendidas', error);
+
+  const porClave = new Map((guardadas || []).map((f) => [f.funcion_clave, f]));
+  const avisos = await advertenciasVigentes(prestadoraId, (catalogo || []).map((f) => f.clave));
+
+  res.json({
+    funciones: (catalogo || []).map((f) => {
+      const guardada = porClave.get(f.clave);
+      return {
+        clave: f.clave,
+        // Sin fila guardada, apagada: una Prestadora recién creada no necesita que nadie le
+        // siembre cinco filas para estar en el estado en el que ya está.
+        activa: guardada?.activa ?? false,
+        advertida_en: guardada?.advertida_en ?? null,
+        // El texto viaja para que la pantalla pueda mostrarlo ANTES de encender, que es el
+        // único momento en el que sirve. Si esta jurisdicción no tiene documento para esta
+        // función, viaja `null` y no hay nada que mostrar.
+        texto_advertencia: avisos.get(f.clave)?.texto ?? null,
+      };
+    }),
+  });
+});
+
+// Encender o apagar una de estas cinco es una decisión de negocio con consecuencia legal: la
+// toma la administración de la Prestadora, no el Coordinador, que las ve y no las toca.
+panelMarketplaceRouter.put('/funciones-riesgo/:clave', soloAdministracion, async (req, res) => {
+  const { activa } = req.body || {};
+  if (typeof activa !== 'boolean') {
+    return res.status(400).json({ error: 'Falta activa (booleano)' });
+  }
+
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+  const usuarioId = req.usuarioPanel.id;
+
+  // La clave se valida contra el catálogo de la base, no contra una lista escrita acá.
+  const { data: catalogo, error: errorCatalogo } = await catalogoDeFuncionesDeRiesgo();
+  if (errorCatalogo) return fallaDelSistema(res, 'catálogo de funciones de riesgo', errorCatalogo);
+  if (!(catalogo || []).some((f) => f.clave === req.params.clave)) {
+    return res.status(404).json({ error: 'No se encontró esa función' });
+  }
+
+  // El aviso se resuelve antes de guardar porque forma parte de lo que se guarda: la fila
+  // queda diciendo que esta función se encendió sabiendo esto. Apagar no lleva aviso: lo que
+  // el documento legal advierte es de usar la función, no de dejar de usarla.
+  const advertencia = activa ? await advertenciaVigente(prestadoraId, req.params.clave) : null;
+  const ahora = new Date().toISOString();
+
+  const { error } = await supabase
+    .from('configuracion_funciones_marketplace')
+    .upsert(
+      {
+        prestadora_id: prestadoraId,
+        funcion_clave: req.params.clave,
+        activa,
+        updated_at: ahora,
+        ...(advertencia ? { advertida_en: ahora, advertida_por: usuarioId } : {}),
+      },
+      { onConflict: 'prestadora_id,funcion_clave' }
+    );
+  if (error) return fallaDelSistema(res, 'encender función de riesgo', error);
+
+  // Recién con la función efectivamente encendida se anota que se avisó: un registro de un
+  // aviso sobre algo que no llegó a pasar no es un registro, es ruido. Al revés no aplica —
+  // que el registro falle nunca hace fallar el encendido (utils/advertenciaLegal.js).
+  if (advertencia) {
+    await registrarAviso({ prestadoraId, usuarioId, funcionClave: req.params.clave, advertencia });
+  }
+
+  res.json({ ok: true, activa, advertencia });
+});
+
+// ----------------------------------------------------------------------------
+// La auditoría: qué se avisó, cuándo y a quién
+// ----------------------------------------------------------------------------
 
 panelMarketplaceRouter.get('/auditoria-legal', async (req, res) => {
+  const { data: catalogo, error: errorCatalogo } = await catalogoDeFuncionesDeRiesgo();
+  if (errorCatalogo) return fallaDelSistema(res, 'catálogo de funciones de riesgo', errorCatalogo);
+
   const { data, error } = await supabase
     .from('auditoria_advertencias_legales')
     .select('id, usuario_id, funcion_clave, jurisdiccion, texto_mostrado, created_at, usuarios(nombre)')
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
-    .in('funcion_clave', FUNCIONES_CLAVE_MARKETPLACE)
+    .in('funcion_clave', (catalogo || []).map((f) => f.clave))
     .order('created_at', { ascending: false });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return fallaDelSistema(res, 'auditoría de advertencias legales', error);
   res.json({ auditoria: data });
 });

@@ -4,13 +4,15 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 import { tipoMatriculaRequerida, hayAsistenteAsignadoConMatricula } from '../utils/medicacionIndicaciones.js';
 import { extensionDeArchivo, rutaDeMatriculaNueva } from '../utils/archivosSubidos.js';
+import { registrarAvisoAlActivar } from '../utils/advertenciaLegal.js';
 
 // Cierra pendiente #62 (docs/PLAN_HASTA_PRODUCCION.md): cola de revisión de indicaciones de
 // medicación solicitadas por la Familia (appFamiliasMedicacion.js). Aceptar/rechazar nunca
 // bloquea por falta de matrícula del Asistente (CLAUDE.md §3) — solo informa mediante
-// el flag `sinMatricula`, que el Panel usa para disparar la advertencia legal ya
-// existente (AdvertenciaLegalContext, funcion_clave 'medicacion_via_sin_matricula') antes
-// de confirmar la aceptación.
+// el flag `sinMatricula`, que el Panel usa para mostrar la advertencia legal
+// (AdvertenciaLegalContext, funcion_clave 'medicacion_via_sin_matricula') antes de confirmar
+// la aceptación. Mostrarla es de la pantalla; dejar registrado que se avisó es de acá, en el
+// mismo pedido que acepta la indicación (utils/advertenciaLegal.js).
 //
 // matriculas_asistente y configuracion_matricula_via_medicacion no tienen rutas CRUD
 // acá: el Panel las gestiona directo vía supabase-js bajo RLS (mismo criterio que
@@ -64,7 +66,7 @@ panelMedicacionRouter.get('/pendientes', requiereRolPanel, async (req, res) => {
 panelMedicacionRouter.post('/:id/aceptar', requiereRolPanel, async (req, res) => {
   const { data: indicacion } = await supabase
     .from('indicaciones_medicacion')
-    .select('id, estado')
+    .select('id, estado, paciente_id, via_administracion')
     .eq('id', req.params.id)
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .eq('estado', 'pendiente')
@@ -83,6 +85,22 @@ panelMedicacionRouter.post('/:id/aceptar', requiereRolPanel, async (req, res) =>
     .select('id');
   if (error) return res.status(500).json({ error: error.message });
   if (!aceptada?.length) return res.status(404).json({ error: 'Indicación no encontrada o ya revisada' });
+
+  // Aceptada de verdad, se anota que se avisó. La situación se vuelve a calcular acá y no se
+  // recibe del navegador: quien manda el pedido podría decir que no había nada que advertir.
+  // Si la jurisdicción de esta Prestadora no tiene texto escrito para esta función, no hay
+  // aviso y no se anota nada — y la indicación queda aceptada igual (CLAUDE.md §7).
+  const tipoRequerido = await tipoMatriculaRequerida(req.usuarioPanel.prestadoraId, indicacion.via_administracion);
+  const sinMatricula = tipoRequerido
+    ? !(await hayAsistenteAsignadoConMatricula(indicacion.paciente_id, tipoRequerido))
+    : false;
+  if (sinMatricula) {
+    await registrarAvisoAlActivar({
+      prestadoraId: req.usuarioPanel.prestadoraId,
+      usuarioId: req.usuarioPanel.id,
+      funcionClave: 'medicacion_via_sin_matricula',
+    });
+  }
 
   res.json({ ok: true });
 });

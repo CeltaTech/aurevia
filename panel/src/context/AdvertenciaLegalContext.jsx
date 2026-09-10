@@ -1,5 +1,4 @@
 import { createContext, useCallback, useContext, useRef, useState } from 'react';
-import { useAuth } from './AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
 import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
@@ -7,25 +6,41 @@ import { useModalAccesible } from '../hooks/useModalAccesible';
 
 const AdvertenciaLegalContext = createContext(null);
 
-// Infraestructura genérica del pendiente #51 (docs/PLAN_HASTA_PRODUCCION.md) / CLAUDE.md §3.
-// Primer consumidor real: Medicacion.jsx, función 'medicacion_via_sin_matricula' (aceptar
-// una indicación cuya vía requiere una matrícula que ningún Asistente asignado tiene
-// vigente). Cualquier función nueva de gestión de Asistentes (rankings, penalización de
-// inasistencias, etc.) se envuelve del mismo modo:
+// El cartel que avisa antes de encender algo con riesgo legal.
+//
+// QUÉ HACE Y QUÉ NO. Muestra el texto escrito para la jurisdicción de esa Prestadora y
+// espera la decisión de quien mira. Nada más: no bloquea —quien decide es quien tiene la
+// responsabilidad (CLAUDE.md §7)— y tampoco escribe el registro de que se avisó.
+//
+// POR QUÉ EL REGISTRO NO SE ESCRIBE ACÁ. Hasta el 2026-09-10 esta pantalla insertaba la fila
+// de auditoría al cerrar el cartel. Eso hacía que el registro dependiera de que la pantalla se
+// acordara de escribirlo: cualquier otro camino hasta la misma acción encendía la función sin
+// dejar rastro, y un registro que se puede saltear no sirve como registro. Ahora lo anota el
+// motor, en el mismo pedido que hace la cosa (backend/src/utils/advertenciaLegal.js).
+//
+// Se usa así:
 //
 //   const { verificarAntesDeActivar } = useAdvertenciaLegal();
-//   const puedeActivar = await verificarAntesDeActivar(prestadoraId, 'rankings');
-//   if (puedeActivar) { ...activar de verdad... }
+//   const puedeActivar = await verificarAntesDeActivar(prestadoraId, 'ranking_plataforma');
+//   if (puedeActivar) { ...pedirle al motor que la encienda... }
 //
-// Si la jurisdicción de esa prestadora no tiene fila en advertencias_legales para esa
-// función, verificarAntesDeActivar resuelve true de inmediato, sin mostrar nada (CLAUDE.md
-// §3: "si la jurisdicción no tiene documento legal cargado, no se muestra advertencia").
+// Si la jurisdicción de esa Prestadora no tiene texto escrito para esa función,
+// verificarAntesDeActivar devuelve true de inmediato, sin mostrar nada: si el país no tiene
+// documento, no hay aviso y no se improvisa uno (CLAUDE.md §7).
 export function AdvertenciaLegalProvider({ children }) {
-  const modal = useModalAccesible(cancelar);
-  const { usuario } = useAuth();
   const { t } = useLocale();
   const [pendiente, setPendiente] = useState(null); // { texto, prestadoraId, jurisdiccion, funcionClave }
   const resolverRef = useRef(null);
+
+  // Va antes de useModalAccesible porque ese hook la recibe: escrita más abajo, la línea que
+  // la usa se ejecuta cuando la constante todavía no existe y la pantalla no llega a dibujarse.
+  const cancelar = useCallback(() => {
+    resolverRef.current?.(false);
+    resolverRef.current = null;
+    setPendiente(null);
+  }, []);
+
+  const modal = useModalAccesible(cancelar);
 
   const verificarAntesDeActivar = useCallback(async (prestadoraId, funcionClave) => {
     const { data: prestadora, error: errorPrestadora } = await supabase
@@ -54,25 +69,11 @@ export function AdvertenciaLegalProvider({ children }) {
     });
   }, []);
 
-  const cancelar = useCallback(() => {
-    resolverRef.current?.(false);
-    resolverRef.current = null;
-    setPendiente(null);
-  }, []);
-
-  const confirmar = useCallback(async () => {
-    if (!pendiente) return;
-    await supabase.from('auditoria_advertencias_legales').insert({
-      prestadora_id: pendiente.prestadoraId,
-      usuario_id: usuario.id,
-      funcion_clave: pendiente.funcionClave,
-      jurisdiccion: pendiente.jurisdiccion,
-      texto_mostrado: pendiente.texto,
-    });
+  const confirmar = useCallback(() => {
     resolverRef.current?.(true);
     resolverRef.current = null;
     setPendiente(null);
-  }, [pendiente, usuario]);
+  }, []);
 
   return (
     <AdvertenciaLegalContext.Provider value={{ verificarAntesDeActivar }}>

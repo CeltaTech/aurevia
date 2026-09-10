@@ -17,6 +17,11 @@ import { MonitoreoVitalesPaciente } from './MonitoreoVitalesPaciente';
 import { DomiciliosTemporalesPaciente } from './DomiciliosTemporalesPaciente';
 import { InvitarCirculoModal } from './InvitarCirculoModal';
 import {
+  AlertasDeLaFamilia,
+  GuardiasActivasDeLaFamilia,
+  ReportesDeLaFamilia,
+} from './GuardiasReportesYAlertas';
+import {
   AccesosDelCirculoModal,
   DocumentoDeLaInstruccion,
   RegistrarPapelFirmadoModal,
@@ -388,14 +393,17 @@ export function FamiliaDetalle() {
         </Button>
       )}
 
+      {/* Las tres secciones traen sus propios datos y manejan sus propios cuatro estados; viven
+          en `GuardiasReportesYAlertas.jsx` y hacen las mismas preguntas que las pantallas de
+          Guardias, Reportes y Alertas, acotadas a los Pacientes de esta Familia. */}
       <h2>{t.familias.guardias_activas}</h2>
-      <p className="estado-vacio">{t.familias.modulo_no_disponible}</p>
+      <GuardiasActivasDeLaFamilia pacientes={familia.pacientes} />
 
       <h2>{t.familias.historial_reportes}</h2>
-      <p className="estado-vacio">{t.familias.modulo_no_disponible}</p>
+      <ReportesDeLaFamilia pacientes={familia.pacientes} />
 
       <h2>{t.familias.alertas_activas}</h2>
-      <p className="estado-vacio">{t.familias.modulo_no_disponible}</p>
+      <AlertasDeLaFamilia pacientes={familia.pacientes} />
 
       {pacienteSeleccionado && (
         <PrestacionesPaciente paciente={pacienteSeleccionado} onClose={() => setPacienteSeleccionado(null)} />

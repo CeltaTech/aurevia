@@ -8,6 +8,7 @@ import { usePermisos } from '../../context/PermisosContext';
 import { useModalidades } from '../../context/ModalidadesContext';
 import { usePedidosDeCodigo } from '../../context/PedidosDeCodigoContext';
 import { esAdminOSuperior } from '../../lib/roles';
+import { MODALIDAD } from '../../lib/modalidades';
 import { SelectoresPreferencias } from './SelectoresPreferencias';
 
 const AVISO_MINUTOS_RESTANTES = 10; // aviso "a los 50 minutos" de una sesión de 60
@@ -82,8 +83,11 @@ export function Layout() {
 
   const esAdmin = esAdminOSuperior(usuario?.rol);
   const esSuperadmin = usuario?.rol === 'superadmin';
-  const directa = tieneModalidad('directa');
-  const marketplace = tieneModalidad('marketplace');
+  // El nombre de cada modalidad sale de lib/modalidades.js, que es el mismo lugar del que lo
+  // toma el candado de la dirección (App.jsx): si el enlace y la pantalla no leyeran la misma
+  // constante, podrían dejar de coincidir sin que nadie lo note.
+  const directa = tieneModalidad(MODALIDAD.DIRECTA);
+  const marketplace = tieneModalidad(MODALIDAD.MARKETPLACE);
   // Las pantallas del plantel valen igual con las dos modalidades: en las dos hay
   // Asistentes que se incorporan, tienen documentación y cubren guardias.
   const hayPlantel = directa || marketplace;

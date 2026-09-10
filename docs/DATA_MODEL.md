@@ -70,7 +70,7 @@ tenant — no depende solo de que la RLS esté bien escrita. Las tablas de los B
 antes de esta convención) tienen `prestadora_id` como columna simple, sin FK compuesta a sus
 tablas relacionadas; no se retrofitea salvo que se decida explícitamente.
 
-**Deuda técnica — cerrada 2026-07-11 (ver `docs/PLAN_HASTA_PRODUCCION.md` ítem #3):**
+**Deuda técnica — cerrada:**
 `schema_multitenant_02.sql` había agregado un `DEFAULT '874f54d7-...'` (prestadora_id de
 la Prestadora Demo) en `prestadora_id` de las 15 tablas de los Bloques 1-3 (`usuarios`, `asistentes`,
 `ausencias`, `guardias_cobertura`, `ceses`, `familias`, `pacientes`, `lista_precios`,
@@ -358,7 +358,8 @@ Asistente/Familia).
 (catálogo de 4 tipos sembrado por prestadora, columnas viejas
 eliminadas de `asistentes`, `configuracion_notificaciones` migrado al evento genérico
 `vencimiento_documento_asistente`, `dias_aviso_vencimiento_documentos` con default 30 — ver
-`docs/PLAN_HASTA_PRODUCCION.md pasos 103 y 104`); el archivo de esquema que llevó ese cambio se eliminó del
+en `docs/PLAN_HASTA_PRODUCCION.md` el paso «El vencimiento de documentos avisa por el catálogo»,
+dentro de «Que los avisos lleguen»); el archivo de esquema que llevó ese cambio se eliminó del
 repositorio el 2026-08-18. Código de Panel/backend (`backend/src/routes/panelConfiguracion.js`,
 `panel/src/pages/Configuracion.jsx`, `panel/src/pages/asistentes/PerfilTab.jsx`,
 `backend/src/utils/vencimientos.js`) también entregado en el mismo cierre.

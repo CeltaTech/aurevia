@@ -7,6 +7,7 @@ import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
+import { useMonedaActual } from '../hooks/useMonedaActual';
 
 export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada }) {
   const modal = useModalAccesible(onClose);
@@ -14,6 +15,13 @@ export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada
   const prestadoraId = usePrestadoraActual();
   const confirmarDestructivo = useConfirmarDestructivo();
   const esNuevo = !precio;
+  // La moneda no se elige acá: la de un precio ya cargado es la que quedó guardada con él, y la
+  // de uno nuevo es la de la Prestadora, que la completa sola al insertar
+  // (`public.moneda_de_prestadora`). Se muestra igual, porque un importe sin moneda a la vista
+  // no se puede leer: en la lista de al lado ya se ve con la suya, y este formulario era el
+  // único lugar donde el mismo número aparecía pelado.
+  const monedaDeLaPrestadora = useMonedaActual();
+  const moneda = precio?.moneda ?? monedaDeLaPrestadora;
   const [tipoServicio, setTipoServicio] = useState(precio?.tipo_servicio || '');
   const [modalidad, setModalidad] = useState(precio?.modalidad || '');
   const [valorPrecio, setValorPrecio] = useState(precio?.precio ?? '');
@@ -83,7 +91,7 @@ export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada
         />
 
         <FormField
-          label={t.lista_precios.col_precio}
+          label={moneda ? `${t.lista_precios.col_precio} (${moneda})` : t.lista_precios.col_precio}
           name="precio"
           type="number"
           step="0.01"

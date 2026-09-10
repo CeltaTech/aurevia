@@ -163,7 +163,7 @@ horario de la guardia de hoy. Si no coincide (o el certificado no está activo),
 explícita de que esa persona no es quien corresponde. **Nunca muestra** DNI, teléfono,
 email ni dirección — dato sensible, ver `SECURITY.md`. El caso de terceros sin la app
 (portero, otro familiar sin cuenta, el propio Paciente sin celular) queda deliberadamente
-fuera de este primer corte — ver `docs/PLAN_HASTA_PRODUCCION.md` pendiente #73.
+fuera de este primer corte.
 
 ### Alertas
 Lista de alertas del paciente (activas + historial resuelto), descripción generada por IA,

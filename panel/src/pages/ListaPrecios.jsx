@@ -7,10 +7,11 @@ import { useSupabaseTable } from '../hooks/useSupabaseTable';
 import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
+import { formatearImporte } from '../lib/dinero';
 import { ListaPrecioDetalle } from './ListaPrecioDetalle';
 
 export function ListaPrecios() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { usuario } = useAuth();
   const { filas, estado, error, recargar } = useSupabaseTable('lista_precios', { orderBy: 'created_at' });
   const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '' });
@@ -67,7 +68,9 @@ export function ListaPrecios() {
               <tr key={p.id}>
                 <td>{p.tipo_servicio}</td>
                 <td>{p.modalidad}</td>
-                <td>{p.precio}</td>
+                {/* Cada fila trae su propia moneda (`lista_precios.moneda`, que completa sola
+                    la base): el precio se muestra con ella y no con la que se suponga. */}
+                <td>{formatearImporte(p.precio, p.moneda, locale)}</td>
                 <td>{new Date(p.vigente_desde).toLocaleDateString()}</td>
                 <td>
                   <span className={claseBadge(p.activo ? 'activo' : 'inactivo')}>

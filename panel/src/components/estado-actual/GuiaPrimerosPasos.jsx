@@ -11,6 +11,7 @@ import { llamarApiConfiguracion } from '../../lib/apiConfiguracion';
 import { mensajeDeError } from '../../lib/errores';
 import { Alert } from '../ui/Alert';
 import { Button } from '../ui/Button';
+import { PropuestaDesdePlanilla } from './PropuestaDesdePlanilla';
 
 /* La guía de primeros pasos de una Prestadora nueva (pendiente #139).
    ==========================================================================
@@ -30,9 +31,16 @@ import { Button } from '../ui/Button';
    pasos» según en qué pantalla estuviera. Se fundieron acá: los ocho pasos, una sola vez, en
    la pantalla de entrada. El paso «primer Asistente» estaba en las dos y quedó uno solo.
 
-   QUÉ NO HACE. No propone configuración con IA ni lee planillas — esa parte de la fila del
-   pendiente sigue abierta porque exige decisiones que la fila no cierra (qué formato de
-   archivo se acepta, qué modelo se usa, dónde se guarda lo que se sube).
+   POR QUÉ «ELEGIR MODALIDAD» VA PRIMERO. Es el paso del que dependen los otros siete: la
+   modalidad decide qué pantallas existen para esa Prestadora, y por lo tanto qué significa
+   cargar precios, zonas o Familias. Elegirla al final obliga a revisar hacia atrás lo que ya
+   se cargó; elegirla primero deja el resto de la guía hablando de lo que esa Prestadora
+   efectivamente va a usar.
+
+   Y LEE PLANILLAS. Lo que la Prestadora ya tiene escrito no se vuelve a tipear: la lectura de
+   planilla del producto —la misma de la pantalla de importación— cuelga acá abajo, en
+   `PropuestaDesdePlanilla`, y propone la configuración inicial a partir del archivo. No crea
+   nada: quien confirma sigue siendo una persona, en la pantalla de importación.
 
    QUIÉN LA VE. Solo Admin_prestadora o Superadmin (candado igual al de Configuración, ver
    `soloAdministracion` en el motor) — el Coordinador nunca la ve, ni siquiera cuando falta
@@ -154,15 +162,11 @@ export function GuiaPrimerosPasos() {
   // muchas Prestadoras legítimas sin poder completar nunca este paso.
   const sinTipo = gente.filas.filter((a) => !a.tipo_asistente_id);
 
+  // El orden de esta lista es el orden en que se muestra la guía, y no sale de ninguna tabla:
+  // no hay catálogo de pasos en la base, porque cada paso es una pregunta distinta hecha a
+  // datos distintos (ver arriba) y no un renglón configurable. Primero la modalidad, por el
+  // motivo escrito en la cabecera del archivo.
   const pasos = [
-    {
-      key: 'datos',
-      hecho: Boolean(empresa?.telefono) && Boolean(empresa?.email),
-      ruta: '/configuracion/prestadora',
-      titulo: t.guia_primeros_pasos.paso_datos_titulo,
-      explicacion: t.guia_primeros_pasos.paso_datos_explicacion,
-      cta: t.guia_primeros_pasos.paso_datos_cta,
-    },
     {
       key: 'modalidad',
       hecho: tieneModalidad('directa') || tieneModalidad('marketplace'),
@@ -170,6 +174,14 @@ export function GuiaPrimerosPasos() {
       titulo: t.guia_primeros_pasos.paso_modalidad_titulo,
       explicacion: t.guia_primeros_pasos.paso_modalidad_explicacion,
       cta: t.guia_primeros_pasos.paso_modalidad_cta,
+    },
+    {
+      key: 'datos',
+      hecho: Boolean(empresa?.telefono) && Boolean(empresa?.email),
+      ruta: '/configuracion/prestadora',
+      titulo: t.guia_primeros_pasos.paso_datos_titulo,
+      explicacion: t.guia_primeros_pasos.paso_datos_explicacion,
+      cta: t.guia_primeros_pasos.paso_datos_cta,
     },
     {
       key: 'zonas',
@@ -258,6 +270,8 @@ export function GuiaPrimerosPasos() {
           </li>
         ))}
       </ul>
+      {/* Sólo para quien puede completar los pasos: un Superadmin de visita mira, no trabaja. */}
+      {!informativo && <PropuestaDesdePlanilla />}
     </div>
   );
 }

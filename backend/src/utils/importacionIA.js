@@ -31,6 +31,26 @@ export const CAMPOS_IMPORTACION = {
   ],
 };
 
+// Qué campos de cada tipo llegan como una lista adentro de una sola celda ("Norte, Sur"), y
+// cómo se saca de una fila el valor de un campo interno con el mapeo ya corregido. Vive acá,
+// al lado del catálogo de campos, porque es la misma pregunta —qué forma tiene una planilla
+// importada— y la hacen dos lugares distintos: la ruta que confirma la importación y la que
+// propone la configuración inicial a partir del archivo.
+export const CAMPOS_LISTA = {
+  asistente: new Set(['zonas']),
+  familia: new Set(['patologiasPaciente']),
+};
+
+export function valorDesdeFila(fila, mapeo, campo, esLista) {
+  const columna = Object.keys(mapeo).find((col) => mapeo[col] === campo);
+  if (!columna) return esLista ? [] : undefined;
+  const valor = fila[columna];
+  if (esLista) {
+    return String(valor ?? '').split(',').map((v) => v.trim()).filter(Boolean);
+  }
+  return valor === '' || valor == null ? undefined : valor;
+}
+
 // Capa 1 (formato conocido): cualquier formato que `xlsx` ya sepa leer — XLSX/XLSM/XLSB/XLS,
 // ODS, XML SpreadsheetML, CSV/TSV/TXT delimitado, DIF, SYLK, DBF, WK1/WK3 — se acepta sin
 // código nuevo, `XLSX.read` autodetecta el formato por firma de archivo, no hace falta un

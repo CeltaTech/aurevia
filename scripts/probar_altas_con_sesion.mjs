@@ -81,6 +81,8 @@ const CONTENEDOR = process.env.CONTENEDOR_BASE || (() => {
 // quiere. No es una clave: está escrita en `supabase/seed.sql`.
 const CONTRASENA = 'local-sandbox-2026';
 const ADMINISTRADORA = 'admin@sandbox.local';
+// El pase más angosto del Panel: lo que alcanza se decide por el Asistente de cada fila.
+const COORDINADORA = 'coordinadora@sandbox.local';
 
 const verde = (t) => `\x1b[32m${t}\x1b[0m`;
 const rojo = (t) => `\x1b[31m${t}\x1b[0m`;
@@ -320,7 +322,60 @@ async function probarLasAltas({ base, llavePublica }, token, d) {
 }
 
 // ---------------------------------------------------------------------------
-// Segunda comprobación: que no vuelva a pasar
+// Segunda comprobación: el hueco
+// ---------------------------------------------------------------------------
+// La pantalla promete que el turno se puede armar sin Asistente y asignarlo después. Quien más
+// usa esa promesa es el Coordinador, y es justo el rol cuyo alcance se define por el Asistente:
+// si la regla que lo acota no contempla el hueco, lo que la pantalla ofrece rebota contra la
+// base. Pasó —la serie volvía con `new row violates row-level security policy`, que en pantalla
+// se lee «este usuario no tiene permiso para hacer esto»— y no lo vio ninguna prueba, porque
+// todas entran con la administradora, que alcanza todo lo de su Prestadora. Por eso ésta entra
+// con el pase más angosto que hay.
+
+async function probarElHueco({ base, llavePublica }, d) {
+  console.log('\n== El hueco: armar el turno sin Asistente todavía ==\n');
+  console.log(gris(`  Sesión: ${COORDINADORA}\n`));
+
+  const token = await entrar(base, llavePublica, COORDINADORA);
+  const enUnMes = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  const r = await fetch(`${base}/rest/v1/series_guardias`, {
+    method: 'POST',
+    headers: {
+      apikey: llavePublica,
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify({
+      prestadora_id: d.prestadora,
+      paciente_id: d.paciente,
+      dias_semana: ['martes'],
+      hora_inicio: '09:00',
+      hora_fin: '13:00',
+      modalidad: 'presencial',
+      vigente_desde: enUnMes,
+    }),
+  });
+  const cuerpo = await r.json().catch(() => null);
+
+  if (!r.ok) {
+    const codigo = cuerpo?.code ? `${cuerpo.code} ` : '';
+    const detalle = cuerpo?.message || JSON.stringify(cuerpo);
+    console.log(rojo('  ✗ series_guardias sin Asistente'));
+    console.log(rojo(`      ${r.status} ${codigo}${detalle}`));
+    return [`series_guardias: el Coordinador no pudo armar la serie sin Asistente — ${r.status} ${codigo}${detalle}`];
+  }
+
+  const fila = Array.isArray(cuerpo) ? cuerpo[0] : cuerpo;
+  if (fila?.id) consultarBase(`DELETE FROM public.series_guardias WHERE id = '${fila.id}';`);
+  console.log(verde('  ✓ series_guardias sin Asistente'));
+  console.log(gris('      coordinador_gestiona_series_guardias_de_su_zona → interno.coordinador_alcanza_guardia'));
+  return [];
+}
+
+// ---------------------------------------------------------------------------
+// Tercera comprobación: que no vuelva a pasar
 // ---------------------------------------------------------------------------
 
 function probarLaClaseEntera() {
@@ -396,17 +451,22 @@ async function main() {
     if (borrados.length) console.log(gris(`\n  (se borró lo que se dio de alta: ${borrados.join(', ')})`));
   }
 
+  const delHueco = await probarElHueco(entorno, d);
   const deLaClase = probarLaClaseEntera();
-  const problemas = [...resultado.problemas, ...deLaClase];
+  const problemas = [...resultado.problemas, ...delHueco, ...deLaClase];
 
   console.log('');
   if (problemas.length) {
     console.log(rojo(`FALLA — ${problemas.length} problema(s):`));
     for (const p of problemas) console.log(rojo(`  · ${p}`));
-    console.log(gris('\n  Un «42501 permission denied for function» acá significa que un disparador'));
-    console.log(gris('  llama a una función que quien inserta no puede ejecutar. No se arregla'));
-    console.log(gris('  tocando políticas: la función tiene que estar del lado de adentro, en el'));
-    console.log(gris('  esquema `interno`, y con permiso para `authenticated`.'));
+    // Los dos rebotes se leen igual en pantalla y no se arreglan igual, así que se separan acá.
+    console.log(gris('\n  «42501 permission denied for function»: un disparador llama a algo que quien'));
+    console.log(gris('  inserta no puede ejecutar. No se arregla tocando políticas — la función tiene'));
+    console.log(gris('  que estar del lado de adentro, en el esquema `interno`, y con permiso para'));
+    console.log(gris('  `authenticated`.'));
+    console.log(gris('\n  «42501 new row violates row-level security policy»: la fila quedó afuera del'));
+    console.log(gris('  alcance de quien la escribe. Eso sí es una política, y antes de ampliarla hay'));
+    console.log(gris('  que ver si el caso no está ya contemplado en la tabla hermana.'));
     process.exit(1);
   }
 

@@ -372,6 +372,24 @@ reparto de siempre —`familia_ve_su_acceso_marketplace` / `prestadora_ve_acceso
 de suscripción a acceso. Ninguna Familia ve el acceso ni el cobro de otra, y ninguna Prestadora
 ve nada de otra Prestadora.
 
+**Y las unidades de tiempo salen de una tabla del producto, no de cada Prestadora.**
+`catalogo_periodos_cobro` dice cada cuánto se puede cobrar —`dia`, `semana`, `mes`, `anio`—, y
+`formas_de_cobro_marketplace.periodo_unidad` la apunta con clave foránea. No lleva columna de
+Prestadora porque no tiene ninguna adentro: es una lista de unidades de tiempo, igual para todas.
+De ahí sale su reparto, que es el de un catálogo del producto y no el de un dato de nadie:
+
+```sql
+CREATE POLICY lectura_del_catalogo_de_periodos ON catalogo_periodos_cobro
+  FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY superadmin_gestiona_catalogo_de_periodos ON catalogo_periodos_cobro
+  FOR ALL USING (interno.es_superadmin()) WITH CHECK (interno.es_superadmin());
+```
+
+Lo lee cualquiera con sesión porque la Familia también necesita esas palabras: ve las formas que
+su Prestadora le ofrece y cada una dice cada cuánto se cobra. Escribirlo es cambiar el producto,
+así que queda del lado del Superadmin.
+
 **Pendiente de decisión, no bloquea desarrollo:** `guardias_tracking_gps` guarda histórico de
 posiciones GPS del Asistente durante una guardia activa — esto es un dato personal sensible
 bajo Ley 25.326 (geolocalización de una persona física). Falta definir política de retención

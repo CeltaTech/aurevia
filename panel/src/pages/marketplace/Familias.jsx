@@ -1,30 +1,14 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useLocale } from '../../i18n/LocaleContext';
-import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
-import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
+import { mensajeDeError } from '../../lib/errores';
+import { llamarApiMarketplace as llamarApi } from '../../lib/apiMarketplace';
 
-const API_URL = import.meta.env.VITE_API_URL;
 const LECTOR_ID = 'lector-qr-cobro-efectivo';
-
-async function llamarApi(path, opciones = {}) {
-  const { data } = await supabase.auth.getSession();
-  const respuesta = await fetch(`${API_URL}/api/panel/marketplace${path}`, {
-    ...opciones,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${data.session?.access_token}`,
-      ...opciones.headers,
-    },
-  });
-  const resultado = await respuesta.json().catch(() => ({}));
-  if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
-  return resultado;
-}
 
 function fechaHoyISO() {
   return new Date().toISOString().slice(0, 10);

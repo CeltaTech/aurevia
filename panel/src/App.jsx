@@ -52,6 +52,7 @@ import { Importacion } from './pages/Importacion';
 import { InformesObraSocial } from './pages/InformesObraSocial';
 import { Auditoria } from './pages/Auditoria';
 import { MarketplaceFamilias } from './pages/marketplace/Familias';
+import { FormasDeCobro } from './pages/marketplace/FormasDeCobro';
 import { MarketplaceCalificaciones } from './pages/marketplace/Calificaciones';
 import { MarketplaceAuditoriaLegal } from './pages/marketplace/AuditoriaLegal';
 
@@ -149,7 +150,7 @@ function App() {
                       <Route path="accesos" element={<ConfiguracionAccesos />} />
                     </Route>
                     <Route path="auditoria" element={<ProtectedRoute roles={ROLES_ADMINISTRACION}><Auditoria /></ProtectedRoute>} />
-                    {/* Las tres pantallas del Marketplace llevan dos candados y no uno: el rol,
+                    {/* Las pantallas del Marketplace llevan dos candados y no uno: el rol,
                         que dice quién de la Prestadora entra, y la modalidad, que dice si esa
                         Prestadora tiene Marketplace. Hasta ahora sólo tenían el primero, así que
                         una Prestadora de prestación directa entraba escribiendo la dirección a
@@ -164,6 +165,18 @@ function App() {
                            las pantallas operativas (Desarrollador, 2026-09-04). */
                         <ProtectedRoute roles={ROLES_ADMINISTRACION} modalidad={MODALIDAD.MARKETPLACE}>
                           <MarketplaceFamilias />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="marketplace/formas-de-cobro"
+                      element={
+                        /* Con qué números cobra la Prestadora. Mismo candado que la pantalla de
+                           la plata: es configuración de dinero, no operación. El Superadmin entra
+                           y mira, para poder dar soporte, pero no cambia nada: eso lo niega el
+                           motor, que es donde el permiso niega de verdad. */
+                        <ProtectedRoute roles={ROLES_ADMINISTRACION} modalidad={MODALIDAD.MARKETPLACE}>
+                          <FormasDeCobro />
                         </ProtectedRoute>
                       }
                     />

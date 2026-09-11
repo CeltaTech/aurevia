@@ -12,7 +12,7 @@ import { exigirAdministracion, exigirAdminDePrestadora } from '../middleware/exi
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { exigirModalidad } from '../middleware/exigirModalidad.js';
 import { advertenciaVigente, advertenciasVigentes, registrarAviso } from '../utils/advertenciaLegal.js';
-import { responderError } from '../utils/errorConMotivo.js';
+import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { darDeAltaEnPasarela, MOTIVO_ALTA } from '../utils/altaEnPasarela.js';
 import { registrarCobroExitoso } from '../utils/cobrosMarketplace.js';
 
@@ -54,6 +54,14 @@ const soloAdministracion = exigirAdministracion('Rol sin permiso');
 // conectadas, los cobros, los accesos— no cambia (middleware/exigirAdministracion.js).
 const soloAdminDePrestadora = exigirAdminDePrestadora(
   'Las credenciales de cobro son de la Prestadora: solo Admin puede cargarlas y cambiarlas'
+);
+
+// El mismo candado angosto, por otro motivo y con otro texto: cuánto cobra una Prestadora y cada
+// cuánto lo cobra es su política de comercialización, y CeltaTech no se mete en eso ni con
+// precios sugeridos. Quien la arma es el Admin de la Prestadora; Superadmin la ve —la necesita
+// para dar soporte— y no la escribe.
+const soloAdminArmaLaFormaDeCobro = exigirAdminDePrestadora(
+  'Cómo cobra la Prestadora lo decide ella: solo Admin puede armar y cambiar sus formas de cobro'
 );
 
 // ============================================================================
@@ -178,6 +186,201 @@ panelMarketplaceRouter.patch('/pasarela/:proveedor', soloAdministracion, soloAdm
   if (error) return responderError(res, error);
 
   res.json({ ok: true });
+});
+
+// ============================================================================
+// Las formas de cobro que arma la Prestadora
+//
+// QUÉ SON. Las piezas con las que cada Prestadora arma cómo le cobra a sus Familias: qué se
+// cobra, cada cuánto, con cuántos días gratis, con qué saldo de contactos y si se renueva sola
+// (`supabase/migrations/20260911160000_la_prestadora_arma_su_forma_de_cobro.sql`). No hay una
+// columna que diga «esto es una suscripción»: la forma sale de cómo se combinen las piezas, y
+// una combinación nueva no necesita migración.
+//
+// POR QUÉ PASAN POR EL MOTOR Y NO DERECHO A LA BASE. La lista de precios de prestación directa
+// se escribe desde la pantalla con la sesión de quien mira, y alcanza. Acá no: lo que decide que
+// estas pantallas existan es la modalidad contratada, y ese candado vive en este riel
+// (`exigirModalidad`, arriba). Escribiendo la dirección a mano se entraba igual.
+//
+// QUIÉN. Verlas es de la administración; armarlas y cambiarlas, sólo del Admin de la Prestadora,
+// por lo mismo que las credenciales de cobro: cómo cobra una Prestadora no es asunto de un rol
+// técnico de CeltaTech.
+//
+// Y NO HAY BAJA. Una forma que ya se contrató no se borra: se apaga con `ofrecida`, y los
+// accesos que la tienen siguen apuntando a algo que existe.
+// ============================================================================
+
+const CAMPOS_DE_LA_FORMA =
+  'id, nombre, importe, moneda, periodo_cantidad, periodo_unidad, dias_gratis, contactos_incluidos, renueva_sola, ofrecida, created_at, updated_at';
+
+/** Las unidades de tiempo que el producto conoce. Salen de la base, nunca de una lista escrita
+ *  acá (CLAUDE.md §8): la tabla es lo mismo que mira la clave foránea de la forma de cobro. */
+async function unidadesDePeriodo() {
+  const { data, error } = await supabase
+    .from('catalogo_periodos_cobro')
+    .select('clave, orden')
+    .order('orden', { ascending: true });
+  if (error) throw error;
+  return (data || []).map((fila) => fila.clave);
+}
+
+/** Un entero de verdad: ni texto con letras, ni un decimal, ni vacío. `Number('')` da 0, así que
+ *  comprobar solamente que sea un número deja pasar el campo vacío como si fuera cero. */
+function enteroOInvalido(valor) {
+  if (valor === null || valor === undefined || valor === '') return null;
+  const numero = Number(valor);
+  return Number.isInteger(numero) ? numero : NaN;
+}
+
+/**
+ * Lo que se va a guardar, o un error con motivo.
+ *
+ * Repite en el servidor lo que la tabla ya comprueba en la base, y no por desconfianza de la
+ * base: un `CHECK` que salta sube como código crudo de Postgres, y de ahí la pantalla sólo puede
+ * decir «hay un dato mal cargado». Comprobándolo acá, cada pieza mal cargada viaja con su propio
+ * motivo y la persona lee cuál es (`celtatech/CLAUDE.md` §6, y `utils/errorConMotivo.js`).
+ *
+ * Falla cerrado: cualquier pieza que no se entienda es un rechazo, nunca un valor por omisión.
+ */
+function formaValidada(cuerpo, unidades) {
+  const nombre = typeof cuerpo.nombre === 'string' ? cuerpo.nombre.trim() : '';
+  if (!nombre) throw new ErrorConMotivo('faltan_datos', 'La forma de cobro necesita un nombre');
+
+  if (cuerpo.importe === null || cuerpo.importe === undefined || cuerpo.importe === '') {
+    throw new ErrorConMotivo('faltan_datos', 'La forma de cobro necesita un importe');
+  }
+  const importe = Number(cuerpo.importe);
+  if (!Number.isFinite(importe) || importe < 0) {
+    throw new ErrorConMotivo('importe_invalido', `Importe fuera de rango: ${cuerpo.importe}`);
+  }
+
+  // El período son dos piezas que viajan juntas o no viajan: «cada 2» sin unidad no quiere decir
+  // nada, y «cada mes» sin cantidad tampoco. Las dos vacías es una forma que se cobra una vez.
+  const periodoCantidad = enteroOInvalido(cuerpo.periodo_cantidad);
+  const periodoUnidad = typeof cuerpo.periodo_unidad === 'string' && cuerpo.periodo_unidad
+    ? cuerpo.periodo_unidad
+    : null;
+  if (Number.isNaN(periodoCantidad)) {
+    throw new ErrorConMotivo('periodo_invalido', `Cantidad de período no entera: ${cuerpo.periodo_cantidad}`);
+  }
+  if ((periodoCantidad === null) !== (periodoUnidad === null)) {
+    throw new ErrorConMotivo('periodo_incompleto', 'El período lleva cantidad y unidad, o ninguna de las dos');
+  }
+  if (periodoCantidad !== null && periodoCantidad <= 0) {
+    throw new ErrorConMotivo('periodo_invalido', `Cantidad de período no positiva: ${periodoCantidad}`);
+  }
+  if (periodoUnidad !== null && !unidades.includes(periodoUnidad)) {
+    throw new ErrorConMotivo('unidad_de_periodo_desconocida', `Unidad fuera del catálogo: ${periodoUnidad}`);
+  }
+
+  const diasGratis = enteroOInvalido(cuerpo.dias_gratis);
+  if (Number.isNaN(diasGratis) || (diasGratis !== null && diasGratis < 0)) {
+    throw new ErrorConMotivo('dias_gratis_invalido', `Días gratis fuera de rango: ${cuerpo.dias_gratis}`);
+  }
+
+  const contactos = enteroOInvalido(cuerpo.contactos_incluidos);
+  if (Number.isNaN(contactos) || (contactos !== null && contactos <= 0)) {
+    throw new ErrorConMotivo('contactos_incluidos_invalido', `Contactos incluidos fuera de rango: ${cuerpo.contactos_incluidos}`);
+  }
+
+  const renuevaSola = cuerpo.renueva_sola === true;
+  if (renuevaSola && periodoCantidad === null) {
+    throw new ErrorConMotivo('renovacion_sin_periodo', 'Una forma que se cobra una sola vez no se renueva sola');
+  }
+
+  return {
+    nombre,
+    importe,
+    periodo_cantidad: periodoCantidad,
+    periodo_unidad: periodoUnidad,
+    dias_gratis: diasGratis,
+    contactos_incluidos: contactos,
+    renueva_sola: renuevaSola,
+    // Una forma nueva se ofrece salvo que se diga lo contrario: quien la está cargando la está
+    // cargando para usarla.
+    ofrecida: cuerpo.ofrecida === undefined ? true : cuerpo.ofrecida === true,
+  };
+}
+
+/** El nombre repetido es lo único que la base rechaza y que la persona puede corregir sola, así
+ *  que sube con motivo propio en vez de caer en «algo falló de nuestro lado». */
+function errorDeGuardado(error) {
+  if (error?.code === '23505') {
+    return new ErrorConMotivo('nombre_de_forma_repetido', error.message);
+  }
+  return error;
+}
+
+panelMarketplaceRouter.get('/formas-de-cobro', soloAdministracion, async (req, res) => {
+  const { data, error } = await supabase
+    .from('formas_de_cobro_marketplace')
+    .select(CAMPOS_DE_LA_FORMA)
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .order('created_at', { ascending: true });
+  if (error) return responderError(res, error);
+
+  // Las unidades viajan con la lista para que la pantalla arme su desplegable sin tener que
+  // conocerlas: el catálogo está en la base y esta ruta es la única puerta hacia él.
+  let unidades;
+  try {
+    unidades = await unidadesDePeriodo();
+  } catch (errorCatalogo) {
+    return responderError(res, errorCatalogo);
+  }
+
+  res.json({ formas: data, unidades_de_periodo: unidades });
+});
+
+panelMarketplaceRouter.post('/formas-de-cobro', soloAdministracion, soloAdminArmaLaFormaDeCobro, async (req, res) => {
+  let valores;
+  try {
+    valores = formaValidada(req.body || {}, await unidadesDePeriodo());
+  } catch (error) {
+    return responderError(res, error, 400);
+  }
+
+  // La moneda no viaja: la completa el disparador con la de la Prestadora, que es el único lugar
+  // donde está decidida (`CLAUDE.md` de Careonys, «la moneda de cada importe se completa sola»).
+  const { data, error } = await supabase
+    .from('formas_de_cobro_marketplace')
+    .insert({ ...valores, prestadora_id: req.usuarioPanel.prestadoraId })
+    .select(CAMPOS_DE_LA_FORMA)
+    .single();
+  if (error) return responderError(res, errorDeGuardado(error));
+
+  res.json({ forma: data });
+});
+
+panelMarketplaceRouter.patch('/formas-de-cobro/:id', soloAdministracion, soloAdminArmaLaFormaDeCobro, async (req, res) => {
+  // Se lee la forma entera antes de tocarla por dos motivos. Uno: si no es de esta Prestadora, no
+  // existe, y se contesta lo mismo que si no existiera. Dos: las piezas se comprueban entre sí
+  // —renovarse sola exige período—, y eso no se puede hacer mirando sólo lo que vino en el pedido.
+  const { data: actual, error: errorLectura } = await supabase
+    .from('formas_de_cobro_marketplace')
+    .select(CAMPOS_DE_LA_FORMA)
+    .eq('id', req.params.id)
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .maybeSingle();
+  if (errorLectura) return responderError(res, errorLectura);
+  if (!actual) return responderError(res, new ErrorConMotivo('no_encontrado', 'Forma de cobro de otra Prestadora o inexistente'));
+
+  let valores;
+  try {
+    valores = formaValidada({ ...actual, ...req.body }, await unidadesDePeriodo());
+  } catch (error) {
+    return responderError(res, error, 400);
+  }
+
+  const { data, error } = await supabase
+    .from('formas_de_cobro_marketplace')
+    .update({ ...valores, updated_at: new Date().toISOString() })
+    .eq('id', req.params.id)
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .select(CAMPOS_DE_LA_FORMA)
+    .single();
+  if (error) return responderError(res, errorDeGuardado(error));
+
+  res.json({ forma: data });
 });
 
 // ============================================================================

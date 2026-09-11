@@ -175,6 +175,10 @@ export function Layout() {
         // lo habilitó en Configuración > Accesos.
         { a: '/facturacion', texto: t.nav.facturacion, ver: directa },
         { a: '/lista-precios', texto: t.nav.lista_precios, ver: directa },
+        // La lista de precios del Marketplace. Va acá, al lado de la de prestación directa,
+        // porque es lo mismo visto desde la otra modalidad: con qué números se cobra. Sólo el
+        // Admin, porque la política de comercialización de la Prestadora la decide ella.
+        { a: '/marketplace/formas-de-cobro', texto: t.nav.marketplace_formas_de_cobro, ver: marketplace && esAdmin },
         { a: '/informes-obra-social', texto: t.nav.informes_obra_social, ver: directa },
         { a: '/pagos-asistentes', texto: t.nav.pagos_asistentes, ver: hayPlantel && (esAdmin || puede('ver_pagos_asistente')) },
       ],

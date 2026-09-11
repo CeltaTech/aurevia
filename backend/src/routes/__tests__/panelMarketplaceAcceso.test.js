@@ -22,6 +22,7 @@ import { createServer } from 'node:http';
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const USUARIO = '22222222-2222-2222-2222-222222222222';
 const ACCESO = '33333333-3333-3333-3333-333333333333';
+const FORMA = '55555555-5555-5555-5555-555555555555';
 const SESION_SOPORTE = '44444444-4444-4444-4444-444444444444';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
@@ -128,6 +129,7 @@ const TABLAS_DE_PLATA = [
   'credenciales_pasarela_pago',
   'accesos_marketplace',
   'cobros_marketplace',
+  'formas_de_cobro_marketplace',
   'qr_cobro_efectivo',
   'rpc/guardar_credencial_pasarela_pago',
   'rpc/guardar_secreto_firma_pasarela_pago',
@@ -154,6 +156,11 @@ const RUTAS_DE_PLATA = [
   // Dar de alta un acceso en la pasarela es lo que lo deja cobrando de verdad: saca la
   // credencial de la caja fuerte y crea el cobro recurrente del lado del proveedor.
   ['POST', `/accesos/${ACCESO}/alta-en-pasarela`, {}],
+  // Cuánto se cobra y cada cuánto es plata igual que un cobro: es el importe con el que después
+  // se le cobra a cada Familia.
+  ['GET', '/formas-de-cobro', undefined],
+  ['POST', '/formas-de-cobro', { nombre: 'Mensual', importe: 12000 }],
+  ['PATCH', `/formas-de-cobro/${FORMA}`, { importe: 15000 }],
 ];
 
 describe('el Coordinador no llega a la plata del Marketplace', () => {
@@ -328,6 +335,38 @@ describe('Superadmin no llega a las credenciales de cobro de una Prestadora', ()
     });
   }
 
+  // Y lo mismo con la forma de cobro, por otro motivo: no es un secreto, es la política de
+  // comercialización de la Prestadora. CeltaTech no le fija precios ni se los sugiere, así que
+  // tampoco se los escribe.
+  for (const [metodo, ruta, cuerpo] of [
+    ['POST', '/formas-de-cobro', { nombre: 'Mensual', importe: 12000 }],
+    ['PATCH', `/formas-de-cobro/${FORMA}`, { importe: 15000 }],
+  ]) {
+    it(`${metodo} ${ruta}: Superadmin no arma la forma de cobro de una Prestadora`, async () => {
+      rolDelUsuario = 'superadmin';
+      prestadoraDelUsuario = null;
+      sesionDeSoporteAbierta = true;
+
+      const { estado, cuerpo: respuesta } = await pedir(metodo, ruta, cuerpo);
+      assert.equal(estado, 403);
+      assert.match(respuesta.error, /solo Admin/i);
+      assert.doesNotMatch(respuesta.error, /formas_de_cobro|select|column|relation/i);
+      noTocoLaPlata();
+    });
+  }
+
+  it('pero sí ve las formas de cobro, que es lo que necesita para dar soporte', async () => {
+    rolDelUsuario = 'superadmin';
+    prestadoraDelUsuario = null;
+    sesionDeSoporteAbierta = true;
+    respuestas.set('GET /rest/v1/formas_de_cobro_marketplace', () => []);
+    respuestas.set('GET /rest/v1/catalogo_periodos_cobro', () => [{ clave: 'mes', orden: 3 }]);
+
+    const { estado, cuerpo } = await pedir('GET', '/formas-de-cobro');
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo.formas, []);
+  });
+
   it('pero sigue viendo qué pasarelas están conectadas, que es lo que necesita para dar soporte', async () => {
     // El candado angosto es de las dos rutas que escriben la credencial y de ninguna más: si se
     // hubiera cerrado el riel entero, Superadmin dejaría de poder ayudar a una Prestadora a
@@ -341,5 +380,141 @@ describe('Superadmin no llega a las credenciales de cobro de una Prestadora', ()
     const { estado, cuerpo } = await pedir('GET', '/pasarela');
     assert.equal(estado, 200);
     assert.ok(Array.isArray(cuerpo.pasarelas));
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Las piezas de la forma de cobro, comprobadas del lado del servidor
+//
+// POR QUÉ ACÁ Y NO SOLO EN LA BASE. La tabla ya rechaza un importe negativo o un período a
+// medias, pero lo hace con un código crudo de Postgres, y de ahí la pantalla sólo puede decir
+// «hay un dato mal cargado». Comprobándolo en el motor, cada pieza mal cargada viaja con su
+// propio motivo y quien la cargó lee cuál corregir. Se comprueba además que nada se escribió:
+// un rechazo que igual tocó la tabla no es un rechazo.
+
+const FORMA_GUARDADA = {
+  id: FORMA,
+  nombre: 'Mensual',
+  importe: 12000,
+  moneda: 'ARS',
+  periodo_cantidad: 1,
+  periodo_unidad: 'mes',
+  dias_gratis: 7,
+  contactos_incluidos: null,
+  renueva_sola: true,
+  ofrecida: true,
+};
+
+function catalogoDePeriodos() {
+  respuestas.set('GET /rest/v1/catalogo_periodos_cobro', () => [
+    { clave: 'dia', orden: 1 },
+    { clave: 'semana', orden: 2 },
+    { clave: 'mes', orden: 3 },
+    { clave: 'anio', orden: 4 },
+  ]);
+}
+
+function noEscribioLaForma() {
+  const escrituras = llamadas.filter(
+    (l) => l.clave.includes('formas_de_cobro_marketplace') && l.clave.startsWith('GET') === false
+  );
+  assert.deepEqual(escrituras, [], 'el motor escribió la forma de cobro antes de rechazarla');
+}
+
+describe('la Prestadora arma su forma de cobro', () => {
+  it('guarda las piezas tal como vinieron, y no manda la moneda', async () => {
+    catalogoDePeriodos();
+    respuestas.set('POST /rest/v1/formas_de_cobro_marketplace', () => [FORMA_GUARDADA]);
+
+    const { estado, cuerpo } = await pedir('POST', '/formas-de-cobro', {
+      nombre: '  Mensual  ',
+      importe: '12000',
+      periodo_cantidad: '1',
+      periodo_unidad: 'mes',
+      dias_gratis: '7',
+      renueva_sola: true,
+    });
+
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.forma.id, FORMA);
+
+    const escritura = llamadas.find((l) => l.clave === 'POST /rest/v1/formas_de_cobro_marketplace');
+    assert.deepEqual(escritura.cuerpo, {
+      nombre: 'Mensual',
+      importe: 12000,
+      periodo_cantidad: 1,
+      periodo_unidad: 'mes',
+      dias_gratis: 7,
+      contactos_incluidos: null,
+      renueva_sola: true,
+      ofrecida: true,
+      prestadora_id: PRESTADORA,
+    });
+    // La moneda la completa el disparador de la base con la de la Prestadora: si viajara desde
+    // acá habría dos lugares decidiéndola.
+    assert.equal('moneda' in escritura.cuerpo, false);
+  });
+
+  it('un paquete sin período tampoco se renueva solo', async () => {
+    catalogoDePeriodos();
+    const { estado, cuerpo } = await pedir('POST', '/formas-de-cobro', {
+      nombre: 'Cinco contactos',
+      importe: 5000,
+      contactos_incluidos: 5,
+      renueva_sola: true,
+    });
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.motivo, 'renovacion_sin_periodo');
+    noEscribioLaForma();
+  });
+
+  const PIEZAS_MAL_CARGADAS = [
+    ['sin nombre', { importe: 1000 }, 'faltan_datos'],
+    ['sin importe', { nombre: 'Mensual' }, 'faltan_datos'],
+    ['con importe negativo', { nombre: 'Mensual', importe: -1 }, 'importe_invalido'],
+    ['con importe que no es número', { nombre: 'Mensual', importe: 'gratis' }, 'importe_invalido'],
+    ['con período a medias', { nombre: 'Mensual', importe: 1000, periodo_unidad: 'mes' }, 'periodo_incompleto'],
+    ['con cantidad de período en cero', { nombre: 'Mensual', importe: 1000, periodo_cantidad: 0, periodo_unidad: 'mes' }, 'periodo_invalido'],
+    ['con cantidad de período partida', { nombre: 'Mensual', importe: 1000, periodo_cantidad: 1.5, periodo_unidad: 'mes' }, 'periodo_invalido'],
+    ['con una unidad que el producto no conoce', { nombre: 'Mensual', importe: 1000, periodo_cantidad: 1, periodo_unidad: 'quincena' }, 'unidad_de_periodo_desconocida'],
+    ['con días gratis negativos', { nombre: 'Mensual', importe: 1000, dias_gratis: -3 }, 'dias_gratis_invalido'],
+    ['con saldo de contactos en cero', { nombre: 'Paquete', importe: 1000, contactos_incluidos: 0 }, 'contactos_incluidos_invalido'],
+  ];
+
+  for (const [caso, cuerpo, motivo] of PIEZAS_MAL_CARGADAS) {
+    it(`rechaza una forma ${caso}, diciendo cuál es la pieza`, async () => {
+      catalogoDePeriodos();
+      const respuesta = await pedir('POST', '/formas-de-cobro', cuerpo);
+      assert.equal(respuesta.estado, 400);
+      assert.equal(respuesta.cuerpo.motivo, motivo);
+      // Ni el detalle crudo ni el nombre de la tabla salen hacia afuera (CLAUDE.md §6).
+      assert.doesNotMatch(respuesta.cuerpo.error, /formas_de_cobro|check|constraint|column/i);
+      noEscribioLaForma();
+    });
+  }
+
+  it('al cambiar una pieza comprueba las demás, que no vinieron en el pedido', async () => {
+    // Sacarle el período a una forma que se renueva sola la deja en un estado imposible, y eso
+    // no se ve mirando sólo lo que vino: hay que mirarla entera.
+    catalogoDePeriodos();
+    respuestas.set('GET /rest/v1/formas_de_cobro_marketplace', () => [FORMA_GUARDADA]);
+
+    const { estado, cuerpo } = await pedir('PATCH', `/formas-de-cobro/${FORMA}`, {
+      periodo_cantidad: null,
+      periodo_unidad: null,
+    });
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.motivo, 'renovacion_sin_periodo');
+    noEscribioLaForma();
+  });
+
+  it('una forma de otra Prestadora se contesta como si no existiera', async () => {
+    catalogoDePeriodos();
+    respuestas.set('GET /rest/v1/formas_de_cobro_marketplace', () => []);
+
+    const { estado, cuerpo } = await pedir('PATCH', `/formas-de-cobro/${FORMA}`, { importe: 99 });
+    assert.equal(estado, 404);
+    assert.equal(cuerpo.motivo, 'no_encontrado');
+    noEscribioLaForma();
   });
 });

@@ -65,6 +65,18 @@ const ESTADO_POR_MOTIVO = {
   // Prestadora, que desde afuera se tienen que ver iguales.
   persona_fuera_del_circulo: 409,
   paciente_no_encontrado: 404,
+  // Las formas de cobro que arma la Prestadora. Son todos 400 salvo el nombre repetido, que es
+  // 409 por lo mismo que el correo ya tomado: el pedido está bien armado y choca con algo que ya
+  // existe. Cada uno nombra la pieza que está mal —el importe, el período, el saldo— porque quien
+  // lo lee es quien la cargó y puede corregirla; ninguno nombra una columna ni una restricción.
+  nombre_de_forma_repetido: 409,
+  importe_invalido: 400,
+  periodo_incompleto: 400,
+  periodo_invalido: 400,
+  unidad_de_periodo_desconocida: 400,
+  dias_gratis_invalido: 400,
+  contactos_incluidos_invalido: 400,
+  renovacion_sin_periodo: 400,
   // El tope de pedidos por minuto (pendiente #177). Es el mismo 429 que los intentos agotados,
   // porque para la web es la misma situación —"probó demasiadas veces"—, pero el motivo es otro
   // y la pantalla dice otra cosa: los intentos agotados no se arreglan esperando, y esto sí.

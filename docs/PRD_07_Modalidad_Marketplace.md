@@ -98,6 +98,20 @@ Resguardos obligatorios, no opcionales:
 - **Cualquier otra combinación** es la forma propia de esa Prestadora. Los resguardos del §3.2 le
   corresponden por la pieza que los dispara —renovarse sola—, no por cómo la haya llamado.
 
+### 3.4 Dónde las carga
+
+En **Panel > Formas de cobro de marketplace**, que es para esta modalidad lo que la lista de
+precios es para la prestación directa. La pantalla pregunta por las piezas, no por un tipo de
+forma: nombre, importe, cada cuántos y de qué, días gratis, contactos incluidos, si se renueva
+sola y si se ofrece. La moneda no se pregunta —es la de la Prestadora y la completa la base—, y
+las unidades de tiempo salen de `catalogo_periodos_cobro`, así que agregar una es una fila y no
+un cambio de pantalla.
+
+Verlas es de la administración; armarlas y cambiarlas, sólo del Admin de la Prestadora: cómo
+cobra una Prestadora no es asunto de un rol técnico de CeltaTech. **Y no hay baja:** una forma
+que ya se contrató se apaga con `ofrecida`, de modo que los accesos que la tienen siguen
+apuntando a algo que existe.
+
 ## 4. Qué sostiene el pago después del contacto
 
 Conseguido el Asistente, el contacto ya no hace falta. Lo que la Familia sigue usando es la

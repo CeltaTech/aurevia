@@ -5,16 +5,14 @@ import { useModalidades } from '../../context/ModalidadesContext';
 import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
 import { useAuth } from '../../context/AuthContext';
 import { esAdminDePrestadora } from '../../lib/roles';
-import { supabase } from '../../lib/supabaseClient';
 import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion';
+import { llamarApiMarketplace } from '../../lib/apiMarketplace';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
-import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
+import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
-
-const API_URL = import.meta.env.VITE_API_URL;
 
 /* Quién es la Prestadora y cómo trabaja: su nombre y sus datos, las modalidades
    que tiene contratadas, las zonas donde presta y —si vende por marketplace— por
@@ -33,21 +31,6 @@ export function ConfiguracionPrestadora() {
       {tieneModalidad('marketplace') && <TabPasarela />}
     </>
   );
-}
-
-async function llamarApiMarketplace(path, opciones = {}) {
-  const { data } = await supabase.auth.getSession();
-  const respuesta = await fetch(`${API_URL}/api/panel/marketplace${path}`, {
-    ...opciones,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${data.session?.access_token}`,
-      ...opciones.headers,
-    },
-  });
-  const resultado = await respuesta.json().catch(() => ({}));
-  if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
-  return resultado;
 }
 
 const PROVEEDORES_SIN_CREDENCIAL = ['efectivo_manual'];

@@ -46,56 +46,73 @@ vínculo?**
 Este principio decide, función por función, si algo es "herramienta de la Familia" (bajo
 riesgo) o "decisión de la plataforma" (riesgo, ver §5).
 
-## 3. Modelo de suscripción — Familia
+## 3. Cómo la Prestadora le cobra a la Familia el acceso a los datos de contacto
 
-- **Período gratuito**: 30 días, con acceso a búsqueda, perfiles, chat interno y
-  videollamada — sin acceso a datos de contacto directo (teléfono, dirección, email).
-- **Activación de la suscripción**: si la Familia intenta acceder a datos de contacto
-  **antes** de cumplirse los 30 días, la suscripción se activa de inmediato (con
-  confirmación explícita en pantalla antes de cobrar — nunca un cobro como efecto
-  colateral oculto de otro botón). Si no lo hizo, al día 30 se le pregunta si quiere
-  suscribirse o darse de baja.
-- **Medio de pago**: tarjeta cargada desde el alta, para poder activar el cobro en el
-  momento en que corresponda (dentro del trial o al día 30).
-- **Renovación**: automática, mes a mes, hasta que la Familia cancela — sin plazo mínimo de
-  permanencia forzoso (un mínimo obligatorio es contraproducente bajo defensa del
-  consumidor en suscripciones de renovación automática, y además debilita el argumento de
-  "canal de contacto neutral").
-- **Resguardos obligatorios de este esquema** (estándar de la industria, no opcionales):
-  - Aviso previo (ej. día 25) antes de cualquier cobro por vencimiento del trial — nunca
-    cobro silencioso.
-  - Baja autoservicio en un clic, sin necesidad de contactar soporte (el patrón contrario
-    fue parte de la sanción de la FTC a Care.com en 2024, USD 8,5M).
-  - Si cancela, mantiene acceso hasta el fin del período ya pagado — no corte inmediato.
-  - Si el cobro falla, período de gracia con reintentos antes de suspender el acceso —
-    nunca corte inmediato ni cobro/reintento indefinido sin aviso.
-- **Cuándo termina la suscripción**: se resuelve con una fecha guardada (próximo cobro),
-  igual patrón que `planes.vigente_desde`/`vigente_hasta` — nunca calculada al vuelo.
+La Familia le paga a la Prestadora. **Cada Prestadora elige de qué forma cobra** —una suscripción
+que se renueva sola, un paquete con una cantidad de contactos, o una forma que arme ella— y fija
+sus propios valores. El producto le da las formas y el mecanismo; no elige por ella ni le fija
+precio ni duración.
 
-## 4. Qué vende la suscripción (más allá del contacto)
+De ahí se sigue que **la política de comercialización es un dato de la Prestadora y no código**
+(`celtatech/CLAUDE.md`, «nunca hardcodear»). Importe mensual, prueba que termina en una fecha y
+renovación automática son tres opciones entre las que ella puede elegir, no la única manera de
+cobrar. Hoy `suscripciones_marketplace` las trae fijas en su forma —una columna por cada una— así
+que son las únicas que entran, y no se combinan con ninguna otra.
 
-El acceso a datos de contacto por sí solo no sostiene el pago mes a mes (una vez conseguido
-el Asistente, no hay motivo para seguir pagando). El valor recurrente es el **uso de la PWA
-de control sobre su propio Asistente ya contratado** (check-in/checkout, reportes diarios,
-historial) — la misma herramienta que en prestación directa, pero acá la administra y
-decide la Familia sobre su propio vínculo (§2).
+### 3.1 Lo que vale para cualquier forma
 
-Incentivos adicionales de retención, todos de información/herramienta, ninguno de
+- La búsqueda, los perfiles, el chat interno y la videollamada son libres. Lo que se cobra es el
+  acceso a los datos de contacto directo: teléfono, dirección, correo.
+- Confirmación explícita en pantalla antes de cualquier cobro. Nunca un cobro como efecto
+  colateral de otro botón.
+- Medio de pago cargado desde el alta, para poder cobrar en el momento en que corresponda.
+- El acceso termina por una fecha o un saldo guardados, nunca por una cuenta hecha al vuelo.
+
+### 3.2 Lo que vale para toda forma que se renueve sola
+
+Resguardos obligatorios, no opcionales:
+
+- Aviso previo antes de cualquier cobro por vencimiento del período gratuito. Nunca un cobro
+  silencioso.
+- Baja autoservicio en un clic, sin tener que escribirle a nadie. El patrón contrario fue parte de
+  la sanción de la FTC a Care.com en 2024, por USD 8,5 millones.
+- Quien cancela conserva el acceso hasta el fin del período ya pagado. No hay corte inmediato.
+- Si el cobro falla, período de gracia con reintentos antes de suspender el acceso. Ni corte en el
+  acto ni reintentos indefinidos sin avisar.
+
+### 3.3 Las formas que trae el producto
+
+- **Suscripción.** Período gratuito y importe los pone la Prestadora. Renovación automática, sin
+  permanencia mínima: un mínimo obligatorio es contraproducente bajo defensa del consumidor y
+  además debilita el argumento de canal de contacto neutral. Si la Familia intenta ver un dato de
+  contacto antes de que termine el período gratuito, el cobro se activa ahí, con confirmación. Si
+  no lo intenta, al terminar ese período se le pregunta si sigue o se da de baja. Lleva los
+  resguardos del §3.2.
+- **Paquete de contactos.** Una cantidad de contactos que se compra una vez y se descuenta de a
+  uno. No se renueva sola y no vence por calendario, así que no lleva los resguardos del §3.2.
+- **Forma propia de la Prestadora.** Armada por ella combinando las piezas —qué se cobra, cada
+  cuánto, con qué período gratuito, con qué saldo—. Sin diseñar. Entra por `celtatech/CLAUDE.md`
+  §11 cuando se encare.
+
+## 4. Qué sostiene el pago después del contacto
+
+Conseguido el Asistente, el contacto ya no hace falta. Lo que la Familia sigue usando es la
+**herramienta de control sobre su propio vínculo** —check-in y check-out, reportes diarios,
+historial—, la misma que en prestación directa, pero acá la administra y la decide la Familia
+sobre su propio Asistente (§2). Alrededor de eso, todo información o herramienta, nada de
 intervención en el vínculo:
 
-1. **Prioridad de acceso al pool de Asistentes disponibles** ante una baja — no es garantía
-   de conseguir reemplazo; conseguirlo y acordar con él sigue siendo responsabilidad de la
-   Familia.
-2. **Historial documental acumulado** (reportes, check-in/checkout, incidentes) — se pierde
-   si cancela.
+1. **Prioridad de acceso al plantel disponible** ante una baja — no es garantía de reemplazo;
+   conseguirlo y acordar con él sigue siendo de la Familia.
+2. **Historial documental acumulado** (reportes, check-in/check-out, incidentes).
 3. **Vigilancia de vencimiento de documentación** del Asistente contratado (antecedentes,
    certificados).
-4. ~~Canal de mediación de conflictos~~ — **descartado explícitamente**: mediar en
-   conflictos horarios/de convivencia se parece a dirigir el vínculo, rompe el argumento de
-   "canal de contacto neutral" (§2).
-5. **Alertas críticas** (ausencia sin aviso, caída del check-in) por push/WhatsApp —
-   reutiliza el mecanismo ya construido para prestación directa (`docs/PLAN_HASTA_PRODUCCION.md`).
-6. **Contenido/recursos para cuidadores familiares** — menor esfuerzo de construir primero.
+4. ~~Canal de mediación de conflictos~~ — **descartado explícitamente**: mediar en conflictos
+   horarios o de convivencia se parece a dirigir el vínculo y rompe el argumento de canal de
+   contacto neutral (§2). Es una decisión de riesgo legal, no comercial.
+5. **Alertas críticas** (ausencia sin aviso, caída del check-in) por notificación o WhatsApp —
+   reutiliza el mecanismo ya construido para prestación directa.
+6. **Contenido y recursos para cuidadores familiares.**
 
 ## 5. Riesgo legal invertido (modalidad marketplace)
 
@@ -143,15 +160,14 @@ persona):
 
 **PWA Familia:**
 - Buscar/filtrar perfiles con insignias de verificación y calificación (opinión).
-- Chat interno + videollamada, sin exponer contacto directo hasta activarse la suscripción.
-- Acceso a datos de contacto solo tras activarse la suscripción (§3).
+- Chat interno + videollamada, sin exponer contacto directo hasta que el cobro esté activo.
+- Acceso a datos de contacto sólo con el cobro activo (§3).
 - Herramienta de control sobre su propio Asistente contratado (reportes, check-in/checkout
   — sujeto al consentimiento del §6).
 - Incentivos de retención del §4 (prioridad de reemplazo, historial, vencimientos,
   alertas críticas, contenido educativo).
-- Gestión de su propia suscripción (ver estado, cancelar en un clic).
-- **No incluye**: mediación de conflictos, ni campos donde la plataforma fije precio u
-  horario.
+- Gestión de su propio cobro con la Prestadora: ver el estado y darse de baja en un clic (§3).
+- **No incluye**: mediación de conflictos, ni campos donde la plataforma fije precio u horario.
 
 **PWA Asistente:**
 - Perfil (experiencia, certificaciones, estado de verificación).
@@ -181,7 +197,7 @@ textual, para no perderla:
   acuerdos de aceptación de esos planes. Distinguir si el servicio es contratado en forma
   directa o es derivación de obra social u otro sistema todavía no considerado.
 - **Asistentes** — todo lo referente a la gestión de los Asistentes.
-- **Facturación, pagos y cobranzas.**
+- **Facturación, pagos y cobranzas**.
 - **Administración de servicios** (Guardias, etc.).
 
 **b) Marketplace** (similar a cuidarlos.com):
@@ -217,8 +233,12 @@ resueltas y no van a hacer cambiar la respuesta.
   este documento alimenta ese rediseño, todavía no iniciado.
 
 Ya no está pendiente lo demás que este apartado daba por hacer: la columna `canales` está
-aplicada contra la base real; la suscripción de la Familia tiene su modelo de datos
-construido (`suscripciones_marketplace`, con estado, período de prueba y próxima fecha de
-cobro, y `cobros_marketplace` con el historial de cobros); y las advertencias de marketplace
-están escritas en `docs/legal/argentina.md`, que lleva su propia nota de revisión pendiente
-por un abogado laboralista — no hace falta repetirla acá.
+aplicada contra la base real, y las advertencias de marketplace están escritas en
+`docs/legal/argentina.md`, que lleva su propia nota de revisión pendiente por un abogado
+laboralista — no hace falta repetirla acá.
+
+El cobro de la Familia tiene su modelo de datos y su motor construidos —período de prueba y
+próxima fecha, historial de cobros, credenciales de pasarela por Prestadora y avisos entrantes de
+seis proveedores de pago—. Lo que falta son los resguardos del §3: la baja en un clic, el corte
+diferido, el aviso previo al primer cobro y el período de gracia con reintentos. Están en
+`docs/PLAN_HASTA_PRODUCCION.md`, sección «El dinero».

@@ -88,10 +88,9 @@ Etapa 1 — La página pública de Careonys (le vende el software a empresas de 
   Con qué:   sin decidir. La recomendación es estirar lo que ya hay —páginas estáticas sin
              framework— y traer una herramienta solo si el sitio crece. La decisión de
              2026-07-08 de usar Next.js quedó sin efecto junto con el documento que la
-             contenía (pendiente #104). Ver docs/PRD_01_Sitio_Web.md §8.
-  Datos:     ninguno. Un interesado en comprar el software es un dato de CeltaTech, no del
-             producto, y esa base todavía no existe: por ahora la página ofrece correo y
-             WhatsApp y no guarda nada (PRD_01_Sitio_Web.md §5).
+             contenía (pendiente #104). Ver docs/PRD_01_Sitio_Web.md §7.
+  Datos:     ninguno. La página ofrece correo y WhatsApp y no guarda nada
+             (PRD_01_Sitio_Web.md §5).
 
   Lo que esta parte decía antes —Next.js, formularios de pedido de servicio y de
   postulación, MySQL, Vercel, Nodemailer— describía el sitio de una empresa de cuidados, que
@@ -224,13 +223,10 @@ Ver `CLAUDE.md` (raíz de `Workspace/`) — sección "El riesgo legal que condic
 
 ## Gap identificado, no resuelto por ningún PRD original: cobro a las familias
 
-Ningún documento original especificó **cómo la prestadora cobra a las familias** (medio de pago,
-facturación, retención de fondos). El "Modelo UPE" cubre la facturación a IOMA (obra
-social) vía Planillas 3, pero no el cobro directo a familias particulares. Antes de
-construir cualquier flujo de cobro, esto necesita una decisión de negocio explícita
-(Mercado Pago, transferencia, ambos) — no asumir nada del documento no vinculante
-"Prompt de Money Suite.md" sin validarlo con el equipo de negocio primero. Ver nota en
-`SECURITY.md` y `PLAN_HASTA_PRODUCCION.md`.
+Ningún documento original especificó **cómo la Prestadora le cobra a las Familias** por el
+cuidado prestado (medio de pago, facturación, retención de fondos). El "Modelo UPE" cubre la
+facturación a IOMA vía Planillas 3, pero no el cobro directo a familias particulares. Sigue
+necesitando una decisión de negocio explícita antes de construirse.
 
 ## Changelog de este documento
 

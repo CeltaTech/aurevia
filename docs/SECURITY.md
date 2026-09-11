@@ -185,7 +185,7 @@ salirse de él. Una policy que diga solamente `USING (es_superadmin())` sobre un
 
 | Tabla | Policy | Por qué se acepta |
 |---|---|---|
-| `uso_ia` | `superadmin_lee_uso_ia` | Medición de consumo de IA (tokens y costo en USD por Prestadora). Es la contabilidad de CeltaTech sobre su propia factura de IA, no datos de la operación. Sin datos personales. |
+| `uso_ia` | `superadmin_lee_uso_ia` | Medición de consumo de IA por Prestadora, en tokens. Sin datos personales y sin importes. |
 | `prestadora_modulos` | `superadmin_lee_prestadora_modulos` | Caché de qué módulos tiene licenciados cada Prestadora. Metadato de licenciamiento. |
 | `prestadora_modalidades` | `superadmin_lee_modalidades` | Ídem: qué modalidades tiene activadas cada Prestadora. |
 | `prestadora_pasarela_pago` | `superadmin_lee_pasarela` | Estado de conexión de la pasarela por Prestadora (proveedor y estado, sin credenciales). |

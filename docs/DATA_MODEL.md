@@ -829,11 +829,7 @@ postulaciones (Etapa 1, independiente) → asistentes (directo, sin tabla interm
   sección "Reclutamiento (PRD_03)" arriba)
 ```
 
-## Gap sin resolver: modelo de pagos
+## Gap sin resolver: cómo la Prestadora le factura a la Familia el cuidado prestado
 
-Ningún PRD original define tablas de pago/facturación a familias (ver `CONTEXT.md`,
-sección de gap). Si se decide construirlo, `Prompt de Money Suite.md` tiene un diseño de
-referencia completo (`payment_status` enum `captured/held/released/disputed`, integración
-Mercado Pago) que puede usarse como punto de partida técnico — pero requiere aprobación de
-negocio antes de implementarse, no está en el alcance de ninguna etapa de `PLAN_HASTA_PRODUCCION.md`
-todavía.
+Ningún PRD original define esas tablas (ver `CONTEXT.md`, sección de gap). Requiere decisión de
+negocio antes de implementarse.

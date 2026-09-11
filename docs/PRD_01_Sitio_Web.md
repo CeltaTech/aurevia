@@ -8,7 +8,7 @@
 > historial de git.
 >
 > Nada de lo que sigue está construido. Hoy en `careonys.com` hay una sola página que dice
-> "En construcción" (ver §8).
+> "En construcción" (ver §7).
 
 ## 0. Qué vende esta página, y qué no
 
@@ -69,7 +69,7 @@ busca "software para empresa de cuidado domiciliario" tiene que dar con esta pá
 motivo ya se había fijado el 2026-07-08 con estas palabras del Desarrollador: *"el seo es
 fundamental, si no nos ven no nos contactan, si no nos contactan no facturamos"*. **El motivo
 sigue valiendo igual; lo que cambió es qué dice la página, no para qué está.** La consecuencia
-técnica está en §8: el texto tiene que llegar ya escrito desde el servidor, no armarse en el
+técnica está en §7: el texto tiene que llegar ya escrito desde el servidor, no armarse en el
 navegador de quien mira.
 
 ## 3. Lo que la página no puede hacer
@@ -96,11 +96,10 @@ Son límites duros, no preferencias.
    automático a las Familias, la aplicación instalable desde las tiendas de Android y Apple, y
    los niveles de inteligencia artificial 3 a 5 (`PLAN_HASTA_PRODUCCION.md`). Lo que está a medias se
    cuenta como lo que es o no se cuenta.
-7. **Ningún número de precio hasta que estén decididos** (§6).
 
 ## 4. Las páginas
 
-Seis, y ninguna de más. Cada una tiene un trabajo; si no se le encuentra el trabajo, no va.
+Cinco, y ninguna de más. Cada una tiene un trabajo; si no se le encuentra el trabajo, no va.
 
 ### 1. Portada (`/`)
 Arriba de todo, en una sola frase, qué es y para quién. Debajo, el problema concreto que
@@ -121,19 +120,16 @@ Las tres piezas, con capturas de pantalla reales del Sandbox:
 
 Es la página que mira quien coordina. Las capturas pesan más que el texto.
 
-### 3. Cómo se cobra (`/precios`)
-La estructura, explicada en castellano y sin números todavía (§6).
-
-### 4. Los datos y la seguridad (`/seguridad`)
+### 3. Los datos y la seguridad (`/seguridad`)
 Existe porque es la primera objeción real de cualquier empresa que maneja información de
 salud, y contestarla tarde es perder la venta. Qué se cuenta: que los datos de cada empresa
 están separados de los de las demás por diseño, que hay respaldo diario, quién ve qué dentro
 del producto, y qué pasa con la información si el día de mañana la empresa deja de usarlo.
 
-### 5. Pedir una demostración (`/demostracion`)
+### 4. Pedir una demostración (`/demostracion`)
 La única acción de toda la página. Cómo funciona por dentro, en §5.
 
-### 6. Privacidad y términos (`/privacidad`, `/terminos`)
+### 5. Privacidad y términos (`/privacidad`, `/terminos`)
 Los de **esta página**, no los del producto. Hacen falta el día que la página recoja un dato
 de contacto. Los redacta quien corresponda; mientras no estén, la página lleva la advertencia
 visible de que están en revisión.
@@ -142,41 +138,12 @@ visible de que están en revisión.
 
 Acá hay una trampa que conviene ver antes de construir nada.
 
-**Un interesado en comprar Careonys no es un dato del producto: es un dato de CeltaTech.** El
-producto guarda lo de cada empresa cliente, aislado del resto. Un interesado no es todavía
-cliente de nadie, así que no tiene dónde entrar sin romper ese aislamiento.
+**La página no guarda nada.** Ofrece correo y WhatsApp, con un botón flotante como el que ya
+usa el resto del producto para cualquier teléfono visible (`DESIGN_SYSTEM.md`). La tabla
+`solicitudes` no sirve: es el pedido que le entra **a una Prestadora** y tiene la empresa dueña
+como dato obligatorio (`prestadora_id NOT NULL`, comprobado contra la base el 2026-08-13).
 
-Y no sirve la tabla que ya existe: `solicitudes` es el pedido que le entra **a una Prestadora**
-—una familia pidiéndole cuidado a ella— y tiene la empresa dueña como dato obligatorio
-(`prestadora_id NOT NULL`, comprobado contra la base el 2026-08-13). Meter ahí a un interesado
-en el software sería inventarle un dueño que no tiene, y dejar información comercial de
-CeltaTech adentro de la caja de un cliente. Va contra `CLAUDE.md` §2.
-
-**Decisión, hasta que exista la base de CeltaTech:** la página **no guarda nada**. Ofrece
-correo y WhatsApp, y con eso alcanza para el volumen de los primeros meses. Un botón flotante
-de WhatsApp, como el que ya usa el resto del producto para cualquier teléfono visible
-(`DESIGN_SYSTEM.md`).
-
-Cuando exista la base de CeltaTech (Nivel 1, ver `celtatech/docs/ARQUITECTURA_NIVELES.md`), el
-formulario escribe ahí y en ningún otro lado.
-
-## 6. Precios: la estructura sí, los números no
-
-La forma de cobrar ya está definida en `celtatech/docs/MODELO_COMERCIAL_CELTATECH.md` §2.4:
-un **abono fijo** que incluye una cantidad de pacientes atendidos, más un **precio por cada
-paciente que pase de esa cantidad**. Se cuenta el paciente que efectivamente recibió cuidado
-en el mes, no el que figura en una lista.
-
-Esa parte se puede contar, y conviene contarla: explica sola por qué una empresa de cinco
-pacientes no paga lo mismo que una de doscientos, y evita la primera llamada perdida.
-
-**Los números todavía no existen** — el mismo documento los deja anotados como pendientes de
-decisión (§7.1: cuánto es el abono, cuántos pacientes incluye, cuánto el adicional). Hasta que
-estén, la página muestra la estructura y dice **"a consultar"** donde iría el importe. Cuando
-haya números, salen de configuración, nunca escritos adentro de la página (`CLAUDE.md` §7
-regla 1).
-
-## 7. Idiomas y direcciones
+## 6. Idiomas y direcciones
 
 - Un idioma, una dirección: `/es-AR/...`, `/en/...`, `/pt-BR/...`. Cada idioma con dirección
   propia es lo que permite que los buscadores lo encuentren; el idioma resuelto en el
@@ -190,7 +157,7 @@ regla 1).
   que se publica el sitio de verdad: una página "en construcción" indexada es una primera
   impresión que después cuesta corregir.
 
-## 8. Cómo está hecha hoy, y con qué se sigue
+## 7. Cómo está hecha hoy, y con qué se sigue
 
 **Estado real, comprobado el 2026-08-13.** Existe `sitio-web/`, con siete archivos:
 una sola página estática (`index.html`), un armador (`construir.mjs`) que reemplaza los
@@ -217,9 +184,9 @@ Next.js quedó sin efecto junto con el documento que la contenía; si se retoma,
 un motivo nuevo y escrito.
 
 **Dos cosas para hacer junto con el sitio:** meterlo en el automatismo de publicación, y
-sacarle el `noindex` (§7).
+sacarle el `noindex` (§6).
 
-## 9. La otra pregunta del pendiente #104: ¿y el sitio de cada Prestadora?
+## 8. La otra pregunta del pendiente #104: ¿y el sitio de cada Prestadora?
 
 El pendiente pedía decidir si el sitio que **sí** le habla a las familias —el de cada empresa
 de cuidados, con sus servicios y su teléfono— es una función de Careonys, algo que cada
@@ -228,8 +195,7 @@ empresa se arregla por su cuenta, o nada.
 **Respuesta (decidida por el Desarrollador el 2026-08-13): no es una función de Careonys,
 pero tampoco queda librada al cliente.** La página con la que cada Prestadora se publicita
 —la que enlaza desde sus redes— se va a armar con **OctoBuilder**, el generador de páginas
-web de CeltaTech, que todavía está por construirse. Va a formar parte del paquete comercial
-que se le ofrece a la empresa cuando contrata.
+web de CeltaTech, que todavía está por construirse.
 
 Por qué va afuera y no acá adentro:
 
@@ -241,9 +207,8 @@ Por qué va afuera y no acá adentro:
    OctoBuilder ya figura como producto propio en `celtatech/docs/ARQUITECTURA_NIVELES.md:76`,
    junto con OctoCMS, OctoCRM y OctoTranslator, y esos productos se comparten entre sí por
    una interfaz de verdad, no copiándose el código.
-3. **Se vende, no se regala.** Cada empresa va a querer su diseño, su dominio y su correo.
-   Como producto con su propio precio, ese acompañamiento es parte de lo que se cobra; como
-   función suelta metida acá, sería soporte para siempre a cambio de nada.
+3. **Cada empresa va a querer su diseño, su dominio y su correo.** Como función suelta metida
+   acá, eso sería soporte para siempre.
 
 **Qué cambia en este repositorio: nada.** OctoBuilder es de CeltaTech y todavía no existe.
 Mientras tanto, la empresa que ya tiene su página sigue con la suya, y desde ahí manda a sus
@@ -255,24 +220,19 @@ cobertura, su teléfono— y la tentación va a ser que las lea directo de la ba
 No se hace así: se piden por una interfaz, como cualquier otro producto de la empresa
 (`CLAUDE.md` §2 y `celtatech/docs/ARQUITECTURA_NIVELES.md`).
 
-## 10. Lo que falta decidir, y es del Desarrollador
+## 9. Lo que falta decidir, y es del Desarrollador
 
-1. **Los números del precio**: cuánto es el abono, cuántos pacientes incluye, cuánto el
-   adicional. Sin esto la página de precios dice "a consultar"
-   (`celtatech/docs/MODELO_COMERCIAL_CELTATECH.md` §7.1).
-2. **Si la página muestra la estructura de precio o no muestra nada de precios.** La
-   recomendación de acá es mostrarla (§6), pero es una decisión comercial.
-3. **Quién es dueño de esta página.** Cuando se definieron los tres niveles, quedó escrito que
+1. **Quién es dueño de esta página.** Cuando se definieron los tres niveles, quedó escrito que
    de *"la pagina web"* del producto se ocupa CeltaTech, no el producto
    (`celtatech/docs/ARQUITECTURA_NIVELES.md`). Hoy el código vive acá, en el repositorio del
    producto, junto a las tres aplicaciones y compartiendo con ellas el nombre del producto y
    la forma de publicar. Hay que decidir si se queda o se muda — y este documento se muda con
    ella. **Mientras no se decida, se queda acá**, que es donde funciona.
-4. **Cuándo se saca el cartel de obra.** Depende de tener las seis páginas escritas y los
+2. **Cuándo se saca el cartel de obra.** Depende de tener las seis páginas escritas y los
    legales, no de una fecha.
 
-## 11. Estado
+## 10. Estado
 
-Documento de definición, sin nada construido. La única página que existe es la de obra (§8).
+Documento de definición, sin nada construido. La única página que existe es la de obra (§7).
 Lo que sigue abierto está en `docs/PLAN_HASTA_PRODUCCION.md`; el porqué de este cambio de rumbo, en
 `docs/claude_history.md`.

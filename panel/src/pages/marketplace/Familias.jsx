@@ -32,11 +32,11 @@ function fechaHoyISO() {
 
 export function MarketplaceFamilias() {
   const { t } = useLocale();
-  const [suscripciones, setSuscripciones] = useState([]);
+  const [accesos, setAccesos] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [expandida, setExpandida] = useState(null);
-  const [cobrosPorSuscripcion, setCobrosPorSuscripcion] = useState({});
+  const [cobrosPorAcceso, setCobrosPorAcceso] = useState({});
   const [formEfectivo, setFormEfectivo] = useState(null);
   const [guardandoEfectivo, setGuardandoEfectivo] = useState(false);
   const [escaneando, setEscaneando] = useState(false);
@@ -50,14 +50,14 @@ export function MarketplaceFamilias() {
     setEstado('cargando');
     setError(null);
     try {
-      // Las pasarelas se piden junto con las suscripciones porque de ellas depende qué se puede
-      // hacer en esta pantalla: con ninguna conectada no hay alta posible, y con más de una hay
-      // que elegir cuál cobra. Elegir por la Prestadora sería decidir con qué cobra.
-      const [{ suscripciones: filas }, { pasarelas }] = await Promise.all([
-        llamarApi('/suscripciones'),
+      // Las pasarelas se piden junto con los accesos porque de ellas depende qué se puede hacer
+      // en esta pantalla: con ninguna conectada no hay alta posible, y con más de una hay que
+      // elegir cuál cobra. Elegir por la Prestadora sería decidir con qué cobra.
+      const [{ accesos: filas }, { pasarelas }] = await Promise.all([
+        llamarApi('/accesos'),
         llamarApi('/pasarela'),
       ]);
-      setSuscripciones(filas);
+      setAccesos(filas);
       setRielesConectados((pasarelas || []).filter((p) => p.estado_conexion === 'conectada').map((p) => p.proveedor));
       setEstado('listo');
     } catch (err) {
@@ -70,22 +70,22 @@ export function MarketplaceFamilias() {
     recargar();
   }, [recargar]);
 
-  async function verCobros(suscripcionId) {
-    if (expandida === suscripcionId) {
+  async function verCobros(accesoId) {
+    if (expandida === accesoId) {
       setExpandida(null);
       return;
     }
-    setExpandida(suscripcionId);
+    setExpandida(accesoId);
     setFormEfectivo(null);
-    if (!cobrosPorSuscripcion[suscripcionId]) {
-      const { cobros } = await llamarApi(`/suscripciones/${suscripcionId}/cobros`);
-      setCobrosPorSuscripcion((c) => ({ ...c, [suscripcionId]: cobros }));
+    if (!cobrosPorAcceso[accesoId]) {
+      const { cobros } = await llamarApi(`/accesos/${accesoId}/cobros`);
+      setCobrosPorAcceso((c) => ({ ...c, [accesoId]: cobros }));
     }
   }
 
-  async function recargarCobros(suscripcionId) {
-    const { cobros } = await llamarApi(`/suscripciones/${suscripcionId}/cobros`);
-    setCobrosPorSuscripcion((c) => ({ ...c, [suscripcionId]: cobros }));
+  async function recargarCobros(accesoId) {
+    const { cobros } = await llamarApi(`/accesos/${accesoId}/cobros`);
+    setCobrosPorAcceso((c) => ({ ...c, [accesoId]: cobros }));
   }
 
   async function guardarEfectivo() {
@@ -95,13 +95,13 @@ export function MarketplaceFamilias() {
       await llamarApi('/cobros/efectivo-manual', {
         method: 'POST',
         body: JSON.stringify({
-          suscripcion_id: formEfectivo.suscripcionId,
+          acceso_id: formEfectivo.accesoId,
           monto: formEfectivo.monto,
           periodo: formEfectivo.periodo,
           fecha_cobro: formEfectivo.fechaCobro,
         }),
       });
-      await recargarCobros(formEfectivo.suscripcionId);
+      await recargarCobros(formEfectivo.accesoId);
       setFormEfectivo(null);
       recargar();
     } catch (err) {
@@ -111,14 +111,14 @@ export function MarketplaceFamilias() {
     }
   }
 
-  async function darDeAlta(suscripcionId) {
-    setDandoAlta(suscripcionId);
+  async function darDeAlta(accesoId) {
+    setDandoAlta(accesoId);
     setError(null);
     setMensajeCanje(null);
     try {
       // El riel sólo se manda cuando hay más de uno conectado; con uno solo lo resuelve el motor.
-      const elegido = rielesConectados.length > 1 ? rielElegido[suscripcionId] : null;
-      await llamarApi(`/suscripciones/${suscripcionId}/alta-en-pasarela`, {
+      const elegido = rielesConectados.length > 1 ? rielElegido[accesoId] : null;
+      await llamarApi(`/accesos/${accesoId}/alta-en-pasarela`, {
         method: 'POST',
         body: JSON.stringify(elegido ? { proveedor: elegido } : {}),
       });
@@ -211,7 +211,7 @@ export function MarketplaceFamilias() {
         )}
       </div>
 
-      <EstadoLista estado={estado} error={null} vacio={estado === 'listo' && suscripciones.length === 0} recargar={recargar}>
+      <EstadoLista estado={estado} error={null} vacio={estado === 'listo' && accesos.length === 0} recargar={recargar}>
         <table className="panel-tabla">
           <thead>
             <tr>
@@ -226,14 +226,14 @@ export function MarketplaceFamilias() {
             </tr>
           </thead>
           <tbody>
-            {suscripciones.map((s) => (
+            {accesos.map((s) => (
               <Fragment key={s.id}>
                 <tr>
                   <td>{s.familia_nombre || '—'}</td>
                   <td>{s.paciente_nombre || '—'}</td>
                   <td>{s.asistente_nombre || '—'}</td>
                   <td>{t.marketplace[`estado_${s.estado}`] || s.estado}</td>
-                  <td>{s.monto_mensual}</td>
+                  <td>{s.importe}</td>
                   <td>{s.proximo_cobro || '—'}</td>
                   <td>
                     {s.alta_en_pasarela
@@ -313,7 +313,7 @@ export function MarketplaceFamilias() {
                           </tr>
                         </thead>
                         <tbody>
-                          {(cobrosPorSuscripcion[s.id] || []).map((c) => (
+                          {(cobrosPorAcceso[s.id] || []).map((c) => (
                             <tr key={c.id}>
                               <td>{c.periodo}</td>
                               <td>{t.marketplace[`medio_${c.medio}`] || c.medio}</td>
@@ -325,7 +325,7 @@ export function MarketplaceFamilias() {
                         </tbody>
                       </table>
 
-                      {formEfectivo?.suscripcionId === s.id ? (
+                      {formEfectivo?.accesoId === s.id ? (
                         <div>
                           <FormField
                             label={t.marketplace.registrar_cobro_efectivo_monto}
@@ -358,7 +358,7 @@ export function MarketplaceFamilias() {
                       ) : (
                         <Button
                           variant="secondary"
-                          onClick={() => setFormEfectivo({ suscripcionId: s.id, monto: '', periodo: '', fechaCobro: fechaHoyISO() })}
+                          onClick={() => setFormEfectivo({ accesoId: s.id, monto: '', periodo: '', fechaCobro: fechaHoyISO() })}
                         >
                           {t.marketplace.registrar_cobro_efectivo}
                         </Button>

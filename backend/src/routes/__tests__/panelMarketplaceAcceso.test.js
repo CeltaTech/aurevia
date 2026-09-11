@@ -21,7 +21,7 @@ import { createServer } from 'node:http';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const USUARIO = '22222222-2222-2222-2222-222222222222';
-const SUSCRIPCION = '33333333-3333-3333-3333-333333333333';
+const ACCESO = '33333333-3333-3333-3333-333333333333';
 const SESION_SOPORTE = '44444444-4444-4444-4444-444444444444';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
@@ -126,7 +126,7 @@ beforeEach(() => {
 const TABLAS_DE_PLATA = [
   'prestadora_pasarela_pago',
   'credenciales_pasarela_pago',
-  'suscripciones_marketplace',
+  'accesos_marketplace',
   'cobros_marketplace',
   'qr_cobro_efectivo',
   'rpc/guardar_credencial_pasarela_pago',
@@ -147,13 +147,13 @@ const RUTAS_DE_PLATA = [
   ['GET', '/pasarela', undefined],
   ['PUT', '/pasarela/mercadopago/secreto-firma', { secretoFirma: 'lo que sea' }],
   ['PATCH', '/pasarela/mercadopago', { activo: true }],
-  ['GET', '/suscripciones', undefined],
-  ['GET', `/suscripciones/${SUSCRIPCION}/cobros`, undefined],
-  ['POST', '/cobros/efectivo-manual', { suscripcion_id: SUSCRIPCION, monto: 1000, periodo: '2026-09', fecha_cobro: '2026-09-04' }],
+  ['GET', '/accesos', undefined],
+  ['GET', `/accesos/${ACCESO}/cobros`, undefined],
+  ['POST', '/cobros/efectivo-manual', { acceso_id: ACCESO, monto: 1000, periodo: '2026-09', fecha_cobro: '2026-09-04' }],
   ['POST', '/qr-cobro/canjear', { token: 'token-de-mentira' }],
-  // Dar de alta una suscripción en la pasarela es lo que la deja cobrando de verdad: saca la
+  // Dar de alta un acceso en la pasarela es lo que lo deja cobrando de verdad: saca la
   // credencial de la caja fuerte y crea el cobro recurrente del lado del proveedor.
-  ['POST', `/suscripciones/${SUSCRIPCION}/alta-en-pasarela`, {}],
+  ['POST', `/accesos/${ACCESO}/alta-en-pasarela`, {}],
 ];
 
 describe('el Coordinador no llega a la plata del Marketplace', () => {
@@ -271,7 +271,7 @@ describe('sin la modalidad Marketplace no se entra', () => {
     // Falla cerrado (CLAUDE.md §5): ante un dato que no se pudo resolver, se deniega. La
     // respuesta sin preparar hace que la base de mentira conteste un error.
     respuestas.delete('POST /rest/v1/rpc/prestadora_tiene_modalidad_activa');
-    const { estado, cuerpo } = await pedir('GET', '/suscripciones');
+    const { estado, cuerpo } = await pedir('GET', '/accesos');
     assert.equal(estado, 403);
     assert.equal(cuerpo.motivo, 'modalidad_no_activa');
     noTocoLaPlata();
@@ -281,7 +281,7 @@ describe('sin la modalidad Marketplace no se entra', () => {
     // El caso que rompe los candados escritos a la ligera: `null` no es `false`, y una
     // comparación floja lo dejaría pasar.
     modalidadMarketplace = null;
-    const { estado, cuerpo } = await pedir('GET', '/suscripciones');
+    const { estado, cuerpo } = await pedir('GET', '/accesos');
     assert.equal(estado, 403);
     assert.equal(cuerpo.motivo, 'modalidad_no_activa');
     noTocoLaPlata();
@@ -291,7 +291,7 @@ describe('sin la modalidad Marketplace no se entra', () => {
     // Que la pregunta se arme con la Prestadora de la sesión —y no con una que venga en el
     // pedido— es lo que impide que alguien conteste por otra.
     modalidadMarketplace = false;
-    await pedir('GET', '/suscripciones');
+    await pedir('GET', '/accesos');
     const pregunta = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/prestadora_tiene_modalidad_activa');
     assert.ok(pregunta, 'el motor no le preguntó a la base si la modalidad está activa');
     assert.deepEqual(pregunta.cuerpo, { p_prestadora_id: PRESTADORA, p_modalidad: 'marketplace' });

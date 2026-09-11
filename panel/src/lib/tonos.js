@@ -82,7 +82,6 @@ const TONO_POR_ESTADO = {
   por_vencer: TONO.ATENCION,
   prospecto: TONO.ATENCION,
   sin_cubrir: TONO.ATENCION,
-  trial: TONO.ATENCION,
 
   // --- Está mal, alguien tiene que actuar ---
   anulado: TONO.CRITICO,

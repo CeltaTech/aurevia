@@ -214,9 +214,9 @@ setInterval(() => {
   verificarPreciosIA().catch((err) => console.error('Error en verificación de precios de IA:', err.message));
 }, UN_DIA_MS);
 
-// El cobro de cada período de las suscripciones del Marketplace, en los rieles que no cobran solos
-// (paso 5, docs/PLAN_HASTA_PRODUCCION.md). Se mide en días —un período es un mes— así que corre con
-// la misma cadencia que revisarVencimientos. Los rieles que sí cobran solos no entran acá: la
+// El cobro de cada período de los accesos del Marketplace, en los rieles que no cobran solos. El
+// período más corto que una forma de cobro puede tener es de un día, así que corre con la misma
+// cadencia diaria que revisarVencimientos. Los rieles que sí cobran solos no entran acá: la
 // función misma los descarta preguntándole a cada adaptador, no con una lista escrita en el trabajo.
 armarCobrosDelPeriodo().catch((err) => console.error('Error en el armado inicial de cobros del Marketplace:', err.message));
 setInterval(() => {

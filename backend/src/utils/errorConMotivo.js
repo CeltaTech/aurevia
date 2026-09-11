@@ -55,8 +55,8 @@ const ESTADO_POR_MOTIVO = {
   // un correo ya tomado: el pedido está bien armado, lo que pasa es que choca con algo que ya
   // existe y que hay que resolver antes.
   modalidad_con_asistentes: 409,
-  modalidad_con_suscripciones: 409,
-  modalidad_con_asistentes_y_suscripciones: 409,
+  modalidad_con_accesos: 409,
+  modalidad_con_asistentes_y_accesos: 409,
   // Dos avisos que antes viajaban como frase adentro del `Error` y que, al dejar de mandarse el
   // texto crudo, se habrían perdido: quien mira leería "algo falló de nuestro lado" cuando en
   // realidad no falló nada, sólo que lo que pidió no corresponde. El de la persona es 409 —el

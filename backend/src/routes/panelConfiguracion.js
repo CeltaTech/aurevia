@@ -1053,9 +1053,9 @@ panelConfiguracionRouter.patch('/politica-verificacion', async (req, res) => {
 const MODALIDAD_MARKETPLACE = 'marketplace';
 const MODALIDADES_DISPONIBLES = ['directa', MODALIDAD_MARKETPLACE];
 
-// Una suscripción del Marketplace sigue en curso mientras esté en período de prueba o al día.
-// Vencida o cancelada ya no ata nada: se apagó sola.
-const SUSCRIPCIONES_EN_CURSO = ['trial', 'activa'];
+// Un acceso del Marketplace sigue en curso mientras esté vigente. Vencido o cancelado ya no ata
+// nada: se apagó solo.
+const ACCESO_EN_CURSO = 'vigente';
 
 /**
  * Qué impide apagar una modalidad, o `null` si no impide nada.
@@ -1063,7 +1063,7 @@ const SUSCRIPCIONES_EN_CURSO = ['trial', 'activa'];
  * POR QUÉ EXISTE. Hasta hoy el casillero se apagaba sin mirar nada, y apagarlo no era un
  * ajuste de pantalla: la Prestadora quedaba con Asistentes trabajando en una forma que su
  * propia configuración ya no habilita —la base les frena la próxima asignación de guardia con
- * un error que nadie pidió— y, en el Marketplace, con Familias pagando una suscripción cuya
+ * un error que nadie pidió— y, en el Marketplace, con Familias pagando un acceso cuya
  * pantalla de cobros acaba de desaparecer del Panel.
  *
  * Devuelve un **motivo**, que es un código: la frase que lee la persona vive en las
@@ -1073,14 +1073,14 @@ const SUSCRIPCIONES_EN_CURSO = ['trial', 'activa'];
  * Los dos vínculos que atan, y por qué son ésos:
  *   * **Asistentes** con vínculo vigente que trabajan en esa modalidad. Un Asistente cesado o
  *     dado de baja no ata nada.
- *   * **Suscripciones** del Marketplace todavía en curso. Sólo existen en esa modalidad, así
- *     que en prestación directa no se pregunta.
+ *   * **Accesos** del Marketplace todavía vigentes. Sólo existen en esa modalidad, así que en
+ *     prestación directa no se pregunta.
  *
  * No devuelve cuántos son a propósito: quien apaga necesita saber qué revisar, y la lista de
- * Asistentes y la de suscripciones ya están, cada una en su pantalla.
+ * Asistentes y la de accesos ya están, cada una en su pantalla.
  */
 async function loQueImpideApagar(prestadoraId, modalidad) {
-  const [asistentes, suscripciones] = await Promise.all([
+  const [asistentes, accesos] = await Promise.all([
     supabase
       .from('asistentes')
       .select('id')
@@ -1091,10 +1091,10 @@ async function loQueImpideApagar(prestadoraId, modalidad) {
       .limit(1),
     modalidad === MODALIDAD_MARKETPLACE
       ? supabase
-          .from('suscripciones_marketplace')
+          .from('accesos_marketplace')
           .select('id')
           .eq('prestadora_id', prestadoraId)
-          .in('estado', SUSCRIPCIONES_EN_CURSO)
+          .eq('estado', ACCESO_EN_CURSO)
           .limit(1)
       : Promise.resolve({ data: [], error: null }),
   ]);
@@ -1102,13 +1102,13 @@ async function loQueImpideApagar(prestadoraId, modalidad) {
   // Si no se pudo preguntar, no se contesta que no impide nada: se levanta el error y la ruta
   // deja la modalidad como está (CLAUDE.md §5, «todo control de acceso falla cerrado»).
   if (asistentes.error) throw asistentes.error;
-  if (suscripciones.error) throw suscripciones.error;
+  if (accesos.error) throw accesos.error;
 
   const hayAsistentes = Boolean(asistentes.data?.length);
-  const haySuscripciones = Boolean(suscripciones.data?.length);
+  const hayAccesos = Boolean(accesos.data?.length);
 
-  if (hayAsistentes && haySuscripciones) return 'modalidad_con_asistentes_y_suscripciones';
-  if (haySuscripciones) return 'modalidad_con_suscripciones';
+  if (hayAsistentes && hayAccesos) return 'modalidad_con_asistentes_y_accesos';
+  if (hayAccesos) return 'modalidad_con_accesos';
   if (hayAsistentes) return 'modalidad_con_asistentes';
   return null;
 }

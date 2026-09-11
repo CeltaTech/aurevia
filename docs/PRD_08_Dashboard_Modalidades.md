@@ -158,7 +158,7 @@ antes de programar:
    punto único de verdad — no exige que conceptos distintos compartan tabla. "Modalidad de
    negocio activa" y "función/módulo activado por plan o add-on" son decisiones distintas
    (una modalidad puede requerir reglas propias, ej. no poder desactivarse si tiene
-   vínculos/suscripciones activas, que un módulo normal no tiene); forzarlas en la misma
+   vínculos o accesos activos, que un módulo normal no tiene); forzarlas en la misma
    tabla solo por parecido superficial sería mezclar dos conceptos, no evitar duplicación.
    **Decisión**: tabla nueva (ej. `prestadora_modalidades`, `modalidad
    directa|marketplace|cooperativa`, activa/inactiva), que actúa como único punto de verdad

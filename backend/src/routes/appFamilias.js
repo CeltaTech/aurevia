@@ -792,47 +792,47 @@ appFamiliasRouter.delete('/push/suscribir', requiereRolFamilia, async (req, res)
 });
 
 // ============================================================================
-// Suscripción marketplace + cobro en efectivo por QR. El QR es la
+// El acceso al Marketplace + cobro en efectivo por QR. El QR es la
 // alternativa a la carga manual del cobrador: la Familia lo genera desde su propio
 // dispositivo, de un solo uso y con vencimiento corto (10 min) — el canje ocurre siempre en
 // el Panel vía service_role, nunca como UPDATE directo desde acá.
 // ============================================================================
 
-appFamiliasRouter.get('/suscripcion/:pacienteId', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), exigeDelCirculo('circulo_dinero'), async (req, res) => {
+appFamiliasRouter.get('/acceso/:pacienteId', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), exigeDelCirculo('circulo_dinero'), async (req, res) => {
   const { data, error } = await supabase
-    .from('suscripciones_marketplace')
-    .select('id, estado, monto_mensual, trial_fin, proximo_cobro, cancelada_en')
+    .from('accesos_marketplace')
+    .select('id, estado, importe, gratis_hasta, proximo_cobro, cancelada_en')
     .eq('familia_id', req.usuarioFamilia.familiaId)
     .eq('paciente_id', req.params.pacienteId)
     .maybeSingle();
   if (error) return responderError(res, error);
-  res.json({ suscripcion: data });
+  res.json({ acceso: data });
 });
 
 appFamiliasRouter.post('/qr-cobro', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), exigeDelCirculo('circulo_dinero'), async (req, res) => {
-  const { suscripcion_id: suscripcionId } = req.body || {};
-  if (!suscripcionId) {
-    return res.status(400).json({ error: 'Falta suscripcion_id' });
+  const { acceso_id: accesoId } = req.body || {};
+  if (!accesoId) {
+    return res.status(400).json({ error: 'Falta acceso_id' });
   }
 
-  const { data: suscripcion } = await supabase
-    .from('suscripciones_marketplace')
-    .select('id, familia_id, monto_mensual, proximo_cobro')
-    .eq('id', suscripcionId)
+  const { data: acceso } = await supabase
+    .from('accesos_marketplace')
+    .select('id, familia_id, importe, proximo_cobro')
+    .eq('id', accesoId)
     .eq('familia_id', req.usuarioFamilia.familiaId)
     .maybeSingle();
-  if (!suscripcion) {
-    return res.status(404).json({ error: 'Suscripción no encontrada' });
+  if (!acceso) {
+    return res.status(404).json({ error: 'Acceso no encontrado' });
   }
 
   const { token, expiraEn } = generarTokenQrCobro();
   const { data, error } = await supabase
     .from('qr_cobro_efectivo')
     .insert({
-      suscripcion_id: suscripcion.id,
+      acceso_id: acceso.id,
       familia_id: req.usuarioFamilia.familiaId,
-      periodo: suscripcion.proximo_cobro || new Date().toISOString().slice(0, 10),
-      monto: suscripcion.monto_mensual,
+      periodo: acceso.proximo_cobro || new Date().toISOString().slice(0, 10),
+      monto: acceso.importe,
       token,
       expira_en: expiraEn.toISOString(),
     })

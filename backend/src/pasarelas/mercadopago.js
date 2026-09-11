@@ -23,11 +23,27 @@ export const REQUIERE_SECRETO_FIRMA = true;
  *  cada proveedor, y eso lo sabe su adaptador (regla 12 del §7). */
 export const CONFIRMA_CONSULTANDO = true;
 
-export async function crearSuscripcion({ credencial, suscripcionId, monto, moneda, emailPagador }) {
-  // La moneda llega de la suscripción, que la heredó de la Prestadora. No hay valor por
-  // descarte: cobrarle a una Familia en una moneda que nadie eligió es peor que fallar
-  // (regla 14, §7).
-  if (!moneda) throw new Error('Falta la moneda de la suscripción');
+/** Cada cuánto cobra Mercado Pago, dicho como lo pide él. `auto_recurring` sólo entiende días y
+ *  meses, así que las semanas se cuentan en días y los años en meses. Lo que decide cuál es, es la
+ *  forma de cobro que armó la Prestadora, y por eso no hay ningún valor por descarte acá. */
+function recurrenciaMercadoPago(periodo) {
+  const cantidad = periodo?.cantidad;
+  const unidad = periodo?.unidad;
+  if (!cantidad || !unidad) {
+    throw new Error('Falta cada cuánto se cobra esta forma de cobro');
+  }
+  if (unidad === 'dia') return { frequency: cantidad, frequency_type: 'days' };
+  if (unidad === 'semana') return { frequency: cantidad * 7, frequency_type: 'days' };
+  if (unidad === 'mes') return { frequency: cantidad, frequency_type: 'months' };
+  if (unidad === 'anio') return { frequency: cantidad * 12, frequency_type: 'months' };
+  throw new Error(`unidad de período desconocida: ${unidad}`);
+}
+
+export async function crearSuscripcion({ credencial, accesoId, monto, moneda, periodo, emailPagador }) {
+  // La moneda llega del acceso, que la heredó de la Prestadora. No hay valor por descarte:
+  // cobrarle a una Familia en una moneda que nadie eligió es peor que fallar (regla 14, §7).
+  if (!moneda) throw new Error('Falta la moneda del acceso');
+  const recurrencia = recurrenciaMercadoPago(periodo);
 
   // Y el correo del pagador tampoco tiene valor por descarte. Mercado Pago exige `payer_email`
   // para crear un preapproval: hasta acá esa línea decía `undefined` con la nota «se completa en
@@ -43,11 +59,10 @@ export async function crearSuscripcion({ credencial, suscripcionId, monto, moned
     },
     body: JSON.stringify({
       reason: `Suscripción ${IDENTIDAD.nombre} Marketplace`,
-      external_reference: suscripcionId,
+      external_reference: accesoId,
       payer_email: emailPagador,
       auto_recurring: {
-        frequency: 1,
-        frequency_type: 'months',
+        ...recurrencia,
         transaction_amount: monto,
         currency_id: moneda,
       },

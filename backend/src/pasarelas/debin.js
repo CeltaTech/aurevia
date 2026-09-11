@@ -15,14 +15,14 @@ const API_BASE = process.env.DEBIN_API_BASE || process.env.DEBIN_PSP_API_BASE;
  *  declara este producto, y sin secreto de firma cargado se rechaza todo. */
 export const REQUIERE_SECRETO_FIRMA = true;
 
-export async function crearSuscripcion({ credencial, suscripcionId, monto, familiaId }) {
+export async function crearSuscripcion({ credencial, accesoId, monto, familiaId }) {
   const respuesta = await fetch(`${API_BASE}/debines/autorizaciones`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${credencial}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ referencia_externa: suscripcionId, monto, recurrente: true, familia_id: familiaId }),
+    body: JSON.stringify({ referencia_externa: accesoId, monto, recurrente: true, familia_id: familiaId }),
   });
   const data = await respuesta.json();
   if (!respuesta.ok) {

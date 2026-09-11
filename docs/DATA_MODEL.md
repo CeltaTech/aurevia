@@ -831,5 +831,12 @@ postulaciones (Etapa 1, independiente) → asistentes (directo, sin tabla interm
 
 ## Gap sin resolver: cómo la Prestadora le factura a la Familia el cuidado prestado
 
-Ningún PRD original define esas tablas (ver `CONTEXT.md`, sección de gap). Requiere decisión de
-negocio antes de implementarse.
+Ningún PRD original define esas tablas (ver `CONTEXT.md`, sección de gap). **En prestación
+directa** requiere decisión de negocio antes de implementarse.
+
+En la modalidad Marketplace el cobro sí está definido y aplicado, y su schema no vive acá sino
+en `docs/PRD_07_Modalidad_Marketplace.md`: `formas_de_cobro_marketplace` (las piezas con las que
+cada Prestadora arma su forma de cobrar) y `accesos_marketplace` (qué tiene habilitado cada
+Familia), más `cobros_marketplace`, `prestadora_pasarela_pago`, `credenciales_pasarela_pago` y
+`qr_cobro_efectivo`. Este documento
+junta las tablas de los documentos originales de Careonys, que son anteriores a esa modalidad.

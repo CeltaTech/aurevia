@@ -50,14 +50,19 @@ riesgo) o "decisión de la plataforma" (riesgo, ver §5).
 
 La Familia le paga a la Prestadora. **Cada Prestadora elige de qué forma cobra** —una suscripción
 que se renueva sola, un paquete con una cantidad de contactos, o una forma que arme ella— y fija
-sus propios valores. El producto le da las formas y el mecanismo; no elige por ella ni le fija
+sus propios valores. El producto le da las piezas y el mecanismo; no elige por ella ni le fija
 precio ni duración.
 
 De ahí se sigue que **la política de comercialización es un dato de la Prestadora y no código**
-(`celtatech/CLAUDE.md`, «nunca hardcodear»). Importe mensual, prueba que termina en una fecha y
-renovación automática son tres opciones entre las que ella puede elegir, no la única manera de
-cobrar. Hoy `suscripciones_marketplace` las trae fijas en su forma —una columna por cada una— así
-que son las únicas que entran, y no se combinan con ninguna otra.
+(`celtatech/CLAUDE.md`, «nunca hardcodear»). Lo que el producto guarda son las piezas sueltas —qué
+se cobra, cada cuánto, con qué período gratuito, con qué saldo de contactos, si se renueva sola— y
+la forma sale de cómo se combinen: una suscripción mensual es importe + cada 1 mes + renueva sola,
+y un paquete de cinco contactos es importe + una sola vez + saldo 5. Cada Prestadora arma las suyas
+en `formas_de_cobro_marketplace`, y cualquier combinación que ella elija entra sin migración.
+
+Lo que cada Familia tiene habilitado se guarda en `accesos_marketplace`: a qué forma se adhirió, con
+qué importe —congelado el día del alta, para que un cambio de precio no le mueva lo pactado—, hasta
+qué fecha y con cuántos contactos.
 
 ### 3.1 Lo que vale para cualquier forma
 
@@ -80,19 +85,18 @@ Resguardos obligatorios, no opcionales:
 - Si el cobro falla, período de gracia con reintentos antes de suspender el acceso. Ni corte en el
   acto ni reintentos indefinidos sin avisar.
 
-### 3.3 Las formas que trae el producto
+### 3.3 Las formas que salen de esas piezas
 
-- **Suscripción.** Período gratuito y importe los pone la Prestadora. Renovación automática, sin
-  permanencia mínima: un mínimo obligatorio es contraproducente bajo defensa del consumidor y
-  además debilita el argumento de canal de contacto neutral. Si la Familia intenta ver un dato de
-  contacto antes de que termine el período gratuito, el cobro se activa ahí, con confirmación. Si
-  no lo intenta, al terminar ese período se le pregunta si sigue o se da de baja. Lleva los
-  resguardos del §3.2.
-- **Paquete de contactos.** Una cantidad de contactos que se compra una vez y se descuenta de a
+- **Suscripción** — importe, un período, y se renueva sola. Período gratuito e importe los pone la
+  Prestadora. Sin permanencia mínima: un mínimo obligatorio es contraproducente bajo defensa del
+  consumidor y además debilita el argumento de canal de contacto neutral. Si la Familia intenta ver
+  un dato de contacto antes de que termine el período gratuito, el cobro se activa ahí, con
+  confirmación. Si no lo intenta, al terminar ese período se le pregunta si sigue o se da de baja.
+  Lleva los resguardos del §3.2.
+- **Paquete de contactos** — importe, sin período, y un saldo de contactos que se descuenta de a
   uno. No se renueva sola y no vence por calendario, así que no lleva los resguardos del §3.2.
-- **Forma propia de la Prestadora.** Armada por ella combinando las piezas —qué se cobra, cada
-  cuánto, con qué período gratuito, con qué saldo—. Sin diseñar. Entra por `celtatech/CLAUDE.md`
-  §11 cuando se encare.
+- **Cualquier otra combinación** es la forma propia de esa Prestadora. Los resguardos del §3.2 le
+  corresponden por la pieza que los dispara —renovarse sola—, no por cómo la haya llamado.
 
 ## 4. Qué sostiene el pago después del contacto
 

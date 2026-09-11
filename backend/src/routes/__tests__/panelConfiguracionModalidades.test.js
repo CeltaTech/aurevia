@@ -6,7 +6,7 @@
  * POR QUÉ EXISTE ESTA PRUEBA. El casillero de Configuración > La Prestadora > Modalidades
  * contratadas se apagaba sin mirar nada. Apagarlo no es un ajuste de pantalla: la Prestadora
  * quedaba con Asistentes trabajando de una forma que su propia configuración ya no habilita, y
- * —en el Marketplace— con Familias pagando una suscripción cuya pantalla de cobros acababa de
+ * —en el Marketplace— con Familias pagando un acceso cuya pantalla de cobros acababa de
  * desaparecer del Panel. Nadie se enteraba hasta que algo fallaba más adelante, lejos del
  * casillero que lo causó.
  *
@@ -84,8 +84,8 @@ async function apagar(modalidad, activa = false) {
 
 /** Un Asistente cualquiera, de los que el motor sólo mira si hay o no hay. */
 const UN_ASISTENTE = [{ id: '44444444-4444-4444-4444-444444444444' }];
-/** Una suscripción del Marketplace, ídem. */
-const UNA_SUSCRIPCION = [{ id: '55555555-5555-5555-5555-555555555555' }];
+/** Un acceso del Marketplace, ídem. */
+const UN_ACCESO = [{ id: '55555555-5555-5555-5555-555555555555' }];
 
 beforeEach(() => {
   llamadas = [];
@@ -94,7 +94,7 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'admin_prestadora', prestadora_id: PRESTADORA }]);
   // Por omisión no hay nada colgando de ninguna modalidad, y guardar sale bien.
   respuestas.set('GET /rest/v1/asistentes', () => []);
-  respuestas.set('GET /rest/v1/suscripciones_marketplace', () => []);
+  respuestas.set('GET /rest/v1/accesos_marketplace', () => []);
   respuestas.set('POST /rest/v1/prestadora_modalidades', () => []);
 });
 
@@ -112,7 +112,7 @@ function noFiltraLaBase(cuerpo) {
   const texto = String(cuerpo?.error ?? '');
   assert.doesNotMatch(
     texto,
-    /suscripciones_marketplace|prestadora_modalidades|deleted_at|canales|select|column|relation|PGRST/i,
+    /accesos_marketplace|prestadora_modalidades|deleted_at|canales|select|column|relation|PGRST/i,
     `el mensaje nombra algo de la base: ${texto}`
   );
 }
@@ -129,11 +129,11 @@ describe('no se apaga una modalidad que todavía tiene gente adentro', () => {
     noFiltraLaBase(cuerpo);
   });
 
-  it('con Familias con la suscripción en curso', async () => {
-    respuestas.set('GET /rest/v1/suscripciones_marketplace', () => UNA_SUSCRIPCION);
+  it('con Familias con el acceso vigente', async () => {
+    respuestas.set('GET /rest/v1/accesos_marketplace', () => UN_ACCESO);
     const { estado, cuerpo } = await apagar('marketplace');
     assert.equal(estado, 409);
-    assert.equal(cuerpo.motivo, 'modalidad_con_suscripciones');
+    assert.equal(cuerpo.motivo, 'modalidad_con_accesos');
     noApago();
     noFiltraLaBase(cuerpo);
   });
@@ -142,10 +142,10 @@ describe('no se apaga una modalidad que todavía tiene gente adentro', () => {
     // Si contestara sólo una, quien apaga resolvería eso, volvería a intentar y se encontraría
     // con el otro rechazo. Se dicen las dos juntas.
     respuestas.set('GET /rest/v1/asistentes', () => UN_ASISTENTE);
-    respuestas.set('GET /rest/v1/suscripciones_marketplace', () => UNA_SUSCRIPCION);
+    respuestas.set('GET /rest/v1/accesos_marketplace', () => UN_ACCESO);
     const { estado, cuerpo } = await apagar('marketplace');
     assert.equal(estado, 409);
-    assert.equal(cuerpo.motivo, 'modalidad_con_asistentes_y_suscripciones');
+    assert.equal(cuerpo.motivo, 'modalidad_con_asistentes_y_accesos');
     noApago();
     noFiltraLaBase(cuerpo);
   });
@@ -158,10 +158,10 @@ describe('no se apaga una modalidad que todavía tiene gente adentro', () => {
     noApago();
   });
 
-  it('y en prestación directa no se pregunta por suscripciones, que no existen ahí', async () => {
+  it('y en prestación directa no se pregunta por accesos, que no existen ahí', async () => {
     await apagar('directa');
     const preguntas = llamadas.map((l) => l.clave);
-    assert.ok(!preguntas.includes('GET /rest/v1/suscripciones_marketplace'));
+    assert.ok(!preguntas.includes('GET /rest/v1/accesos_marketplace'));
   });
 });
 
@@ -188,7 +188,7 @@ describe('encender no comprueba nada', () => {
     // Y si se comprobara, se estaría trabando justo el camino de salida de una Prestadora que
     // quedó con la modalidad apagada y gente adentro.
     respuestas.set('GET /rest/v1/asistentes', () => UN_ASISTENTE);
-    respuestas.set('GET /rest/v1/suscripciones_marketplace', () => UNA_SUSCRIPCION);
+    respuestas.set('GET /rest/v1/accesos_marketplace', () => UN_ACCESO);
     const { estado, cuerpo } = await apagar('marketplace', true);
     assert.equal(estado, 200);
     assert.equal(cuerpo.ok, true);

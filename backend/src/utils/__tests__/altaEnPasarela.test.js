@@ -1,21 +1,23 @@
 /**
- * El alta de una suscripción del Marketplace en la pasarela de cobro (paso 5 del plan).
+ * El alta de un acceso del Marketplace en la pasarela de cobro.
  *
  *   npm test --prefix backend
  *
  * POR QUÉ EXISTE ESTA PRUEBA. Las seis pasarelas están escritas desde el primer día y
- * `crearSuscripcion` no la llamaba nadie: una suscripción vivía en esta base y no existía del lado
- * de ningún proveedor, así que no había con qué cobrarle. Lo que se agregó es el paso del medio, y
- * lo que se prueba acá no es que ande el camino feliz —eso es lo fácil— sino las seis formas de
- * salir mal, que son las que dejan plata sin cobrar o cobrada dos veces:
+ * `crearSuscripcion` no la llamaba nadie: un acceso vivía en esta base y no existía del lado de
+ * ningún proveedor, así que no había con qué cobrarle. Lo que se agregó es el paso del medio, y lo
+ * que se prueba acá no es que ande el camino feliz —eso es lo fácil— sino las siete formas de
+ * salir mal, que son las que dejan plata sin cobrar o cobrada de más:
  *
- *   * dar de alta dos veces la misma suscripción, que deja dos cobros recurrentes vivos;
+ *   * dar de alta dos veces el mismo acceso, que deja dos cobros recurrentes vivos;
  *   * elegir por la Prestadora con qué riel se le cobra, cuando tiene más de uno conectado;
- *   * marcarla como dada de alta cuando el proveedor rechazó, que la deja sin cobrar para siempre
- *     y sin que nadie la vuelva a intentar;
+ *   * marcarlo como dado de alta cuando el proveedor rechazó, que lo deja sin cobrar para siempre
+ *     y sin que nadie lo vuelva a intentar;
  *   * dejar que se le cobre a alguien que se dio de baja;
+ *   * dejar andando un cobro recurrente por una forma que se cobra una sola vez, que le cobraría
+ *     todos los períodos a quien pagó uno;
  *   * devolverle a la pantalla algo que salió de la caja fuerte;
- *   * y cambiarle el estado a la suscripción, que no es de acá: dar de alta no es cobrar.
+ *   * y cambiarle el estado al acceso, que no es de acá: dar de alta no es cobrar.
  *
  * Se levanta la base de mentira y un Stripe de mentira, igual que `webhooksPasarelas.test.js`.
  */
@@ -24,11 +26,13 @@ import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
-const SUSCRIPCION = '33333333-3333-3333-3333-333333333333';
+const ACCESO = '33333333-3333-3333-3333-333333333333';
 const FAMILIA = '44444444-4444-4444-4444-444444444444';
 const CORREO_DE_LA_FAMILIA = 'familia@sandbox.local';
 const CREDENCIAL = 'credencial-de-mentira-que-no-tiene-que-salir';
 const REFERENCIA_DE_STRIPE = 'sub_de_mentira';
+/** La forma de cobro que armó la Prestadora: cada un mes. Es un dato de ella, no del código. */
+const CADA_MES = { periodo_cantidad: 1, periodo_unidad: 'mes' };
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba pisa lo que necesita cambiar. */
 const respuestas = new Map();
@@ -72,20 +76,31 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 // se lo llame cuando no, y qué pasa cuando rechaza.
 let stripeRechaza = false;
 let llamadasAStripe = [];
+/** Lo que se le mandó a cada dirección de Stripe, ya leído como formulario. Se guarda porque hay
+ *  algo que mirar ahí: cada cuánto se cobra tiene que llegar como lo dijo la Prestadora. */
+let cuerposAStripe = new Map();
 const stripeFalso = createServer((req, res) => {
   llamadasAStripe.push(req.url);
-  if (stripeRechaza) {
-    res.writeHead(402, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: { message: 'la cuenta de cobro 1234 está dada de baja' } }));
-    return;
-  }
-  const cuerpo = req.url.includes('/customers')
-    ? { id: 'cus_de_mentira' }
-    : req.url.includes('/prices')
-      ? { id: 'price_de_mentira' }
-      : { id: REFERENCIA_DE_STRIPE, status: 'active' };
-  res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify(cuerpo));
+  let crudoStripe = '';
+  req.on('data', (parte) => {
+    crudoStripe += parte;
+  });
+  req.on('end', () => {
+    cuerposAStripe.set(req.url, new URLSearchParams(crudoStripe));
+
+    if (stripeRechaza) {
+      res.writeHead(402, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: { message: 'la cuenta de cobro 1234 está dada de baja' } }));
+      return;
+    }
+    const cuerpo = req.url.includes('/customers')
+      ? { id: 'cus_de_mentira' }
+      : req.url.includes('/prices')
+        ? { id: 'price_de_mentira' }
+        : { id: REFERENCIA_DE_STRIPE, status: 'active' };
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(cuerpo));
+  });
 });
 await new Promise((listo) => stripeFalso.listen(0, '127.0.0.1', listo));
 process.env.STRIPE_API_BASE = `http://127.0.0.1:${stripeFalso.address().port}`;
@@ -103,20 +118,21 @@ after(() => {
   stripeFalso.close();
 });
 
-/** La suscripción tal como está antes del alta: sin proveedor, sin referencia y sin la marca. */
-function suscripcionSinAlta(cambios = {}) {
+/** El acceso tal como está antes del alta: sin proveedor, sin referencia y sin la marca. */
+function accesoSinAlta(cambios = {}) {
   return [
     {
-      id: SUSCRIPCION,
+      id: ACCESO,
       prestadora_id: PRESTADORA,
       familia_id: FAMILIA,
-      estado: 'trial',
-      monto_mensual: 12500,
+      estado: 'vigente',
+      importe: 12500,
       moneda: 'ARS',
       proveedor: null,
       referencia_externa: null,
       url_accion: null,
       alta_en_pasarela: null,
+      formas_de_cobro_marketplace: CADA_MES,
       ...cambios,
     },
   ];
@@ -127,24 +143,25 @@ beforeEach(() => {
   llamadas = [];
   anotados = [];
   llamadasAStripe = [];
+  cuerposAStripe = new Map();
   stripeRechaza = false;
   respuestas.clear();
-  respuestas.set('GET /rest/v1/suscripciones_marketplace', () => suscripcionSinAlta());
-  respuestas.set('PATCH /rest/v1/suscripciones_marketplace', () => []);
+  respuestas.set('GET /rest/v1/accesos_marketplace', () => accesoSinAlta());
+  respuestas.set('PATCH /rest/v1/accesos_marketplace', () => []);
   respuestas.set('GET /rest/v1/prestadora_pasarela_pago', () => [{ proveedor: 'stripe' }]);
   respuestas.set('POST /rest/v1/rpc/leer_credencial_pasarela_pago', () => CREDENCIAL);
   respuestas.set('GET /auth/v1/admin/users/:id', () => ({ id: FAMILIA, email: CORREO_DE_LA_FAMILIA }));
 });
 
 const darDeAlta = (extra = {}) =>
-  darDeAltaEnPasarela({ suscripcionId: SUSCRIPCION, prestadoraId: PRESTADORA, ...extra });
+  darDeAltaEnPasarela({ accesoId: ACCESO, prestadoraId: PRESTADORA, ...extra });
 
 function guardado() {
-  return llamadas.find((l) => l.clave === 'PATCH /rest/v1/suscripciones_marketplace');
+  return llamadas.find((l) => l.clave === 'PATCH /rest/v1/accesos_marketplace');
 }
 
 describe('el alta que sale bien', () => {
-  it('crea la suscripción en el proveedor y guarda lo que devolvió', async () => {
+  it('crea el cobro en el proveedor y guarda lo que devolvió', async () => {
     const resultado = await darDeAlta();
 
     assert.equal(resultado.ok, true);
@@ -160,14 +177,15 @@ describe('el alta que sale bien', () => {
     assert.ok(guardado().cuerpo.alta_en_pasarela, 'queda la marca de que ya está dada de alta');
   });
 
-  it('no le cambia el estado a la suscripción: dar de alta no es cobrar', async () => {
-    // La suscripción pasa a `activa` cuando entra la plata del primer período, y eso lo decide
-    // `registrarCobroExitoso`. Si el alta la activara, una Familia que nunca pagó figuraría al día.
+  it('no le cambia el estado al acceso: dar de alta no es cobrar', async () => {
+    // El acceso queda vigente cuando entra la plata del primer período, y eso lo decide
+    // `registrarCobroExitoso`. Si el alta lo diera por pagado, una Familia que nunca pagó
+    // figuraría al día.
     await darDeAlta();
     assert.equal('estado' in guardado().cuerpo, false);
   });
 
-  it('el alta se guarda acotada a la Prestadora, no sólo al identificador de la suscripción', async () => {
+  it('el alta se guarda acotada a la Prestadora, no sólo al identificador del acceso', async () => {
     await darDeAlta();
     assert.ok(guardado().url.includes(`prestadora_id=eq.${PRESTADORA}`));
   });
@@ -177,36 +195,70 @@ describe('el alta que sale bien', () => {
     assert.equal(JSON.stringify(resultado).includes(CREDENCIAL), false);
   });
 
-  it('la busca acotada a la Prestadora, así nadie da de alta la suscripción de otra', async () => {
+  it('lo busca acotado a la Prestadora, así nadie da de alta el acceso de otra', async () => {
     await darDeAlta();
-    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/suscripciones_marketplace');
+    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_marketplace');
     assert.ok(busqueda.url.includes(`prestadora_id=eq.${PRESTADORA}`));
+  });
+
+  it('le pasa al proveedor cada cuánto cobra, y eso sale de la forma de la Prestadora', async () => {
+    // Es lo que hace que la recurrencia sea un dato y no una línea escrita en el adaptador. Con
+    // una forma de dos semanas, a Stripe le tiene que llegar «cada 2 semanas» y no «cada 1 mes».
+    respuestas.set('GET /rest/v1/accesos_marketplace', () =>
+      accesoSinAlta({ formas_de_cobro_marketplace: { periodo_cantidad: 2, periodo_unidad: 'semana' } })
+    );
+
+    await darDeAlta();
+    const precio = llamadasAStripe.find((url) => url.includes('/prices'));
+    assert.ok(precio, 'se le pidió un precio a Stripe');
+    const cuerpo = cuerposAStripe.get(precio);
+    assert.equal(cuerpo.get('recurring[interval]'), 'week');
+    assert.equal(cuerpo.get('recurring[interval_count]'), '2');
+  });
+
+  it('pide la forma de cobro junto con el acceso, en la misma consulta', async () => {
+    await darDeAlta();
+    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_marketplace');
+    assert.ok(busqueda.url.includes('formas_de_cobro_marketplace'));
   });
 });
 
-describe('la suscripción que no se puede dar de alta', () => {
+describe('el acceso que no se puede dar de alta', () => {
   it('la que no existe —o es de otra Prestadora— se contesta y no se llama a nadie', async () => {
-    respuestas.set('GET /rest/v1/suscripciones_marketplace', () => []);
+    respuestas.set('GET /rest/v1/accesos_marketplace', () => []);
     const resultado = await darDeAlta();
     assert.equal(resultado.ok, false);
-    assert.equal(resultado.motivo, MOTIVO_ALTA.SUSCRIPCION_INEXISTENTE);
+    assert.equal(resultado.motivo, MOTIVO_ALTA.ACCESO_INEXISTENTE);
     assert.equal(llamadasAStripe.length, 0);
     assert.equal(guardado(), undefined);
   });
 
-  it('la cancelada no se da de alta: sería empezar a cobrarle a quien se dio de baja', async () => {
-    respuestas.set('GET /rest/v1/suscripciones_marketplace', () => suscripcionSinAlta({ estado: 'cancelada' }));
+  it('el cancelado no se da de alta: sería empezar a cobrarle a quien se dio de baja', async () => {
+    respuestas.set('GET /rest/v1/accesos_marketplace', () => accesoSinAlta({ estado: 'cancelada' }));
     const resultado = await darDeAlta();
-    assert.equal(resultado.motivo, MOTIVO_ALTA.SUSCRIPCION_CANCELADA);
+    assert.equal(resultado.motivo, MOTIVO_ALTA.ACCESO_CANCELADO);
     assert.equal(llamadasAStripe.length, 0);
     assert.equal(guardado(), undefined);
   });
 
-  it('la que ya estaba dada de alta se contesta con lo guardado y no se vuelve a crear', async () => {
+  it('el de una forma que se cobra una sola vez no se da de alta en un cobro recurrente', async () => {
+    // Dejar andando la recurrencia por una forma sin período le cobraría todos los períodos a
+    // quien pagó uno. Lo que sostiene ese acceso es un saldo o una fecha, no la pasarela.
+    respuestas.set('GET /rest/v1/accesos_marketplace', () =>
+      accesoSinAlta({ formas_de_cobro_marketplace: { periodo_cantidad: null, periodo_unidad: null } })
+    );
+    const resultado = await darDeAlta();
+    assert.equal(resultado.ok, false);
+    assert.equal(resultado.motivo, MOTIVO_ALTA.FORMA_SIN_PERIODO);
+    assert.equal(llamadasAStripe.length, 0);
+    assert.equal(guardado(), undefined);
+  });
+
+  it('el que ya estaba dado de alta se contesta con lo guardado y no se vuelve a crear', async () => {
     // Volver a crearla dejaría dos cobros recurrentes vivos por la misma Familia, y del segundo
     // no se enteraría nadie hasta que llegue el resumen.
-    respuestas.set('GET /rest/v1/suscripciones_marketplace', () =>
-      suscripcionSinAlta({
+    respuestas.set('GET /rest/v1/accesos_marketplace', () =>
+      accesoSinAlta({
         proveedor: 'stripe',
         referencia_externa: 'sub_de_la_vez_anterior',
         alta_en_pasarela: '2026-09-01T10:00:00.000Z',
@@ -303,7 +355,7 @@ describe('lo que falta antes de poder cobrar', () => {
     assert.equal(guardado(), undefined);
   });
 
-  it('el correo se pide por el identificador de la Familia de esa suscripción', async () => {
+  it('el correo se pide por el identificador de la Familia de ese acceso', async () => {
     await darDeAlta();
     const pedido = llamadas.find((l) => l.clave === 'GET /auth/v1/admin/users/:id');
     assert.ok(pedido.url.includes(FAMILIA));
@@ -312,8 +364,8 @@ describe('lo que falta antes de poder cobrar', () => {
 
 describe('cuando el proveedor rechaza', () => {
   it('no queda la marca de alta puesta: si no, nadie la volvería a intentar', async () => {
-    // Es el caso que deja una suscripción sin cobrar para siempre. Sin `alta_en_pasarela`, el
-    // próximo intento la crea de nuevo.
+    // Es el caso que deja un acceso sin cobrar para siempre. Sin `alta_en_pasarela`, el próximo
+    // intento lo crea de nuevo.
     stripeRechaza = true;
     const resultado = await darDeAlta();
 
@@ -331,13 +383,13 @@ describe('cuando el proveedor rechaza', () => {
   });
 
   it('si el alta se creó y no se pudo guardar, queda avisado y sin la marca', async () => {
-    // Acá la suscripción existe en el proveedor y no de este lado. Lo que corresponde es que se
-    // pueda volver a intentar, y que quede registrado porque es plata.
-    respuestas.delete('PATCH /rest/v1/suscripciones_marketplace');
+    // Acá el acceso existe en el proveedor y no de este lado. Lo que corresponde es que se pueda
+    // volver a intentar, y que quede registrado porque es plata.
+    respuestas.delete('PATCH /rest/v1/accesos_marketplace');
     const resultado = await darDeAlta();
 
     assert.equal(resultado.ok, false);
     assert.equal(resultado.motivo, MOTIVO_ALTA.NO_SE_PUDO_GUARDAR);
-    assert.ok(anotados.some((linea) => linea.includes('Suscripción creada en la pasarela y no guardada')));
+    assert.ok(anotados.some((linea) => linea.includes('Acceso creado en la pasarela y no guardado')));
   });
 });

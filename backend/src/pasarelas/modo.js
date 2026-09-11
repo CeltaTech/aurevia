@@ -21,11 +21,11 @@ export const REQUIERE_SECRETO_FIRMA = true;
  *  este riel le toca pasar todos los meses, y que a los que cobran solos no. */
 export const ARMA_COBRO_POR_PERIODO = true;
 
-export async function crearSuscripcion({ suscripcionId }) {
+export async function crearSuscripcion({ accesoId }) {
   // No hay nada que crear del lado de Modo al dar de alta la suscripción — el cobro real
   // se genera período a período (ver generarCobroQr más abajo, llamado desde la ruta que
   // arma el próximo período de cobro). Acá solo se confirma que el riel está disponible.
-  return { estadoConexion: 'pendiente', referenciaExterna: suscripcionId };
+  return { estadoConexion: 'pendiente', referenciaExterna: accesoId };
 }
 
 export async function cancelarSuscripcion() {

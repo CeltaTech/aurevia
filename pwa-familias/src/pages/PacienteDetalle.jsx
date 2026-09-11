@@ -202,9 +202,9 @@ export default function PacienteDetalle() {
         <Link to={`/pacientes/${id}/asistente`} className="btn btn-secondary btn-full">
           {t.paciente.ver_asistente}
         </Link>
-        {seEntraA('suscripcion') && (
-          <Link to={`/pacientes/${id}/suscripcion`} className="btn btn-secondary btn-full">
-            {t.paciente.ver_suscripcion}
+        {seEntraA('acceso') && (
+          <Link to={`/pacientes/${id}/acceso`} className="btn btn-secondary btn-full">
+            {t.paciente.ver_acceso}
           </Link>
         )}
         {seEntraA('medicacion') && (

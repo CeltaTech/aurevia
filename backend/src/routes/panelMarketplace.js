@@ -1,5 +1,5 @@
 // Pendiente #85 (docs/PLAN_HASTA_PRODUCCION.md), Grupo 3 Marketplace — rutas del Panel: pasarela de
-// pago por Prestadora, suscripciones/cobros, calificaciones con descargo, y la auditoría de
+// pago por Prestadora, accesos y cobros, calificaciones con descargo, y la auditoría de
 // advertencias legales de marketplace. Mismo patrón de scoping por prestadora_id/rol que
 // panelConfiguracion.js.
 
@@ -35,7 +35,7 @@ panelMarketplaceRouter.use(exigirModalidad('marketplace'));
 // La plata del Marketplace es de la administración de la Prestadora, no del Coordinador
 // (Desarrollador, 2026-09-04: «absolutamente no puede ni debe»). Alcanza a las dos mitades:
 // conectar y desconectar pasarelas de pago —que es cargar credenciales de cobro—, y todo lo
-// que sea un cobro: la lista de suscripciones con sus importes, el historial de cobros, la
+// que sea un cobro: la lista de accesos con sus importes, el historial de cobros, la
 // carga de efectivo en mano y el canje del QR. Lo que sí queda para el Coordinador es lo que
 // no es plata: las calificaciones y la auditoría de advertencias legales.
 //
@@ -51,7 +51,7 @@ const soloAdministracion = exigirAdministracion('Rol sin permiso');
 // cargarlas y de reemplazarlas. Superadmin es un rol técnico de CeltaTech, y CeltaTech no tiene
 // por qué poder tocar con qué credencial cobra una Prestadora. Se suma encima del candado de
 // administración en las dos rutas que las escriben; el resto del riel —ver qué pasarelas están
-// conectadas, los cobros, las suscripciones— no cambia (middleware/exigirAdministracion.js).
+// conectadas, los cobros, los accesos— no cambia (middleware/exigirAdministracion.js).
 const soloAdminDePrestadora = exigirAdminDePrestadora(
   'Las credenciales de cobro son de la Prestadora: solo Admin puede cargarlas y cambiarlas'
 );
@@ -181,17 +181,17 @@ panelMarketplaceRouter.patch('/pasarela/:proveedor', soloAdministracion, soloAdm
 });
 
 // ============================================================================
-// Suscripciones y cobros
+// Accesos y cobros
 // ============================================================================
 
 // Nombres legibles de Familia/Paciente/Asistente en consultas separadas (no un único JOIN
 // embebido): familia_id apunta a familias.id, que a su vez comparte id con usuarios.id, así
 // que el nombre real vive en usuarios — resolverlo acá evita mostrar UUID crudo en el Panel
 // (CLAUDE.md §7 regla 7, "sin datos crudos").
-panelMarketplaceRouter.get('/suscripciones', soloAdministracion, async (req, res) => {
+panelMarketplaceRouter.get('/accesos', soloAdministracion, async (req, res) => {
   const { data, error } = await supabase
-    .from('suscripciones_marketplace')
-    .select('id, familia_id, paciente_id, asistente_id, estado, monto_mensual, trial_fin, proximo_cobro, cancelada_en, created_at, proveedor, url_accion, alta_en_pasarela')
+    .from('accesos_marketplace')
+    .select('id, familia_id, paciente_id, asistente_id, estado, importe, gratis_hasta, proximo_cobro, cancelada_en, created_at, proveedor, url_accion, alta_en_pasarela')
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .order('created_at', { ascending: false });
   if (error) return responderError(res, error);
@@ -210,21 +210,21 @@ panelMarketplaceRouter.get('/suscripciones', soloAdministracion, async (req, res
   const nombrePaciente = new Map((pacientes || []).map((p) => [p.id, p.nombre]));
   const nombreAsistente = new Map((asistentes || []).map((a) => [a.id, a.nombre]));
 
-  const suscripciones = data.map((s) => ({
+  const accesos = data.map((s) => ({
     ...s,
     familia_nombre: nombreFamilia.get(s.familia_id) || null,
     paciente_nombre: nombrePaciente.get(s.paciente_id) || null,
     asistente_nombre: s.asistente_id ? nombreAsistente.get(s.asistente_id) || null : null,
   }));
 
-  res.json({ suscripciones });
+  res.json({ accesos });
 });
 
-panelMarketplaceRouter.get('/suscripciones/:id/cobros', soloAdministracion, async (req, res) => {
+panelMarketplaceRouter.get('/accesos/:id/cobros', soloAdministracion, async (req, res) => {
   const { data, error } = await supabase
     .from('cobros_marketplace')
     .select('id, medio, monto, periodo, estado_cobro, referencia_externa, fecha_cobro, registrado_por, created_at')
-    .eq('suscripcion_id', req.params.id)
+    .eq('acceso_id', req.params.id)
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .order('periodo', { ascending: false });
   if (error) return responderError(res, error);
@@ -235,23 +235,23 @@ panelMarketplaceRouter.get('/suscripciones/:id/cobros', soloAdministracion, asyn
 // por cobro no reflejado a tiempo en el sistema (docs/PLAN_HASTA_PRODUCCION.md). fecha_cobro es la
 // fecha real del hecho, nunca la de carga (CLAUDE.md §3).
 panelMarketplaceRouter.post('/cobros/efectivo-manual', soloAdministracion, async (req, res) => {
-  const { suscripcion_id: suscripcionId, monto, periodo, fecha_cobro: fechaCobro } = req.body || {};
-  if (!suscripcionId || !monto || !periodo || !fechaCobro) {
-    return res.status(400).json({ error: 'Faltan suscripcion_id, monto, periodo o fecha_cobro' });
+  const { acceso_id: accesoId, monto, periodo, fecha_cobro: fechaCobro } = req.body || {};
+  if (!accesoId || !monto || !periodo || !fechaCobro) {
+    return res.status(400).json({ error: 'Faltan acceso_id, monto, periodo o fecha_cobro' });
   }
 
-  const { data: suscripcion } = await supabase
-    .from('suscripciones_marketplace')
+  const { data: acceso } = await supabase
+    .from('accesos_marketplace')
     .select('id')
-    .eq('id', suscripcionId)
+    .eq('id', accesoId)
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
-  if (!suscripcion) {
-    return res.status(404).json({ error: 'Suscripción no encontrada' });
+  if (!acceso) {
+    return res.status(404).json({ error: 'Acceso no encontrado' });
   }
 
   const { error } = await supabase.from('cobros_marketplace').insert({
-    suscripcion_id: suscripcionId,
+    acceso_id: accesoId,
     prestadora_id: req.usuarioPanel.prestadoraId,
     medio: 'efectivo_manual',
     monto,
@@ -262,9 +262,9 @@ panelMarketplaceRouter.post('/cobros/efectivo-manual', soloAdministracion, async
   });
   if (error) return responderError(res, error);
 
-  // Y la suscripción pasa al mes siguiente. Sin esto el período quedaba pagado y la suscripción
-  // seguía esperando el mismo mes para siempre, así que el mes que viene no llegaba nunca.
-  const movimiento = await registrarCobroExitoso({ suscripcionId, periodo });
+  // Y el acceso pasa al período siguiente. Sin esto el período quedaba pagado y el acceso seguía
+  // esperando el mismo para siempre, así que el que viene no llegaba nunca.
+  const movimiento = await registrarCobroExitoso({ accesoId, periodo });
 
   res.json({ ok: true, proximo_cobro: movimiento.proximo_cobro ?? null });
 });
@@ -279,7 +279,7 @@ panelMarketplaceRouter.post('/qr-cobro/canjear', soloAdministracion, async (req,
 
   const { data: qr } = await supabase
     .from('qr_cobro_efectivo')
-    .select('id, suscripcion_id, monto, periodo, expira_en, usado_en')
+    .select('id, acceso_id, monto, periodo, expira_en, usado_en')
     .eq('token', token)
     .maybeSingle();
   if (!qr) {
@@ -292,20 +292,20 @@ panelMarketplaceRouter.post('/qr-cobro/canjear', soloAdministracion, async (req,
     return res.status(410).json({ error: 'Este QR venció, hace falta pedirle a la Familia que genere uno nuevo' });
   }
 
-  const { data: suscripcion } = await supabase
-    .from('suscripciones_marketplace')
+  const { data: acceso } = await supabase
+    .from('accesos_marketplace')
     .select('id')
-    .eq('id', qr.suscripcion_id)
+    .eq('id', qr.acceso_id)
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
-  if (!suscripcion) {
-    return res.status(404).json({ error: 'La suscripción de este QR no pertenece a esta Prestadora' });
+  if (!acceso) {
+    return res.status(404).json({ error: 'El acceso de este QR no pertenece a esta Prestadora' });
   }
 
   const { data: cobro, error: errorCobro } = await supabase
     .from('cobros_marketplace')
     .insert({
-      suscripcion_id: qr.suscripcion_id,
+      acceso_id: qr.acceso_id,
       prestadora_id: req.usuarioPanel.prestadoraId,
       medio: 'efectivo_manual',
       monto: qr.monto,
@@ -324,21 +324,21 @@ panelMarketplaceRouter.post('/qr-cobro/canjear', soloAdministracion, async (req,
     .eq('id', qr.id);
   if (errorQr) return responderError(res, errorQr);
 
-  // Igual que el efectivo en mano: cobrado el período, la suscripción pasa al siguiente.
-  const movimiento = await registrarCobroExitoso({ suscripcionId: qr.suscripcion_id, periodo: qr.periodo });
+  // Igual que el efectivo en mano: cobrado el período, el acceso pasa al siguiente.
+  const movimiento = await registrarCobroExitoso({ accesoId: qr.acceso_id, periodo: qr.periodo });
 
   res.json({ ok: true, monto: qr.monto, proximo_cobro: movimiento.proximo_cobro ?? null });
 });
 
 // ============================================================================
-// El alta de la suscripción en la pasarela
+// El alta del acceso en la pasarela
 // ============================================================================
 
-// Sin esto una suscripción vive en esta base y no existe del lado de ningún proveedor, así que no
-// hay con qué cobrarle. Lo hace el Admin de la Prestadora desde la pantalla de suscripciones;
-// mañana lo va a llamar también la activación del lado de la Familia. Los seis pasos que hacen
-// falta están en un solo lugar (`utils/altaEnPasarela.js`) y esta ruta no repite ninguno.
-panelMarketplaceRouter.post('/suscripciones/:id/alta-en-pasarela', soloAdministracion, async (req, res) => {
+// Sin esto un acceso vive en esta base y no existe del lado de ningún proveedor, así que no hay
+// con qué cobrarle. Lo hace el Admin de la Prestadora desde la pantalla de accesos; mañana lo va
+// a llamar también la activación del lado de la Familia. Los pasos que hacen falta están en un
+// solo lugar (`utils/altaEnPasarela.js`) y esta ruta no repite ninguno.
+panelMarketplaceRouter.post('/accesos/:id/alta-en-pasarela', soloAdministracion, async (req, res) => {
   const { proveedor } = req.body || {};
 
   // Con qué riel sólo hace falta decirlo cuando la Prestadora tiene más de uno conectado; con uno
@@ -348,7 +348,7 @@ panelMarketplaceRouter.post('/suscripciones/:id/alta-en-pasarela', soloAdministr
   }
 
   const resultado = await darDeAltaEnPasarela({
-    suscripcionId: req.params.id,
+    accesoId: req.params.id,
     prestadoraId: req.usuarioPanel.prestadoraId,
     proveedor: proveedor || null,
   });
@@ -357,9 +357,9 @@ panelMarketplaceRouter.post('/suscripciones/:id/alta-en-pasarela', soloAdministr
     // El motivo es un código, y la frase que lee la persona sale de las traducciones del Panel en
     // los tres idiomas. El detalle crudo no sale de acá: puede nombrar la cuenta de cobro
     // (`celtatech\CLAUDE.md` §6).
-    const estado = resultado.motivo === MOTIVO_ALTA.SUSCRIPCION_INEXISTENTE ? 404 : 409;
+    const estado = resultado.motivo === MOTIVO_ALTA.ACCESO_INEXISTENTE ? 404 : 409;
     return res.status(estado).json({
-      error: 'No se pudo dar de alta la suscripción en la pasarela',
+      error: 'No se pudo dar de alta el acceso en la pasarela',
       motivo: resultado.motivo,
       conectados: resultado.conectados,
     });

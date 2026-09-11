@@ -1,15 +1,18 @@
 // Pendiente #85 (docs/PLAN_HASTA_PRODUCCION.md), Grupo 3 Marketplace — registro de adaptadores de
 // pasarela de pago. Un solo punto de verdad (CLAUDE.md §7 regla 12): cualquier ruta que
-// necesite operar sobre una suscripción llama a `obtenerAdaptador(proveedor)`, nunca
-// importa un adaptador puntual por su nombre de proveedor.
+// necesite operar sobre un acceso llama a `obtenerAdaptador(proveedor)`, nunca importa un
+// adaptador puntual por su nombre de proveedor.
 //
 // Interfaz común que todo adaptador implementa:
-//   crearSuscripcion({ prestadoraId, credencial, suscripcionId, monto, moneda, familiaId,
+//   crearSuscripcion({ prestadoraId, credencial, accesoId, monto, moneda, periodo, familiaId,
 //                      emailPagador })
 //     -> { estadoConexion: 'pendiente'|'exitoso', referenciaExterna, urlAccion? }
+//     `periodo` es `{ cantidad, unidad }` —`dia`, `semana`, `mes` o `anio`— y dice cada cuánto
+//     vuelve a cobrarse. Sale de la forma de cobro que armó la Prestadora, así que ningún
+//     adaptador tiene un valor por descarte: sin período, falla.
 //     `emailPagador` es el correo real de la Familia. Lo resuelve quien llama —hoy
-//     `backend/src/utils/altaEnPasarela.js`, que es el único punto por donde se da de alta una
-//     suscripción—, porque el adaptador no consulta la base. Los rieles que no se lo piden al
+//     `backend/src/utils/altaEnPasarela.js`, que es el único punto por donde se da de alta un
+//     acceso—, porque el adaptador no consulta la base. Los rieles que no se lo piden al
 //     proveedor lo ignoran; Mercado Pago sin él rechaza el alta.
 //   cancelarSuscripcion({ credencial, referenciaExterna })
 //     -> { ok: true }
@@ -68,7 +71,7 @@ export function confirmaConsultando(proveedor) {
 
 /** ¿A este riel hay que armarle el cobro período por período? Los seis se parten en dos grupos y
  *  la diferencia manda todo lo demás: los que cobran solos (`mercadopago`, `stripe`, `debin`)
- *  quedan andando con el alta de la suscripción y avisan por cada mes que cobran; los que no
+ *  quedan andando con el alta del acceso y avisan por cada período que cobran; los que no
  *  (`modo`, `cobranza_efectivo`) no dejan nada recurrente, y si nadie les pide el QR o el cupón de
  *  este mes, la Familia no tiene con qué pagar. `efectivo_manual` no es ninguno de los dos: ahí
  *  no hay proveedor, la carga la hace una persona desde el Panel.

@@ -10,10 +10,10 @@ function minutosRestantes(fecha) {
   return Math.max(0, Math.ceil((new Date(fecha).getTime() - Date.now()) / 60000));
 }
 
-export default function SuscripcionMarketplace() {
+export default function AccesoMarketplace() {
   const { id } = useParams();
   const { t } = useLocale();
-  const [suscripcion, setSuscripcion] = useState(undefined);
+  const [acceso, setAcceso] = useState(undefined);
   const [error, setError] = useState('');
   const [generando, setGenerando] = useState(false);
   const [qr, setQr] = useState(null);
@@ -23,13 +23,13 @@ export default function SuscripcionMarketplace() {
 
   const cargar = useCallback(() => {
     api
-      .suscripcionMarketplace(id)
-      .then((data) => setSuscripcion(data.suscripcion))
-      .catch((e) => setError(mensajeDeError(e, t, 'suscripción del marketplace')));
+      .accesoMarketplace(id)
+      .then((data) => setAcceso(data.acceso))
+      .catch((e) => setError(mensajeDeError(e, t, 'acceso del marketplace')));
   }, [id]);
 
   useEffect(() => {
-    setSuscripcion(undefined);
+    setAcceso(undefined);
     cargar();
   }, [cargar]);
 
@@ -44,7 +44,7 @@ export default function SuscripcionMarketplace() {
     setError('');
     setCobrado(false);
     try {
-      const { qr: nuevoQr } = await api.generarQrCobro({ suscripcion_id: suscripcion.id });
+      const { qr: nuevoQr } = await api.generarQrCobro({ acceso_id: acceso.id });
       setQr(nuevoQr);
       setQrDataUrl(await QRCode.toDataURL(nuevoQr.token, { width: 260, margin: 1 }));
       if (pollRef.current) clearInterval(pollRef.current);
@@ -69,7 +69,7 @@ export default function SuscripcionMarketplace() {
   }
 
   if (error) return <div className="alert alert-error" role="alert">{error}</div>;
-  if (suscripcion === undefined) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
+  if (acceso === undefined) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
 
   const qrVencido = qr && !cobrado && new Date(qr.expira_en).getTime() < Date.now();
 
@@ -79,44 +79,44 @@ export default function SuscripcionMarketplace() {
         {t.comun.volver}
       </Link>
 
-      <h1>{t.suscripcion.titulo}</h1>
+      <h1>{t.acceso.titulo}</h1>
 
-      {!suscripcion && <div className="estado-vacio" role="status">{t.suscripcion.sin_suscripcion}</div>}
+      {!acceso && <div className="estado-vacio" role="status">{t.acceso.sin_acceso}</div>}
 
-      {suscripcion && (
+      {acceso && (
         <>
           <div className="guardia-card-detalle">
-            {traducirValor(t.suscripcion, `estado_${suscripcion.estado}`)}
+            {traducirValor(t.acceso, `estado_${acceso.estado}`)}
           </div>
           <div className="guardia-card-detalle">
-            {t.suscripcion.monto_mensual}: {suscripcion.monto_mensual}
+            {t.acceso.importe}: {acceso.importe}
           </div>
-          {suscripcion.proximo_cobro && (
+          {acceso.proximo_cobro && (
             <div className="guardia-card-detalle">
-              {t.suscripcion.proximo_cobro}: {suscripcion.proximo_cobro}
+              {t.acceso.proximo_cobro}: {acceso.proximo_cobro}
             </div>
           )}
 
-          {(suscripcion.estado === 'activa' || suscripcion.estado === 'trial') && (
+          {acceso.estado === 'vigente' && (
             <div style={{ marginTop: '1.5rem' }}>
-              <h2>{t.suscripcion.generar_qr_titulo}</h2>
-              <p className="guardia-card-detalle">{t.suscripcion.generar_qr_explicacion}</p>
+              <h2>{t.acceso.generar_qr_titulo}</h2>
+              <p className="guardia-card-detalle">{t.acceso.generar_qr_explicacion}</p>
 
-              {cobrado && <div className="alert alert-success" role="status">{t.suscripcion.qr_cobrado}</div>}
+              {cobrado && <div className="alert alert-success" role="status">{t.acceso.qr_cobrado}</div>}
 
               {!cobrado && qr && !qrVencido && qrDataUrl && (
                 <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-                  <img src={qrDataUrl} alt={t.suscripcion.generar_qr_titulo} />
-                  <p className="mapa-actualizado">{t.suscripcion.qr_vence_en.replace('{minutos}', minutosRestantes(qr.expira_en))}</p>
-                  <p className="mapa-actualizado">{t.suscripcion.qr_esperando_cobro}</p>
+                  <img src={qrDataUrl} alt={t.acceso.generar_qr_titulo} />
+                  <p className="mapa-actualizado">{t.acceso.qr_vence_en.replace('{minutos}', minutosRestantes(qr.expira_en))}</p>
+                  <p className="mapa-actualizado">{t.acceso.qr_esperando_cobro}</p>
                 </div>
               )}
 
-              {qrVencido && <div className="alert alert-error" role="alert">{t.suscripcion.qr_vencido}</div>}
+              {qrVencido && <div className="alert alert-error" role="alert">{t.acceso.qr_vencido}</div>}
 
               {(!qr || qrVencido || cobrado) && (
                 <button type="button" className="btn btn-primary btn-full" onClick={generarQr} disabled={generando} style={{ marginTop: '1rem' }}>
-                  {generando ? t.suscripcion.generando_qr : (qr ? t.suscripcion.qr_generar_otro : t.suscripcion.generar_qr_boton)}
+                  {generando ? t.acceso.generando_qr : (qr ? t.acceso.qr_generar_otro : t.acceso.generar_qr_boton)}
                 </button>
               )}
             </div>

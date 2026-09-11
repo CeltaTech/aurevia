@@ -107,32 +107,32 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', async (req, res) => {
   //
   //   * **la del cobro**, en los rieles a los que este producto les arma el cobro mes a mes
   //     (`modo`, `cobranza_efectivo`): la referencia se guardó al armarlo y la fila ya existe;
-  //   * **la de la suscripción**, en los rieles que cobran solos (`mercadopago`, `stripe`,
+  //   * **la del acceso**, en los rieles que cobran solos (`mercadopago`, `stripe`,
   //     `debin`): ahí no hay ninguna fila de ese mes, porque el que decidió cobrar fue el
   //     proveedor y de este lado nadie armó nada.
   //
   // Hasta acá se buscaba únicamente entre los cobros. Para el segundo grupo eso no encontraba
-  // nunca nada: se contestaba 200 y se seguía de largo, así que la suscripción cobraba todos
-  // los meses del lado del proveedor y en esta base no figuraba ninguno.
+  // nunca nada: se contestaba 200 y se seguía de largo, así que el acceso cobraba todos los
+  // períodos del lado del proveedor y en esta base no figuraba ninguno.
   const { data: cobro } = await supabase
     .from('cobros_marketplace')
-    .select('id, suscripcion_id, periodo')
+    .select('id, acceso_id, periodo')
     .eq('prestadora_id', prestadoraId)
     .eq('referencia_externa', referenciaExterna)
     .maybeSingle();
 
-  const { data: suscripcionDelAviso } = cobro
+  const { data: accesoDelAviso } = cobro
     ? { data: null }
     : await supabase
-        .from('suscripciones_marketplace')
-        .select('id, monto_mensual, proximo_cobro')
+        .from('accesos_marketplace')
+        .select('id, importe, proximo_cobro')
         .eq('prestadora_id', prestadoraId)
         .eq('referencia_externa', referenciaExterna)
         .maybeSingle();
 
-  // Ni un cobro ni una suscripción de esta Prestadora: el aviso vino firmado pero habla de algo
+  // Ni un cobro ni un acceso de esta Prestadora: el aviso vino firmado pero habla de algo
   // que acá no existe. Se contesta 200 para que el proveedor no lo repita para siempre.
-  if (!cobro && !suscripcionDelAviso) {
+  if (!cobro && !accesoDelAviso) {
     return res.status(200).json({ ok: true });
   }
 
@@ -152,24 +152,24 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', async (req, res) => {
     }
   }
 
-  const suscripcionId = cobro ? cobro.suscripcion_id : suscripcionDelAviso.id;
+  const accesoId = cobro ? cobro.acceso_id : accesoDelAviso.id;
   let periodo = cobro ? cobro.periodo : null;
 
   if (cobro) {
     await supabase.from('cobros_marketplace').update({ estado_cobro: estadoFinal }).eq('id', cobro.id);
   } else if (estadoFinal !== 'pendiente') {
-    // El cobro del mes nace acá, con el estado que trajo el aviso. Un aviso `pendiente` no deja
-    // fila: no dice nada que se pueda anotar, y el mismo mes puede traer varios antes de que la
-    // plata entre.
-    periodo = suscripcionDelAviso.proximo_cobro || new Date().toISOString().slice(0, 10);
-    // Sin `referencia_externa`, a propósito: la que trajo el aviso es la de la suscripción, no la
-    // de este mes. Guardarla acá haría que el aviso del mes que viene encontrara esta misma fila
-    // y pisara el cobro anterior en vez de anotar uno nuevo.
+    // El cobro del período nace acá, con el estado que trajo el aviso. Un aviso `pendiente` no
+    // deja fila: no dice nada que se pueda anotar, y el mismo período puede traer varios antes de
+    // que la plata entre.
+    periodo = accesoDelAviso.proximo_cobro || new Date().toISOString().slice(0, 10);
+    // Sin `referencia_externa`, a propósito: la que trajo el aviso es la del acceso, no la de este
+    // período. Guardarla acá haría que el aviso del período siguiente encontrara esta misma fila y
+    // pisara el cobro anterior en vez de anotar uno nuevo.
     const { error: errorInsertar } = await supabase.from('cobros_marketplace').insert({
-      suscripcion_id: suscripcionId,
+      acceso_id: accesoId,
       prestadora_id: prestadoraId,
       medio: proveedor,
-      monto: suscripcionDelAviso.monto_mensual,
+      monto: accesoDelAviso.importe,
       periodo,
       estado_cobro: estadoFinal,
     });
@@ -180,13 +180,13 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', async (req, res) => {
   }
 
   if (estadoFinal === 'exitoso') {
-    // Quién mueve la suscripción cuando entra la plata es uno solo, y es el mismo que usan las
+    // Quién mueve el acceso cuando entra la plata es uno solo, y es el mismo que usan las
     // dos cargas a mano del Panel (`utils/cobrosMarketplace.js`). Acá se contaba el mes siguiente
     // desde la fecha de hoy: con eso, un cobro que entraba tarde corría la fecha de cobro un poco
     // más cada mes, y el 31 de enero más un mes daba 3 de marzo.
-    await registrarCobroExitoso({ suscripcionId, periodo });
+    await registrarCobroExitoso({ accesoId, periodo });
   } else if (estadoFinal === 'fallido') {
-    await supabase.from('suscripciones_marketplace').update({ estado: 'vencida' }).eq('id', suscripcionId);
+    await supabase.from('accesos_marketplace').update({ estado: 'vencida' }).eq('id', accesoId);
   }
 
   res.status(200).json({ ok: true });

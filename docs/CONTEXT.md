@@ -225,8 +225,16 @@ Ver `CLAUDE.md` (raíz de `Workspace/`) — sección "El riesgo legal que condic
 
 Ningún documento original especificó **cómo la Prestadora le cobra a las Familias** por el
 cuidado prestado (medio de pago, facturación, retención de fondos). El "Modelo UPE" cubre la
-facturación a IOMA vía Planillas 3, pero no el cobro directo a familias particulares. Sigue
-necesitando una decisión de negocio explícita antes de construirse.
+facturación a IOMA vía Planillas 3, pero no el cobro directo a familias particulares. **En
+prestación directa sigue necesitando una decisión de negocio explícita antes de construirse.**
+
+**En la modalidad Marketplace está resuelto y construido**
+(`docs/PRD_07_Modalidad_Marketplace.md`): la Familia le paga a la Prestadora por una pasarela,
+y **cada Prestadora arma su propia forma de cobrar** con las piezas que el producto le da
+—importe, cada cuánto, período gratuito, saldo de contactos, si se renueva sola— en
+`formas_de_cobro_marketplace`. Lo que cada Familia tiene habilitado vive en
+`accesos_marketplace`. El producto no elige por ella ni le fija precio ni duración: la política
+de comercialización es un dato de la Prestadora, no código.
 
 ## Changelog de este documento
 

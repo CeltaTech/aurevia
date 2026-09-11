@@ -19,8 +19,8 @@ export const REQUIERE_SECRETO_FIRMA = true;
  *  (`backend/src/utils/cobrosMarketplace.js`) sabe que a este riel le toca pasar todos los meses. */
 export const ARMA_COBRO_POR_PERIODO = true;
 
-export async function crearSuscripcion({ suscripcionId }) {
-  return { estadoConexion: 'pendiente', referenciaExterna: suscripcionId };
+export async function crearSuscripcion({ accesoId }) {
+  return { estadoConexion: 'pendiente', referenciaExterna: accesoId };
 }
 
 export async function cancelarSuscripcion() {

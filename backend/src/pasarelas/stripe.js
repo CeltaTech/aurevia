@@ -17,9 +17,33 @@ function form(objeto) {
   return new URLSearchParams(objeto).toString();
 }
 
-export async function crearSuscripcion({ credencial, suscripcionId, monto, moneda, familiaId, emailPagador }) {
-  // Ver la nota de mercadopago.js: la moneda viene de la suscripción, sin valor por descarte.
-  if (!moneda) throw new Error('Falta la moneda de la suscripción');
+/** Cada cuánto cobra Stripe, dicho como lo pide él: `interval` con su `interval_count`. Las cuatro
+ *  unidades que la Prestadora puede elegir tienen las cuatro su equivalente, así que acá no hay
+ *  ninguna cuenta que hacer. */
+const INTERVALO_STRIPE = { dia: 'day', semana: 'week', mes: 'month', anio: 'year' };
+
+function recurrenciaStripe(periodo) {
+  const cantidad = periodo?.cantidad;
+  const intervalo = INTERVALO_STRIPE[periodo?.unidad];
+  if (!cantidad || !periodo?.unidad) {
+    throw new Error('Falta cada cuánto se cobra esta forma de cobro');
+  }
+  if (!intervalo) throw new Error(`unidad de período desconocida: ${periodo.unidad}`);
+  return { 'recurring[interval]': intervalo, 'recurring[interval_count]': cantidad };
+}
+
+export async function crearSuscripcion({
+  credencial,
+  accesoId,
+  monto,
+  moneda,
+  periodo,
+  familiaId,
+  emailPagador,
+}) {
+  // Ver la nota de mercadopago.js: la moneda viene del acceso, sin valor por descarte.
+  if (!moneda) throw new Error('Falta la moneda del acceso');
+  const recurrencia = recurrenciaStripe(periodo);
   // Stripe crea igual un cliente sin correo, pero entonces no le manda ningún comprobante a la
   // Familia y el cobro le aparece en el resumen sin haber recibido nada. Se corta acá, con el
   // mismo criterio que la moneda: falta un dato del que depende el cobro.
@@ -27,21 +51,21 @@ export async function crearSuscripcion({ credencial, suscripcionId, monto, moned
 
   const cliente = await llamar('/customers', credencial, {
     email: emailPagador,
-    'metadata[suscripcion_id]': suscripcionId,
+    'metadata[acceso_id]': accesoId,
     'metadata[familia_id]': familiaId,
   });
 
   const precio = await llamar('/prices', credencial, {
     'currency': moneda.toLowerCase(),
     'unit_amount': Math.round(monto * 100),
-    'recurring[interval]': 'month',
+    ...recurrencia,
     'product_data[name]': `Suscripción ${IDENTIDAD.nombre} Marketplace`,
   });
 
   const suscripcion = await llamar('/subscriptions', credencial, {
     customer: cliente.id,
     'items[0][price]': precio.id,
-    'metadata[suscripcion_id]': suscripcionId,
+    'metadata[acceso_id]': accesoId,
   });
 
   return {

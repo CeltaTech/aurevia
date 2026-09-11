@@ -341,6 +341,37 @@ real (15 policies, incluyendo el patrón OR-de-dos-EXISTS de
 `guardia_saliente_id IS NULL`). Sigue sin existir ninguna ruta backend ni pantalla de Panel
 que consuma estas tablas.
 
+**Marketplace — cómo cobra la Prestadora y qué tiene habilitado la Familia.** Son dos tablas y
+se leen juntas. `formas_de_cobro_marketplace` guarda las piezas con las que cada Prestadora arma
+su forma de cobrar —qué importe, cada cuánto, con qué período gratuito, con qué saldo de
+contactos, si se renueva sola—; `accesos_marketplace`, a qué forma se adhirió cada Familia, con
+qué importe congelado, hasta qué fecha y con cuántos contactos. La primera la administra
+únicamente la Admin de esa Prestadora, y la Familia alcanza sólo las que están ofrecidas:
+
+```sql
+CREATE POLICY prestadora_administra_sus_formas_de_cobro ON formas_de_cobro_marketplace
+  FOR ALL USING (
+    prestadora_id = interno.current_tenant()
+    AND EXISTS (SELECT 1 FROM usuarios u WHERE u.id = auth.uid() AND u.rol = 'admin_prestadora')
+  );
+
+CREATE POLICY familia_ve_las_formas_ofrecidas ON formas_de_cobro_marketplace
+  FOR SELECT USING (
+    ofrecida
+    AND prestadora_id = (SELECT f.prestadora_id FROM familias f
+                         WHERE f.id = interno.familia_id_de_usuario(auth.uid()))
+  );
+```
+
+La columna `ofrecida` es parte del control de acceso, no una preferencia de pantalla: una forma
+que la Prestadora dejó de ofrecer desaparece de la vista de la Familia, y los accesos que ya se
+adhirieron a ella siguen apuntando a su fila. Las demás tablas de la modalidad conservan el mismo
+reparto de siempre —`familia_ve_su_acceso_marketplace` / `prestadora_ve_accesos_marketplace`,
+`familia_ve_los_cobros_de_su_acceso` / `prestadora_ve_cobros_marketplace` /
+`panel_registra_cobro_efectivo_manual`, y las tres de `qr_cobro_efectivo`—, renombradas al pasar
+de suscripción a acceso. Ninguna Familia ve el acceso ni el cobro de otra, y ninguna Prestadora
+ve nada de otra Prestadora.
+
 **Pendiente de decisión, no bloquea desarrollo:** `guardias_tracking_gps` guarda histórico de
 posiciones GPS del Asistente durante una guardia activa — esto es un dato personal sensible
 bajo Ley 25.326 (geolocalización de una persona física). Falta definir política de retención
@@ -378,6 +409,8 @@ negocio y de presupuesto, no bloquea el desarrollo de las etapas 1-2.
 - Proveedor de reconocimiento facial para la etapa de verificación de identidad del Proceso
   de Incorporación de Asistentes: no elegido.
 - Si se automatiza la consulta de antecedentes penales: proveedor no elegido.
-- Modelo de pagos (ver `CONTEXT.md` y `DATA_MODEL.md`): no hay decisión de negocio, por lo
-  tanto tampoco hay decisión de seguridad de datos de pago (tokenización, PCI DSS scope).
-  No construir nada de esto hasta que exista un PRD de pagos aprobado.
+- Cómo la Prestadora le cobra a la Familia el cuidado prestado **en prestación directa**: no hay
+  decisión de negocio, y por lo tanto tampoco de seguridad de datos de pago. En la modalidad
+  Marketplace sí está resuelto y construido (`docs/PRD_07_Modalidad_Marketplace.md`): el cobro lo
+  hace una pasarela y el producto no guarda nunca un dato de tarjeta — sólo el identificador que
+  devuelve el proveedor.

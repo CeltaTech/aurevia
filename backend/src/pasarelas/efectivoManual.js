@@ -5,8 +5,8 @@
 // ambos casos insertan directo en `cobros_marketplace` con `estado_cobro = 'exitoso'` desde
 // la ruta que llama, este adaptador no tiene nada que confirmar de forma asíncrona.
 
-export async function crearSuscripcion({ suscripcionId }) {
-  return { estadoConexion: 'exitoso', referenciaExterna: suscripcionId };
+export async function crearSuscripcion({ accesoId }) {
+  return { estadoConexion: 'exitoso', referenciaExterna: accesoId };
 }
 
 export async function cancelarSuscripcion() {

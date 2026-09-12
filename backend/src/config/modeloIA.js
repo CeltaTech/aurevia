@@ -4,9 +4,9 @@
 // La regla de la empresa lo pide con estas palabras: «El nombre del modelo de IA vive en un solo
 // lugar, sobreescribible por variable de entorno. Nunca escrito a mano en cada archivo que lo
 // usa» (`celtatech/CLAUDE.md` §8). Todo lo que habla con el modelo —`alertasIA.js`,
-// `iaWhatsapp.js`, `importacionIA.js`, `reporteIA.js` y `verificarPreciosIA.js`— lo toma de acá y
-// no lo escribe a mano: escrito en cada uno, cambiarlo sería acordarse de cinco archivos, y
-// olvidarse de uno dejaría a una parte del motor hablando con otro modelo sin que nada avisara.
+// `iaWhatsapp.js`, `importacionIA.js` y `reporteIA.js`— lo toma de acá y no lo escribe a mano:
+// escrito en cada uno, cambiarlo sería acordarse de cuatro archivos, y olvidarse de uno dejaría a
+// una parte del motor hablando con otro modelo sin que nada avisara.
 //
 // ----------------------------------------------------------------------------
 // Por qué se puede cambiar desde afuera
@@ -24,11 +24,9 @@
 // Lo que hay que mirar al cambiarlo
 // ----------------------------------------------------------------------------
 //
-// El costo de cada llamada sale de la tabla `precios_ia_modelo`, buscando por proveedor y por
-// **nombre de modelo** (`utils/registrarUsoIA.js`). Si se apunta a un modelo que no tiene precio
-// cargado, las llamadas siguen funcionando y el costo deja de registrarse, con un renglón en el
-// registro del servidor que lo dice. O sea: al cambiar de modelo hay que cargarle el precio, o el
-// consumo de ese período queda sin contabilizar.
+// El consumo de cada llamada queda medido en tokens, con el nombre del modelo al lado
+// (`utils/registrarUsoIA.js`). Al cambiar de modelo no hay nada que configurar: el medidor anota
+// igual, y el nombre nuevo aparece en el conteo desde la primera llamada.
 
 /** El nombre del modelo escrito en el código. Es el que se usa si nadie pone la variable. */
 const MODELO_POR_DEFECTO = 'claude-sonnet-5';

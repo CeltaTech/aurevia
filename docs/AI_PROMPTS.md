@@ -7,10 +7,9 @@
 
 **Con qué modelo se habla no se decide en estos prompts.** El nombre del modelo vive en un solo
 lugar, `backend/src/config/modeloIA.js`, y se puede cambiar desde afuera con la variable de entorno
-`MODELO_IA` sin tocar código. Los cinco archivos que llaman a la IA lo importan de ahí; ninguno lo
-escribe. Al apuntar a un modelo distinto hay que cargarle el precio en `precios_ia_modelo`, porque
-el costo de cada llamada se busca por nombre de modelo (`backend/src/utils/registrarUsoIA.js`) y
-sin precio cargado esas llamadas quedan sin contabilizar.
+`MODELO_IA` sin tocar código. Los cuatro archivos que llaman a la IA lo importan de ahí; ninguno lo
+escribe. El consumo de cada llamada queda medido en tokens, con el nombre del modelo al lado
+(`backend/src/utils/registrarUsoIA.js`), sin ninguna configuración previa.
 
 ## Nivel 1 — Reporte inteligente
 
@@ -129,7 +128,8 @@ Vale para todo texto en prosa que se devuelva, incluido el que va adentro de un 
 Debajo del bloque, cada prompt agrega **qué campos suyos lee una persona**, para que el
 modelo sepa a dónde apunta la regla.
 
-**Los cuatro archivos que lo llevan** (todos en `backend/src/utils/`):
+**Los cuatro archivos que lo llevan**, que son todos los que hablan con el modelo (todos en
+`backend/src/utils/`):
 
 | Archivo | Qué campos lee una persona |
 | --- | --- |
@@ -137,9 +137,6 @@ modelo sepa a dónde apunta la regla.
 | `alertasIA.js` (Nivel 2) | `descripcion` (la Familia), `detalle_coordinador` |
 | `iaWhatsapp.js` | `respuesta_sugerida` (va al teléfono tal cual), `motivo` |
 | `importacionIA.js` (dos prompts) | `motivo`, `advertencias` (en pantalla del Panel) |
-
-El quinto, `verificarPreciosIA.js`, queda afuera a propósito: devuelve solo números y ninguna
-persona lee su salida.
 
 **Los prompts tampoco se escriben tuteando al modelo.** Un prompt redactado con "marcá",
 "respondé", "podés" lo empuja a contestar en ese mismo registro. Van en forma impersonal.

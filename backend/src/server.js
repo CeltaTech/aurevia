@@ -15,7 +15,6 @@ import { panelUsuariosRouter } from './routes/panelUsuarios.js';
 import { panelSesionTenantRouter } from './routes/panelSesionTenant.js';
 import { panelAuditoriaRouter } from './routes/panelAuditoria.js';
 import { panelPrestadorasRouter } from './routes/panelPrestadoras.js';
-import { panelCostosIARouter } from './routes/panelCostosIA.js';
 import { panelAusenciasRouter } from './routes/panelAusencias.js';
 import { panelConfiguracionRouter } from './routes/panelConfiguracion.js';
 import { panelImportacionRouter } from './routes/panelImportacion.js';
@@ -54,7 +53,6 @@ import { panelComprobacionesRouter } from './routes/panelComprobaciones.js';
 import { webhooksPasarelasRouter } from './routes/webhooksPasarelas.js';
 import { revisarAlertasIA } from './utils/revisarAlertasIA.js';
 import { revisarAvisosAutomaticosCese } from './utils/avisoAutomaticoCese.js';
-import { verificarPreciosIA } from './utils/verificarPreciosIA.js';
 import { responderError } from './utils/errorConMotivo.js';
 
 const app = express();
@@ -115,7 +113,6 @@ app.use('/api/panel/usuarios', panelUsuariosRouter);
 app.use('/api/panel/sesion-tenant', panelSesionTenantRouter);
 app.use('/api/panel/auditoria', panelAuditoriaRouter);
 app.use('/api/panel/prestadoras', panelPrestadorasRouter);
-app.use('/api/panel/costos-ia', panelCostosIARouter);
 app.use('/api/panel/ausencias', panelAusenciasRouter);
 app.use('/api/panel/configuracion', panelConfiguracionRouter);
 app.use('/api/panel/importacion', panelImportacionRouter);
@@ -208,14 +205,6 @@ revisarLlegadasDemoradas().catch((err) => console.error('Error en revisión inic
 setInterval(() => {
   revisarLlegadasDemoradas().catch((err) => console.error('Error en revisión de llegadas demoradas:', err.message));
 }, CINCO_MINUTOS_MS);
-
-// Verificación mensual de precios de IA (pendiente #84, docs/PLAN_HASTA_PRODUCCION.md) — la función
-// misma revisa internamente si hoy es el día del mes que corresponde, por eso el chequeo
-// corre con la misma cadencia diaria que revisarVencimientos.
-verificarPreciosIA().catch((err) => console.error('Error en verificación inicial de precios de IA:', err.message));
-setInterval(() => {
-  verificarPreciosIA().catch((err) => console.error('Error en verificación de precios de IA:', err.message));
-}, UN_DIA_MS);
 
 // El cobro de cada período de los accesos del Marketplace, en los rieles que no cobran solos. El
 // período más corto que una forma de cobro puede tener es de un día, así que corre con la misma

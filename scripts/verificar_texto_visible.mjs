@@ -85,7 +85,6 @@ const INSTRUCCIONES_PARA_LA_IA = [
   'backend/src/utils/importacionIA.js',
   'backend/src/utils/reporteIA.js',
   'backend/src/utils/tratoIA.js',
-  'backend/src/utils/verificarPreciosIA.js',
 ];
 
 // ---------------------------------------------------------------------------

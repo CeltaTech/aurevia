@@ -39,7 +39,6 @@ import { Continuidad } from './pages/Continuidad';
 import { ListaPrecios } from './pages/ListaPrecios';
 import { UsuariosPanel } from './pages/UsuariosPanel';
 import { Prestadoras } from './pages/Prestadoras';
-import { CostosIA } from './pages/CostosIA';
 import { Configuracion } from './pages/Configuracion';
 import { ConfiguracionPrestadora } from './pages/configuracion/LaPrestadora';
 import { ConfiguracionAsistentes } from './pages/configuracion/Asistentes';
@@ -135,7 +134,6 @@ function App() {
                     <Route path="informes-obra-social" element={<InformesObraSocial />} />
                     <Route path="usuarios-panel" element={<ProtectedRoute soloAdmin><UsuariosPanel /></ProtectedRoute>} />
                     <Route path="prestadoras" element={<ProtectedRoute roles={['superadmin']}><Prestadoras /></ProtectedRoute>} />
-                    <Route path="costos-ia" element={<ProtectedRoute roles={['superadmin']}><CostosIA /></ProtectedRoute>} />
                     {/* Configuración dejó de ser una pantalla sola con trece solapas: son
                         secciones, cada una con su propia dirección, para poder entrar derecho a
                         la que uno busca y guardarse el enlace. El candado de administrador está

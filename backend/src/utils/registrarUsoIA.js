@@ -1,55 +1,43 @@
 import { supabase } from '../db/connection.js';
 
-// Punto único de verdad para calcular el costo real de una llamada a la IA (CLAUDE.md
-// §7.12 — evita repetir esta cuenta en alertasIA.js/reporteIA.js/importacionIA.js/
-// iaWhatsapp.js) y para el pendiente #84 (docs/PLAN_HASTA_PRODUCCION.md): registro de uso de IA por
-// Prestadora, nunca visible en el panel de la propia Prestadora (CLAUDE.md §2).
+// El medidor de consumo de IA
+// ============================================================================
 //
-// El costo nunca se estima ni se hardcodea (CLAUDE.md §7.10): se toma tokens_entrada/
-// tokens_salida real que devuelve la respuesta de Anthropic y se multiplica por el precio
-// vigente en precios_ia_modelo a la fecha de la llamada (no el precio actual si la llamada
-// fuera reprocesada después).
+// Anota, por Prestadora, cuántos tokens gastó cada llamada a la inteligencia artificial, con qué
+// módulo se hizo y contra qué modelo. Es un contador y nada más: acá no hay ningún precio ni
+// ningún importe.
 //
-// Si el registro falla (tabla caída, precio no cargado, etc.) nunca corta el flujo
-// principal — guardar el reporte/alerta/mapeo/respuesta de WhatsApp importa más que
-// contabilizar su costo; el error solo queda en el log del backend.
+// **Y esa es la regla, no una simplificación.** El producto declara lo que sabe hacer y mide lo
+// que consumió; cuánto vale ese consumo, cómo se reparte y a quién se le cobra es de CeltaTech y
+// vive en su panel (`celtatech/CLAUDE.md` §2). Con la tabla de precios adentro del producto, el
+// mismo precio terminaba escrito de los dos lados, con dos respuestas posibles para la misma
+// pregunta.
+//
+// Lo que había acá —la tabla de precios por millón de tokens, la vigilancia mensual de los
+// precios del proveedor, la columna del importe y la pantalla que lo mostraba— funcionaba bien y
+// está guardado entero en el estante de la empresa, en
+// `Codigos-utiles/vigilancia-del-precio-de-la-ia/`, con su documento de cómo se vuelve a poner.
+//
+// **Antes no se registraba nada cuando no había precio cargado**, así que la medición dependía de
+// una configuración comercial y hoy la tabla está vacía. Ahora el conteo entra siempre: es lo
+// único que el producto tiene que saber, y lo sabe sin que nadie configure nada.
+//
+// Si el registro falla nunca corta el flujo principal — guardar el reporte, la alerta, el mapeo o
+// la respuesta de WhatsApp importa más que contar su consumo; el error queda en el registro del
+// motor.
 export async function registrarUsoIA({ prestadoraId, modulo, modelo, proveedor = 'anthropic', respuestaAnthropic }) {
   try {
-    const tokensEntrada = respuestaAnthropic?.usage?.input_tokens ?? 0;
-    const tokensSalida = respuestaAnthropic?.usage?.output_tokens ?? 0;
-    const ahoraISO = new Date().toISOString().slice(0, 10);
-
-    const { data: precio, error: errorPrecio } = await supabase
-      .from('precios_ia_modelo')
-      .select('precio_entrada_usd_por_millon, precio_salida_usd_por_millon')
-      .eq('proveedor', proveedor)
-      .eq('modelo', modelo)
-      .lte('vigente_desde', ahoraISO)
-      .order('vigente_desde', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (errorPrecio || !precio) {
-      console.error(`registrarUsoIA: sin precio cargado para ${proveedor}/${modelo} — no se registra el costo de esta llamada`);
-      return;
-    }
-
-    const costoUsd =
-      (tokensEntrada / 1_000_000) * Number(precio.precio_entrada_usd_por_millon) +
-      (tokensSalida / 1_000_000) * Number(precio.precio_salida_usd_por_millon);
-
-    const { error: errorInsert } = await supabase.from('uso_ia').insert({
+    const { error } = await supabase.from('uso_ia').insert({
       prestadora_id: prestadoraId,
       modulo,
       proveedor,
       modelo,
-      tokens_entrada: tokensEntrada,
-      tokens_salida: tokensSalida,
-      costo_usd: costoUsd,
+      tokens_entrada: respuestaAnthropic?.usage?.input_tokens ?? 0,
+      tokens_salida: respuestaAnthropic?.usage?.output_tokens ?? 0,
     });
 
-    if (errorInsert) {
-      console.error('registrarUsoIA: error al insertar uso_ia:', errorInsert.message);
+    if (error) {
+      console.error('registrarUsoIA: error al insertar uso_ia:', error.message);
     }
   } catch (err) {
     console.error('registrarUsoIA: error inesperado:', err.message);

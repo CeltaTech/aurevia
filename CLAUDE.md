@@ -101,9 +101,7 @@ alguna se despegó. Nunca una copia editada a mano.
 
 **La moneda de cada importe se completa sola.** La de la Prestadora está en `prestadoras.moneda`,
 nace del país configurado y se cambia desde Configuración; la de cada importe, en la columna
-`moneda` de su tabla, que la función `public.moneda_de_prestadora` completa al insertar. Los gastos
-propios de CeltaTech, siempre en dólares, llevan la moneda en el nombre (`costo_usd`) y no se
-renombran.
+`moneda` de su tabla, que la función `public.moneda_de_prestadora` completa al insertar.
 
 **Alcance, para que la regla de la moneda no se estire:** Careonys **no emite comprobantes
 fiscales y no está previsto que lo haga.** No hay tipo de comprobante, ni punto de venta, ni

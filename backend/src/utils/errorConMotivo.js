@@ -77,6 +77,13 @@ const ESTADO_POR_MOTIVO = {
   dias_gratis_invalido: 400,
   contactos_incluidos_invalido: 400,
   renovacion_sin_periodo: 400,
+  // La baja en un clic de un acceso del Marketplace. El acceso que no existe y el que es de otra
+  // Familia contestan lo mismo: desde afuera se tienen que ver iguales. La forma que no se renueva
+  // es 409 por lo mismo que el correo ya tomado —el pedido está bien armado y choca con lo que esa
+  // forma es—, y no nombra ninguna columna. Los demás motivos de la baja no están acá a propósito:
+  // caen en 500, que es lo honesto, porque son fallas de este lado o del proveedor.
+  acceso_inexistente: 404,
+  forma_que_no_se_renueva: 409,
   // El tope de pedidos por minuto (pendiente #177). Es el mismo 429 que los intentos agotados,
   // porque para la web es la misma situación —"probó demasiadas veces"—, pero el motivo es otro
   // y la pantalla dice otra cosa: los intentos agotados no se arreglan esperando, y esto sí.

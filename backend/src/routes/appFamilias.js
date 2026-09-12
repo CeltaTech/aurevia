@@ -13,9 +13,10 @@ import { guardarSuscripcionPush } from '../utils/suscripcionesPush.js';
 import { accesosDelPedido, exigeDelCirculo, soloElTitular, visibilidadDeLaPersona } from '../utils/accesosDelCirculo.js';
 import { instruccionPendiente, pedirCodigo, confirmarConCodigo } from '../utils/instruccionesCirculo.js';
 import { codigoParaMostrar } from '../utils/comprobacionDePresencia.js';
-import { responderError } from '../utils/errorConMotivo.js';
+import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { llegadaEstimadaDeGuardia } from '../utils/estimarLlegadaDeGuardia.js';
+import { darDeBajaElAcceso } from '../utils/bajaDelAcceso.js';
 
 export const appFamiliasRouter = Router();
 
@@ -801,12 +802,45 @@ appFamiliasRouter.delete('/push/suscribir', requiereRolFamilia, async (req, res)
 appFamiliasRouter.get('/acceso/:pacienteId', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), exigeDelCirculo('circulo_dinero'), async (req, res) => {
   const { data, error } = await supabase
     .from('accesos_marketplace')
-    .select('id, estado, importe, gratis_hasta, proximo_cobro, cancelada_en')
+    .select(
+      'id, estado, importe, gratis_hasta, proximo_cobro, cancelada_en, vigente_hasta, ' +
+        'formas_de_cobro_marketplace(renueva_sola)'
+    )
     .eq('familia_id', req.usuarioFamilia.familiaId)
     .eq('paciente_id', req.params.pacienteId)
     .maybeSingle();
   if (error) return responderError(res, error);
-  res.json({ acceso: data });
+  // La pantalla necesita saber si hay renovación que apagar para decidir si ofrece la baja, y no
+  // tiene por qué recibir la forma de cobro entera para eso.
+  const acceso = data
+    ? {
+        ...sinLaFormaDeCobro(data),
+        renueva_sola: Boolean(data.formas_de_cobro_marketplace?.renueva_sola),
+      }
+    : data;
+  res.json({ acceso });
+});
+
+function sinLaFormaDeCobro({ formas_de_cobro_marketplace: _forma, ...resto }) {
+  return resto;
+}
+
+// La baja en un clic del §3.2 del `docs/PRD_07_Modalidad_Marketplace.md`: la hace quien paga, sin
+// pedírselo a nadie. Qué apaga y qué conserva lo decide `utils/bajaDelAcceso.js`, que es el único
+// lugar por donde un acceso se da de baja; acá sólo se comprueba quién llama.
+appFamiliasRouter.post('/acceso/:accesoId/baja', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), exigeDelCirculo('circulo_dinero'), async (req, res) => {
+  const resultado = await darDeBajaElAcceso({
+    accesoId: req.params.accesoId,
+    familiaId: req.usuarioFamilia.familiaId,
+  });
+
+  if (!resultado.ok) {
+    // El motivo es un código y la frase vive en las traducciones; qué número de respuesta le
+    // toca a cada uno lo decide `utils/errorConMotivo.js`, que es el único lugar que lo sabe.
+    return responderError(res, new ErrorConMotivo(resultado.motivo, resultado.detalle));
+  }
+
+  res.json({ baja: resultado.baja, ya_estaba: Boolean(resultado.yaEstaba) });
 });
 
 appFamiliasRouter.post('/qr-cobro', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), exigeDelCirculo('circulo_dinero'), async (req, res) => {

@@ -45,6 +45,9 @@ export const api = {
   accesoMarketplace: (pacienteId) => pedido(`/acceso/${pacienteId}`),
   generarQrCobro: (datos) => pedido('/qr-cobro', { method: 'POST', body: JSON.stringify(datos) }),
   estadoQrCobro: (id) => pedido(`/qr-cobro/${id}`),
+  // La baja en un clic. Apaga la renovación y no corta nada de lo que ya está pagado: hasta
+  // cuándo alcanza vuelve en la respuesta, para poder decirlo sin volver a preguntar.
+  darDeBajaAcceso: (accesoId) => pedido(`/acceso/${accesoId}/baja`, { method: 'POST' }),
   indicacionesMedicacion: (pacienteId) => pedido(`/medicacion/${pacienteId}`),
   crearIndicacionMedicacion: (pacienteId, formData) => pedido(`/medicacion/${pacienteId}`, { method: 'POST', body: formData }),
   // La instrucción del círculo familiar que el titular todavía no firmó. El perfil ya avisa que

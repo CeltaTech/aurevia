@@ -39,6 +39,11 @@ export const T = {
         sin_codigo: 'Todavía no se pidió ningún código. Hace falta pedirlo primero.',
         ya_cerrada: 'Esa instrucción ya está firmada. No queda nada por confirmar.',
         no_encontrado: 'No se encontró esa instrucción. Conviene volver a abrir la pantalla.',
+        // Los dos de la baja del acceso. Ninguno es una falla: el primero pasa cuando la pantalla
+        // quedó vieja, y el segundo cuando esa forma de cobro no se renueva sola y entonces no hay
+        // nada que apagar.
+        acceso_inexistente: 'No se encontró ese acceso. Conviene volver a abrir la pantalla.',
+        forma_que_no_se_renueva: 'Ese acceso no se renueva solo, así que no hay nada que dar de baja.',
         // Los de la activación de la cuenta. Son cinco frases distintas porque son cinco
         // problemas distintos y cada uno se sale de una manera: el enlace equivocado se abre
         // de nuevo desde el correo, el ya usado se saltea entrando derecho, y el vencido
@@ -273,6 +278,15 @@ export const T = {
       qr_cobrado: 'Cobro confirmado, ¡gracias!',
       qr_vencido: 'Este código venció. Hace falta generar uno nuevo.',
       qr_generar_otro: 'Generar otro código',
+      // La baja se hace en un clic y sin pedírsela a nadie. Lo que hay que leer antes está arriba
+      // del botón: qué se apaga y qué se conserva.
+      baja_titulo: 'Dar de baja',
+      baja_explicacion: 'Deja de cobrarse desde el próximo período. Lo que ya está pagado se conserva hasta el final de ese período.',
+      baja_boton: 'Dar de baja',
+      dando_de_baja: 'Dando de baja…',
+      baja_hecha: 'La baja quedó registrada. No se vuelve a cobrar.',
+      baja_hasta: 'El acceso sigue disponible hasta el {fecha}.',
+      baja_cancelada_el: 'Dada de baja el {fecha}.',
     },
     perfil: {
       titulo: 'Mi Perfil',
@@ -385,6 +399,8 @@ export const T = {
         sin_codigo: 'No code has been requested yet. Please request one first.',
         ya_cerrada: 'That instruction is already signed. There is nothing left to confirm.',
         no_encontrado: 'That instruction could not be found. Please open the screen again.',
+        acceso_inexistente: 'That access could not be found. Please open the screen again.',
+        forma_que_no_se_renueva: 'That access does not renew on its own, so there is nothing to cancel.',
         faltan_datos: 'Some information is missing. Please open the link from the email again and enter the password once more.',
         password_debil: 'The password must be at least 8 characters long.',
         token_invalido: 'This activation link is not valid. Try opening it again from the email, or ask for a new invitation.',
@@ -589,6 +605,13 @@ export const T = {
       qr_cobrado: 'Payment confirmed, thank you!',
       qr_vencido: 'This code expired. Generate a new one.',
       qr_generar_otro: 'Generate another code',
+      baja_titulo: 'Cancel',
+      baja_explicacion: 'Charging stops from the next period onwards. What has already been paid for is kept until the end of that period.',
+      baja_boton: 'Cancel',
+      dando_de_baja: 'Cancelling…',
+      baja_hecha: 'The cancellation is on record. There will be no further charges.',
+      baja_hasta: 'Access remains available until {fecha}.',
+      baja_cancelada_el: 'Cancelled on {fecha}.',
     },
     perfil: {
       titulo: 'My Profile',
@@ -691,6 +714,8 @@ export const T = {
         sin_codigo: 'Ainda não foi pedido nenhum código. É preciso pedi-lo primeiro.',
         ya_cerrada: 'Essa instrução já está assinada. Não resta nada a confirmar.',
         no_encontrado: 'Não foi encontrada essa instrução. Convém abrir a tela de novo.',
+        acceso_inexistente: 'Não foi encontrado esse acesso. Convém abrir a tela de novo.',
+        forma_que_no_se_renueva: 'Esse acesso não se renova sozinho, portanto não há nada a cancelar.',
         faltan_datos: 'Faltam dados para ativar a conta. É preciso abrir novamente o link do email e digitar a senha de novo.',
         password_debil: 'A senha precisa ter pelo menos 8 caracteres.',
         token_invalido: 'Este link de ativação não é válido. Convém abri-lo novamente a partir do email ou pedir que reenviem o convite.',
@@ -895,6 +920,13 @@ export const T = {
       qr_cobrado: 'Pagamento confirmado, obrigado!',
       qr_vencido: 'Este código expirou. É preciso gerar um novo.',
       qr_generar_otro: 'Gerar outro código',
+      baja_titulo: 'Cancelar',
+      baja_explicacion: 'Deixa de ser cobrado a partir do próximo período. O que já está pago é mantido até o fim desse período.',
+      baja_boton: 'Cancelar',
+      dando_de_baja: 'Cancelando…',
+      baja_hecha: 'O cancelamento ficou registrado. Não se cobra de novo.',
+      baja_hasta: 'O acesso continua disponível até {fecha}.',
+      baja_cancelada_el: 'Cancelada em {fecha}.',
     },
     perfil: {
       titulo: 'Meu Perfil',

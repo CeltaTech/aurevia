@@ -136,6 +136,26 @@ implementación: hacerlo desde afuera —leer el saldo, restarle uno, volver a e
 dos ventanas abiertas a la vez descuenten una sola vez. El reparto de permisos de esas dos
 funciones está en `docs/SECURITY.md`.
 
+### 3.6 Cómo se da de baja un acceso
+
+**La hace quien paga, en un clic, desde su propia aplicación.** El botón está en la pantalla del
+acceso y no lleva una pantalla de confirmación detrás: darse de baja tiene que costar lo mismo que
+darse de alta. Lo que hay que saber antes de apretarlo está escrito arriba del botón, no en un
+cartel que haya que sacarse de encima.
+
+**Lo que la baja apaga es la renovación, no el acceso.** Deja de cobrarse desde el período
+siguiente y se le avisa al proveedor para que no cobre él tampoco; lo que ya está pagado se
+conserva hasta el final de ese período, y mientras tanto el acceso sigue funcionando igual. Cortar
+al llegar esa fecha es otra cosa y pasa en otro momento.
+
+**Primero el proveedor, después la base.** Si se anotara la baja de este lado y la llamada al
+proveedor fallara, quedaría alguien dado de baja acá y cobrado allá todos los meses. Por eso una
+falla del proveedor corta sin escribir nada y la baja se puede volver a intentar.
+
+**Sólo se da de baja lo que se renueva solo.** Un paquete se pagó una vez y lo que lo sostiene es
+su saldo: no hay renovación que apagar, y ofrecer una baja que no hace nada sería peor que no
+ofrecerla.
+
 ## 4. Qué sostiene el pago después del contacto
 
 Conseguido el Asistente, el contacto ya no hace falta. Lo que la Familia sigue usando es la

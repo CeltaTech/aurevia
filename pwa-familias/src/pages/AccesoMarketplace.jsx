@@ -19,6 +19,9 @@ export default function AccesoMarketplace() {
   const [qr, setQr] = useState(null);
   const [qrDataUrl, setQrDataUrl] = useState(null);
   const [cobrado, setCobrado] = useState(false);
+  const [dandoDeBaja, setDandoDeBaja] = useState(false);
+  const [baja, setBaja] = useState(null);
+  const [errorBaja, setErrorBaja] = useState('');
   const pollRef = useRef(null);
 
   const cargar = useCallback(() => {
@@ -65,6 +68,23 @@ export default function AccesoMarketplace() {
       setError(mensajeDeError(e, t, 'generar el QR de cobro'));
     } finally {
       setGenerando(false);
+    }
+  }
+
+  // La baja en un clic: un botón y nada más. No lleva una pantalla de confirmación a propósito —
+  // el §3.2 del PRD pide que cancelar sea tan fácil como darse de alta—, y lo que hay que saber
+  // antes de apretarlo está escrito arriba: qué se apaga y hasta cuándo sigue lo que ya se pagó.
+  async function darDeBaja() {
+    setDandoDeBaja(true);
+    setErrorBaja('');
+    try {
+      const { baja: hecha } = await api.darDeBajaAcceso(acceso.id);
+      setBaja(hecha);
+      cargar();
+    } catch (e) {
+      setErrorBaja(mensajeDeError(e, t, 'dar de baja el acceso'));
+    } finally {
+      setDandoDeBaja(false);
     }
   }
 
@@ -118,6 +138,36 @@ export default function AccesoMarketplace() {
                 <button type="button" className="btn btn-primary btn-full" onClick={generarQr} disabled={generando} style={{ marginTop: '1rem' }}>
                   {generando ? t.acceso.generando_qr : (qr ? t.acceso.qr_generar_otro : t.acceso.generar_qr_boton)}
                 </button>
+              )}
+            </div>
+          )}
+
+          {/* La baja sólo aparece donde hay una renovación que apagar. Una forma que se cobra una
+              sola vez no se da de baja: no hay nada que cancelar. */}
+          {acceso.renueva_sola && (
+            <div style={{ marginTop: '1.5rem' }}>
+              <h2>{t.acceso.baja_titulo}</h2>
+
+              {acceso.cancelada_en || baja ? (
+                <>
+                  <div className="alert alert-success" role="status">{t.acceso.baja_hecha}</div>
+                  <p className="guardia-card-detalle">
+                    {t.acceso.baja_cancelada_el.replace('{fecha}', (baja?.cancelada_en || acceso.cancelada_en).slice(0, 10))}
+                  </p>
+                  {(baja?.vigente_hasta || acceso.vigente_hasta || acceso.gratis_hasta) && (
+                    <p className="guardia-card-detalle">
+                      {t.acceso.baja_hasta.replace('{fecha}', baja?.vigente_hasta || acceso.vigente_hasta || acceso.gratis_hasta)}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="guardia-card-detalle">{t.acceso.baja_explicacion}</p>
+                  {errorBaja && <div className="alert alert-error" role="alert">{errorBaja}</div>}
+                  <button type="button" className="btn btn-secondary btn-full" onClick={darDeBaja} disabled={dandoDeBaja} style={{ marginTop: '1rem' }}>
+                    {dandoDeBaja ? t.acceso.dando_de_baja : t.acceso.baja_boton}
+                  </button>
+                </>
               )}
             </div>
           )}

@@ -236,7 +236,9 @@ y **cada Prestadora arma su propia forma de cobrar** con las piezas que el produ
 `accesos_marketplace`. El producto no elige por ella ni le fija precio ni duración: la política
 de comercialización es un dato de la Prestadora, no código. El saldo de contactos de un paquete
 se carga cuando entra la plata y se gasta de a un Asistente, con la cuenta hecha adentro de la
-base; el detalle está en `docs/PRD_07_Modalidad_Marketplace.md` §3.5.
+base; el detalle está en `docs/PRD_07_Modalidad_Marketplace.md` §3.5. Y una forma que se renueva
+sola se da de baja en un clic desde la aplicación de la Familia: apaga la renovación y conserva
+el período ya pagado hasta el final (§3.6).
 
 ## Changelog de este documento
 

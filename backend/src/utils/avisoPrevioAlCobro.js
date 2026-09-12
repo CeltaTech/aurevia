@@ -28,7 +28,8 @@
 
 import { supabase } from '../db/connection.js';
 import { enviarPushFamilia } from './push.js';
-import { sumarDias } from './cobrosMarketplace.js';
+import { sumarDias } from './fechas.js';
+import { enDia, importeConMoneda } from './comoSeDiceEnUnAviso.js';
 
 /** Con cuántos días de anticipación se avisa. Lo decide este producto, no la Prestadora: es el
  *  resguardo del §3.2 y no una preferencia de cómo trabaja cada una. Tres días alcanzan para darse
@@ -109,18 +110,4 @@ export function textoDelAviso(acceso) {
       'Si prefiere no continuar, puede darse de baja antes desde la aplicación.',
     url: acceso.paciente_id ? `/pacientes/${acceso.paciente_id}/acceso` : '/',
   };
-}
-
-/** La fecha dicha como se dice en el día a día. Se arma a mano y no con el formateador del sistema
- *  operativo, porque el motor corre en un servidor cuya configuración no es la de quien lee. */
-function enDia(fechaISO) {
-  const [anio, mes, dia] = String(fechaISO).slice(0, 10).split('-');
-  return `${Number(dia)}/${Number(mes)}/${anio}`;
-}
-
-/** Nunca un número suelto: todo importe se muestra con su moneda (`celtatech\CLAUDE.md` §8). */
-function importeConMoneda(acceso) {
-  const importe = Number(acceso.importe);
-  const numero = Number.isFinite(importe) ? importe.toFixed(2) : acceso.importe;
-  return [numero, acceso.moneda].filter(Boolean).join(' ');
 }

@@ -194,6 +194,26 @@ es lo que la baja consigue.
 **Este aviso no se puede apagar.** No está entre los que cada Prestadora enciende según cómo
 trabaja: es el resguardo del §3.2, y un aviso obligatorio que se pueda apagar no es obligatorio.
 
+### 3.9 Qué pasa cuando un cobro no entra
+
+**Un cobro que falla abre un período de gracia de siete días, y el acceso sigue funcionando.** La
+fecha en que se suspende se escribe el día de la primera falla, y desde ahí el acceso queda igual
+que estaba: la Familia sigue usándolo mientras dure.
+
+**Se avisa al abrirla, una vez.** El aviso dice cuánto no se pudo cobrar —con su moneda—, hasta qué
+día alcanza el acceso y que después queda suspendido, y lleva a la pantalla donde se paga.
+
+**Los reintentos los pone cada riel, y la gracia no se estira con ninguno.** Los que cobran solos
+reintentan de su lado y avisan por cada intento; a los que hay que armarles el cobro de cada
+período se lo vuelve a armar todos los días mientras la gracia dure. La fecha se escribe una vez y
+no se mueve: si cada reintento la corriera, el acceso no se suspendería nunca.
+
+**Llegado ese día sin que el cobro haya entrado, el acceso se suspende.** Lo hace el mismo trabajo
+diario del motor (§3.7), y vuelve a comprobar en ese instante que el cobro siga sin entrar.
+
+**Y cuando entra la plata, la gracia se cierra y el acceso vuelve a quedar vigente**, incluso si ya
+se lo había suspendido.
+
 ## 4. Qué sostiene el pago después del contacto
 
 Conseguido el Asistente, el contacto ya no hace falta. Lo que la Familia sigue usando es la

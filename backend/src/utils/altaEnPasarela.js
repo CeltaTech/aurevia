@@ -52,7 +52,7 @@
 
 import { supabase } from '../db/connection.js';
 import { obtenerAdaptador, proveedoresDisponibles } from '../pasarelas/index.js';
-import { sumarDias } from './cobrosMarketplace.js';
+import { sumarDias } from './fechas.js';
 
 /** Los motivos por los que un alta no se puede hacer. Son códigos, no frases: la frase que lee la
  *  persona vive en las traducciones del Panel, en los tres idiomas

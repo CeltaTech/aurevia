@@ -28,9 +28,11 @@ export function esFechaISO(texto) {
   return !Number.isNaN(fecha.getTime()) && fecha.toISOString().slice(0, 10) === texto;
 }
 
-/** Suma (o resta, con número negativo) días a una fecha `2026-08-20`. */
+/** Suma (o resta, con número negativo) días a una fecha `2026-08-20`. Se le puede pasar también un
+ *  momento guardado (`2026-08-20T23:59:59Z`): lo que se cuenta es el día, así que la hora se
+ *  descarta antes de empezar. */
 export function sumarDias(fechaISO, dias) {
-  const fecha = new Date(`${fechaISO}T00:00:00Z`);
+  const fecha = new Date(`${String(fechaISO).slice(0, 10)}T00:00:00Z`);
   fecha.setUTCDate(fecha.getUTCDate() + dias);
   return fecha.toISOString().slice(0, 10);
 }

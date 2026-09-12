@@ -33,8 +33,10 @@
    períodos por año.
 
    POR QUÉ ESTE TRABAJO NO SUSPENDE NADA. Armar un cobro no es cobrarlo. Que un cobro quede
-   pendiente y no entre es otro asunto —el período de gracia y los reintentos son un paso aparte del
-   plan— y acá no se toca el estado de ningún acceso por el paso del tiempo.
+   pendiente y no entre lo resuelve `periodoDeGracia.js`, y acá no se toca el estado de ningún
+   acceso por el paso del tiempo. Lo que sí sale de acá es el reintento de los rieles que no cobran
+   solos: mientras el acceso siga `vigente` —que es lo que la gracia sostiene— el cobro de un
+   período fallido se vuelve a armar todos los días.
 
    Y NO SE ARMA DOS VECES EL MISMO PERÍODO. El candado de verdad está en la base: un índice único
    parcial deja un solo cobro `pendiente` por acceso y período
@@ -44,6 +46,7 @@
 import { supabase } from '../db/connection.js';
 import { obtenerAdaptador, armaCobroPorPeriodo } from '../pasarelas/index.js';
 import { cargarContactosEnElSaldo } from './contactosMarketplace.js';
+import { sumarDias } from './fechas.js';
 
 /** Cuántos días vive el cupón de una red de cobranza extrabancaria. Quien decide hasta cuándo se
  *  puede pagar es este producto, no la red: un cupón sin vencimiento se paga tres meses tarde y el
@@ -205,6 +208,10 @@ export async function registrarCobroExitoso({ accesoId, periodo }) {
     .update({
       estado: 'vigente',
       proximo_cobro: proximoCobro,
+      // Entró la plata, así que la gracia que hubiera abierto un cobro fallido se cierra: si
+      // quedara puesta, el trabajo diario suspendería el acceso al llegar esa fecha por una falla
+      // que ya se resolvió (`periodoDeGracia.js`).
+      gracia_hasta: null,
       // Hasta cuándo alcanza lo que se acaba de pagar. Es el dato que después mira el corte al
       // fin del período pagado: sin él, cortar obligaría a rehacer la cuenta del cobro.
       ...(proximoCobro ? { vigente_hasta: proximoCobro } : {}),
@@ -275,12 +282,4 @@ export function sumarPeriodo(fechaISO, cantidad, unidad) {
   const ultimoDia = new Date(Date.UTC(anioFinal, mesFinal, 0)).getUTCDate();
   const diaFinal = Math.min(dia, ultimoDia);
   return `${anioFinal}-${String(mesFinal).padStart(2, '0')}-${String(diaFinal).padStart(2, '0')}`;
-}
-
-/** Fecha en formato `AAAA-MM-DD`, tantos días después. Se hace en UTC a propósito: son fechas sin
- *  hora, y hacerlo en la zona del servidor corre un día según a qué hora corra el trabajo. */
-export function sumarDias(fechaISO, dias) {
-  const base = new Date(`${fechaISO.slice(0, 10)}T00:00:00Z`);
-  base.setUTCDate(base.getUTCDate() + dias);
-  return base.toISOString().slice(0, 10);
 }

@@ -242,7 +242,9 @@ el período ya pagado hasta el final (§3.6); el acceso se apaga solo al llegar 
 trabajo diario del motor (§3.7). El período gratuito que cargó la Prestadora se convierte en una
 fecha el día del alta —la del primer cobro—, se le informa a los rieles que cobran solos, y ese
 mismo trabajo diario avisa al teléfono de quien paga unos días antes de que llegue: nunca un cobro
-silencioso (§3.8).
+silencioso (§3.8). Y un cobro que no entra no apaga nada en el acto: abre un período de gracia de
+siete días, se avisa una vez, cada riel reintenta mientras dura, y recién al llegar esa fecha sin
+que la plata haya entrado el acceso se suspende (§3.9).
 
 ## Changelog de este documento
 

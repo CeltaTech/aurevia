@@ -23,6 +23,7 @@ import { supabase } from '../db/connection.js';
 import { obtenerAdaptador, confirmaConsultando } from '../pasarelas/index.js';
 import { esRechazoDeAutenticidad, MOTIVO } from '../pasarelas/firmaWebhook.js';
 import { registrarCobroExitoso } from '../utils/cobrosMarketplace.js';
+import { abrirElPeriodoDeGracia } from '../utils/periodoDeGracia.js';
 
 export const webhooksPasarelasRouter = Router();
 
@@ -186,7 +187,10 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', async (req, res) => {
     // más cada mes, y el 31 de enero más un mes daba 3 de marzo.
     await registrarCobroExitoso({ accesoId, periodo });
   } else if (estadoFinal === 'fallido') {
-    await supabase.from('accesos_marketplace').update({ estado: 'vencida' }).eq('id', accesoId);
+    // Un cobro que no entra no suspende nada hoy: abre el período de gracia, se le avisa a la
+    // Familia y se sigue reintentando hasta que se termine (`utils/periodoDeGracia.js`). Es el
+    // resguardo del §3.2 del PRD del Marketplace, y acá se suspendía el mismo día.
+    await abrirElPeriodoDeGracia({ accesoId });
   }
 
   res.status(200).json({ ok: true });

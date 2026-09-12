@@ -104,7 +104,7 @@ process.env.COBRANZA_EFECTIVO_API_BASE = `http://127.0.0.1:${proveedorFalso.addr
 
 // El import va después de las variables de entorno: la conexión a la base y la dirección de cada
 // proveedor se arman en el momento en que se importa el archivo.
-const { armarCobrosDelPeriodo, registrarCobroExitoso, proximaFecha, sumarDias, sumarPeriodo } =
+const { armarCobrosDelPeriodo, registrarCobroExitoso, proximaFecha, sumarPeriodo } =
   await import('../cobrosMarketplace.js');
 
 const avisarDeVerdad = console.error;
@@ -224,20 +224,6 @@ describe('cada cuánto vuelve a cobrarse una forma de cobro', () => {
   });
 });
 
-describe('la fecha de vencimiento del cupón', () => {
-  it('son tantos días corridos después, y cruza de mes', () => {
-    assert.equal(sumarDias('2026-09-01', 10), '2026-09-11');
-    assert.equal(sumarDias('2026-01-25', 10), '2026-02-04');
-  });
-
-  it('cuenta en UTC, así no se corre un día según a qué hora corra el trabajo', () => {
-    // El trabajo diario corre a la hora que arrancó el servidor. Contando en la zona horaria de la
-    // máquina, el mismo cálculo da una fecha distinta según si son las 21 o las 03.
-    assert.equal(sumarDias('2026-09-01T23:59:59Z', 10), '2026-09-11');
-    assert.equal(sumarDias('2028-02-25', 10), '2028-03-06');
-  });
-});
-
 // ---------------------------------------------------------------------------
 // Entró la plata de un período
 // ---------------------------------------------------------------------------
@@ -258,6 +244,13 @@ describe('cuando un período se cobra', () => {
     assert.deepEqual(resultado, { ok: true, proximo_cobro: '2026-09-01', saldo_contactos: null });
     assert.equal(guardado().cuerpo.estado, 'vigente');
     assert.equal(guardado().cuerpo.proximo_cobro, '2026-09-01');
+  });
+
+  it('cierra la gracia que había abierto un cobro fallido', async () => {
+    // Entró la plata. Si la fecha quedara puesta, el trabajo diario de `periodoDeGracia.js`
+    // suspendería el acceso al llegar por una falla que ya se resolvió.
+    await registrarCobroExitoso({ accesoId: ACCESO, periodo: PERIODO });
+    assert.equal(guardado().cuerpo.gracia_hasta, null);
   });
 
   it('lo pagado queda vigente hasta el próximo cobro, no hasta una fecha aparte', async () => {

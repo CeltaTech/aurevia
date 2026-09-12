@@ -161,11 +161,13 @@ beforeEach(() => {
   respuestas.set('PATCH /rest/v1/accesos_marketplace', () => []);
   // Dos consultas distintas caen acá y se distinguen por el filtro: la ruta busca el acceso
   // **por la referencia del aviso** —y de fábrica no la encuentra, porque la de fábrica es la de
-  // un cobro—, y `registrarCobroExitoso` la lee **por su identificador** antes de moverla.
+  // un cobro—, y `registrarCobroExitoso` la lee **por su identificador** antes de moverla. Por ese
+  // mismo identificador la lee `abrirElPeriodoDeGracia` cuando el cobro no entra, y de ahí salen el
+  // estado y la gracia: un acceso vigente al que todavía no se le abrió ninguna.
   respuestas.set('GET /rest/v1/accesos_marketplace', (_cuerpo, url) =>
     url.includes('referencia_externa=eq.')
       ? []
-      : [{ id: ACCESO, proximo_cobro: PERIODO, formas_de_cobro_marketplace: CADA_MES }]
+      : [{ id: ACCESO, estado: 'vigente', gracia_hasta: null, proximo_cobro: PERIODO, formas_de_cobro_marketplace: CADA_MES }]
   );
   // Los tres rieles sin esquema publicado miran un secreto de ambiente cuando la Prestadora no
   // cargó el suyo. La máquina donde corre esto puede tenerlo puesto, así que cada prueba
@@ -357,14 +359,17 @@ describe('el aviso de Mercado Pago, que no dice si la plata entró', () => {
     assert.equal(escrituras().some((l) => l.clave.endsWith('/accesos_marketplace')), false);
   });
 
-  it('si el proveedor dice que se canceló, el cobro queda fallido y el acceso vencido', async () => {
+  it('si el proveedor dice que se canceló, el cobro queda fallido y el acceso entra en gracia', async () => {
     respuestaDelProveedor = { status: 'cancelled' };
     await avisarMercadoPago();
 
     const cobro = escrituras().find((l) => l.clave.endsWith('/cobros_marketplace'));
     assert.equal(cobro.cuerpo.estado_cobro, 'fallido');
     const acceso = escrituras().find((l) => l.clave.endsWith('/accesos_marketplace'));
-    assert.equal(acceso.cuerpo.estado, 'vencida');
+    // Acá se suspendía el mismo día. Ahora se le abre la gracia y el acceso queda como estaba
+    // (`utils/periodoDeGracia.js`).
+    assert.ok(acceso.cuerpo.gracia_hasta);
+    assert.equal(acceso.cuerpo.estado, undefined);
   });
 
   it('si no se puede preguntar, no se escribe nada: quedarse corto se arregla, cobrar de más no', async () => {
@@ -552,7 +557,7 @@ function sinCobroYConAcceso({ proximoCobro = PERIODO } = {}) {
   respuestas.set('GET /rest/v1/accesos_marketplace', (_cuerpo, url) =>
     url.includes('referencia_externa=eq.')
       ? [{ id: ACCESO, importe: MONTO_MENSUAL, proximo_cobro: proximoCobro }]
-      : [{ id: ACCESO, proximo_cobro: proximoCobro, formas_de_cobro_marketplace: CADA_MES }]
+      : [{ id: ACCESO, estado: 'vigente', gracia_hasta: null, proximo_cobro: proximoCobro, formas_de_cobro_marketplace: CADA_MES }]
   );
 }
 
@@ -602,13 +607,14 @@ describe('el aviso de un riel que cobra solo, con la referencia del acceso', () 
     assert.equal(escrituras().length, 0);
   });
 
-  it('un aviso fallido anota el período como fallido y deja el acceso vencido', async () => {
+  it('un aviso fallido anota el período como fallido y le abre la gracia al acceso', async () => {
     sinCobroYConAcceso();
     await avisar({ cuerpo: eventoStripe('invoice.payment_failed') });
 
     assert.equal(inserciones()[0].cuerpo.estado_cobro, 'fallido');
     const acceso = escrituras().find((l) => l.clave.endsWith('/accesos_marketplace'));
-    assert.equal(acceso.cuerpo.estado, 'vencida');
+    assert.ok(acceso.cuerpo.gracia_hasta);
+    assert.equal(acceso.cuerpo.estado, undefined);
   });
 
   it('sin cobro y sin acceso con esa referencia se contesta 200 y no se escribe nada', async () => {

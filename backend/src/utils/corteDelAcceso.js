@@ -16,9 +16,10 @@
    del período ya pagado. No hay corte inmediato».
 
    ACÁ SÓLO SE CORTA LO QUE SE DIO DE BAJA. Un acceso que no se dio de baja y al que se le pasó la
-   fecha no está terminado: está esperando que entre un cobro. Qué se hace con ése —cuántos días de
-   gracia tiene y cuántas veces se reintenta antes de suspenderlo— es otro paso del plan, y
-   decidirlo acá lo suspendería el primer día, que es el defecto que ese paso viene a corregir.
+   fecha no está terminado: está esperando que entre un cobro. De ése se ocupa `periodoDeGracia.js`,
+   que le da unos días y lo suspende recién si para entonces el cobro no entró. Son dos finales
+   distintos —uno lo pidió una persona y el otro es una deuda— y por eso no dejan el acceso en el
+   mismo estado.
 
    CUÁNDO SE CORTA. `vigente_hasta` es la fecha del cobro que no se va a hacer, o sea el primer día
    que ya no está pagado: se corta cuando llega, no al día siguiente. Si no hay ninguna fecha

@@ -35,6 +35,7 @@ import { revisarRecordatoriosPush } from './utils/revisarRecordatoriosPush.js';
 import { revisarGuardiasSinCubrir } from './utils/revisarGuardiasSinCubrir.js';
 import { revisarLlegadasDemoradas } from './utils/revisarLlegadasDemoradas.js';
 import { armarCobrosDelPeriodo } from './utils/cobrosMarketplace.js';
+import { cortarLosAccesosDadosDeBaja } from './utils/corteDelAcceso.js';
 import { whatsappWebhookRouter } from './routes/whatsappWebhook.js';
 import { appAsistentesRouter } from './routes/appAsistentes.js';
 import { appFamiliasRouter } from './routes/appFamilias.js';
@@ -221,6 +222,14 @@ setInterval(() => {
 armarCobrosDelPeriodo().catch((err) => console.error('Error en el armado inicial de cobros del Marketplace:', err.message));
 setInterval(() => {
   armarCobrosDelPeriodo().catch((err) => console.error('Error armando los cobros del Marketplace:', err.message));
+}, UN_DIA_MS);
+
+// El corte de los accesos del Marketplace a los que se les terminó el período pagado. Quien se da
+// de baja conserva lo pagado hasta el final, y este trabajo es el que apaga el acceso cuando llega
+// esa fecha. Se mide en días, así que corre con la misma cadencia diaria que revisarVencimientos.
+cortarLosAccesosDadosDeBaja().catch((err) => console.error('Error en el corte inicial de accesos del Marketplace:', err.message));
+setInterval(() => {
+  cortarLosAccesosDadosDeBaja().catch((err) => console.error('Error cortando accesos del Marketplace:', err.message));
 }, UN_DIA_MS);
 
 // Middleware de error único (pendiente #91) — punto único de verdad para toda excepción no

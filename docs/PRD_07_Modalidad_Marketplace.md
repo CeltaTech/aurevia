@@ -156,6 +156,16 @@ falla del proveedor corta sin escribir nada y la baja se puede volver a intentar
 su saldo: no hay renovación que apagar, y ofrecer una baja que no hace nada sería peor que no
 ofrecerla.
 
+### 3.7 Cuándo se apaga el acceso que se dio de baja
+
+**Al terminar el período que ya estaba pagado, no antes.** El acceso queda funcionando hasta la
+fecha del cobro que no se va a hacer, y ese día se apaga solo. Nadie tiene que apretar nada: lo
+hace un trabajo del sistema una vez por día.
+
+**Sólo se apaga lo que se dio de baja.** Un acceso al que se le pasó la fecha y nadie dio de baja
+no está terminado: está esperando que entre un cobro, y lo que le corresponde es el período de
+gracia con sus reintentos, que es otra cosa.
+
 ## 4. Qué sostiene el pago después del contacto
 
 Conseguido el Asistente, el contacto ya no hace falta. Lo que la Familia sigue usando es la

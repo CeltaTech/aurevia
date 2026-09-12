@@ -160,6 +160,13 @@ function guardado() {
   return llamadas.find((l) => l.clave === 'PATCH /rest/v1/accesos_marketplace');
 }
 
+/** Un día contado desde hoy, en el formato que guarda la base. */
+function enDias(dias) {
+  const fecha = new Date();
+  fecha.setUTCDate(fecha.getUTCDate() + dias);
+  return fecha.toISOString().slice(0, 10);
+}
+
 describe('el alta que sale bien', () => {
   it('crea el cobro en el proveedor y guarda lo que devolvió', async () => {
     const resultado = await darDeAlta();
@@ -214,6 +221,47 @@ describe('el alta que sale bien', () => {
     const cuerpo = cuerposAStripe.get(precio);
     assert.equal(cuerpo.get('recurring[interval]'), 'week');
     assert.equal(cuerpo.get('recurring[interval_count]'), '2');
+  });
+
+  it('guarda el período gratuito que armó la Prestadora, y el primer cobro al final de él', async () => {
+    // `dias_gratis` era un dato que la Prestadora cargaba y que no leía nadie: el período
+    // gratuito no existía. Las dos fechas se escriben acá porque acá empieza, y para que la
+    // activación del lado de la Familia no tenga que volver a contarlos por su cuenta.
+    respuestas.set('GET /rest/v1/accesos_marketplace', () =>
+      accesoSinAlta({ formas_de_cobro_marketplace: { ...CADA_MES, dias_gratis: 14 } })
+    );
+
+    await darDeAlta();
+
+    assert.equal(guardado().cuerpo.gratis_hasta, enDias(14));
+    assert.equal(guardado().cuerpo.proximo_cobro, enDias(14));
+  });
+
+  it('sin días gratis el primer cobro es hoy, y no hay período gratuito que guardar', async () => {
+    await darDeAlta();
+
+    assert.equal(guardado().cuerpo.gratis_hasta, null);
+    assert.equal(guardado().cuerpo.proximo_cobro, enDias(0));
+  });
+
+  it('le dice al proveedor hasta cuándo no cobrar, no sólo lo guarda de este lado', async () => {
+    // Guardarlo acá y no decírselo al riel que cobra solo sería el cobro silencioso del §3.2: la
+    // Familia leería «gratis hasta el 30» en la pantalla y Stripe le cobraría hoy.
+    respuestas.set('GET /rest/v1/accesos_marketplace', () =>
+      accesoSinAlta({ formas_de_cobro_marketplace: { ...CADA_MES, dias_gratis: 14 } })
+    );
+
+    await darDeAlta();
+
+    const suscripcion = llamadasAStripe.find((url) => url.includes('/subscriptions'));
+    const enviado = cuerposAStripe.get(suscripcion).get('trial_end');
+    assert.equal(new Date(Number(enviado) * 1000).toISOString().slice(0, 10), enDias(14));
+  });
+
+  it('pide los días gratis junto con el acceso, en la misma consulta', async () => {
+    await darDeAlta();
+    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_marketplace');
+    assert.ok(busqueda.url.includes('dias_gratis'));
   });
 
   it('pide la forma de cobro junto con el acceso, en la misma consulta', async () => {

@@ -32,12 +32,25 @@ function recurrenciaStripe(periodo) {
   return { 'recurring[interval]': intervalo, 'recurring[interval_count]': cantidad };
 }
 
+/** El período gratuito, dicho como lo pide Stripe: `trial_end`, en segundos desde 1970. Stripe cobra
+ *  el primer período apenas se crea la suscripción, así que sin esto el período gratuito que armó la
+ *  Prestadora no existiría del lado del proveedor por más que estuviera guardado acá.
+ *  Una fecha que ya pasó no se manda: Stripe rechaza el alta entera por un `trial_end` vencido, y lo
+ *  que corresponde en ese caso es justamente lo que hace Stripe sin la marca, cobrar ya. */
+function pruebaGratisStripe(gratisHasta) {
+  if (!gratisHasta) return {};
+  const instante = Date.parse(`${gratisHasta}T00:00:00Z`);
+  if (!Number.isFinite(instante) || instante <= Date.now()) return {};
+  return { trial_end: Math.floor(instante / 1000) };
+}
+
 export async function crearSuscripcion({
   credencial,
   accesoId,
   monto,
   moneda,
   periodo,
+  gratisHasta,
   familiaId,
   emailPagador,
 }) {
@@ -66,6 +79,7 @@ export async function crearSuscripcion({
     customer: cliente.id,
     'items[0][price]': precio.id,
     'metadata[acceso_id]': accesoId,
+    ...pruebaGratisStripe(gratisHasta),
   });
 
   return {

@@ -4,12 +4,18 @@
 // adaptador puntual por su nombre de proveedor.
 //
 // Interfaz común que todo adaptador implementa:
-//   crearSuscripcion({ prestadoraId, credencial, accesoId, monto, moneda, periodo, familiaId,
-//                      emailPagador })
+//   crearSuscripcion({ prestadoraId, credencial, accesoId, monto, moneda, periodo, gratisHasta,
+//                      familiaId, emailPagador })
 //     -> { estadoConexion: 'pendiente'|'exitoso', referenciaExterna, urlAccion? }
 //     `periodo` es `{ cantidad, unidad }` —`dia`, `semana`, `mes` o `anio`— y dice cada cuánto
 //     vuelve a cobrarse. Sale de la forma de cobro que armó la Prestadora, así que ningún
 //     adaptador tiene un valor por descarte: sin período, falla.
+//     `gratisHasta` es el día del primer cobro cuando la forma de cobro tiene período gratuito, y
+//     nulo cuando no lo tiene. **Sólo lo miran los rieles que cobran solos**, porque el cobro
+//     recurrente queda andando del lado del proveedor y sin decírselo arrancaría hoy: Stripe lo
+//     manda como `trial_end` y Mercado Pago como `auto_recurring.start_date`. Los demás lo ignoran
+//     a propósito —no dejan nada recurrente—, y ahí el período gratuito lo sostiene
+//     `accesos_marketplace.proximo_cobro`, que es lo único que mira `armarCobrosDelPeriodo`.
 //     `emailPagador` es el correo real de la Familia. Lo resuelve quien llama —hoy
 //     `backend/src/utils/altaEnPasarela.js`, que es el único punto por donde se da de alta un
 //     acceso—, porque el adaptador no consulta la base. Los rieles que no se lo piden al

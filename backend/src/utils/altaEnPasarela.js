@@ -23,6 +23,23 @@
    existe en el proveedor y volver a crearlo dejaría dos cobros recurrentes vivos por la misma
    Familia. Se contesta lo que ya está guardado y no se llama a nadie.
 
+   ACÁ EMPIEZA EL PERÍODO GRATUITO, Y POR ESO ACÁ SE ESCRIBE. `formas_de_cobro_marketplace.dias_gratis`
+   era hasta ahora un dato que la Prestadora cargaba y que no leía nadie: el período gratuito no
+   existía. El primer día que se cobra sale de ese número contado desde el alta, y se guarda dos
+   veces porque son dos preguntas distintas: `gratis_hasta` dice hasta cuándo no se cobra —es lo que
+   mira el aviso previo del §3.2— y `proximo_cobro` dice qué período toca. Las dos son la misma
+   fecha el primer día, y desde el primer cobro cada una sigue su camino.
+
+   Y SE ESCRIBE UNA VEZ SOLA, ACÁ. Mañana la activación del lado de la Familia va a dar de alta
+   accesos por este mismo camino; si cada una contara los días gratis por su cuenta, la segunda iba
+   a contarlos distinto (`celtatech\CLAUDE.md` §8, ningún patrón repetido sin punto único de verdad).
+
+   CÓMO HONRA EL PERÍODO GRATUITO CADA RIEL. Los que cobran solos lo tienen que saber, porque el
+   cobro recurrente queda andando del lado del proveedor y arrancaría hoy: por eso `crearSuscripcion`
+   recibe `gratisHasta`. Los que no cobran solos no necesitan enterarse: lo que les arma el cobro es
+   `armarCobrosDelPeriodo`, que sólo mira accesos con `proximo_cobro` cumplido, así que la fecha
+   guardada alcanza para que no le pidan nada a nadie hasta que el período gratuito termine.
+
    NO CAMBIA EL ESTADO DEL ACCESO. Dar de alta no es cobrar. El acceso queda `vigente` cuando entra
    la plata del primer período, y eso lo decide `registrarCobroExitoso`
    (`cobrosMarketplace.js`), que es adonde llegan tanto el aviso del proveedor como la carga a mano
@@ -35,6 +52,7 @@
 
 import { supabase } from '../db/connection.js';
 import { obtenerAdaptador, proveedoresDisponibles } from '../pasarelas/index.js';
+import { sumarDias } from './cobrosMarketplace.js';
 
 /** Los motivos por los que un alta no se puede hacer. Son códigos, no frases: la frase que lee la
  *  persona vive en las traducciones del Panel, en los tres idiomas
@@ -72,7 +90,7 @@ export async function darDeAltaEnPasarela({ accesoId, prestadoraId, proveedor = 
     .select(
       'id, prestadora_id, familia_id, estado, importe, moneda, proveedor, referencia_externa, ' +
         'url_accion, alta_en_pasarela, ' +
-        'formas_de_cobro_marketplace(periodo_cantidad, periodo_unidad)'
+        'formas_de_cobro_marketplace(periodo_cantidad, periodo_unidad, dias_gratis)'
     )
     .eq('id', accesoId)
     .eq('prestadora_id', prestadoraId)
@@ -134,6 +152,14 @@ export async function darDeAltaEnPasarela({ accesoId, prestadoraId, proveedor = 
     return { ok: false, motivo: MOTIVO_ALTA.SIN_CORREO_DE_FAMILIA };
   }
 
+  // Hasta cuándo no se cobra. La fecha es la del primer cobro: el último día gratis es el anterior,
+  // igual que `vigente_hasta` es el día del cobro que no se va a hacer. Sin días gratis no hay
+  // período gratuito y el primer cobro es hoy, que es lo que pasaba antes de que esto existiera.
+  const diasGratis = Number(forma.dias_gratis) || 0;
+  const hoy = new Date().toISOString().slice(0, 10);
+  const gratisHasta = diasGratis > 0 ? sumarDias(hoy, diasGratis) : null;
+  const proximoCobro = gratisHasta || hoy;
+
   let respuesta;
   try {
     respuesta = await adaptador.crearSuscripcion({
@@ -143,6 +169,7 @@ export async function darDeAltaEnPasarela({ accesoId, prestadoraId, proveedor = 
       monto: Number(acceso.importe),
       moneda: acceso.moneda,
       periodo: { cantidad: forma.periodo_cantidad, unidad: forma.periodo_unidad },
+      gratisHasta,
       familiaId: acceso.familia_id,
       emailPagador,
     });
@@ -160,6 +187,8 @@ export async function darDeAltaEnPasarela({ accesoId, prestadoraId, proveedor = 
       referencia_externa: respuesta.referenciaExterna ?? null,
       url_accion: respuesta.urlAccion ?? null,
       alta_en_pasarela: new Date().toISOString(),
+      gratis_hasta: gratisHasta,
+      proximo_cobro: proximoCobro,
       updated_at: new Date().toISOString(),
     })
     .eq('id', acceso.id)

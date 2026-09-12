@@ -239,7 +239,10 @@ se carga cuando entra la plata y se gasta de a un Asistente, con la cuenta hecha
 base; el detalle está en `docs/PRD_07_Modalidad_Marketplace.md` §3.5. Y una forma que se renueva
 sola se da de baja en un clic desde la aplicación de la Familia: apaga la renovación y conserva
 el período ya pagado hasta el final (§3.6); el acceso se apaga solo al llegar esa fecha, con un
-trabajo diario del motor (§3.7).
+trabajo diario del motor (§3.7). El período gratuito que cargó la Prestadora se convierte en una
+fecha el día del alta —la del primer cobro—, se le informa a los rieles que cobran solos, y ese
+mismo trabajo diario avisa al teléfono de quien paga unos días antes de que llegue: nunca un cobro
+silencioso (§3.8).
 
 ## Changelog de este documento
 

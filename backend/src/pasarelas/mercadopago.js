@@ -39,7 +39,19 @@ function recurrenciaMercadoPago(periodo) {
   throw new Error(`unidad de período desconocida: ${unidad}`);
 }
 
-export async function crearSuscripcion({ credencial, accesoId, monto, moneda, periodo, emailPagador }) {
+/** El período gratuito, dicho como lo pide Mercado Pago: `start_date` adentro de `auto_recurring`,
+ *  que es desde cuándo empieza a cobrar. Sin esto cobra el primer período en el acto y el período
+ *  gratuito que armó la Prestadora queda escrito en esta base y en ningún otro lado.
+ *  Una fecha que ya pasó no se manda: Mercado Pago rechaza el alta, y lo que corresponde ahí es lo
+ *  mismo que hace sin la marca, cobrar ya. */
+function comienzoMercadoPago(gratisHasta) {
+  if (!gratisHasta) return {};
+  const instante = Date.parse(`${gratisHasta}T00:00:00Z`);
+  if (!Number.isFinite(instante) || instante <= Date.now()) return {};
+  return { start_date: new Date(instante).toISOString() };
+}
+
+export async function crearSuscripcion({ credencial, accesoId, monto, moneda, periodo, gratisHasta, emailPagador }) {
   // La moneda llega del acceso, que la heredó de la Prestadora. No hay valor por descarte:
   // cobrarle a una Familia en una moneda que nadie eligió es peor que fallar (regla 14, §7).
   if (!moneda) throw new Error('Falta la moneda del acceso');
@@ -65,6 +77,7 @@ export async function crearSuscripcion({ credencial, accesoId, monto, moneda, pe
         ...recurrencia,
         transaction_amount: monto,
         currency_id: moneda,
+        ...comienzoMercadoPago(gratisHasta),
       },
       back_url: process.env.MERCADOPAGO_BACK_URL,
       status: 'pending',

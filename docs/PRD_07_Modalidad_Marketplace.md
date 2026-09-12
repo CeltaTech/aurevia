@@ -166,6 +166,34 @@ hace un trabajo del sistema una vez por día.
 no está terminado: está esperando que entre un cobro, y lo que le corresponde es el período de
 gracia con sus reintentos, que es otra cosa.
 
+### 3.8 Cómo se avisa antes del primer cobro
+
+**El período gratuito queda escrito el día del alta.** La Prestadora carga cuántos días sin cargo
+tiene su forma de cobro, y al darse el acceso esos días se convierten en una fecha guardada: la del
+primer cobro. El último día gratis es el anterior, igual que la fecha de la baja es la del cobro
+que no se va a hacer.
+
+**A los rieles que cobran solos se les dice esa fecha, y los demás la sostienen con la fecha del
+próximo cobro.** Un proveedor que deja el cobro andando de su lado cobra el primer período apenas
+se crea la suscripción si nadie le dice lo contrario, y ahí el período gratuito existiría sólo en
+esta base. Los rieles a los que hay que armarles el cobro de cada período no necesitan que se les
+diga nada: ese cobro se arma recién cuando llega la fecha.
+
+**Se avisa unos días antes, y a más tardar el mismo día.** El aviso le llega al teléfono de quien
+paga, dice qué día empieza a cobrarse, cuánto —con su moneda— y que puede darse de baja antes; el
+enlace lleva a la pantalla del acceso, donde está el botón. Lo manda un trabajo del sistema una vez
+por día, el mismo que apaga los accesos dados de baja.
+
+**Se avisa una vez sola, y queda anotado cuándo.** La marca se guarda después de que el aviso
+salió: si no había ningún dispositivo al que mandarlo, al día siguiente se vuelve a intentar
+mientras la ventana dure.
+
+**A quien se dio de baja durante el período gratuito no se le avisa.** No viene ningún cobro, que
+es lo que la baja consigue.
+
+**Este aviso no se puede apagar.** No está entre los que cada Prestadora enciende según cómo
+trabaja: es el resguardo del §3.2, y un aviso obligatorio que se pueda apagar no es obligatorio.
+
 ## 4. Qué sostiene el pago después del contacto
 
 Conseguido el Asistente, el contacto ya no hace falta. Lo que la Familia sigue usando es la

@@ -2,20 +2,9 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { hoyISO, horaDelMomento } from '../lib/horarios';
+import { enPalabras } from '../lib/fechaEnPalabras';
 import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
-
-// Las fechas las escribe el teléfono, no esta pantalla. `toLocaleDateString` con el idioma
-// elegido devuelve "jueves, 20 de agosto", "Thursday, August 20" y "quinta-feira, 20 de agosto"
-// sin que haya que escribir los nombres de los días y de los meses tres veces en el archivo de
-// textos. No es texto de la aplicación: es una fecha dicha en el idioma de quien mira.
-//
-// La hora del medio (`T00:00:00`) no es un detalle: sin ella, `2026-08-20` se entiende como
-// medianoche en Londres, y en Buenos Aires eso todavía es el 19. La Familia vería la semana
-// corrida un día.
-function enPalabras(fechaISO, locale, opciones) {
-  return new Date(`${fechaISO}T00:00:00`).toLocaleDateString(locale, opciones);
-}
 
 // La hora en que el Asistente llegó o se fue la escribe `horaDelMomento`, en `lib/horarios.js`:
 // la misma cuenta la usan la pantalla del Paciente y la aplicación de los Asistentes, y un reloj

@@ -169,6 +169,11 @@ export const GRUPOS = [
     copias: ['backend/src/utils/motivosDemora.js'],
   },
   {
+    que: 'cómo se muestra un importe con su moneda',
+    original: 'panel/src/lib/dinero.js',
+    copias: ['pwa-familias/src/lib/dinero.js'],
+  },
+  {
     que: 'la pantalla que muestra el código de presencia para que lo lea quien llega',
     original: 'pwa-familias/src/components/CodigoDePresencia.jsx',
     copias: ['pwa-asistentes/src/components/CodigoDePresencia.jsx'],

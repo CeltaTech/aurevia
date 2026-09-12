@@ -890,6 +890,81 @@ appFamiliasRouter.get('/qr-cobro/:id', requiereRolFamilia, exigeVisible('familia
 });
 
 // ============================================================================
+// Las facturas de la Familia — la ventanilla
+//
+// LA CUENTA YA ESTABA HECHA Y NO SE VOLVIÓ A HACER ACÁ. Lo facturado menos lo cobrado lo resuelve
+// la vista `saldos_familia`, que es el único lugar donde vive esa resta, y el estado de hoy lo
+// calcula la base con la fecha de vencimiento. Repetir la resta del lado del motor daría dos
+// respuestas posibles para la misma pregunta, y una de las dos la vería la Familia.
+//
+// LO QUE SE MUESTRA ES EL DESGLOSE, no un total suelto. Un importe sin decir de qué es no se
+// puede comprobar ni discutir: cada renglón dice a qué Paciente y a qué Servicio corresponde.
+//
+// LOS COBROS ANULADOS VAN TAMBIÉN, marcados. Anular no es borrar: un pago que se anotó y después
+// se dio de baja, desaparecido de la pantalla, es indistinguible de uno que nunca existió, y
+// quien pagó tiene derecho a ver ese movimiento. El motivo de la anulación no viaja: es una nota
+// interna de la Prestadora.
+//
+// ENTRA POR LAS DOS PUERTAS QUE YA EXISTEN: el interruptor de la Prestadora
+// —`familia_pagos_y_suscripcion`— y el acceso que el titular reparte —`circulo_dinero`—. Ningún
+// permiso nuevo: quien ya podía ver la cuota del Marketplace es quien puede ver esto.
+// ============================================================================
+
+/** El saldo de una factura de esta Familia, o null. Nunca se busca una factura sin decir de quién es. */
+async function saldoDeLaFamilia(req, facturaId) {
+  const { data, error } = await supabase
+    .from('saldos_familia')
+    .select(
+      'factura_id, periodo, moneda, monto_total, cobrado, saldo, estado, fecha_emision, fecha_vencimiento'
+    )
+    .eq('factura_id', facturaId)
+    .eq('familia_id', req.usuarioFamilia.familiaId)
+    .eq('prestadora_id', req.usuarioFamilia.prestadoraId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ?? null;
+}
+
+appFamiliasRouter.get('/facturas', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), exigeDelCirculo('circulo_dinero'), async (req, res) => {
+  const { data, error } = await supabase
+    .from('saldos_familia')
+    .select('factura_id, periodo, moneda, monto_total, cobrado, saldo, estado, fecha_emision, fecha_vencimiento')
+    .eq('familia_id', req.usuarioFamilia.familiaId)
+    .eq('prestadora_id', req.usuarioFamilia.prestadoraId)
+    .order('periodo', { ascending: false });
+  if (error) return responderError(res, error);
+  res.json({ facturas: data || [] });
+});
+
+appFamiliasRouter.get('/facturas/:facturaId', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), exigeDelCirculo('circulo_dinero'), async (req, res) => {
+  let factura;
+  try {
+    factura = await saldoDeLaFamilia(req, req.params.facturaId);
+  } catch (e) {
+    return responderError(res, e);
+  }
+  if (!factura) return res.status(404).json({ error: 'Factura no encontrada' });
+
+  const { data: renglones, error: errorRenglones } = await supabase
+    .from('facturas_familia_items')
+    .select('id, descripcion, monto, moneda, paciente_id, servicio_id')
+    .eq('factura_id', factura.factura_id)
+    .eq('prestadora_id', req.usuarioFamilia.prestadoraId)
+    .order('created_at', { ascending: true });
+  if (errorRenglones) return responderError(res, errorRenglones);
+
+  const { data: cobros, error: errorCobros } = await supabase
+    .from('cobros_familia')
+    .select('id, monto, moneda, fecha_cobro, medio, estado')
+    .eq('factura_id', factura.factura_id)
+    .eq('prestadora_id', req.usuarioFamilia.prestadoraId)
+    .order('fecha_cobro', { ascending: false });
+  if (errorCobros) return responderError(res, errorCobros);
+
+  res.json({ factura, renglones: renglones || [], cobros: cobros || [] });
+});
+
+// ============================================================================
 // El pase de guardia — el código que la Familia muestra en pantalla
 //
 // Cuando llega el Asistente, quien está en la casa abre esto y le muestra el código. Se renueva

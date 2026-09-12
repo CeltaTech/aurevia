@@ -13,6 +13,7 @@ export const INTERRUPTOR_DE_LA_PANTALLA = {
   alertas: 'familia_alertas_de_la_revision',
   escanearAsistente: 'familia_verifica_con_codigo',
   acceso: 'familia_pagos_y_suscripcion',
+  facturas: 'familia_pagos_y_suscripcion',
   medicacion: 'familia_medicacion_del_paciente',
 };
 
@@ -37,6 +38,7 @@ export const ACCESO_DEL_CIRCULO_DE_LA_PANTALLA = {
   alertas: 'circulo_alertas',
   escanearAsistente: 'circulo_verifica_con_codigo',
   acceso: 'circulo_dinero',
+  facturas: 'circulo_dinero',
   medicacion: 'circulo_medicacion',
   reportes: 'circulo_reportes',
   guardias: 'circulo_guardias',

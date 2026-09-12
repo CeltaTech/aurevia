@@ -61,4 +61,9 @@ export const api = {
   // lleva el Paciente adentro porque el código es del círculo familiar entero, y quién es ese
   // círculo lo resuelve el motor con la sesión de quien pide, nunca con un dato de este teléfono.
   codigoDePresencia: () => pedido('/codigo-de-presencia'),
+  // Las facturas de la Familia. La lista trae la resta ya hecha —lo facturado, lo cobrado y lo
+  // que falta— porque esa resta la hace la base en un solo lugar y no se vuelve a hacer acá; el
+  // detalle agrega de qué es cada renglón y qué pagos entraron contra esa factura.
+  facturas: () => pedido('/facturas'),
+  factura: (facturaId) => pedido(`/facturas/${facturaId}`),
 };

@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
 import { activarPush, desactivarPush, pushSoportado, suscripcionActual } from '../lib/push';
 import { useSeVe } from '../context/PerfilContext';
+import { useCirculo } from '../context/CirculoContext';
+import { pantallaPermitida } from '../lib/interruptorDeCadaPantalla';
 import AvisoInstruccionPendiente from '../components/AvisoInstruccionPendiente';
 
 // Una de las dos listas: qué ve esta persona y qué no. La de «qué no ve» pesa lo mismo que la
@@ -29,6 +32,7 @@ function ListaDeAccesos({ titulo, claves, etiquetas, vacio }) {
 export default function MiPerfil() {
   const { t } = useLocale();
   const seVe = useSeVe();
+  const { puedeVer } = useCirculo();
   const [perfil, setPerfil] = useState(null);
   const [error, setError] = useState('');
   const [notifActivas, setNotifActivas] = useState(false);
@@ -111,6 +115,17 @@ export default function MiPerfil() {
           </>
         )}
       </div>
+
+      {/* Las facturas se entran desde acá y no desde la barra de abajo, que tiene tres lugares y
+          los tres son de todos los días. Lo que se le cobra al círculo familiar no cuelga de
+          ningún Paciente: se factura al círculo entero, y una misma factura puede tener
+          renglones de más de una persona cuidada. El botón se pregunta lo mismo que la ruta, con
+          la misma función, o quedaría un botón que rebota. */}
+      {pantallaPermitida('facturas', seVe, puedeVer) && (
+        <Link to="/facturas" className="btn btn-secondary btn-full" style={{ marginTop: '1.5rem' }}>
+          {t.facturas.titulo}
+        </Link>
+      )}
 
       {/* Qué ve esta persona y qué no. Al titular se le dice que ve todo y se termina ahí: lo
           suyo no se configura, no hay instrucción que le pueda quitar nada, ni siquiera una

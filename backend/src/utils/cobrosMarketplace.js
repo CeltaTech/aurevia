@@ -16,6 +16,11 @@
       `registrarCobroExitoso`, que es el único que decide qué le pasa al acceso cuando entra la
       plata (`celtatech\CLAUDE.md` §8, ningún patrón repetido sin punto único de verdad).
 
+   Y NO TODO LO QUE SE COBRA ES UN PERÍODO. Una forma de cobro puede traer contactos incluidos —un
+   paquete se paga una vez y lo que lo sostiene es el saldo, no una fecha—, y el único momento en
+   que ese saldo existe es cuando entra la plata. Por eso la carga también sale de acá
+   (`contactosMarketplace.js`): es el mismo punto único por donde pasan los tres caminos del cobro.
+
    CUÁNTO DURA EL PERÍODO LO DICE LA PRESTADORA, NO ESTE ARCHIVO. Cada acceso cuelga de la forma de
    cobro que la Familia eligió, y esa forma guarda cada cuánto se cobra: tantos días, semanas, meses
    o años (`formas_de_cobro_marketplace.periodo_cantidad` y `periodo_unidad`). Una forma sin período
@@ -38,6 +43,7 @@
 
 import { supabase } from '../db/connection.js';
 import { obtenerAdaptador, armaCobroPorPeriodo } from '../pasarelas/index.js';
+import { cargarContactosEnElSaldo } from './contactosMarketplace.js';
 
 /** Cuántos días vive el cupón de una red de cobranza extrabancaria. Quien decide hasta cuándo se
  *  puede pagar es este producto, no la red: un cupón sin vencimiento se paga tres meses tarde y el
@@ -171,7 +177,10 @@ async function credencialDe(prestadoraId, proveedor, credenciales) {
 export async function registrarCobroExitoso({ accesoId, periodo }) {
   const { data: acceso, error } = await supabase
     .from('accesos_marketplace')
-    .select('id, proximo_cobro, formas_de_cobro_marketplace(periodo_cantidad, periodo_unidad)')
+    .select(
+      'id, proximo_cobro, ' +
+        'formas_de_cobro_marketplace(periodo_cantidad, periodo_unidad, contactos_incluidos)'
+    )
     .eq('id', accesoId)
     .maybeSingle();
 
@@ -208,7 +217,23 @@ export async function registrarCobroExitoso({ accesoId, periodo }) {
     return { ok: false };
   }
 
-  return { ok: true, proximo_cobro: proximoCobro };
+  // Y si lo que se pagó trae contactos, el saldo se carga acá: entrar la plata es el momento en
+  // que existen. Se suma al que hubiera, porque un paquete no vence por calendario y lo que quedó
+  // sin abrir de una compra anterior sigue estando. Va después de mover el acceso a propósito: el
+  // período es lo que no puede quedar sin anotar, y una carga de saldo que falle se ve en el
+  // registro sin dejar un cobro a medio aplicar.
+  const contactos = acceso.formas_de_cobro_marketplace?.contactos_incluidos;
+  let saldoContactos;
+  if (contactos > 0) {
+    const carga = await cargarContactosEnElSaldo({ accesoId, cuantos: contactos });
+    if (!carga.ok) {
+      console.error('No se pudo cargar el saldo de contactos tras un cobro:', carga.motivo, carga.detalle ?? '');
+    } else {
+      saldoContactos = carga.saldo_contactos;
+    }
+  }
+
+  return { ok: true, proximo_cobro: proximoCobro, saldo_contactos: saldoContactos ?? null };
 }
 
 /**

@@ -390,6 +390,39 @@ Lo lee cualquiera con sesión porque la Familia también necesita esas palabras:
 su Prestadora le ofrece y cada una dice cada cuánto se cobra. Escribirlo es cambiar el producto,
 así que queda del lado del Superadmin.
 
+**Y el saldo de un paquete de contactos no lo mueve ninguna pantalla.** Un paquete se paga una
+vez y se gasta de a un Asistente: `accesos_marketplace.saldo_contactos` dice cuántos quedan y
+`contactos_vistos_marketplace` dice a quiénes ya se les abrió el contacto, con un único por
+(`familia_id`, `asistente_id`) que es lo que hace que volver a mirar al mismo no cueste otro. Las
+dos cuentas —sumarle al saldo cuando entra la plata y restarle uno al abrir— viven en dos
+funciones de la base (`supabase/migrations/20260912100000_el_paquete_de_contactos.sql`), y lo que
+las obliga a estar ahí es la seguridad, no la comodidad: leer el saldo, restarle uno y volver a
+escribirlo son dos viajes, y dos ventanas abiertas a la vez descuentan una sola vez. Adentro de la
+base el descuento y la anotación pasan juntos, con la fila del acceso tomada.
+
+Ninguna de las dos funciones es `SECURITY DEFINER` —entra el motor con la llave de servicio, y el
+esquema `interno` es para las que usan las políticas—, y las dos revocan `PUBLIC`, `anon` y
+`authenticated` en la misma migración que las crea: quedan al alcance de `service_role` y de nadie
+más. Sin eso serían dos direcciones web, y una de ellas gasta plata ajena.
+
+La tabla lleva RLS y sólo políticas de lectura, porque desde una pantalla no se escribe: la fila
+la escribe el descuento, en la misma transacción.
+
+```sql
+CREATE POLICY familia_ve_los_contactos_que_abrio ON contactos_vistos_marketplace
+  FOR SELECT USING (
+    familia_id = interno.familia_id_de_usuario(auth.uid())
+    AND interno.circulo_puede(auth.uid(), 'circulo_dinero')
+  );
+
+CREATE POLICY prestadora_ve_los_contactos_vistos ON contactos_vistos_marketplace
+  FOR SELECT USING (
+    prestadora_id = interno.current_tenant()
+    AND EXISTS (SELECT 1 FROM usuarios u WHERE u.id = auth.uid()
+                AND u.rol IN ('admin_prestadora', 'coordinador'))
+  );
+```
+
 **Pendiente de decisión, no bloquea desarrollo:** `guardias_tracking_gps` guarda histórico de
 posiciones GPS del Asistente durante una guardia activa — esto es un dato personal sensible
 bajo Ley 25.326 (geolocalización de una persona física). Falta definir política de retención

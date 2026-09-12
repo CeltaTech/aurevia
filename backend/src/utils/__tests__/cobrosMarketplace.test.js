@@ -255,7 +255,7 @@ describe('cuando un período se cobra', () => {
   it('el acceso queda vigente y esperando el período siguiente al cobrado', async () => {
     const resultado = await registrarCobroExitoso({ accesoId: ACCESO, periodo: PERIODO });
 
-    assert.deepEqual(resultado, { ok: true, proximo_cobro: '2026-09-01' });
+    assert.deepEqual(resultado, { ok: true, proximo_cobro: '2026-09-01', saldo_contactos: null });
     assert.equal(guardado().cuerpo.estado, 'vigente');
     assert.equal(guardado().cuerpo.proximo_cobro, '2026-09-01');
   });
@@ -279,9 +279,79 @@ describe('cuando un período se cobra', () => {
     ]);
     const resultado = await registrarCobroExitoso({ accesoId: ACCESO, periodo: PERIODO });
 
-    assert.deepEqual(resultado, { ok: true, proximo_cobro: null });
+    assert.deepEqual(resultado, { ok: true, proximo_cobro: null, saldo_contactos: null });
     assert.equal(guardado().cuerpo.proximo_cobro, null);
     assert.equal('vigente_hasta' in guardado().cuerpo, false, 'no se le pone fecha de fin');
+  });
+
+  const cargasDeSaldo = () =>
+    llamadas.filter((l) => l.clave === 'POST /rest/v1/rpc/sumar_contactos_al_saldo');
+
+  /** Un acceso cuya forma de cobro es un paquete: un importe, sin período, con tantos contactos. */
+  function paquete(contactos = 5) {
+    respuestas.set('GET /rest/v1/accesos_marketplace', () => [
+      {
+        id: ACCESO,
+        proximo_cobro: PERIODO,
+        formas_de_cobro_marketplace: {
+          periodo_cantidad: null,
+          periodo_unidad: null,
+          contactos_incluidos: contactos,
+        },
+      },
+    ]);
+  }
+
+  it('un paquete carga su saldo de contactos cuando entra la plata', async () => {
+    // Es el único momento en que el saldo existe: el paquete se paga una vez y de ahí en más lo
+    // que lo sostiene es lo que quedó cargado.
+    paquete(5);
+    respuestas.set('POST /rest/v1/rpc/sumar_contactos_al_saldo', () => 5);
+    const resultado = await registrarCobroExitoso({ accesoId: ACCESO, periodo: PERIODO });
+
+    assert.deepEqual(resultado, { ok: true, proximo_cobro: null, saldo_contactos: 5 });
+    assert.equal(cargasDeSaldo().length, 1);
+    assert.deepEqual(cargasDeSaldo()[0].cuerpo, { p_acceso_id: ACCESO, p_cuantos: 5 });
+  });
+
+  it('la cuenta la hace la base: acá se le pide sumar, no escribir un total', async () => {
+    // Leer el saldo, restarle y volver a escribirlo son dos viajes, y dos cobros que entran a la
+    // vez terminarían dejando uno solo cargado. Por eso lo que sale de acá es «sumá tantos».
+    paquete(3);
+    respuestas.set('POST /rest/v1/rpc/sumar_contactos_al_saldo', () => 11);
+    const resultado = await registrarCobroExitoso({ accesoId: ACCESO, periodo: PERIODO });
+
+    assert.equal(cargasDeSaldo()[0].cuerpo.p_cuantos, 3, 'lo que trae la compra, no el total');
+    assert.equal(resultado.saldo_contactos, 11, 'el total lo contesta la base');
+  });
+
+  it('una forma sin contactos no le carga saldo a nadie', async () => {
+    // Una suscripción por mes no es un paquete. Si igual pasara por acá, un acceso que se sostiene
+    // por fecha terminaría con un saldo que nadie le vendió.
+    respuestas.set('GET /rest/v1/accesos_marketplace', () => [
+      {
+        id: ACCESO,
+        proximo_cobro: PERIODO,
+        formas_de_cobro_marketplace: { ...CADA_MES, contactos_incluidos: 0 },
+      },
+    ]);
+    const resultado = await registrarCobroExitoso({ accesoId: ACCESO, periodo: PERIODO });
+
+    assert.deepEqual(cargasDeSaldo(), []);
+    assert.equal(resultado.saldo_contactos, null);
+  });
+
+  it('si el saldo no se puede cargar, el período igual queda movido y queda avisado', async () => {
+    // El orden es a propósito: el período es lo que no puede quedar sin anotar. Un saldo que no se
+    // cargó se ve en el registro y se vuelve a cargar; un cobro aplicado a medias, no.
+    paquete(5);
+    respuestas.delete('POST /rest/v1/rpc/sumar_contactos_al_saldo');
+    const resultado = await registrarCobroExitoso({ accesoId: ACCESO, periodo: PERIODO });
+
+    assert.equal(resultado.ok, true);
+    assert.equal(resultado.saldo_contactos, null);
+    assert.equal(guardado().cuerpo.estado, 'vigente');
+    assert.ok(anotados.some((linea) => linea.includes('No se pudo cargar el saldo de contactos')));
   });
 
   it('una forma por semanas se mueve por semanas, no por meses', async () => {

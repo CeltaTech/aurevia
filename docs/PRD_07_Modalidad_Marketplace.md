@@ -112,6 +112,30 @@ cobra una Prestadora no es asunto de un rol técnico de CeltaTech. **Y no hay ba
 que ya se contrató se apaga con `ofrecida`, de modo que los accesos que la tienen siguen
 apuntando a algo que existe.
 
+### 3.5 Cómo se mueve el saldo de un paquete
+
+**Se carga cuando entra la plata.** El paquete se paga una vez, y ése es el momento en que el
+saldo existe: `registrarCobroExitoso` —el único lugar por el que pasan los tres caminos del cobro,
+el aviso del proveedor, el efectivo en mano y el canje del QR— le suma al acceso los contactos que
+traiga la forma.
+
+**Suma, no pisa.** Un paquete no vence por calendario, así que lo que quedó sin abrir de una
+compra anterior sigue estando; escribir el total nuevo encima sería vencerlo.
+
+**Se gasta de a un Asistente, no de a una mirada.** Abierto el contacto de alguien, volver a
+mirarlo no descuenta otro: queda anotado a quién se le abrió, y eso es lo que hace que cinco
+contactos alcancen para cinco personas y no para tres miradas dos veces. La anotación vale para la
+Familia entera, así que tampoco se paga dos veces por haber comprado dos paquetes.
+
+**No abre nada un acceso que no está vigente**, aunque le haya quedado saldo, y un acceso que se
+sostiene por fecha y no por saldo lo dice con sus propias palabras: comprar un paquete no es lo
+que le falta.
+
+**Y el descuento y la anotación pasan juntos, adentro de la base.** No es un detalle de
+implementación: hacerlo desde afuera —leer el saldo, restarle uno, volver a escribirlo— deja que
+dos ventanas abiertas a la vez descuenten una sola vez. El reparto de permisos de esas dos
+funciones está en `docs/SECURITY.md`.
+
 ## 4. Qué sostiene el pago después del contacto
 
 Conseguido el Asistente, el contacto ya no hace falta. Lo que la Familia sigue usando es la

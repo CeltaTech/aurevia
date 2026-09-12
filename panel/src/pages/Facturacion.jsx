@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
 import { useConfirmarDestructivo } from '../context/TenantSessionContext';
-import { supabase } from '../lib/supabaseClient';
 import { llamarApiCobros } from '../lib/apiCobros';
 import { claseBadge } from '../lib/tonos';
 import { formatearImporte } from '../lib/dinero';
@@ -14,7 +13,6 @@ import { FormField } from '../components/ui/FormField';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
-import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 
 /* Los saldos de las Familias: lo facturado, lo que entró y lo que falta.
    ==========================================================================
@@ -37,6 +35,11 @@ import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
    de cada saldo se muestra de dónde salió el dato y de cuándo es: un número que puso otro
    sistema tiene que poder distinguirse de uno que cargó una persona.
 
+   Y LA FACTURA TAMPOCO SE ARMA ACÁ. Qué renglones lleva la factura de un período —qué
+   prestaciones corren ese mes y qué paquete cobra su precio pactado en lugar de la suma de los
+   suyos— es un cálculo sobre plata, y vive en el motor, en `utils/facturaDelPeriodo.js`. La
+   pantalla pide el período y la fecha de vencimiento, y muestra cuántas facturas salieron.
+
    LO QUE NO HACE. No emite comprobantes fiscales —el producto no los emite (regla 14)— y no
    decide nada: que una Familia deba plata no corta ningún Servicio. La pantalla avisa; lo demás
    lo resuelve una persona. */
@@ -58,7 +61,6 @@ function soloLaFecha(momento) {
 
 export function Facturacion() {
   const { t, locale } = useLocale();
-  const prestadoraId = usePrestadoraActual();
   const confirmarDestructivo = useConfirmarDestructivo();
 
   const [mes, setMes] = useState(mesActual());
@@ -102,102 +104,20 @@ export function Facturacion() {
     setAvisoGeneracion(null);
     setError(null);
 
-    const periodo = `${mes}-01`;
-
-    const { data: familiasData, error: errorFamilias } = await supabase
-      .from('familias')
-      .select('id, pacientes(id, nombre)')
-      .is('deleted_at', null);
-
-    if (errorFamilias) {
-      setError(mensajeDeError(errorFamilias, t));
-      setGenerando(false);
-      return;
-    }
-
-    const pacienteIds = (familiasData ?? []).flatMap((f) => f.pacientes.map((p) => p.id));
-
-    const { data: prestacionesData, error: errorPrestaciones } = pacienteIds.length
-      ? await supabase
-          .from('prestaciones')
-          .select('id, paciente_id, servicio_id, tipo_servicio, precio_final')
-          .eq('estado', 'vigente')
-          .in('paciente_id', pacienteIds)
-      : { data: [], error: null };
-
-    if (errorPrestaciones) {
-      setError(mensajeDeError(errorPrestaciones, t));
-      setGenerando(false);
-      return;
-    }
-
-    const { data: existentesData } = await supabase.from('facturas_familia').select('familia_id').eq('periodo', periodo);
-    const familiasYaFacturadas = new Set((existentesData ?? []).map((f) => f.familia_id));
-
-    const prestacionesPorPaciente = {};
-    for (const p of prestacionesData ?? []) {
-      (prestacionesPorPaciente[p.paciente_id] ??= []).push(p);
-    }
-
-    let generadas = 0;
-    let sinPrestaciones = 0;
-
-    for (const familia of familiasData ?? []) {
-      if (familiasYaFacturadas.has(familia.id)) continue;
-
-      // Cada renglón dice de qué Servicio se cobra, además de a quién se le prestó. La columna
-      // está en la tabla desde que se creó y hasta ahora quedaba vacía, así que una factura no
-      // podía contestar contra qué contratación se emitió.
-      const items = familia.pacientes.flatMap((paciente) =>
-        (prestacionesPorPaciente[paciente.id] ?? []).map((p) => ({
-          paciente_id: paciente.id,
-          servicio_id: p.servicio_id,
-          descripcion: `${p.tipo_servicio} — ${paciente.nombre}`,
-          monto: p.precio_final,
-        }))
+    try {
+      const { generadas, sinPrestaciones } = await llamarApiCobros('/facturas/generar', {
+        method: 'POST',
+        body: JSON.stringify({ periodo: mes, fecha_vencimiento: vencimiento }),
+      });
+      setAvisoGeneracion(
+        t.facturacion.resultado_generacion.replace('{generadas}', generadas).replace('{sinPrestaciones}', sinPrestaciones)
       );
-
-      if (items.length === 0) {
-        sinPrestaciones += 1;
-        continue;
-      }
-
-      const montoTotal = items.reduce((acc, i) => acc + Number(i.monto), 0);
-
-      const { data: facturaCreada, error: errorFactura } = await supabase
-        .from('facturas_familia')
-        .insert({
-          prestadora_id: prestadoraId,
-          familia_id: familia.id,
-          periodo,
-          monto_total: montoTotal,
-          fecha_vencimiento: vencimiento,
-        })
-        .select('id')
-        .single();
-
-      if (errorFactura) {
-        setError(mensajeDeError(errorFactura, t));
-        setGenerando(false);
-        return;
-      }
-
-      const { error: errorItems } = await supabase
-        .from('facturas_familia_items')
-        .insert(items.map((i) => ({ ...i, factura_id: facturaCreada.id })));
-
-      if (errorItems) {
-        setError(mensajeDeError(errorItems, t));
-        setGenerando(false);
-        return;
-      }
-
-      generadas += 1;
+      recargar();
+    } catch (e) {
+      setError(mensajeDeError(e, t, 'generación de facturas'));
+    } finally {
+      setGenerando(false);
     }
-
-    setGenerando(false);
-    setAvisoGeneracion(t.facturacion.resultado_generacion.replace('{generadas}', generadas).replace('{sinPrestaciones}', sinPrestaciones));
-    recargar();
   }
 
   return (

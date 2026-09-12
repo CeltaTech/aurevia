@@ -8,6 +8,7 @@ import {
   loQueEstaMalEnElCobro,
   primerDiaDelPeriodo,
 } from '../utils/cobrosDeFamilia.js';
+import { armarLosRenglonesDeLaFactura } from '../utils/facturaDelPeriodo.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
 /* Lo que la Familia pagó, anotado; y el saldo, que es una resta.
@@ -171,6 +172,152 @@ panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, async (req, res)
   }
 
   res.json({ ...saldo, familia_nombre: nombres.get(saldo.familia_id) ?? null, cobros: cobros || [] });
+});
+
+// ---------------------------------------------------------------------------------------
+// Las facturas del período
+// ---------------------------------------------------------------------------------------
+
+/**
+ * Generar las facturas de un período, una por Familia que todavía no tenga la suya.
+ *
+ * ESTO SE HACÍA EN EL NAVEGADOR, y la cuenta salía mal de dos maneras: cobraba prestaciones cuya
+ * vigencia ya había terminado o todavía no había empezado, y cobraba renglón por renglón las
+ * prestaciones que estaban adentro de un paquete, o sea desconociendo el precio único que se
+ * había pactado. Qué lleva cada factura es un cálculo económico y ahora vive en
+ * `utils/facturaDelPeriodo.js`, del mismo lado que las facturas.
+ *
+ * SE COBRA EL PRECIO ACORDADO, ENTERO, por cualquier prestación que corra aunque sea un día del
+ * período. Partirlo en proporción a los días obligaría a decidir sobre cuántos se parte, y eso lo
+ * acuerda cada Prestadora con cada Familia.
+ *
+ * UNA FACTURA SIN RENGLONES NO QUEDA. Si los renglones no entran, se borra la factura recién
+ * creada: una factura con monto y sin detalle no se puede reclamar ni explicar, y como no tiene
+ * ningún cobro todavía, borrarla no pierde nada.
+ */
+panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) => {
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+  const periodo = primerDiaDelPeriodo(req.body?.periodo);
+  if (!periodo) return res.status(400).json({ error: 'Falta el período, en formato AAAA-MM' });
+
+  const vencimiento = String(req.body?.fecha_vencimiento ?? '').slice(0, 10);
+  // Una factura sin vencimiento no se puede reclamar ni mostrar como vencida, y hasta cuándo
+  // tiene para pagar cada Familia lo acuerda la Prestadora: no se le pone una por defecto.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(vencimiento)) {
+    return res.status(400).json({ error: 'Falta la fecha de vencimiento' });
+  }
+
+  const { data: familias, error: errorFamilias } = await supabase
+    .from('familias')
+    .select('id, pacientes(id, nombre)')
+    .eq('prestadora_id', prestadoraId)
+    .is('deleted_at', null);
+  if (errorFamilias) return responderError(res, errorFamilias);
+
+  const pacientes = (familias || []).flatMap((f) => f.pacientes || []);
+  const pacienteIds = pacientes.map((p) => p.id);
+  const nombresDePacientes = new Map(pacientes.map((p) => [p.id, p.nombre]));
+
+  let prestaciones = [];
+  let paquetes = [];
+  let itemsDePaquete = [];
+
+  if (pacienteIds.length > 0) {
+    const { data, error } = await supabase
+      .from('prestaciones')
+      .select('id, paciente_id, servicio_id, tipo_servicio, precio_final, vigente_desde, vigente_hasta')
+      .eq('prestadora_id', prestadoraId)
+      .eq('estado', 'vigente')
+      .in('paciente_id', pacienteIds);
+    if (error) return responderError(res, error);
+    prestaciones = data || [];
+
+    const { data: datosPaquetes, error: errorPaquetes } = await supabase
+      .from('paquetes_prestaciones')
+      .select('id, paciente_id, nombre, precio_paquete, estado')
+      .eq('prestadora_id', prestadoraId)
+      .in('paciente_id', pacienteIds);
+    if (errorPaquetes) return responderError(res, errorPaquetes);
+    paquetes = datosPaquetes || [];
+
+    if (paquetes.length > 0) {
+      const { data: datosItems, error: errorItems } = await supabase
+        .from('paquete_prestacion_items')
+        .select('paquete_id, prestacion_id')
+        .eq('prestadora_id', prestadoraId)
+        .in('paquete_id', paquetes.map((pq) => pq.id));
+      if (errorItems) return responderError(res, errorItems);
+      itemsDePaquete = datosItems || [];
+    }
+  }
+
+  const { data: existentes, error: errorExistentes } = await supabase
+    .from('facturas_familia')
+    .select('familia_id')
+    .eq('prestadora_id', prestadoraId)
+    .eq('periodo', periodo);
+  if (errorExistentes) return responderError(res, errorExistentes);
+  const yaFacturadas = new Set((existentes || []).map((f) => f.familia_id));
+
+  const porPaciente = new Map();
+  for (const p of prestaciones) {
+    if (!porPaciente.has(p.paciente_id)) porPaciente.set(p.paciente_id, []);
+    porPaciente.get(p.paciente_id).push(p);
+  }
+  const paquetesPorPaciente = new Map();
+  for (const pq of paquetes) {
+    if (!paquetesPorPaciente.has(pq.paciente_id)) paquetesPorPaciente.set(pq.paciente_id, []);
+    paquetesPorPaciente.get(pq.paciente_id).push(pq);
+  }
+
+  let generadas = 0;
+  let sinPrestaciones = 0;
+
+  for (const familia of familias || []) {
+    if (yaFacturadas.has(familia.id)) continue;
+
+    const suyos = (familia.pacientes || []).map((p) => p.id);
+    const renglones = armarLosRenglonesDeLaFactura({
+      periodo,
+      nombresDePacientes,
+      prestaciones: suyos.flatMap((id) => porPaciente.get(id) || []),
+      paquetes: suyos.flatMap((id) => paquetesPorPaciente.get(id) || []),
+      itemsDePaquete,
+    });
+
+    if (renglones.length === 0) {
+      sinPrestaciones += 1;
+      continue;
+    }
+
+    const montoTotal = aDosDecimales(renglones.reduce((acc, r) => acc + r.monto, 0));
+
+    const { data: factura, error: errorFactura } = await supabase
+      .from('facturas_familia')
+      .insert({
+        prestadora_id: prestadoraId,
+        familia_id: familia.id,
+        periodo,
+        monto_total: montoTotal,
+        fecha_vencimiento: vencimiento,
+      })
+      .select('id')
+      .single();
+    if (errorFactura) return responderError(res, errorFactura, 400);
+
+    const { error: errorRenglones } = await supabase
+      .from('facturas_familia_items')
+      .insert(renglones.map((r) => ({ ...r, factura_id: factura.id })));
+
+    if (errorRenglones) {
+      await supabase.from('facturas_familia').delete().eq('id', factura.id).eq('prestadora_id', prestadoraId);
+      return responderError(res, errorRenglones, 400);
+    }
+
+    generadas += 1;
+  }
+
+  res.json({ generadas, sinPrestaciones });
 });
 
 // ---------------------------------------------------------------------------------------

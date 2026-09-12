@@ -538,3 +538,141 @@ describe('la puerta de entrada para lo que viene de afuera', () => {
     assert.equal(estado, 403);
   });
 });
+
+// ---------------------------------------------------------------------------------------
+// Generar las facturas del período
+// ---------------------------------------------------------------------------------------
+
+const PACIENTE = '55555555-5555-5555-5555-555555555555';
+
+/** La base contesta con una Familia, un Paciente y lo que cada prueba le ponga encima. */
+function baseConUnaFamilia({ prestaciones = [], paquetes = [], items = [], yaFacturadas = [] } = {}) {
+  respuestas.set('GET /rest/v1/familias', () => [{ id: FAMILIA, pacientes: [{ id: PACIENTE, nombre: 'Juana Pérez' }] }]);
+  respuestas.set('GET /rest/v1/prestaciones', () => prestaciones);
+  respuestas.set('GET /rest/v1/paquetes_prestaciones', () => paquetes);
+  respuestas.set('GET /rest/v1/paquete_prestacion_items', () => items);
+  respuestas.set('GET /rest/v1/facturas_familia', () => yaFacturadas);
+  respuestas.set('POST /rest/v1/facturas_familia', () => [{ id: FACTURA }]);
+  respuestas.set('POST /rest/v1/facturas_familia_items', () => []);
+}
+
+function unaPrestacion(cambios = {}) {
+  return {
+    id: 1,
+    paciente_id: PACIENTE,
+    servicio_id: null,
+    tipo_servicio: 'Acompañamiento',
+    precio_final: '10000.00',
+    vigente_desde: '2026-01-01',
+    vigente_hasta: null,
+    ...cambios,
+  };
+}
+
+describe('generar las facturas de un período', () => {
+  it('sin período no se genera nada', async () => {
+    const { estado } = await pedir('POST', '/facturas/generar', { fecha_vencimiento: '2026-08-31' });
+    assert.equal(estado, 400);
+  });
+
+  it('sin fecha de vencimiento tampoco: una factura que no vence no se puede reclamar', async () => {
+    const { estado } = await pedir('POST', '/facturas/generar', { periodo: '2026-08' });
+    assert.equal(estado, 400);
+  });
+
+  it('la factura lleva lo que corre ese mes, y no lo que dejó de correr', async () => {
+    baseConUnaFamilia({
+      prestaciones: [
+        unaPrestacion({ id: 1, precio_final: '10000.00' }),
+        unaPrestacion({ id: 2, tipo_servicio: 'Enfermería', precio_final: '8000.00', vigente_hasta: '2026-06-30' }),
+      ],
+    });
+
+    const { estado, cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo, { generadas: 1, sinPrestaciones: 0 });
+
+    const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_familia');
+    assert.equal(factura.cuerpo.monto_total, 10000);
+    const renglones = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_familia_items');
+    assert.equal(renglones.cuerpo.length, 1);
+    assert.equal(renglones.cuerpo[0].descripcion, 'Acompañamiento — Juana Pérez');
+  });
+
+  it('un paquete vigente se cobra a su precio pactado, no a la suma de los suyos', async () => {
+    baseConUnaFamilia({
+      prestaciones: [
+        unaPrestacion({ id: 1, precio_final: '10000.00' }),
+        unaPrestacion({ id: 2, tipo_servicio: 'Enfermería', precio_final: '8000.00' }),
+      ],
+      paquetes: [{ id: 9, paciente_id: PACIENTE, nombre: 'Plan tarde', precio_paquete: '15000.00', estado: 'vigente' }],
+      items: [
+        { paquete_id: 9, prestacion_id: 1 },
+        { paquete_id: 9, prestacion_id: 2 },
+      ],
+    });
+
+    await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
+
+    const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_familia');
+    assert.equal(factura.cuerpo.monto_total, 15000);
+    const renglones = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_familia_items');
+    assert.equal(renglones.cuerpo.length, 1);
+    assert.equal(renglones.cuerpo[0].descripcion, 'Plan tarde — Juana Pérez');
+  });
+
+  it('la Familia que ya tiene la factura del período no recibe otra', async () => {
+    baseConUnaFamilia({ prestaciones: [unaPrestacion()], yaFacturadas: [{ familia_id: FAMILIA }] });
+
+    const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
+    assert.deepEqual(cuerpo, { generadas: 0, sinPrestaciones: 0 });
+    assert.equal(llamadas.some((l) => l.clave === 'POST /rest/v1/facturas_familia'), false);
+  });
+
+  it('la Familia a la que no le corre nada se cuenta aparte, y no se le factura', async () => {
+    baseConUnaFamilia({ prestaciones: [unaPrestacion({ vigente_hasta: '2026-06-30' })] });
+
+    const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
+    assert.deepEqual(cuerpo, { generadas: 0, sinPrestaciones: 1 });
+    assert.equal(llamadas.some((l) => l.clave === 'POST /rest/v1/facturas_familia'), false);
+  });
+
+  it('si los renglones no entran, la factura no queda sin detalle', async () => {
+    baseConUnaFamilia({ prestaciones: [unaPrestacion()] });
+    respuestas.set('POST /rest/v1/facturas_familia_items', () => ({ __estado: 400, __cuerpo: { message: 'no entró' } }));
+    respuestas.set('DELETE /rest/v1/facturas_familia', () => []);
+
+    const { estado } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
+    assert.equal(estado, 400);
+    const borrado = llamadas.find((l) => l.clave === 'DELETE /rest/v1/facturas_familia');
+    assert.ok(borrado, 'la factura sin renglones tiene que borrarse');
+    assert.ok(borrado.url.includes(`prestadora_id=eq.${PRESTADORA}`));
+  });
+
+  it('toda consulta lleva el filtro de Prestadora escrito', async () => {
+    baseConUnaFamilia({
+      prestaciones: [unaPrestacion()],
+      paquetes: [{ id: 9, paciente_id: PACIENTE, nombre: null, precio_paquete: '1.00', estado: 'de_baja' }],
+      items: [{ paquete_id: 9, prestacion_id: 1 }],
+    });
+
+    await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
+
+    const consultas = consultasDeDatos();
+    assert.ok(consultas.length >= 5);
+    for (const consulta of consultas) {
+      assert.ok(
+        consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`),
+        `esta consulta no filtró por Prestadora: ${consulta.url}`
+      );
+    }
+    const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_familia');
+    assert.equal(factura.cuerpo.prestadora_id, PRESTADORA);
+  });
+
+  it('quien no es del Panel no genera facturas', async () => {
+    rolDelUsuario = 'familia';
+    const { estado } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
+    assert.equal(estado, 403);
+  });
+});

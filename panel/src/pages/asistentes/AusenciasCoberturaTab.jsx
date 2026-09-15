@@ -10,6 +10,7 @@ import { EstadoLista } from '../../components/layout/EstadoLista';
 import { generarConstanciaAusencia, descargarPDF } from '../../lib/generarDocumentoCese';
 import { ESTADO_ACTIVO } from '../../lib/candidatos';
 import { guardiasAfectadas, guardiasSinCubrir } from '../../lib/guardiasAfectadas';
+import { diasComputados } from '../../lib/diasDeAusencia';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { con } from '../../lib/textos';
 
@@ -42,6 +43,7 @@ export function AusenciasCoberturaTab({ asistente }) {
   const [guardando, setGuardando] = useState(false);
   const [nueva, setNueva] = useState({ tipo: 'enfermedad_inculpable', fecha_inicio: '', fecha_fin: '', observaciones: '' });
   const [coberturaForm, setCoberturaForm] = useState({});
+  const [cierreForm, setCierreForm] = useState({});
   const [subiendoCertificado, setSubiendoCertificado] = useState(null);
   const [errorCertificado, setErrorCertificado] = useState(null);
 
@@ -150,6 +152,7 @@ export function AusenciasCoberturaTab({ asistente }) {
       fecha_fin: nueva.fecha_fin || null,
       observaciones: nueva.observaciones || null,
       guardias_afectadas: afectadas,
+      dias_computados: diasComputados(nueva),
     });
     setGuardando(false);
     if (errorInsert) {
@@ -157,6 +160,42 @@ export function AusenciasCoberturaTab({ asistente }) {
       return;
     }
     setNueva({ tipo: 'enfermedad_inculpable', fecha_inicio: '', fecha_fin: '', observaciones: '' });
+    recargar();
+  }
+
+  // Cerrar una ausencia que estaba en curso: se le pone el día en que terminó y, con eso, los dos
+  // números que hasta que ese día se sabe no se podían calcular. Los días computados son los que
+  // imprime la constancia que se le entrega a la persona, y la lista de guardias se rehace porque
+  // mientras la ausencia estaba abierta alcanzaba todo lo que hubiera hacia adelante.
+  //
+  // Los tres valores se guardan de una sola vez: una ausencia cerrada sin su cuenta, o con una
+  // cuenta de cuando todavía estaba abierta, es peor que una sin cerrar.
+  async function cerrarAusencia(ausencia) {
+    const fechaFin = cierreForm[ausencia.id];
+    if (!fechaFin) return;
+    setGuardando(true);
+    setError(null);
+
+    const cerrada = { ...ausencia, fecha_fin: fechaFin };
+    let afectadas;
+    try {
+      afectadas = await guardiasDeLaAusencia(cerrada);
+    } catch {
+      setGuardando(false);
+      setError(t.comun.error_generico);
+      return;
+    }
+
+    const { error: errorUpdate } = await supabase
+      .from('ausencias')
+      .update({ fecha_fin: fechaFin, guardias_afectadas: afectadas, dias_computados: diasComputados(cerrada) })
+      .eq('id', ausencia.id);
+    setGuardando(false);
+    if (errorUpdate) {
+      setError(t.comun.error_generico);
+      return;
+    }
+    setCierreForm((prev) => ({ ...prev, [ausencia.id]: '' }));
     recargar();
   }
 
@@ -261,7 +300,28 @@ export function AusenciasCoberturaTab({ asistente }) {
               <strong>{t.asistentes.ausencias[`tipo_${a.tipo}`]}</strong> — {new Date(a.fecha_inicio).toLocaleDateString()}
               {a.fecha_fin ? ` → ${new Date(a.fecha_fin).toLocaleDateString()}` : ` (${t.asistentes.ausencias.en_curso})`}
             </p>
+            {a.dias_computados !== null && a.dias_computados !== undefined && (
+              <p>{con(t.asistentes.ausencias.dias_computados, { n: a.dias_computados })}</p>
+            )}
             {a.observaciones && <p>{a.observaciones}</p>}
+
+            {/* Una ausencia en curso se cierra acá, y hasta que se cierre no hay cuánto duró ni
+                lista firme de turnos descubiertos: mientras no se sabe cuándo termina, alcanza
+                todo lo que haya hacia adelante. */}
+            {!a.fecha_fin && (
+              <div className="panel-cierre-ausencia">
+                <FormField
+                  label={t.asistentes.ausencias.fecha_fin}
+                  name={`cierre-${a.id}`}
+                  type="date"
+                  value={cierreForm[a.id] || ''}
+                  onChange={(e) => setCierreForm((prev) => ({ ...prev, [a.id]: e.target.value }))}
+                />
+                <Button variant="secondary" onClick={() => cerrarAusencia(a)} disabled={guardando || !cierreForm[a.id]}>
+                  {t.asistentes.ausencias.cerrar_ausencia}
+                </Button>
+              </div>
+            )}
 
             {/* Cuántos turnos dejó descubiertos. Las ausencias cargadas antes de que esto se
                 escribiera tienen la columna vacía, y ahí no se dice nada: cero y «no se sabe» no

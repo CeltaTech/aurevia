@@ -35,6 +35,9 @@ async function pedido(ruta, opciones = {}) {
 
 export const api = {
   perfil: () => pedido('/perfil'),
+  // Sus papeles y su Certificado. Va aparte de `/perfil` porque `/perfil` lo pide la aplicación
+  // al arrancar y esto lo mira quien entró a Mi Perfil.
+  papeles: () => pedido('/perfil/papeles'),
   // El interruptor de disponibilidad. No lleva el identificador de nadie: la sesión decide sobre
   // qué ficha se escribe, y lo que vuelve es lo que quedó guardado, no lo que se mandó.
   cambiarDisponibilidad: (disponible) =>

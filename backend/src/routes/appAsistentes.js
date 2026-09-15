@@ -17,6 +17,7 @@ import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
 import { visibilidadDelPedido, exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
 import { tipoConSusTareas } from '../utils/tareasDelTipo.js';
+import { carpetaDelAsistente, estadoDelCertificado } from '../utils/carpetaDelAsistente.js';
 import { guardarSuscripcionPush } from '../utils/suscripcionesPush.js';
 import {
   MOTIVOS_SIN_COMPROBAR,
@@ -246,6 +247,59 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
     (await ofreceMarketplace(req.usuarioAsistente.prestadoraId));
 
   res.json({ perfil, certificado: certificado || null, marca, visibilidad, marketplace });
+});
+
+// Su carpeta de papeles, y su Certificado de Aptitud.
+//
+// VA APARTE DE `/perfil` A PROPÓSITO. `/perfil` lo pide la aplicación entera al arrancar, para
+// saber de qué Prestadora es la marca del encabezado: todo lo que se le cuelgue ahí lo paga cada
+// arranque, y esto lo mira quien entró a Mi Perfil.
+//
+// Y ACÁ SÍ VAN LOS NOMBRES DE LOS PAPELES. A la Familia se le dan cuentas y nunca cuál papel es
+// cuál (`celtatech/CLAUDE.md` §6); el dueño de la carpeta necesita saber qué le falta para ir a
+// buscarlo. La sesión decide de quién es la carpeta: el identificador no viaja en el pedido.
+appAsistentesRouter.get('/perfil/papeles', requiereRolAsistente, async (req, res) => {
+  const asistenteId = req.usuarioAsistente.id;
+  const prestadoraId = req.usuarioAsistente.prestadoraId;
+
+  const [{ data: tiposExigidos }, { data: documentos }, { data: certificado }, { data: prestadora }] =
+    await Promise.all([
+      supabase
+        .from('tipos_documento_asistente')
+        .select('id, nombre, requiere_vencimiento')
+        .eq('prestadora_id', prestadoraId)
+        .eq('activo', true)
+        .order('nombre'),
+      supabase
+        .from('documentos_asistente')
+        .select('tipo_documento_id, fecha_vencimiento')
+        .eq('prestadora_id', prestadoraId)
+        .eq('asistente_id', asistenteId),
+      supabase
+        .from('certificados')
+        .select('activo, fecha_emision, fecha_vencimiento')
+        .eq('prestadora_id', prestadoraId)
+        .eq('asistente_id', asistenteId)
+        .order('fecha_emision', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('prestadoras')
+        .select('dias_aviso_vencimiento_documentos')
+        .eq('id', prestadoraId)
+        .maybeSingle(),
+    ]);
+
+  const diasAviso = prestadora?.dias_aviso_vencimiento_documentos ?? undefined;
+
+  res.json({
+    carpeta: carpetaDelAsistente({
+      tiposExigidos: tiposExigidos || [],
+      documentos: documentos || [],
+      diasAviso,
+    }),
+    certificado: estadoDelCertificado(certificado || null, { diasAviso }),
+  });
 });
 
 // El interruptor de disponibilidad, y lo mueve el Asistente.
@@ -821,6 +875,9 @@ appAsistentesRouter.post('/guardias/:id/reporte/estructurar', requiereRolAsisten
     const estructurado = await estructurarReporteIA(textoLibre, req.usuarioAsistente.prestadoraId);
     res.json({ estructurado });
   } catch (error) {
+    // El detalle queda en el registro del servidor y no sale hacia afuera: de acá puede venir
+    // el mensaje crudo del proveedor de IA. Lo que ve el teléfono es qué hacer ahora.
+    console.error('Error estructurando el reporte con IA:', error.message);
     res.status(500).json({ error: 'No se pudo estructurar el reporte con IA — hace falta completar los campos a mano' });
   }
 });

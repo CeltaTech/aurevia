@@ -7,6 +7,7 @@ import { activarPush, desactivarPush, pushSoportado, suscripcionActual } from '.
 import { traducirValor } from '../i18n/valores';
 import { nombreTipo } from '../lib/tipoDeAsistente';
 import Matricula from '../components/Matricula';
+import CarpetaDePapeles from '../components/CarpetaDePapeles';
 import Consentimientos from '../components/Consentimientos';
 
 export default function MiPerfil() {
@@ -92,6 +93,18 @@ export default function MiPerfil() {
   return (
     <div>
       <h1>{t.perfil.titulo}</h1>
+
+      {/* La foto que ven las Familias. Va arriba de todo y sólo si hay: un recuadro vacío con la
+          silueta de nadie no informa nada, y en un teléfono ocupa la pantalla entera. Se mira y
+          no se cambia —la carga la Prestadora, igual que el resto de la ficha—. */}
+      {perfil.foto_url && (
+        <img
+          src={perfil.foto_url}
+          alt={t.perfil.foto_alt}
+          style={{ width: '100%', maxWidth: 180, borderRadius: '12px', marginBottom: '1rem' }}
+        />
+      )}
+
       <div className="panel-detalle-lista" style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '0.5rem 1.5rem' }}>
         <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.nombre}</div>
         <div>{perfil.nombre}</div>
@@ -101,6 +114,10 @@ export default function MiPerfil() {
         <div>{perfil.telefono || '—'}</div>
         <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.tipo}</div>
         <div>{nombreTipo(perfil.tipos_asistente, t)}</div>
+        {/* Cómo está contratado. Es lo que decide cómo cobra y qué le corresponde, y si quedó
+            cargado al revés conviene que lo vea él, que es el único que lo sabe con certeza. */}
+        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.vinculo}</div>
+        <div>{traducirValor(t.perfil, `vinculo_${perfil.tipo_vinculo}`)}</div>
         <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.zonas}</div>
         <div>{(perfil.zonas || []).join(', ') || '—'}</div>
         <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.estado}</div>
@@ -143,6 +160,13 @@ export default function MiPerfil() {
           tiene que ser lo primero que vea. Si su tipo no requiere Matrícula, este
           bloque no se dibuja. */}
       <Matricula />
+
+      {/* Los papeles que le exige la Prestadora, y su Certificado de Aptitud. Van después de la
+          Matrícula por la misma razón por la que ella va primero: la Matrícula lo traba hoy, y
+          esto le avisa de lo que lo va a trabar. Si la Prestadora no exige ninguno y no hay
+          Certificado, este bloque no se dibuja. */}
+      <CarpetaDePapeles />
+
       <h2 style={{ marginTop: '2rem' }}>{t.perfil.notificaciones_titulo}</h2>
       {!pushSoportado() ? (
         <div className="alert">{t.perfil.notificaciones_no_soportadas}</div>

@@ -137,8 +137,31 @@ botón diez veces. Lo provisorio se muestra y no se guarda.
 persona no queda encendido porque se tocó «volver».
 
 ### Mi Perfil
-Foto, datos personales, especialidades y zonas, estado de monotributo y seguro (con fecha de
-vencimiento), Certificado de Aptitud (ver QR, compartir), historial de evaluaciones recibidas.
+Foto, datos personales, tipo de vínculo, matrícula, la carpeta de papeles con el Certificado de
+Aptitud, y el historial de evaluaciones recibidas.
+
+**La carpeta de papeles se mira, no se carga.** Los papeles del Asistente los recibe la Prestadora
+y los carga ella desde el Panel; el teléfono los muestra para que la persona sepa qué tiene, qué
+está por vencerse y qué le falta. Al pie lo dice con todas las letras, para que nadie espere un
+botón de subir que no está.
+
+**Acá sí va el nombre de cada papel, y eso la diferencia de lo que ve la Familia.** A la Familia se
+le dan cuentas y nunca el nombre de un papel, porque el nombre puede ser dato de salud. El dueño de
+la carpeta es otra cosa: si no se le dice cuál le falta, no sabe qué ir a buscar.
+
+**Lo exigido y nunca cargado aparece igual**, como un renglón más de la lista. Una lista armada
+desde lo que está cargado dejaría afuera justo lo que más importa ver, y se vería toda en verde.
+La lista va ordenada por gravedad —vencido, sin cargar, falta la fecha, por vencer, vigente—, así
+lo que hay que resolver queda arriba sin tener que buscarlo.
+
+**El resumen es el mismo que ve el otro lado del producto.** Lo calcula la misma función que
+alimenta al Panel de la Prestadora y a la Familia, con la ventana de aviso que configuró esa
+Prestadora. Si cada pantalla contara por su cuenta, el teléfono diría «al día» y el Panel «falta un
+papel», cada uno con razón según su propia cuenta.
+
+**El Certificado de Aptitud se muestra con su estado y su fecha de emisión.** No tenerlo no es
+tenerlo vencido, y se dice distinto. La baja que le da la Prestadora gana sobre el calendario: un
+certificado dado de baja aparece así aunque la fecha no haya llegado.
 
 ## Alertas tempranas de ausencia (diseño, no implementado — ver pendiente #20 de `docs/PLAN_HASTA_PRODUCCION.md`)
 

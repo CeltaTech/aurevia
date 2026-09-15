@@ -196,7 +196,11 @@ export default function GuardiaActiva() {
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
   const [haciendoCheckin, setHaciendoCheckin] = useState(false);
-  const [tick, setTick] = useState(0);
+  // El latido que vuelve a dibujar la pantalla cada medio minuto mientras la guardia está
+  // abierta: lo que se ve arriba es cuánto lleva adentro, y eso cambia solo con el reloj. El
+  // valor no se lee en ninguna parte —por eso no tiene nombre—: lo único que hace falta es que
+  // cambie.
+  const [, redibujar] = useState(0);
   const [checkinPendiente, setCheckinPendiente] = useState(null); // { desde } o null
   // Los dos actos de antes de llegar (pendiente #101) esperando señal. Se miran igual que el
   // check-in pendiente: quien avisó sin conexión tiene que ver que su aviso quedó guardado, o
@@ -268,7 +272,7 @@ export default function GuardiaActiva() {
 
   useEffect(() => {
     if ((!guardia?.checkin_at && !checkinPendiente) || guardia?.checkout_at || cerradoPendiente) return;
-    const intervalo = setInterval(() => setTick((v) => v + 1), 30000);
+    const intervalo = setInterval(() => redibujar((v) => v + 1), 30000);
     return () => clearInterval(intervalo);
   }, [guardia, checkinPendiente, cerradoPendiente]);
 

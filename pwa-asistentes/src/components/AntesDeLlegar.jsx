@@ -60,7 +60,7 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
     } catch {
       punto = null;
     }
-    const datos = { ...(punto ?? {}), medioTransporte: medioTransporte.trim() || undefined };
+    const datos = { ...punto, medioTransporte: medioTransporte.trim() || undefined };
     try {
       const resultado = await api.registrarSalida(guardiaId, datos);
       if (resultado.yaLlego) setAviso(t.antes_de_llegar.ya_llego);

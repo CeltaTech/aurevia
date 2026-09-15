@@ -199,3 +199,33 @@ describe('la carpeta de papeles del Asistente, desde el teléfono', () => {
     assert.equal(estado, 403);
   });
 });
+
+// `GET /perfil` devuelve el mismo Certificado que la carpeta, por una consulta propia. Son dos
+// consultas a la misma tabla escritas en dos lugares, y una de ellas estuvo sin el filtro de
+// Prestadora: se veía igual de bien, porque el identificador del Asistente ya alcanza mientras
+// nunca se repita. Lo que separa una Prestadora de otra son estos filtros, así que el que falta
+// no lo encuentra nadie mirando la pantalla.
+describe('el Certificado que viaja con el perfil', () => {
+  beforeEach(() => {
+    respuestas.set('GET /rest/v1/asistentes', () => [
+      { id: USUARIO, nombre: 'Nombre Inventado', telefono: null, email: 'inventado@ejemplo.test',
+        foto_url: null, tipo_asistente_id: null, zonas: [], estado: 'activo',
+        tipo_vinculo: 'monotributo', qr_token: 'x', canales: [],
+        disponible_para_ofertas: true, disponibilidad_cambiada_en: null, tipos_asistente: null },
+    ]);
+  });
+
+  it('la consulta del Certificado va filtrada por la Prestadora de la sesión', async () => {
+    const respuesta = await fetch(`${DIRECCION}/perfil`, {
+      headers: { Authorization: 'Bearer token-de-mentira' },
+    });
+    assert.equal(respuesta.status, 200);
+    const consultas = consultasA('certificados');
+    assert.equal(consultas.length, 1);
+    assert.ok(
+      consultas[0].includes(`prestadora_id=eq.${PRESTADORA}`),
+      'la consulta del Certificado no lleva el filtro de Prestadora'
+    );
+    assert.ok(consultas[0].includes(`asistente_id=eq.${USUARIO}`));
+  });
+});

@@ -215,9 +215,14 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
     return res.status(404).json({ error: 'Perfil no encontrado' });
   }
 
+  // El filtro por Prestadora va aunque el identificador del Asistente ya sea de una sola: una
+  // misma persona tiene una ficha por cada Prestadora donde trabaja, y una consulta que no
+  // nombra la Organización queda a merced de que ese identificador nunca se repita. Es la misma
+  // consulta que hace `/perfil/papeles`, y se escribe igual.
   const { data: certificado } = await supabase
     .from('certificados')
     .select('activo, fecha_emision, fecha_vencimiento')
+    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('asistente_id', req.usuarioAsistente.id)
     .order('fecha_emision', { ascending: false })
     .limit(1)

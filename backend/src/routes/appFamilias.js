@@ -601,9 +601,13 @@ appFamiliasRouter.get('/pacientes/:id/asistente', requiereRolFamilia, async (req
     paciente.prestadora_id
   );
 
+  // El filtro por Prestadora va aunque el identificador del Asistente ya sea de una sola: una
+  // misma persona tiene una ficha por cada Prestadora donde trabaja, y el motor entra con la
+  // llave de servicio, así que lo único que separa una Prestadora de otra son estos filtros.
   const { data: certificado } = await supabase
     .from('certificados')
     .select('activo, fecha_vencimiento')
+    .eq('prestadora_id', paciente.prestadora_id)
     .eq('asistente_id', guardia.asistente_id)
     .eq('activo', true)
     .order('fecha_vencimiento', { ascending: false })
@@ -743,9 +747,12 @@ appFamiliasRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRol
 
   const coincide = guardiaHoy.asistente_id === asistenteEscaneado.id;
 
+  // Mismo motivo que en la pantalla del Asistente asignado: el filtro de Prestadora es lo que
+  // aísla, no el identificador del Asistente.
   const { data: certificado } = await supabase
     .from('certificados')
     .select('activo, fecha_vencimiento')
+    .eq('prestadora_id', paciente.prestadora_id)
     .eq('asistente_id', asistenteEscaneado.id)
     .eq('activo', true)
     .order('fecha_vencimiento', { ascending: false })

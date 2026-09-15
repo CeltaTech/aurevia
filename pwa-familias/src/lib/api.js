@@ -79,6 +79,13 @@ export const api = {
   // El perfil público de una persona de la vidriera. De acá no sale ningún dato de contacto:
   // llegar a la persona es lo que el Marketplace vende y tiene su propio circuito.
   asistenteDelMarketplace: (id) => pedido(`/marketplace/asistentes/${id}`),
+  // VER CÓMO LLEGAR A UNA PERSONA. Son dos direcciones y no una a propósito: preguntar no cobra
+  // nada y contesta qué pasaría —con qué forma, cuánto sale, si eso termina el período gratuito—,
+  // y abrir es un pedido aparte que sale únicamente cuando alguien toca el botón. Así ver el dato
+  // de contacto nunca es el efecto de haber mirado una pantalla.
+  comoEstaElContactoDelAsistente: (asistenteId) => pedido(`/marketplace/asistentes/${asistenteId}/contacto`),
+  verElContactoDelAsistente: (asistenteId) =>
+    pedido(`/marketplace/asistentes/${asistenteId}/contacto`, { method: 'POST' }),
   // EL CHAT CON UN ASISTENTE DE LA VIDRIERA. El chat no se cobra: lo que se cobra es el dato de
   // contacto, y por eso sale tapado de acá hasta que esa pareja lo abra. Quien tapa es el motor,
   // una sola vez para las dos puntas.

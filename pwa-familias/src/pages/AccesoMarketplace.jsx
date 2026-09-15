@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
 import { mensajeDeError } from '../lib/errores';
+import { formatearImporte } from '../lib/dinero';
 
 function minutosRestantes(fecha) {
   return Math.max(0, Math.ceil((new Date(fecha).getTime() - Date.now()) / 60000));
@@ -12,7 +13,7 @@ function minutosRestantes(fecha) {
 
 export default function AccesoMarketplace() {
   const { id } = useParams();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [acceso, setAcceso] = useState(undefined);
   const [error, setError] = useState('');
   const [generando, setGenerando] = useState(false);
@@ -109,7 +110,7 @@ export default function AccesoMarketplace() {
             {traducirValor(t.acceso, `estado_${acceso.estado}`)}
           </div>
           <div className="guardia-card-detalle">
-            {t.acceso.importe}: {acceso.importe}
+            {t.acceso.importe}: {formatearImporte(acceso.importe, acceso.moneda, locale)}
           </div>
           {acceso.proximo_cobro && (
             <div className="guardia-card-detalle">

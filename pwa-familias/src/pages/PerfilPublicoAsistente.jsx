@@ -5,6 +5,7 @@ import { useLocale } from '../i18n/LocaleContext';
 import { nombreTipo } from '../lib/tipoDeAsistente';
 import { diaEnPalabras } from '../lib/fechaEnPalabras';
 import { mensajeDeError } from '../lib/errores';
+import { formatearImporte } from '../lib/dinero';
 import EstadoDocumental from '../components/EstadoDocumental';
 
 // El perfil público de una persona de la vidriera, antes de contratarla.
@@ -16,8 +17,15 @@ import EstadoDocumental from '../components/EstadoDocumental';
 // LAS OPINIONES VAN SIN QUIÉN LAS ESCRIBIÓ. Quien calificó es una Familia, y su nombre no es
 // parte de lo que se publica. El motor ya no lo manda; acá no habría de dónde sacarlo.
 //
-// Y NO HAY NINGÚN DATO DE CONTACTO. Llegar a la persona es lo que el Marketplace vende y se
-// pide aparte. Esta pantalla lo dice en vez de dejar buscando un botón que no está.
+// CÓMO LLEGAR A LA PERSONA SE PIDE APARTE, Y CON SU PROPIO BOTÓN. Eso es lo que el Marketplace
+// vende, así que verlo cuesta. Mirar este perfil no abre nada: la pantalla pregunta qué pasaría
+// —con qué forma se cobra, cuánto sale, si termina el período de prueba— y lo muestra en una
+// confirmación. Recién cuando alguien toca «sí» sale el pedido que cobra. Abrir un contacto no
+// puede ser nunca el efecto de haber entrado a una pantalla.
+//
+// Y QUIEN NO MIRA LA PLATA NO VE NINGUNA DE ESAS FRASES. El motor le contesta si el contacto ya
+// está abierto y nada más: cuánto sale y cuánto saldo queda es plata, y en el círculo familiar no
+// la mira cualquiera.
 export default function PerfilPublicoAsistente() {
   const { id } = useParams();
   const { t, locale } = useLocale();
@@ -25,6 +33,28 @@ export default function PerfilPublicoAsistente() {
   const [error, setError] = useState('');
   const [abriendo, setAbriendo] = useState(false);
   const navegar = useNavigate();
+
+  // El contacto se carga aparte del perfil, y su error también se muestra aparte: que no se pueda
+  // decir cuánto sale no es motivo para tapar el perfil entero.
+  const [contacto, setContacto] = useState(null);
+  const [errorContacto, setErrorContacto] = useState('');
+  const [confirmando, setConfirmando] = useState(false);
+  const [viendoContacto, setViendoContacto] = useState(false);
+
+  async function verElContacto() {
+    if (viendoContacto) return;
+    setViendoContacto(true);
+    setErrorContacto('');
+    try {
+      const abierto = await api.verElContactoDelAsistente(id);
+      setContacto({ ...abierto, activacion: null });
+      setConfirmando(false);
+    } catch (e) {
+      setErrorContacto(mensajeDeError(e, t, 'Contacto del Asistente'));
+    } finally {
+      setViendoContacto(false);
+    }
+  }
 
   async function escribirle() {
     if (abriendo) return;
@@ -48,6 +78,17 @@ export default function PerfilPublicoAsistente() {
       })
       .catch((e) => {
         if (activo) setError(mensajeDeError(e, t, 'Perfil público del Asistente'));
+      });
+
+    // Preguntar no cobra nada: esta consulta no toca el saldo ni termina ningún período de
+    // prueba. Lo único que cobra es el botón.
+    api
+      .comoEstaElContactoDelAsistente(id)
+      .then((estado) => {
+        if (activo) setContacto(estado);
+      })
+      .catch((e) => {
+        if (activo) setErrorContacto(mensajeDeError(e, t, 'Contacto del Asistente'));
       });
     return () => {
       activo = false;
@@ -97,6 +138,86 @@ export default function PerfilPublicoAsistente() {
         {abriendo ? t.comun.cargando : t.chat.escribirle}
       </button>
 
+      <section style={{ marginTop: '1.5rem' }}>
+        <h2>{t.vidriera.contacto_titulo}</h2>
+
+        {errorContacto && <div className="alert alert-error" role="alert">{errorContacto}</div>}
+        {!errorContacto && contacto === null && (
+          <div className="estado-cargando" role="status">{t.comun.cargando}</div>
+        )}
+
+        {contacto?.abierto && contacto.contacto && (
+          <>
+            {contacto.contacto.telefono && (
+              <p className="guardia-card-detalle">
+                {t.vidriera.contacto_telefono}: {contacto.contacto.telefono}
+              </p>
+            )}
+            {contacto.contacto.email && (
+              <p className="guardia-card-detalle">
+                {t.vidriera.contacto_email}: {contacto.contacto.email}
+              </p>
+            )}
+            {contacto.contacto.domicilio && (
+              <p className="guardia-card-detalle">
+                {t.vidriera.contacto_domicilio}: {contacto.contacto.domicilio}
+              </p>
+            )}
+            <p className="guardia-card-detalle">{t.vidriera.contacto_ya_abierto}</p>
+          </>
+        )}
+
+        {/* El motivo por el que no se puede no es una falla: cada uno se resuelve de una manera
+            distinta, y la frase lo dice. */}
+        {contacto && !contacto.abierto && contacto.motivo && (
+          <div className="estado-vacio" role="status">
+            {t.errores.motivos[contacto.motivo] || t.vidriera.contacto_aparte}
+          </div>
+        )}
+
+        {/* Quien no mira la plata llega hasta acá: sabe que el dato existe y que se pide aparte. */}
+        {contacto && !contacto.abierto && !contacto.motivo && !contacto.activacion && (
+          <p className="guardia-card-detalle">{t.vidriera.contacto_aparte}</p>
+        )}
+
+        {contacto && !contacto.abierto && contacto.activacion && !confirmando && (
+          <button type="button" className="btn btn-secondary" onClick={() => setConfirmando(true)}>
+            {t.vidriera.contacto_ver}
+          </button>
+        )}
+
+        {/* La confirmación dice qué se va a cobrar antes de cobrarlo, y nombra las cuatro cosas
+            que cambian: con qué forma, cuánto, si se renueva sola y si termina la prueba. */}
+        {contacto && !contacto.abierto && contacto.activacion && confirmando && (
+          <div className="alert alert-info">
+            <strong>{t.vidriera.contacto_confirmar_titulo}</strong>
+            <p>
+              {t.vidriera.contacto_confirmar_importe
+                .replace('{forma}', contacto.activacion.forma)
+                .replace('{importe}', formatearImporte(contacto.activacion.importe, contacto.activacion.moneda, locale))}
+            </p>
+            {contacto.activacion.renueva_sola && <p>{t.vidriera.contacto_confirmar_renueva}</p>}
+            {contacto.activacion.termina_el_periodo_gratuito && (
+              <p>{t.vidriera.contacto_confirmar_termina_gratis}</p>
+            )}
+            {contacto.activacion.saldo_contactos !== null && (
+              <p>{t.vidriera.contacto_confirmar_saldo.replace('{n}', contacto.activacion.saldo_contactos)}</p>
+            )}
+            <button type="button" className="btn btn-primary" onClick={verElContacto} disabled={viendoContacto}>
+              {viendoContacto ? t.comun.cargando : t.vidriera.contacto_confirmar_si}
+            </button>{' '}
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setConfirmando(false)}
+              disabled={viendoContacto}
+            >
+              {t.comun.cancelar}
+            </button>
+          </div>
+        )}
+      </section>
+
       {verificacion && (
         <EstadoDocumental
           resumen={verificacion.documentacion}
@@ -143,10 +264,6 @@ export default function PerfilPublicoAsistente() {
           </div>
         ))
       )}
-
-      <p className="guardia-card-detalle" style={{ marginTop: '1.5rem' }}>
-        {t.vidriera.contacto_aparte}
-      </p>
     </div>
   );
 }

@@ -51,6 +51,12 @@ export const T = {
         // es una función apagada: es que esa Prestadora asigna ella a su gente, y decirlo así
         // evita que alguien le reclame que le "active" algo que no ofrece.
         marketplace_no_habilitado: 'Esta Prestadora asigna ella misma a sus Asistentes, así que no hay una lista para elegir.',
+        // Los tres de ver cómo llegar a una persona. Ninguno es una falla, y cada uno se sale de
+        // una manera distinta: el primero contratando, el segundo renovando y el tercero pidiendo
+        // otro paquete. Los tres nombran a la Prestadora, que es con quien se resuelve.
+        sin_acceso_de_marketplace: 'Para ver cómo llegar a esta persona hace falta tener contratado el servicio con la Prestadora.',
+        acceso_no_vigente: 'El servicio contratado no está vigente. Para ver estos datos hace falta renovarlo con la Prestadora.',
+        saldo_agotado: 'Ya se usaron todos los contactos incluidos. Para ver uno más hace falta pedirle otro paquete a la Prestadora.',
         // Los de la activación de la cuenta. Son cinco frases distintas porque son cinco
         // problemas distintos y cada uno se sale de una manera: el enlace equivocado se abre
         // de nuevo desde el correo, el ya usado se saltea entrando derecho, y el vencido
@@ -67,6 +73,7 @@ export const T = {
       error_generico: 'Ocurrió un error. Se puede volver a intentar.',
       vacio: 'No hay resultados.',
       volver: 'Volver',
+      cancelar: 'Cancelar',
       // El puntaje dicho en palabras. Las estrellas dibujadas no se leen: un lector de
       // pantalla las nombraría una por una, o las saltearía. Es el mismo texto que en el Panel.
       puntaje_estrellas: '{n} de 5 estrellas',
@@ -305,6 +312,22 @@ export const T = {
       opiniones_titulo: 'Qué dijeron otras Familias',
       sin_opiniones: 'Todavía no hay comentarios de otras Familias.',
       contacto_aparte: 'Los datos para comunicarse con la persona no se muestran acá: se piden cuando se decide avanzar.',
+      // Ver cómo llegar a la persona por afuera de la aplicación. La confirmación se arma con
+      // varias frases sueltas y no con una sola: qué se cobra, si se renueva, si termina la
+      // prueba y cuántos contactos quedan no aparecen siempre los cuatro, y una frase larga con
+      // huecos que a veces quedan vacíos se lee peor que tres cortas.
+      contacto_titulo: 'Cómo llegar a esta persona',
+      contacto_ver: 'Ver los datos de contacto',
+      contacto_telefono: 'Teléfono',
+      contacto_email: 'Email',
+      contacto_domicilio: 'Domicilio',
+      contacto_ya_abierto: 'Estos datos ya están disponibles para esta cuenta y no se vuelven a cobrar.',
+      contacto_confirmar_titulo: 'Antes de ver los datos',
+      contacto_confirmar_importe: 'Se activa el cobro de {forma}: {importe}.',
+      contacto_confirmar_renueva: 'Esa forma se renueva sola hasta que se le pida la baja a la Prestadora.',
+      contacto_confirmar_termina_gratis: 'Con esto termina el período de prueba: desde hoy el cobro queda firme.',
+      contacto_confirmar_saldo: 'Quedan {n} contactos incluidos, y ver éste usa uno.',
+      contacto_confirmar_si: 'Sí, ver los datos',
     },
     // El código que se le muestra al Asistente que llega (pendiente #113). Reemplaza al cartel
     // impreso del domicilio, que se podía fotografiar una vez y usar desde cualquier lado.
@@ -516,6 +539,9 @@ export const T = {
         acceso_inexistente: 'That access could not be found. Please open the screen again.',
         forma_que_no_se_renueva: 'That access does not renew on its own, so there is nothing to cancel.',
         marketplace_no_habilitado: 'This Provider assigns its own Assistants, so there is no list to choose from.',
+        sin_acceso_de_marketplace: 'To see how to reach this person, the service has to be arranged with the Provider first.',
+        acceso_no_vigente: 'The arranged service is not active. To see these details it has to be renewed with the Provider.',
+        saldo_agotado: 'All the included contacts have already been used. To see one more, another pack has to be requested from the Provider.',
         faltan_datos: 'Some information is missing. Please open the link from the email again and enter the password once more.',
         password_debil: 'The password must be at least 8 characters long.',
         token_invalido: 'This activation link is not valid. Try opening it again from the email, or ask for a new invitation.',
@@ -528,6 +554,7 @@ export const T = {
       error_generico: 'Something went wrong. Please try again.',
       vacio: 'No results.',
       volver: 'Back',
+      cancelar: 'Cancel',
       puntaje_estrellas: '{n} out of 5 stars',
       campo_obligatorio: 'This field needs to be filled in.',
     },
@@ -721,6 +748,18 @@ export const T = {
       opiniones_titulo: 'What other Families said',
       sin_opiniones: 'No comments from other Families yet.',
       contacto_aparte: 'Contact details are not shown here: they are requested when moving forward.',
+      contacto_titulo: 'How to reach this person',
+      contacto_ver: 'See the contact details',
+      contacto_telefono: 'Phone',
+      contacto_email: 'Email',
+      contacto_domicilio: 'Address',
+      contacto_ya_abierto: 'These details are already available for this account and are not charged again.',
+      contacto_confirmar_titulo: 'Before seeing the details',
+      contacto_confirmar_importe: 'This starts the charge for {forma}: {importe}.',
+      contacto_confirmar_renueva: 'That arrangement renews on its own until the Provider is asked to cancel it.',
+      contacto_confirmar_termina_gratis: 'This ends the trial period: from today the charge is firm.',
+      contacto_confirmar_saldo: '{n} included contacts are left, and seeing this one uses one.',
+      contacto_confirmar_si: 'Yes, show the details',
     },
     codigo_para_el_asistente: {
       titulo: 'Code for the Assistant',
@@ -911,6 +950,9 @@ export const T = {
         acceso_inexistente: 'Não foi encontrado esse acesso. Convém abrir a tela de novo.',
         forma_que_no_se_renueva: 'Esse acesso não se renova sozinho, portanto não há nada a cancelar.',
         marketplace_no_habilitado: 'Esta Prestadora designa ela mesma os seus Assistentes, portanto não há uma lista para escolher.',
+        sin_acceso_de_marketplace: 'Para ver como chegar a esta pessoa é preciso ter o serviço contratado com a Prestadora.',
+        acceso_no_vigente: 'O serviço contratado não está vigente. Para ver estes dados é preciso renová-lo com a Prestadora.',
+        saldo_agotado: 'Todos os contatos incluídos já foram usados. Para ver mais um é preciso pedir outro pacote à Prestadora.',
         faltan_datos: 'Faltam dados para ativar a conta. É preciso abrir novamente o link do email e digitar a senha de novo.',
         password_debil: 'A senha precisa ter pelo menos 8 caracteres.',
         token_invalido: 'Este link de ativação não é válido. Convém abri-lo novamente a partir do email ou pedir que reenviem o convite.',
@@ -923,6 +965,7 @@ export const T = {
       error_generico: 'Ocorreu um erro. É possível tentar novamente.',
       vacio: 'Nenhum resultado.',
       volver: 'Voltar',
+      cancelar: 'Cancelar',
       puntaje_estrellas: '{n} de 5 estrelas',
       campo_obligatorio: 'É necessário preencher este campo.',
     },
@@ -1116,6 +1159,18 @@ export const T = {
       opiniones_titulo: 'O que outras Famílias disseram',
       sin_opiniones: 'Ainda não há comentários de outras Famílias.',
       contacto_aparte: 'Os dados para entrar em contato com a pessoa não aparecem aqui: são solicitados quando se decide avançar.',
+      contacto_titulo: 'Como chegar a esta pessoa',
+      contacto_ver: 'Ver os dados de contato',
+      contacto_telefono: 'Telefone',
+      contacto_email: 'Email',
+      contacto_domicilio: 'Endereço',
+      contacto_ya_abierto: 'Estes dados já estão disponíveis para esta conta e não são cobrados de novo.',
+      contacto_confirmar_titulo: 'Antes de ver os dados',
+      contacto_confirmar_importe: 'Ativa a cobrança de {forma}: {importe}.',
+      contacto_confirmar_renueva: 'Essa forma se renova sozinha até que se peça o cancelamento à Prestadora.',
+      contacto_confirmar_termina_gratis: 'Com isto termina o período de teste: a partir de hoje a cobrança fica firme.',
+      contacto_confirmar_saldo: 'Restam {n} contatos incluídos, e ver este usa um.',
+      contacto_confirmar_si: 'Sim, ver os dados',
     },
     codigo_para_el_asistente: {
       titulo: 'Código para o Assistente',

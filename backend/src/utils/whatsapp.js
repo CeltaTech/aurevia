@@ -152,6 +152,24 @@ export async function avisarPorWhatsapp({ config, prestadoraId, telefono, valore
   return true;
 }
 
+/**
+ * A qué número le llega un aviso al Coordinador cuando quien avisa no tiene uno propio.
+ *
+ * Es el mismo criterio que usa el correo: sin destinatarios cargados, el aviso cae al contacto de
+ * la Prestadora (`utils/email.js`). Sin esto, la casilla de WhatsApp de la pantalla de Avisos
+ * quedaba encendida sin que saliera nunca un mensaje, porque los avisos que nacen de un proceso
+ * —una guardia sin cubrir, un documento por vencer— no tienen a quién preguntarle el número.
+ */
+export async function telefonoDeAvisos(prestadoraId) {
+  const { data } = await supabase
+    .from('configuracion_prestadora')
+    .select('whatsapp_numero')
+    .eq('prestadora_id', prestadoraId)
+    .single();
+
+  return data?.whatsapp_numero || null;
+}
+
 // Envío al Coordinador de un evento configurado (Módulo 8 > Notificaciones del Panel):
 // intenta WhatsApp si el evento lo tiene activado, hay un teléfono de destino y la Prestadora le
 // eligió una plantilla aprobada; si falla cualquiera de esas tres cosas, cae a email — nunca se
@@ -168,10 +186,13 @@ export async function notificarCoordinador({ evento, prestadoraId, asunto, texto
   if (config && config.activo === false) return;
 
   try {
+    // El número sólo se busca si el canal está encendido: preguntárselo a la base en cada aviso
+    // que igual va a salir por correo sería una consulta por nada.
+    const destino = telefono ?? (config?.whatsapp_activo ? await telefonoDeAvisos(prestadoraId) : null);
     const salio = await avisarPorWhatsapp({
       config,
       prestadoraId,
-      telefono,
+      telefono: destino,
       valores: [asunto, texto],
     });
     if (salio) return;

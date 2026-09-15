@@ -1,5 +1,5 @@
 import { supabase } from '../db/connection.js';
-import { enviarEmailCoordinador } from './email.js';
+import { notificarCoordinador } from './whatsapp.js';
 import { DIAS_AVISO_POR_DEFECTO, fechaLimiteDeAviso, ventanaDeAviso } from './reglaVencimientos.js';
 import { aviso } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
@@ -7,9 +7,7 @@ import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 const EVENTO_VENCIMIENTO_DOCUMENTO = 'vencimiento_documento_asistente';
 
 // Revisa vencimientos de los documentos que cada prestadora eligió trackear (catálogo en
-// tipos_documento_asistente, configurable por prestadora — ver, en
-// docs/PLAN_HASTA_PRODUCCION.md, el paso «El vencimiento de documentos avisa por el catálogo», y
-// supabase/migrations/) y avisa por email al Coordinador según
+// tipos_documento_asistente, configurable por prestadora) y le avisa al Coordinador según
 // docs/PRD_02B_Gestion_Personal.md función 9. Se ejecuta una vez por día (ver server.js).
 // Recorre TODAS las prestadoras licenciatarias, no una fija (mismo patrón que
 // revisarAusenciasAutomaticas/revisarNotificacionesCoordinador).
@@ -63,7 +61,9 @@ export async function revisarVencimientos() {
       if (!activos.length) continue;
 
       try {
-        await enviarEmailCoordinador({
+        // Por el canal que la Prestadora haya elegido para este aviso: con WhatsApp encendido y
+        // una plantilla aprobada sale por ahí, y si no, por correo. Nunca por los dos.
+        await notificarCoordinador({
           evento: EVENTO_VENCIMIENTO_DOCUMENTO,
           prestadoraId,
           ...aviso('vencimiento_documentos', idioma, {
@@ -76,7 +76,7 @@ export async function revisarVencimientos() {
           }),
         });
       } catch (err) {
-        console.error(`Error enviando email de vencimiento (${etiqueta}) de ${prestadoraId}:`, err.message);
+        console.error(`Error enviando el aviso de vencimiento (${etiqueta}) de ${prestadoraId}:`, err.message);
       }
     }
   }

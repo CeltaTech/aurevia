@@ -23,7 +23,9 @@
 //                     que dibujarles la casilla sería ofrecer algo que no ocurre. Encender la
 //                     casilla no alcanza: el aviso lo empieza la Prestadora, y Meta esos mensajes
 //                     los entrega solamente con una plantilla aprobada, la que la Prestadora le
-//                     elija en `plantilla_whatsapp_id`.
+//                     elija en `plantilla_whatsapp_id`. El mensaje sale al número de WhatsApp de
+//                     contacto de la Prestadora, salvo que quien avisa tenga uno propio —el de la
+//                     Familia, el del respaldo— (`utils/whatsapp.js`).
 //   admite_familia  — si el aviso, además de al Coordinador, le puede llegar a la Familia.
 //   se_puede_apagar — si la Prestadora puede decidir que este aviso no se mande. Casi todos sí.
 //                     Los que no son los que la persona está esperando en ese mismo momento para
@@ -39,7 +41,7 @@
 //   incidente_relevo_sin_resolver  → utils/revisarNotificacionesCoordinador.js:113, 143, 213
 //                                    (notificarCoordinador) + :160 aviso a la Familia
 //   alerta_ia_nivel2               → utils/revisarAlertasIA.js:114 (notificarCoordinador)
-//   vencimiento_documento_asistente→ utils/vencimientos.js:64 (enviarEmailCoordinador, solo correo)
+//   vencimiento_documento_asistente→ utils/vencimientos.js (notificarCoordinador)
 //   aviso_rutina_asistente         → utils/revisarRecordatoriosPush.js:24 (push, con respaldo WhatsApp)
 //   nueva_postulacion_asistente    → routes/postulacionAsistente.js:40 (enviarEmailCoordinador)
 //   nueva_solicitud_servicio       → routes/solicitudServicio.js:32 (enviarEmailCoordinador)
@@ -102,7 +104,7 @@ export const CATALOGO_AVISOS = [
   {
     evento: 'vencimiento_documento_asistente',
     descripcion: 'Documento de un Asistente vencido o por vencer, según el catálogo y el plazo de aviso configurados por la prestadora',
-    admite_whatsapp: false,
+    admite_whatsapp: true,
     admite_familia: false,
   },
   {

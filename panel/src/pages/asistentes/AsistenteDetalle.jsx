@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
 import { esAdminOSuperior } from '../../lib/roles';
+import { pestanasDe } from '../../lib/pestanasDelAsistente';
 import { supabase } from '../../lib/supabaseClient';
 import { PerfilTab } from './PerfilTab';
 import { VerificacionTab } from './VerificacionTab';
@@ -11,18 +12,11 @@ import { MatriculasTab } from './MatriculasTab';
 import { VinculoCeseTab } from './VinculoCeseTab';
 import { SimuladorVinculoTab } from './SimuladorVinculoTab';
 import { ScoreRiesgoTab } from './ScoreRiesgoTab';
+import { GuardiasTab } from './GuardiasTab';
 import { AusenciasCoberturaTab } from './AusenciasCoberturaTab';
 import { ComunicacionTab } from './ComunicacionTab';
 import { mensajeDeError } from '../../lib/errores';
 import { CAMPOS_PAGO, CAMPOS_RESERVADOS, conDatosAparte } from '../../lib/fichaAsistente';
-
-const TABS = ['perfil', 'verificacion', 'certificado', 'matriculas', 'vinculo_cese', 'simulador', 'score_riesgo', 'ausencias', 'comunicacion'];
-// Ausencias y Cobertura es operativo (tipo/fechas/sustituto), no datos laborales sensibles —
-// Coordinador ya tiene RLS de zona sobre "ausencias"/"guardias_cobertura" (schema_etapa2i.sql),
-// así que el tab estaba vetado en el frontend sin motivo, dejando una función habilitada en
-// el backend pero inalcanzable desde la UI. Comunicación es el mismo caso: RLS de zona propia
-// ya cubre a mensajes_asistente (schema_mensajes_asistente_01.sql).
-const TABS_COORDINADOR = ['perfil', 'verificacion', 'certificado', 'ausencias', 'comunicacion'];
 
 export function AsistenteDetalle() {
   const { t } = useLocale();
@@ -70,7 +64,7 @@ export function AsistenteDetalle() {
       <h1>{asistente.nombre}</h1>
 
       <div className="panel-tabs">
-        {(esAdmin ? TABS : TABS_COORDINADOR).map((tabId) => (
+        {pestanasDe(esAdmin).map((tabId) => (
           <button
             key={tabId}
             className={`panel-tab ${tab === tabId ? 'panel-tab-activo' : ''}`}
@@ -89,6 +83,7 @@ export function AsistenteDetalle() {
         {tab === 'vinculo_cese' && esAdmin && <VinculoCeseTab asistente={asistente} onActualizado={recargar} />}
         {tab === 'simulador' && esAdmin && <SimuladorVinculoTab asistente={asistente} />}
         {tab === 'score_riesgo' && esAdmin && <ScoreRiesgoTab asistente={asistente} onActualizado={recargar} />}
+        {tab === 'guardias' && <GuardiasTab asistente={asistente} />}
         {tab === 'ausencias' && <AusenciasCoberturaTab asistente={asistente} />}
         {tab === 'comunicacion' && <ComunicacionTab asistente={asistente} />}
       </div>

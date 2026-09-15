@@ -1025,6 +1025,20 @@ h2 {
   font-size: 0.85rem;
 }
 
+/* Una tarjeta de total que además filtra. Un botón trae su propia apariencia —centrado, tipografía
+   del sistema operativo, borde propio—, así que se la saca y queda la de la tarjeta. */
+button.panel-kpi-card {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.panel-kpi-card[aria-pressed='true'] {
+  border-color: var(--azul-medio);
+  box-shadow: inset 0 0 0 1px var(--azul-medio);
+}
+
 .panel-modulos-lista {
   display: flex;
   flex-direction: column;

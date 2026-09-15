@@ -249,8 +249,23 @@ rechazo salen como claves y ninguno nombra una tabla ni una columna.
 
 ## Panel de administración — sección Postulantes
 
-Estadísticas en tiempo real: total postulantes, pendientes de revisión, en verificación,
-aprobadas y disponibles, aprobadas sin monotributo (bloqueadas), rechazadas.
+### Los totales — cómo quedaron construidos
+
+Arriba de la lista hay cinco números: cuántas postulaciones hay, y cuántas pendientes, en
+verificación, aprobadas y rechazadas.
+
+- **Los números son de todas las postulaciones, no de las que quedaron después de los filtros.**
+  Contados sobre lo filtrado, elegir una situación dejaría los otros cuatro en cero: dirían lo
+  mismo que el filtro que se acaba de tocar, y no habría forma de ver el panorama para volver.
+- **Cada número filtra por esa situación, y el primero saca el filtro.** Es la pregunta que se hace
+  cualquiera después de mirar el número.
+- La cuenta vive en `panel/src/lib/totalesDePostulaciones.js`. Una situación que no está entre las
+  cinco se cuenta en el total y en ninguna otra parte: cuántas postulaciones hay no depende de que
+  se sepa clasificarlas.
+
+**Falta un sexto número, las aprobadas sin monotributo**, y no se construyó porque todavía no está
+decidido si eso avisa o bloquea — ver `docs/PLAN_HASTA_PRODUCCION.md`, sección «Reclutamiento». Un
+número que diga «bloqueadas» antes de esa decisión adelanta la respuesta.
 
 Tabla de postulantes — columnas: nombre, especialidad, zona, pretensión de honorario/hora,
 años de experiencia, condición fiscal, disponible para urgencias, estado, canal de llegada.

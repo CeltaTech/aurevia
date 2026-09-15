@@ -7,6 +7,7 @@ import { useZonasCobertura } from '../hooks/useZonasCobertura';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { PostulacionDetalle } from './PostulacionDetalle';
 import { contieneCodigo, traducirCodigos } from '../lib/postulacionCodigos';
+import { totalesDePostulaciones } from '../lib/totalesDePostulaciones';
 import { claseBadge } from '../lib/tonos';
 
 const ESTADOS = ['pendiente', 'en_revision', 'aprobado', 'rechazado'];
@@ -41,9 +42,41 @@ export function Postulaciones() {
     });
   }, [filas, f]);
 
+  // Los números son de todas las postulaciones traídas y no de las que quedaron después de los
+  // filtros: contados sobre lo filtrado, elegir una situación dejaría las otras cuatro en cero.
+  const totales = useMemo(() => totalesDePostulaciones(filas, ESTADOS), [filas]);
+
   return (
     <div>
       <h1>{t.postulaciones.titulo}</h1>
+
+      {/* Cuántas hay y en qué situación está cada una. Cada número filtra por esa situación, y el
+          primero saca el filtro: es la pregunta que se hace después de mirar el número. */}
+      {estado === 'listo' && (
+        <div className="panel-kpis">
+          <button
+            type="button"
+            className="panel-kpi-card"
+            onClick={() => set('estado', '')}
+            aria-pressed={f.estado === ''}
+          >
+            <div className="panel-kpi-valor">{totales.total}</div>
+            <div className="panel-kpi-etiqueta">{t.postulaciones.titulo}</div>
+          </button>
+          {ESTADOS.map((clave) => (
+            <button
+              key={clave}
+              type="button"
+              className="panel-kpi-card"
+              onClick={() => set('estado', clave)}
+              aria-pressed={f.estado === clave}
+            >
+              <div className="panel-kpi-valor">{totales.porEstado[clave]}</div>
+              <div className="panel-kpi-etiqueta">{t.postulaciones[`estado_${clave}`]}</div>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="panel-filtros">
         <input

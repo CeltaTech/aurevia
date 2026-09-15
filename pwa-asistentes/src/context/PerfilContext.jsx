@@ -31,7 +31,8 @@ import { guardarMarca } from '../lib/marcaGuardada';
 import { useAuth } from './AuthContext';
 
 const MARCA_VACIA = { nombre: null, logoUrl: null, mostrarMarcaProducto: true };
-const PERFIL_VACIO = { marca: MARCA_VACIA, visibilidad: null, marketplace: false };
+const CONTACTO_VACIO = { telefono: null, whatsapp: null, email: null };
+const PERFIL_VACIO = { marca: MARCA_VACIA, contacto: CONTACTO_VACIO, visibilidad: null, marketplace: false };
 
 const PerfilContext = createContext(PERFIL_VACIO);
 
@@ -52,6 +53,7 @@ export function PerfilProvider({ children }) {
         if (!activo) return;
         setPerfil({
           marca: datos.marca ?? MARCA_VACIA,
+          contacto: datos.contacto ?? CONTACTO_VACIO,
           visibilidad: datos.visibilidad ?? null,
           marketplace: datos.marketplace === true,
         });
@@ -73,6 +75,16 @@ export function PerfilProvider({ children }) {
 
 export function useMarca() {
   return useContext(PerfilContext).marca;
+}
+
+// Cómo se llega a la Prestadora: teléfono, WhatsApp y correo, los que ella haya cargado.
+//
+// Viene en la misma respuesta que la marca porque se usa adentro de pantallas que ya están
+// dibujadas y con apuro —una alerta abierta de madrugada—, y ahí pedir un dato más sería una
+// espera de más. Lo que no está cargado llega en `null`, y la aplicación cuyo `/perfil` todavía
+// no lo manda recibe los tres en `null`: sin canal no hay botón, que es la respuesta segura.
+export function useContactoDeLaPrestadora() {
+  return useContext(PerfilContext).contacto ?? CONTACTO_VACIO;
 }
 
 // Devuelve la pregunta, no la lista: `seVe('familia_signos_vitales')`.

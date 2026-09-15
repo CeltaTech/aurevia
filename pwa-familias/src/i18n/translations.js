@@ -244,6 +244,16 @@ export const T = {
       resuelta: 'Resuelta',
       ver_reportes_relacionados: 'Ver reportes relacionados',
     },
+    // Cómo llegar a la Prestadora. Los canales son los que ella cargó, y si no cargó
+    // ninguno la pantalla no muestra nada: acá sólo está el marco.
+    contacto: {
+      titulo: 'Hablar con la Prestadora',
+      titulo_con_nombre: 'Hablar con {prestadora}',
+      explicacion: 'Ante una duda sobre una alerta, se puede consultar por estos medios.',
+      whatsapp: 'Escribir por WhatsApp',
+      llamar: 'Llamar al {telefono}',
+      email: 'Escribir un correo',
+    },
     // Los tipos de Asistente que trae el producto de fábrica. En la base guardan
     // una clave y el nombre visible sale de acá, en el idioma de quien mira. Los
     // tipos que crea cada Prestadora guardan su nombre como dato y no se traducen.
@@ -708,6 +718,14 @@ export const T = {
       resuelta: 'Resolved',
       ver_reportes_relacionados: 'View related reports',
     },
+    contacto: {
+      titulo: 'Contact the Provider',
+      titulo_con_nombre: 'Contact {prestadora}',
+      explicacion: 'If there is any doubt about an alert, these are the ways to ask.',
+      whatsapp: 'Message on WhatsApp',
+      llamar: 'Call {telefono}',
+      email: 'Send an email',
+    },
     tipos_asistente: {
       tipo_cuidador: 'Caregiver',
       tipo_enfermero: 'Nurse',
@@ -1129,6 +1147,14 @@ export const T = {
       activa: 'Ativo',
       resuelta: 'Resolvido',
       ver_reportes_relacionados: 'Ver relatórios relacionados',
+    },
+    contacto: {
+      titulo: 'Falar com a Prestadora',
+      titulo_con_nombre: 'Falar com {prestadora}',
+      explicacion: 'Havendo alguma dúvida sobre um alerta, é possível consultar por estes meios.',
+      whatsapp: 'Escrever pelo WhatsApp',
+      llamar: 'Ligar para {telefono}',
+      email: 'Enviar um e-mail',
     },
     tipos_asistente: {
       tipo_cuidador: 'Cuidador(a)',

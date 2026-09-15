@@ -251,7 +251,19 @@ fuera de este primer corte.
 
 ### Alertas
 Lista de alertas del paciente (activas + historial resuelto), descripción generada por IA,
-reportes que la originaron (con links), botón "Contactar coordinador".
+reportes que la originaron (con links), y al pie el botón para hablar con la Prestadora.
+
+**El botón no lleva a una persona, lleva a la Prestadora.** En prestación directa la Familia
+contrató a la Prestadora, no a un Coordinador: el teléfono personal de quien coordina ese día es
+el dato de contacto de alguien que trabaja ahí, y además rota. Lo que se ofrece son los canales
+que la propia Prestadora cargó en Configuración › La Prestadora —teléfono, WhatsApp y correo—, y
+dónde suenan lo decide ella. El teléfono o el correo de un Asistente no aparece acá nunca: cómo
+llegar a alguien del plantel es lo que la modalidad Marketplace abre a pedido y con el contacto
+tapado hasta entonces.
+
+**Sin ningún canal cargado no hay botón.** Uno que no lleva a ningún lado hace creer que del otro
+lado hay alguien esperando. Y por la dirección no viaja nada escrito: ni el nombre del Paciente,
+ni la alerta, ni su nivel. Quien llama cuenta lo que quiere contar.
 
 ## Lógica de alertas IA Nivel 2
 

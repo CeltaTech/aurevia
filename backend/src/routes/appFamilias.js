@@ -4,6 +4,7 @@ import { supabase } from '../db/connection.js';
 import { resolverVitalesHabilitados } from '../utils/vitalesReferencia.js';
 import { generarTokenQrCobro } from '../utils/qrCobroEfectivo.js';
 import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
+import { contactoDeLaPrestadora } from '../utils/contactoDeLaPrestadora.js';
 import { visibilidadDelPedido, exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
 import { tipoDelAsistente, tipoConSusTareas } from '../utils/tareasDelTipo.js';
@@ -116,6 +117,11 @@ appFamiliasRouter.get('/perfil', requiereRolFamilia, async (req, res) => {
   // pedido de más.
   const marca = await marcaDeLaPrestadora(req.usuarioFamilia.prestadoraId);
 
+  // Y cómo se llega a ella, por el mismo motivo que la marca: el botón de contacto aparece
+  // adentro de pantallas que ya están dibujadas —una alerta abierta a las tres de la mañana— y
+  // pedirlo recién ahí sería un pedido de más justo cuando hay apuro.
+  const contacto = await contactoDeLaPrestadora(req.usuarioFamilia.prestadoraId);
+
   // Qué eligió mostrar esta Prestadora, por el mismo motivo que la marca: la aplicación lo
   // necesita para dibujar el menú y las pantallas desde el primer momento, y ya está pidiendo
   // el perfil. Es una lista de qué dibujar, no un permiso: el candado de verdad está en cada
@@ -162,6 +168,7 @@ appFamiliasRouter.get('/perfil', requiereRolFamilia, async (req, res) => {
       esTitular: req.usuarioFamilia.esTitular,
     },
     marca,
+    contacto,
     visibilidad,
     accesos,
     marketplace,

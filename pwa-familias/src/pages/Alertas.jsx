@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
 import { mensajeDeError } from '../lib/errores';
+import ContactarALaPrestadora from '../components/ContactarALaPrestadora';
 
 export default function Alertas() {
   const { id } = useParams();
@@ -54,6 +55,10 @@ export default function Alertas() {
           )}
         </div>
       ))}
+      {/* Al pie de la lista y no arriba: primero se lee qué pasó, y recién después se
+          pregunta. Aparece solamente con esta pantalla cargada y con alguna alerta a la
+          vista, que es el momento en que hace falta hablar con alguien. */}
+      <ContactarALaPrestadora t={t} />
     </div>
   );
 }

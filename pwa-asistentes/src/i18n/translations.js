@@ -68,6 +68,9 @@ export const T = {
         descargo_vacio: 'El descargo está vacío. Hace falta escribir algo antes de dejarlo.',
         descargo_ya_cargado: 'Esta calificación ya tiene su descargo escrito, y un descargo no se edita.',
         calificacion_no_encontrada: 'Esa calificación ya no está.',
+        // La guardia de alguien que tiene una licencia registrada y todavía no tiene sustituto.
+        // No se dice de qué licencia se trata ni de quién: eso es del legajo (CLAUDE.md §6).
+        guardia_de_cobertura_sin_sustituto: 'Esta guardia está anotada dentro de una licencia y todavía no tiene un Asistente sustituto asignado, así que no se puede empezar. Conviene avisarle al Coordinador.',
       },
     },
     comun: {
@@ -518,6 +521,7 @@ export const T = {
         descargo_vacio: 'The reply is empty. Please write something before leaving it.',
         descargo_ya_cargado: 'This rating already has its reply written, and a reply cannot be edited.',
         calificacion_no_encontrada: 'That rating is no longer there.',
+        guardia_de_cobertura_sin_sustituto: 'This shift falls inside a registered leave and has no substitute Assistant assigned yet, so it cannot be started. Please tell the Coordinator.',
       },
     },
     comun: {
@@ -911,6 +915,7 @@ export const T = {
         descargo_vacio: 'A resposta está vazia. É preciso escrever algo antes de deixá-la.',
         descargo_ya_cargado: 'Esta avaliação já tem a sua resposta escrita, e uma resposta não se edita.',
         calificacion_no_encontrada: 'Essa avaliação não está mais lá.',
+        guardia_de_cobertura_sin_sustituto: 'Este plantão está dentro de uma licença registrada e ainda não tem um Assistente substituto designado, então não é possível começá-lo. Convém avisar o Coordenador.',
       },
     },
     comun: {

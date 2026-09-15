@@ -63,6 +63,9 @@ import {
   matriculaQueMandaAl,
   motivoDeBloqueo,
 } from './matricula';
+// Se reexporta más abajo: la cuenta es la misma del lado del motor, así que vive en un archivo
+// propio que se copia allá, y quien la importaba de acá la sigue encontrando.
+import { ausenciaQueTapa, ultimoDiaDeLaGuardia } from './ausenciaQueTapa';
 import { trabajaEnModalidad } from './modalidades';
 import { DIAS_AVISO_POR_DEFECTO } from './reglaVencimientos';
 import { idsDePacientes } from './pacientesDeGuardia';
@@ -352,38 +355,10 @@ export function guardiaQueSePisa(guardia, guardiasDelAsistente) {
   return lista(guardiasDelAsistente).find((g) => seSuperponen(g, guardia)) ?? null;
 }
 
-/**
- * La ausencia registrada del Asistente que tapa esta guardia, o `null` si no hay ninguna.
- *
- * Estar de licencia pesa exactamente lo mismo que tener otra guardia encima: los dos casos
- * contestan que esa persona no está ese día. Por eso bloquea y no descuenta puntos.
- *
- * Se compara contra los **dos** días que puede ocupar la guardia, el primero y el último: la de
- * noche arranca a las 22:00 y termina a las 06:00 del día siguiente, y una licencia que empieza
- * ese día siguiente igual la parte al medio.
- *
- * Una ausencia sin `fecha_fin` es una que sigue abierta, no una que terminó: cuenta desde su
- * inicio y hacia adelante sin límite. Tratarla como cerrada sería dar por trabajando a quien
- * está de licencia y todavía no tiene fecha de vuelta, que es el caso más común de todos.
- *
- * **El tipo de ausencia no entra acá, a propósito.** Una licencia por enfermedad o por accidente
- * es información de salud (CLAUDE.md §6) y no tiene por qué salir del legajo, ni viajar hasta
- * una lista de candidatos, ni terminar en un renglón de pantalla. Y no hace ninguna falta: las
- * cuatro clases que admite la tabla contestan lo mismo a la única pregunta de acá —ese día esa
- * persona no está—, así que distinguirlas agregaría un dato sensible sin cambiar ninguna
- * decisión. Quien llama tampoco lo trae en su consulta.
- */
-export function ausenciaQueTapa(asistenteId, ausencias, primerDia, ultimoDia) {
-  return (
-    lista(ausencias).find(
-      (a) =>
-        a.asistente_id === asistenteId &&
-        a.fecha_inicio &&
-        a.fecha_inicio <= ultimoDia &&
-        (!a.fecha_fin || a.fecha_fin >= primerDia)
-    ) ?? null
-  );
-}
+// La ausencia registrada que tapa una guardia. Se escribe una sola vez en
+// `lib/ausenciaQueTapa.js`, porque el motor hace la misma pregunta al marcar la llegada, y se
+// reexporta desde acá porque es una comprobación compartida más, como las de arriba.
+export { ausenciaQueTapa };
 
 /**
  * Cuántas horas de descanso le quedan al Asistente alrededor de esta guardia, mirando tanto la
@@ -670,7 +645,7 @@ function evaluarAsistente(asistente, ctx) {
   // del día siguiente, así que "el día de la guardia" en realidad son dos, y las dos
   // comprobaciones que miran el almanaque —la ausencia y la Matrícula— tienen que llegar hasta
   // el final y no quedarse en el comienzo. Es el mismo día que mira la base.
-  const ultimoDiaDeLaGuardia = diaDe(finDeGuardia(hueco));
+  const ultimoDia = ultimoDiaDeLaGuardia(hueco);
 
   // --- 1. Continuidad. El criterio que más pesa: para el Paciente y su Familia, que venga
   //        alguien conocido vale más que cualquier comodidad de la agenda.
@@ -719,7 +694,7 @@ function evaluarAsistente(asistente, ctx) {
   //
   //        El motivo que se muestra no dice de qué ausencia se trata, y el tipo ni siquiera
   //        llega hasta acá: la razón está escrita en `ausenciaQueTapa` (CLAUDE.md §6).
-  if (ausenciaQueTapa(asistente.id, ctx.ausencias, hueco.fecha, ultimoDiaDeLaGuardia)) {
+  if (ausenciaQueTapa(asistente.id, ctx.ausencias, hueco.fecha, ultimoDia)) {
     bloqueado = true;
     suma(enContra, MOTIVO.AUSENCIA, null, pesos.ausencia);
   }
@@ -752,7 +727,7 @@ function evaluarAsistente(asistente, ctx) {
     asistente.id,
     ctx.estadoMatricula,
     matriculas,
-    ultimoDiaDeLaGuardia
+    ultimoDia
   );
 
   if (bloqueoMatricula) {
@@ -764,7 +739,7 @@ function evaluarAsistente(asistente, ctx) {
     const matricula = matriculaVigenteAl(
       asistente.id,
       matriculas,
-      ultimoDiaDeLaGuardia,
+      ultimoDia,
       ctx.estadoMatricula?.tipo_matricula ?? null
     );
     if (matricula) {

@@ -31,7 +31,7 @@
 // Igual que `candidatos.js`, **no devuelve texto**: devuelve claves de traducción más los
 // valores a reemplazar, y la pantalla arma la frase con `t.guardias.avisos[clave]`.
 
-import { finDeGuardia } from './horarios';
+import { ultimoDiaDeLaGuardia } from './ausenciaQueTapa';
 import {
   TOPES,
   guardiasDeAsistente,
@@ -55,13 +55,6 @@ export const AVISO = {
 const redondear = (n) => Math.round(n * 10) / 10;
 const hhmm = (h) => (typeof h === 'string' ? h.slice(0, 5) : h);
 const lista = (x) => (Array.isArray(x) ? x : []);
-
-/** El día en que termina la guardia, en el formato de la base. Cruza la medianoche bien. */
-function diaEnQueTermina(guardia) {
-  const fin = finDeGuardia(guardia);
-  const corrida = new Date(fin.getTime() - fin.getTimezoneOffset() * 60000);
-  return corrida.toISOString().slice(0, 10);
-}
 
 /**
  * La Matrícula que hay que mirar para esta asignación.
@@ -143,7 +136,7 @@ export function avisosDeAsignacion(guardia, asistenteId, datos = {}, opciones = 
   // la guardia? Por eso se compara contra el día en que la guardia TERMINA y no contra el día
   // en que empieza: un papel que vence en el medio de una guardia de noche es exactamente el
   // caso que hay que avisar, y comparar contra el inicio lo dejaría pasar.
-  const ultimoDia = diaEnQueTermina(guardia);
+  const ultimoDia = ultimoDiaDeLaGuardia(guardia);
 
   // --- 4. Documentación que vence antes o durante la guardia.
   const papel = papelQueVencePrimero(asistenteId, datos.documentos);

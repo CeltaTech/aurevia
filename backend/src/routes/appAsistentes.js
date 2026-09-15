@@ -39,6 +39,7 @@ import {
   videollamadaEnCurso,
 } from '../utils/conversacionMarketplace.js';
 import { puedeRegistrarUbicacion } from '../utils/consentimientoUbicacion.js';
+import { faltaElSustituto, MOTIVO_SIN_SUSTITUTO } from '../utils/guardiaSinSustituto.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { MOTIVOS_DEMORA } from '../utils/motivosDemora.js';
 import { FUENTE_AVISO_DEMORA_ASISTENTE } from '../utils/fuentesAlertaTemprana.js';
@@ -418,6 +419,17 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
     // yaRegistrado: true — permite que el cliente offline (Fase 9) distinga "ya se había
     // sincronizado antes" de un error real, y dé la acción encolada por sincronizada.
     return res.status(400).json({ error: 'Esta guardia ya tiene check-in registrado', yaRegistrado: true });
+  }
+
+  // Una guardia tapada por una licencia registrada no arranca hasta que tenga sustituto asignado
+  // (docs/PRD_02B_Gestion_Personal.md:187). Es el único lugar de todo el producto que pasa una
+  // guardia a `activa`, así que la guarda va acá. El motivo viaja como código y la frase la arma
+  // la pantalla en su idioma; el texto de acá es para el registro, no para nadie.
+  if (await faltaElSustituto(guardia)) {
+    return res.status(400).json({
+      error: 'Esta guardia todavía no tiene Asistente sustituto asignado',
+      motivo: MOTIVO_SIN_SUSTITUTO,
+    });
   }
 
   // Un solo check-in para todo el turno, aunque el turno cubra a varias personas: el Asistente

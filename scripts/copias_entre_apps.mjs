@@ -84,6 +84,11 @@ export const GRUPOS = [
     ],
   },
   {
+    que: 'si el Asistente está de licencia el día de una guardia',
+    original: 'panel/src/lib/ausenciaQueTapa.js',
+    copias: ['backend/src/utils/ausenciaQueTapa.js'],
+  },
+  {
     que: 'cuándo una guardia quedó sin cerrar',
     original: 'panel/src/lib/guardiaSinCerrar.js',
     copias: ['pwa-asistentes/src/lib/guardiaSinCerrar.js'],

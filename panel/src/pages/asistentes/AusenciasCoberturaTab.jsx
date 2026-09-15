@@ -9,7 +9,7 @@ import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { generarConstanciaAusencia, descargarPDF } from '../../lib/generarDocumentoCese';
 import { ESTADO_ACTIVO } from '../../lib/candidatos';
-import { guardiasAfectadas } from '../../lib/guardiasAfectadas';
+import { guardiasAfectadas, guardiasSinCubrir } from '../../lib/guardiasAfectadas';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { con } from '../../lib/textos';
 
@@ -35,6 +35,7 @@ export function AusenciasCoberturaTab({ asistente }) {
   const prestadoraId = usePrestadoraActual();
   const { empresa } = useEmpresa();
   const [ausencias, setAusencias] = useState([]);
+  const [coberturas, setCoberturas] = useState({});
   const [otrosAsistentes, setOtrosAsistentes] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -60,7 +61,29 @@ export function AusenciasCoberturaTab({ asistente }) {
       setEstado('error');
       return;
     }
-    setAusencias(dataAusencias ?? []);
+    // Qué turnos de esas ausencias ya tienen sustituto. Se trae junto con las ausencias y no al
+    // apretar el botón: la tarjeta tiene que poder decir cuántas faltan antes de que nadie toque
+    // nada. Si esta consulta falla, la pestaña entra en error en vez de dibujar cero cubiertas,
+    // que invitaría a asignar de nuevo lo que ya está asignado.
+    const lista = dataAusencias ?? [];
+    const porAusencia = {};
+    if (lista.length > 0) {
+      const { data: dataCobertura, error: errorCobertura } = await supabase
+        .from('guardias_cobertura')
+        .select('id, ausencia_id, guardia_original_id')
+        .in('ausencia_id', lista.map((a) => a.id));
+      if (errorCobertura) {
+        setError(mensajeDeError(errorCobertura, t));
+        setEstado('error');
+        return;
+      }
+      for (const cobertura of dataCobertura ?? []) {
+        (porAusencia[cobertura.ausencia_id] ??= []).push(cobertura);
+      }
+    }
+
+    setAusencias(lista);
+    setCoberturas(porAusencia);
     setOtrosAsistentes(dataAsistentes ?? []);
     setEstado('listo');
   }
@@ -74,17 +97,32 @@ export function AusenciasCoberturaTab({ asistente }) {
   //
   // Las guardias de la ausencia abierta se piden igual: sin fecha de fin la lista alcanza todo lo
   // que ya esté armado hacia adelante, y se vuelve a calcular el día que se le cargue el cierre.
-  async function guardiasDeLaAusencia() {
+  async function guardiasDeLaAusencia(ausencia) {
     const consulta = supabase
       .from('guardias')
       .select('id, fecha, estado')
       .eq('asistente_id', asistente.id)
-      .gte('fecha', nueva.fecha_inicio);
-    const { data, error: errorGuardias } = nueva.fecha_fin
-      ? await consulta.lte('fecha', nueva.fecha_fin)
+      .gte('fecha', ausencia.fecha_inicio);
+    const { data, error: errorGuardias } = ausencia.fecha_fin
+      ? await consulta.lte('fecha', ausencia.fecha_fin)
       : await consulta;
     if (errorGuardias) throw errorGuardias;
-    return guardiasAfectadas(data ?? [], nueva);
+    return guardiasAfectadas(data ?? [], ausencia);
+  }
+
+  // Las guardias que esta ausencia dejó descubiertas. Las cargadas antes de que esto se escribiera
+  // tienen la columna vacía, y ahí se averigua ahora y se guarda: son ausencias reales, con turnos
+  // reales sin cubrir, y dejarlas sin poder asignar un sustituto sería castigarlas por haber sido
+  // cargadas primero.
+  async function afectadasDe(ausencia) {
+    if (Array.isArray(ausencia.guardias_afectadas)) return ausencia.guardias_afectadas;
+    const afectadas = await guardiasDeLaAusencia(ausencia);
+    const { error: errorUpdate } = await supabase
+      .from('ausencias')
+      .update({ guardias_afectadas: afectadas })
+      .eq('id', ausencia.id);
+    if (errorUpdate) throw errorUpdate;
+    return afectadas;
   }
 
   async function registrarAusencia() {
@@ -94,7 +132,7 @@ export function AusenciasCoberturaTab({ asistente }) {
 
     let afectadas;
     try {
-      afectadas = await guardiasDeLaAusencia();
+      afectadas = await guardiasDeLaAusencia(nueva);
     } catch {
       // Sin saber qué turnos quedan descubiertos la ausencia no se guarda. Guardarla igual la
       // dejaría con la lista vacía, que se lee como «no afectó a ninguno» y no como «no se pudo
@@ -154,23 +192,54 @@ export function AusenciasCoberturaTab({ asistente }) {
     }
   }
 
-  async function asignarCobertura(ausenciaId) {
-    const sustitutoId = coberturaForm[ausenciaId]?.asistente_sustituto_id;
+  // Una fila por cada guardia que quedó sin Asistente, no una por ausencia.
+  //
+  // Hasta hoy se guardaba una sola fila, con `guardia_original_id` vacía: decía que alguien iba a
+  // cubrir la ausencia, y no qué turno iba a tomar. Con eso ninguna pantalla podía contestar quién
+  // va mañana a lo de un Paciente, ni si quedaron turnos sin nadie. El costo adicional es el de
+  // cada guardia cubierta, y por eso va igual en todas las filas.
+  //
+  // Se asignan solamente las que todavía no tienen sustituto: apretar dos veces no duplica la
+  // cobertura de un mismo turno.
+  async function asignarCobertura(ausencia) {
+    const sustitutoId = coberturaForm[ausencia.id]?.asistente_sustituto_id;
     if (!sustitutoId) return;
     setGuardando(true);
     setError(null);
-    const { error: errorInsert } = await supabase.from('guardias_cobertura').insert({
-      prestadora_id: prestadoraId,
-      ausencia_id: ausenciaId,
-      asistente_sustituto_id: sustitutoId,
-      costo_adicional: coberturaForm[ausenciaId]?.costo_adicional || null,
-    });
+
+    let filas;
+    try {
+      const afectadas = await afectadasDe(ausencia);
+      const sinCubrir = guardiasSinCubrir(afectadas, coberturas[ausencia.id]);
+      filas = sinCubrir.map((guardiaId) => ({
+        prestadora_id: prestadoraId,
+        ausencia_id: ausencia.id,
+        guardia_original_id: guardiaId,
+        asistente_sustituto_id: sustitutoId,
+        costo_adicional: coberturaForm[ausencia.id]?.costo_adicional || null,
+      }));
+    } catch {
+      setGuardando(false);
+      setError(t.comun.error_generico);
+      return;
+    }
+
+    // Sin turnos descubiertos no hay cobertura que cargar. Guardar una fila suelta volvería a
+    // dejar una cobertura que no cubre nada en particular, que es justo lo que esto viene a
+    // terminar.
+    if (filas.length === 0) {
+      setGuardando(false);
+      return;
+    }
+
+    const { error: errorInsert } = await supabase.from('guardias_cobertura').insert(filas);
     setGuardando(false);
     if (errorInsert) {
       setError(t.comun.error_generico);
       return;
     }
-    setCoberturaForm((prev) => ({ ...prev, [ausenciaId]: {} }));
+    setCoberturaForm((prev) => ({ ...prev, [ausencia.id]: {} }));
+    recargar();
   }
 
   return (
@@ -180,7 +249,13 @@ export function AusenciasCoberturaTab({ asistente }) {
       {errorCertificado && <Alert variant="error">{errorCertificado}</Alert>}
 
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && ausencias.length === 0} recargar={recargar}>
-        {ausencias.map((a) => (
+        {ausencias.map((a) => {
+          // Cuántos turnos faltan cubrir. Con la lista todavía sin calcular —las ausencias
+          // cargadas antes de que esto existiera— no se sabe, y entonces el sustituto se ofrece
+          // igual: la cuenta se hace al asignarlo.
+          const afectadas = Array.isArray(a.guardias_afectadas) ? a.guardias_afectadas : null;
+          const sinCubrir = afectadas === null ? null : guardiasSinCubrir(afectadas, coberturas[a.id]);
+          return (
           <div key={a.id} className="panel-card-ausencia">
             <p>
               <strong>{t.asistentes.ausencias[`tipo_${a.tipo}`]}</strong> — {new Date(a.fecha_inicio).toLocaleDateString()}
@@ -191,11 +266,19 @@ export function AusenciasCoberturaTab({ asistente }) {
             {/* Cuántos turnos dejó descubiertos. Las ausencias cargadas antes de que esto se
                 escribiera tienen la columna vacía, y ahí no se dice nada: cero y «no se sabe» no
                 son lo mismo, y escribir cero haría creer que no hay nada que cubrir. */}
-            {Array.isArray(a.guardias_afectadas) && (
+            {afectadas !== null && (
               <p>
-                {a.guardias_afectadas.length === 0
+                {afectadas.length === 0
                   ? t.asistentes.ausencias.sin_guardias_afectadas
-                  : con(t.asistentes.ausencias.guardias_afectadas, { n: a.guardias_afectadas.length })}
+                  : con(t.asistentes.ausencias.guardias_afectadas, { n: afectadas.length })}
+                {afectadas.length > 0 && (
+                  <>
+                    {' — '}
+                    {sinCubrir.length === 0
+                      ? t.asistentes.ausencias.todas_cubiertas
+                      : con(t.asistentes.ausencias.guardias_sin_cubrir, { n: sinCubrir.length })}
+                  </>
+                )}
               </p>
             )}
 
@@ -226,30 +309,36 @@ export function AusenciasCoberturaTab({ asistente }) {
               {subiendoCertificado === a.id && <p>{t.asistentes.ausencias.subiendo_certificado}</p>}
             </div>
 
-            <FormField
-              label={t.asistentes.ausencias.asignar_sustituto}
-              name={`sustituto-${a.id}`}
-              type="select"
-              value={coberturaForm[a.id]?.asistente_sustituto_id || ''}
-              onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], asistente_sustituto_id: e.target.value } }))}
-            >
-              <option value="">{t.comun.todos}</option>
-              {otrosAsistentes.map((o) => (
-                <option key={o.id} value={o.id}>{o.nombre}</option>
-              ))}
-            </FormField>
-            <FormField
-              label={t.asistentes.ausencias.costo_adicional}
-              name={`costo-${a.id}`}
-              type="number"
-              value={coberturaForm[a.id]?.costo_adicional || ''}
-              onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], costo_adicional: e.target.value } }))}
-            />
-            <Button variant="secondary" onClick={() => asignarCobertura(a.id)} disabled={guardando}>
-              {t.asistentes.ausencias.guardar_cobertura}
-            </Button>
+            {/* Sin turnos que cubrir no se pide ningún sustituto: no habría dónde ponerlo. */}
+            {(sinCubrir === null || sinCubrir.length > 0) && (
+              <>
+                <FormField
+                  label={t.asistentes.ausencias.asignar_sustituto}
+                  name={`sustituto-${a.id}`}
+                  type="select"
+                  value={coberturaForm[a.id]?.asistente_sustituto_id || ''}
+                  onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], asistente_sustituto_id: e.target.value } }))}
+                >
+                  <option value="">{t.comun.todos}</option>
+                  {otrosAsistentes.map((o) => (
+                    <option key={o.id} value={o.id}>{o.nombre}</option>
+                  ))}
+                </FormField>
+                <FormField
+                  label={t.asistentes.ausencias.costo_adicional}
+                  name={`costo-${a.id}`}
+                  type="number"
+                  value={coberturaForm[a.id]?.costo_adicional || ''}
+                  onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], costo_adicional: e.target.value } }))}
+                />
+                <Button variant="secondary" onClick={() => asignarCobertura(a)} disabled={guardando}>
+                  {t.asistentes.ausencias.guardar_cobertura}
+                </Button>
+              </>
+            )}
           </div>
-        ))}
+          );
+        })}
       </EstadoLista>
 
       <h2>{t.asistentes.ausencias.registrar_nueva}</h2>

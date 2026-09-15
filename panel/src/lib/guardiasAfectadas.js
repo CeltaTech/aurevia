@@ -41,3 +41,17 @@ export function guardiasAfectadas(guardias, ausencia) {
     .filter((g) => typeof g?.fecha === 'string' && g.fecha >= desde && (hasta === null || g.fecha <= hasta))
     .map((g) => g.id);
 }
+
+/**
+ * De las guardias que una ausencia dejó descubiertas, las que todavía no tienen sustituto.
+ *
+ * `coberturas` son las filas ya cargadas para esa ausencia, cada una con `guardia_original_id`.
+ * Una cobertura vieja puede no tener ese dato —hasta hoy se guardaba una sola fila por ausencia,
+ * sin decir de qué turno—: esa no tapa ninguna guardia en particular, así que no descuenta
+ * ninguna. Dar por cubierto un turno que nadie dijo que iba a cubrir es peor que pedir el
+ * sustituto de nuevo.
+ */
+export function guardiasSinCubrir(afectadas, coberturas) {
+  const cubiertas = new Set((coberturas ?? []).map((c) => c?.guardia_original_id).filter(Boolean));
+  return (afectadas ?? []).filter((id) => !cubiertas.has(id));
+}

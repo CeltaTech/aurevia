@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { guardiasAfectadas } from '../guardiasAfectadas';
+import { guardiasAfectadas, guardiasSinCubrir } from '../guardiasAfectadas';
 
 // Una licencia de una semana.
 const AUSENCIA = { fecha_inicio: '2026-08-10', fecha_fin: '2026-08-16' };
@@ -62,5 +62,32 @@ describe('guardiasAfectadas', () => {
     expect(guardiasAfectadas(undefined, AUSENCIA)).toEqual([]);
     expect(guardiasAfectadas([{ ...PROGRAMADA, fecha: null }], AUSENCIA)).toEqual([]);
     expect(guardiasAfectadas([null, undefined], AUSENCIA)).toEqual([]);
+  });
+});
+
+describe('guardiasSinCubrir', () => {
+  it('saca las que ya tienen sustituto y deja las demás en su orden', () => {
+    const coberturas = [{ guardia_original_id: 'b' }];
+    expect(guardiasSinCubrir(['a', 'b', 'c'], coberturas)).toEqual(['a', 'c']);
+  });
+
+  it('con todas cubiertas no queda ninguna', () => {
+    const coberturas = [{ guardia_original_id: 'a' }, { guardia_original_id: 'b' }];
+    expect(guardiasSinCubrir(['a', 'b'], coberturas)).toEqual([]);
+  });
+
+  it('sin ninguna cobertura quedan todas', () => {
+    expect(guardiasSinCubrir(['a', 'b'], [])).toEqual(['a', 'b']);
+    expect(guardiasSinCubrir(['a', 'b'], null)).toEqual(['a', 'b']);
+  });
+
+  it('una cobertura vieja, sin guardia, no tapa ninguna', () => {
+    expect(guardiasSinCubrir(['a'], [{ guardia_original_id: null }])).toEqual(['a']);
+    expect(guardiasSinCubrir(['a'], [{}])).toEqual(['a']);
+  });
+
+  it('sin guardias afectadas no hay nada que cubrir', () => {
+    expect(guardiasSinCubrir([], [{ guardia_original_id: 'a' }])).toEqual([]);
+    expect(guardiasSinCubrir(null, [])).toEqual([]);
   });
 });

@@ -8,7 +8,11 @@ import { claseBadge } from '../lib/tonos';
 import { nombreTipo } from '../lib/tiposAsistente';
 import { CAMPOS_RESERVADOS, conDatosAparte } from '../lib/fichaAsistente';
 import { con } from '../lib/textos';
-import { DIAS_DE_HORIZONTE } from '../lib/resumenDelPlantel';
+import {
+  DIAS_DE_HORIZONTE,
+  coincideConElFiltro,
+  opcionesDelPlantel,
+} from '../lib/resumenDelPlantel';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
 import { useFiltros } from '../hooks/useFiltros';
 import { useTiposAsistente } from '../hooks/useTiposAsistente';
@@ -36,7 +40,13 @@ export function Asistentes() {
     esAdmin ? 'asistentes' : 'asistentes_coordinador',
     { orderBy: 'created_at', select: esAdmin ? `*, ${CAMPOS_RESERVADOS}` : '*' },
   );
-  const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '', estado: '', tipo: '' });
+  const { f, set, limpiar, hayFiltros } = useFiltros({
+    busqueda: '',
+    estado: '',
+    tipo: '',
+    zona: '',
+    especialidad: '',
+  });
   const { paraElegir: tiposAsistente, porId: tiposPorId } = useTiposAsistente();
   // Los dos datos que había que entrar a la ficha para ver. Llegan aparte de la lista y no la
   // demoran: mientras no estén, las tarjetas se muestran sin ellos.
@@ -52,9 +62,20 @@ export function Asistentes() {
         a.email?.toLowerCase().includes(f.busqueda.toLowerCase());
       const coincideEstado = !f.estado || a.estado === f.estado;
       const coincideTipo = !f.tipo || a.tipo_asistente_id === f.tipo;
-      return coincideBusqueda && coincideEstado && coincideTipo;
+      return (
+        coincideBusqueda &&
+        coincideEstado &&
+        coincideTipo &&
+        coincideConElFiltro(a, 'zonas', f.zona) &&
+        coincideConElFiltro(a, 'especialidades', f.especialidad)
+      );
     });
   }, [filas, f]);
+
+  // Las dos listas salen de lo que el plantel tiene cargado, no de un catálogo: así el filtro
+  // nunca ofrece una zona donde no hay nadie ni deja afuera una que alguien escribió a mano.
+  const zonas = useMemo(() => opcionesDelPlantel(filas, 'zonas'), [filas]);
+  const especialidades = useMemo(() => opcionesDelPlantel(filas, 'especialidades'), [filas]);
 
   // Todos los que todavía no tienen tipo del catálogo. Son de dos orígenes: los que
   // quedaron de la época de la casilla de texto libre —esos traen algo escrito a
@@ -93,6 +114,28 @@ export function Asistentes() {
             <option key={tipo.id} value={tipo.id}>{nombreTipo(tipo, t)}</option>
           ))}
         </select>
+        {/* Los dos filtros aparecen sólo si hay algo que filtrar: una lista desplegable con una
+            sola opción, o con ninguna, es una pregunta que no se puede contestar. */}
+        {zonas.length > 1 && (
+          <select value={f.zona} onChange={(e) => set('zona', e.target.value)} aria-label={t.asistentes.col_zonas}>
+            <option value="">{t.asistentes.filtro_zona_todas}</option>
+            {zonas.map((zona) => (
+              <option key={zona} value={zona}>{zona}</option>
+            ))}
+          </select>
+        )}
+        {especialidades.length > 1 && (
+          <select
+            value={f.especialidad}
+            onChange={(e) => set('especialidad', e.target.value)}
+            aria-label={t.asistentes.col_especialidades}
+          >
+            <option value="">{t.asistentes.filtro_especialidad_todas}</option>
+            {especialidades.map((especialidad) => (
+              <option key={especialidad} value={especialidad}>{especialidad}</option>
+            ))}
+          </select>
+        )}
         {puedeAltaManual && <Button onClick={() => setMostrarNuevo(true)}>{t.asistentes.nuevo.titulo}</Button>}
       </div>
 

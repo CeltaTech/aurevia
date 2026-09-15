@@ -19,6 +19,7 @@
 // pantalla pueden inventar lo que no se pidió.
 // ---------------------------------------------------------------------------
 
+import { comparable } from './textoComparable';
 import { estaActiva } from './semaforoGuardia';
 import {
   DIAS_AVISO_POR_DEFECTO,
@@ -104,4 +105,45 @@ export function documentacionPorAsistente(
   }
 
   return porAsistente;
+}
+
+/**
+ * Las opciones de un filtro, sacadas de lo que el plantel tiene cargado.
+ *
+ * Las zonas y las especialidades las escribió a mano quien cargó cada ficha, así que la misma
+ * zona aparece escrita de varias maneras —`San Isidro`, `san isidro`, `SAN ISIDRO`—. Se agrupan
+ * con `comparable` (`textoComparable.js`), que es el mismo criterio con el que la sugerencia de
+ * la Solicitud acerca las dos puntas, y se muestra la primera forma que apareció.
+ *
+ * **Las opciones salen del plantel y no de un catálogo** a propósito: un filtro armado con el
+ * catálogo de la Prestadora ofrecería zonas donde no hay nadie y —peor— dejaría afuera lo que
+ * alguien escribió sin que estuviera en la lista, que es justo lo que hay que poder encontrar.
+ *
+ * @param filas   el plantel.
+ * @param campo   `'zonas'` o `'especialidades'`.
+ * @returns array de textos, ordenado alfabéticamente, sin repetidos.
+ */
+export function opcionesDelPlantel(filas, campo) {
+  const vistas = new Map();
+  for (const fila of lista(filas)) {
+    for (const texto of lista(fila?.[campo])) {
+      const clave = comparable(texto);
+      if (!clave || vistas.has(clave)) continue;
+      vistas.set(clave, String(texto).trim());
+    }
+  }
+  return [...vistas.values()].sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * ¿Esta ficha tiene el valor elegido en el filtro?
+ *
+ * Compara con el mismo criterio con el que se armaron las opciones: si no, elegir `San Isidro`
+ * dejaría afuera a quien escribió `san isidro`, que es la persona que se estaba buscando.
+ * Sin nada elegido no filtra nada.
+ */
+export function coincideConElFiltro(fila, campo, elegido) {
+  if (!elegido) return true;
+  const buscado = comparable(elegido);
+  return lista(fila?.[campo]).some((texto) => comparable(texto) === buscado);
 }

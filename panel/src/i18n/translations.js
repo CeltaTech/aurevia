@@ -960,6 +960,8 @@ export const T = {
       tipo_sin_asignar: 'Sin tipo asignado',
       tipo_antes_decia: 'Antes acá decía',
       filtro_tipo_todos: 'Todos los tipos',
+      filtro_zona_todas: 'Todas las zonas',
+      filtro_especialidad_todas: 'Todas las especialidades',
       pasar_al_catalogo: {
         titulo: 'Ponerle tipo a los Asistentes que no lo tienen',
         explicacion: 'Acá se elige qué es cada persona. Cuando el sistema puede darse cuenta solo, deja el tipo ya propuesto; cuando duda, lo deja vacío para que lo elija una persona. Lo que quede sin elegir se puede dejar para otro momento.',
@@ -3139,6 +3141,8 @@ export const T = {
       tipo_sin_asignar: 'No type assigned',
       tipo_antes_decia: 'This used to say',
       filtro_tipo_todos: 'All types',
+      filtro_zona_todas: 'All zones',
+      filtro_especialidad_todas: 'All specialties',
       pasar_al_catalogo: {
         titulo: 'Assign a type to the Assistants that have none',
         explicacion: 'Choose what each person is. When the system can tell on its own it pre-fills the type; when it is unsure it leaves the box empty for you to choose. Whatever you leave empty stays for later.',
@@ -5302,6 +5306,8 @@ export const T = {
       tipo_sin_asignar: 'Sem tipo atribuído',
       tipo_antes_decia: 'Antes aqui dizia',
       filtro_tipo_todos: 'Todos os tipos',
+      filtro_zona_todas: 'Todas as zonas',
+      filtro_especialidad_todas: 'Todas as especialidades',
       pasar_al_catalogo: {
         titulo: 'Atribuir tipo aos Assistentes que não têm',
         explicacion: 'Aqui se escolhe o que é cada pessoa. Quando o sistema consegue perceber sozinho, já deixa o tipo proposto; quando fica em dúvida, deixa vazio para escolher à mão. O que ficar sem escolher fica para outro momento.',

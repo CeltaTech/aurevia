@@ -35,6 +35,10 @@ async function pedido(ruta, opciones = {}) {
 
 export const api = {
   perfil: () => pedido('/perfil'),
+  // El interruptor de disponibilidad. No lleva el identificador de nadie: la sesión decide sobre
+  // qué ficha se escribe, y lo que vuelve es lo que quedó guardado, no lo que se mandó.
+  cambiarDisponibilidad: (disponible) =>
+    pedido('/perfil/disponibilidad', { method: 'PATCH', body: JSON.stringify({ disponible }) }),
   misGuardias: () => pedido('/guardias'),
   guardia: (id) => pedido(`/guardias/${id}`),
   checkin: (id, datos) => pedido(`/guardias/${id}/checkin`, { method: 'POST', body: JSON.stringify(datos) }),

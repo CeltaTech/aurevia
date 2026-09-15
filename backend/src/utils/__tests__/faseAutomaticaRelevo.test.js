@@ -45,6 +45,8 @@ const respuestas = new Map();
 let consultas = [];
 /** Quiénes figuran hoy como plantel activo de la Prestadora. */
 let plantelActivo = [];
+/** Quiénes movieron su interruptor a "no disponible" desde su aplicación. */
+let noDisponibles = new Set();
 
 const baseFalsa = createServer((req, res) => {
   req.on('data', () => {});
@@ -118,13 +120,22 @@ beforeEach(() => {
         ],
   );
   plantelActivo = [AUSENTE, SUPLENTE_LIBRE, SUPLENTE_OCUPADO, FRANQUERO];
+  noDisponibles = new Set();
+  // La base falsa filtra de verdad por `disponible_para_ofertas`: si alguien sacara ese filtro
+  // de la consulta, acá volverían todos y la prueba lo vería.
   respuestas.set('GET /rest/v1/asistentes', (busqueda) =>
     busqueda.has('estado')
-      ? plantelActivo.map((id) => ({ id }))
+      ? plantelActivo
+          .filter((id) => busqueda.get('disponible_para_ofertas') !== 'eq.true' || !noDisponibles.has(id))
+          .map((id) => ({ id }))
       : [{ telefono: TELEFONOS[valorDe(busqueda, 'id')] ?? null }],
   );
   respuestas.set('GET /rest/v1/personal_emergencia', () => [
-    { asistente_id: FRANQUERO, tipo: 'franquero', asistentes: { estado: 'activo' } },
+    {
+      asistente_id: FRANQUERO,
+      tipo: 'franquero',
+      asistentes: { estado: 'activo', disponible_para_ofertas: !noDisponibles.has(FRANQUERO) },
+    },
   ]);
   respuestas.set('GET /rest/v1/configuracion_notificaciones', () => [
     { emails: [], activo: true, whatsapp_activo: true, notificar_familia: false, plantilla_whatsapp_id: PLANTILLA },
@@ -179,6 +190,27 @@ describe('a quiénes sale a buscar la fase automática', () => {
     await correr();
 
     assert.deepEqual(pedidosAMeta.map((p) => p.to), [TELEFONOS[SUPLENTE_LIBRE], TELEFONOS[FRANQUERO]]);
+  });
+
+  // El interruptor de disponibilidad lo mueve el propio Asistente
+  // (`asistentes.disponible_para_ofertas`). Acá se respeta sin preguntar, y esa es la diferencia
+  // con el panel de cobertura: allá la lista la lee una persona, que puede llamarlo igual porque
+  // sabe algo que el sistema no sabe; acá no hay nadie leyendo, sale un mensaje solo.
+  it('no le escribe a quien se puso como no disponible', async () => {
+    noDisponibles.add(SUPLENTE_LIBRE);
+
+    await correr();
+
+    assert.ok(!pedidosAMeta.map((p) => p.to).includes(TELEFONOS[SUPLENTE_LIBRE]));
+    assert.deepEqual(pedidosAMeta.map((p) => p.to), [TELEFONOS[FRANQUERO]]);
+  });
+
+  it('y estar anotado en el roster de emergencia no lo hace una excepción', async () => {
+    noDisponibles.add(FRANQUERO);
+
+    await correr();
+
+    assert.deepEqual(pedidosAMeta.map((p) => p.to), [TELEFONOS[SUPLENTE_LIBRE]]);
   });
 
   it('el orden que escribió la Prestadora es el orden en que salen los mensajes', async () => {

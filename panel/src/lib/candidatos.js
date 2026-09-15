@@ -121,6 +121,16 @@ export const PESOS = {
    */
   modalidad_distinta: -1000,
 
+  /**
+   * El Asistente puso su interruptor en "no disponible"
+   * (`asistentes.disponible_para_ofertas`). Resta como un bloqueo **pero no bloquea**, y esa
+   * diferencia es toda la regla: en esta lista decide una persona, que puede saber algo que el
+   * sistema no sabe —que hablaron ayer, que lo apagó por una semana que ya terminó—. Queda al
+   * fondo de los que sí se pueden proponer, con el motivo a la vista. Donde no hay nadie
+   * leyendo, la fase automática de la escalada de relevo, ahí sí se respeta sin preguntar.
+   */
+  no_disponible: -1000,
+
   papeles_ok: 5,
   papeles_vencen: -10,
 
@@ -219,6 +229,11 @@ export const MOTIVO = {
   MODALIDAD_DIRECTA: 'motivo_modalidad_directa',
   MODALIDAD_MARKETPLACE: 'motivo_modalidad_marketplace',
   MODALIDAD_SUBCONTRATACION: 'motivo_modalidad_subcontratacion',
+  /**
+   * Lo dijo el propio Asistente desde su aplicación. El texto no inventa un motivo —no se sabe
+   * por qué, y no hace falta saberlo— ni sugiere qué hacer: sólo lo pone donde se ve.
+   */
+  NO_DISPONIBLE: 'motivo_no_disponible',
   PAPELES_OK: 'motivo_papeles_ok',
   PAPELES_VENCEN: 'motivo_papeles_vencen',
   CERCA: 'motivo_cerca',
@@ -299,6 +314,19 @@ export const ESTADO_ACTIVO = 'activo';
  */
 export function estaEnElPlantel(asistente) {
   return asistente?.estado === ESTADO_ACTIVO;
+}
+
+/**
+ * ¿Se puso disponible para que le ofrezcan trabajo?
+ *
+ * Es otra pregunta que la de arriba y la contesta otra persona: `estado` lo decide la
+ * Prestadora, esto lo decide el Asistente desde su aplicación
+ * (`asistentes.disponible_para_ofertas`). Se lee con `!== false` a propósito: un Asistente
+ * cargado antes de que la columna existiera, o traído por una consulta que no la pidió, llega
+ * sin el dato, y eso no significa que se haya puesto no disponible.
+ */
+export function estaDisponibleParaOfertas(asistente) {
+  return asistente?.disponible_para_ofertas !== false;
 }
 
 /**
@@ -694,6 +722,21 @@ function evaluarAsistente(asistente, ctx) {
   if (ausenciaQueTapa(asistente.id, ctx.ausencias, hueco.fecha, ultimoDiaDeLaGuardia)) {
     bloqueado = true;
     suma(enContra, MOTIVO.AUSENCIA, null, pesos.ausencia);
+  }
+
+  // --- 2 quater. El interruptor que mueve el propio Asistente. Resta como un bloqueo y **no
+  //        bloquea**: se va al fondo de los que sí se pueden proponer, con el motivo a la vista.
+  //
+  //        La diferencia con la ausencia, que está tres renglones más arriba y se parece mucho,
+  //        es quién lo dijo y qué significa. Una ausencia registrada es un hecho de la agenda:
+  //        ese día esa persona no está. Esto es una preferencia que puso ella misma y que puede
+  //        estar vieja, o haber cambiado en una conversación de ayer. Quien mira esta lista
+  //        puede saber eso; la lista no. Por eso acá se muestra y no se decide.
+  //
+  //        Donde no hay nadie mirando sí se respeta sin preguntar: la fase automática de la
+  //        escalada de relevo no le escribe (`backend/src/utils/faseAutomaticaRelevo.js`).
+  if (!estaDisponibleParaOfertas(asistente)) {
+    suma(enContra, MOTIVO.NO_DISPONIBLE, null, pesos.no_disponible);
   }
 
   // --- 3. Matrícula. Bloquea cuando el tipo de Asistente la exige y algo no está en orden.

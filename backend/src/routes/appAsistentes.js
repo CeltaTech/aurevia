@@ -194,7 +194,7 @@ async function pacientesSinReporte(guardia) {
 appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   const { data: perfil, error } = await supabase
     .from('asistentes')
-    .select('id, nombre, telefono, email, foto_url, tipo_asistente_id, zonas, estado, tipo_vinculo, qr_token, tipos_asistente(id, clave, nombre, prestadora_id)')
+    .select('id, nombre, telefono, email, foto_url, tipo_asistente_id, zonas, estado, tipo_vinculo, qr_token, disponible_para_ofertas, disponibilidad_cambiada_en, tipos_asistente(id, clave, nombre, prestadora_id)')
     .eq('id', req.usuarioAsistente.id)
     .single();
   if (error || !perfil) {
@@ -223,6 +223,40 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   const visibilidad = await visibilidadDelPedido(req);
 
   res.json({ perfil, certificado: certificado || null, marca, visibilidad });
+});
+
+// El interruptor de disponibilidad, y lo mueve el Asistente.
+//
+// `asistentes.estado` lo decide la Prestadora; esto lo decide él, y son dos cosas distintas a
+// propósito (ver la migración `20260915120000_el_asistente_dice_cuando_no_esta_disponible.sql`).
+// Apagarlo lo saca de lo que sale a buscarlo solo —la fase automática de la escalada de relevo—
+// y no toca ninguna guardia ya asignada: lo que ya se comprometió sigue siendo suyo.
+//
+// La sesión decide sobre qué fila se escribe. El identificador no viaja en el pedido, así que no
+// hay forma de pedir que se apague a otra persona.
+appAsistentesRouter.patch('/perfil/disponibilidad', requiereRolAsistente, async (req, res) => {
+  const { disponible } = req.body || {};
+  if (typeof disponible !== 'boolean') {
+    return res.status(400).json({ error: 'Falta decir si queda disponible o no', motivo: 'disponibilidad_invalida' });
+  }
+
+  // Se pide de vuelta la fila que se tocó: la base contesta que salió bien aunque no haya
+  // encontrado ninguna, y acá lo que se muestra después es justamente el estado del interruptor.
+  const { data: guardada, error } = await supabase
+    .from('asistentes')
+    .update({ disponible_para_ofertas: disponible, disponibilidad_cambiada_en: new Date().toISOString() })
+    .eq('id', req.usuarioAsistente.id)
+    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
+    .select('disponible_para_ofertas, disponibilidad_cambiada_en');
+  if (error) return responderError(res, error);
+  if (!guardada?.length) {
+    return res.status(404).json({ error: 'Perfil no encontrado', motivo: 'perfil_no_encontrado' });
+  }
+
+  res.json({
+    disponible_para_ofertas: guardada[0].disponible_para_ofertas,
+    disponibilidad_cambiada_en: guardada[0].disponibilidad_cambiada_en,
+  });
 });
 
 // ============================================================================

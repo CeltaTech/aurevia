@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
+import { mensajeDeError } from '../lib/errores';
 import { activarPush, desactivarPush, pushSoportado, suscripcionActual } from '../lib/push';
 import { traducirValor } from '../i18n/valores';
 import { nombreTipo } from '../lib/tipoDeAsistente';
@@ -15,6 +16,8 @@ export default function MiPerfil() {
   const [notifActivas, setNotifActivas] = useState(false);
   const [notifCargando, setNotifCargando] = useState(false);
   const [notifError, setNotifError] = useState('');
+  const [dispCargando, setDispCargando] = useState(false);
+  const [dispError, setDispError] = useState('');
 
   useEffect(() => {
     let activo = true;
@@ -35,6 +38,26 @@ export default function MiPerfil() {
       activo = false;
     };
   }, []);
+
+  // El interruptor de disponibilidad. Lo mueve el Asistente y nadie más: `estado` —lo que decide
+  // la Prestadora— es otra cosa y se muestra arriba, sin tocar.
+  //
+  // Lo que queda en pantalla es lo que contestó el motor, no lo que se mandó. Si el pedido no
+  // llegó, el interruptor tiene que seguir mostrando lo de antes: decirle a alguien que quedó no
+  // disponible cuando en realidad no quedó es el único error que esta pantalla no puede cometer.
+  async function alternarDisponibilidad() {
+    setDispError('');
+    setDispCargando(true);
+    try {
+      const ahora = perfil?.disponible_para_ofertas !== false;
+      const { disponible_para_ofertas } = await api.cambiarDisponibilidad(!ahora);
+      setPerfil((previo) => ({ ...previo, disponible_para_ofertas }));
+    } catch (e) {
+      setDispError(mensajeDeError(e, t, 'cambiar disponibilidad'));
+    } finally {
+      setDispCargando(false);
+    }
+  }
 
   async function alternarNotificaciones() {
     setNotifError('');
@@ -85,6 +108,29 @@ export default function MiPerfil() {
           <span className={`badge badge-${perfil.estado}`}>{traducirValor(t.perfil, `estado_${perfil.estado}`)}</span>
         </div>
       </div>
+
+      {/* El interruptor de disponibilidad. Va inmediatamente después del estado que decide la
+          Prestadora, y con su propio título, para que se vea que son dos cosas distintas: una la
+          decide ella y la otra la decide él.
+
+          El texto de abajo dice qué apaga y qué no, porque es lo que la gente necesita saber
+          antes de tocarlo: que no lo saca de la Prestadora y que no le cancela nada de lo que ya
+          aceptó. Nadie se pone "no disponible" si sospecha que puede perder el trabajo. */}
+      <h2 style={{ marginTop: '2rem' }}>{t.perfil.disponibilidad_titulo}</h2>
+      <p className="texto-ayuda">{t.perfil.disponibilidad_explicacion}</p>
+      <p>
+        {perfil.disponible_para_ofertas !== false
+          ? t.perfil.disponibilidad_disponible
+          : t.perfil.disponibilidad_no_disponible}
+      </p>
+      <button type="button" className="btn btn-secondary" disabled={dispCargando} onClick={alternarDisponibilidad}>
+        {dispCargando
+          ? t.comun.guardando
+          : perfil.disponible_para_ofertas !== false
+          ? t.perfil.disponibilidad_ponerse_no_disponible
+          : t.perfil.disponibilidad_ponerse_disponible}
+      </button>
+      {dispError && <div className="alert alert-error" role="alert">{dispError}</div>}
 
       {/* Lo que dijeron de su trabajo, y lo que él tiene para contestar (pendiente #85). Va acá
           y no en la barra de abajo porque no es trabajo del día: se mira cada tanto. */}

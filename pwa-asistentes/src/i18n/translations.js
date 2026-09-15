@@ -352,6 +352,15 @@ export const T = {
       // El enlace a las calificaciones vive en Mi Perfil y no en la barra de abajo: la barra es
       // para el trabajo del día —las guardias y las ofertas—, y esto se mira cada tanto.
       ver_calificaciones: 'Ver mis calificaciones',
+      // El interruptor de disponibilidad. La explicación dice qué apaga y, sobre todo, qué no
+      // apaga: nadie se pone "no disponible" si sospecha que puede perder el trabajo.
+      disponibilidad_titulo: 'Mi disponibilidad',
+      disponibilidad_explicacion:
+        'Usted decide cuándo quiere que le ofrezcan guardias nuevas. Ponerse como no disponible no cambia las guardias que ya aceptó ni lo da de baja de la Prestadora, y puede volver atrás cuando quiera.',
+      disponibilidad_disponible: 'Hoy está disponible para que le ofrezcan guardias.',
+      disponibilidad_no_disponible: 'Hoy figura como no disponible para guardias nuevas.',
+      disponibilidad_ponerse_no_disponible: 'Ponerme como no disponible',
+      disponibilidad_ponerse_disponible: 'Ponerme como disponible',
     },
     // Lo que las Familias dijeron de su trabajo, y lo que él tiene para decir al respecto. Una
     // calificación no se puede borrar ni corregir, así que lo único que equilibra la balanza es
@@ -727,6 +736,13 @@ export const T = {
       notificaciones_permiso_denegado: 'You denied notification permission. Enable it from your browser settings.',
       notificaciones_error: 'Could not enable notifications. Please try again.',
       ver_calificaciones: 'See my ratings',
+      disponibilidad_titulo: 'My availability',
+      disponibilidad_explicacion:
+        'You decide when you want to be offered new shifts. Marking yourself as unavailable does not change the shifts you already accepted, and it does not remove you from the provider. You can switch back whenever you want.',
+      disponibilidad_disponible: 'You are currently available to be offered shifts.',
+      disponibilidad_no_disponible: 'You are currently marked as unavailable for new shifts.',
+      disponibilidad_ponerse_no_disponible: 'Mark me as unavailable',
+      disponibilidad_ponerse_disponible: 'Mark me as available',
     },
     calificaciones: {
       titulo: 'My ratings',
@@ -1092,6 +1108,13 @@ export const T = {
       notificaciones_permiso_denegado: 'A permissão de notificações está negada. Ela se habilita nas configurações do navegador.',
       notificaciones_error: 'Não foi possível ativar as notificações. É preciso tentar novamente.',
       ver_calificaciones: 'Ver as minhas avaliações',
+      disponibilidad_titulo: 'A minha disponibilidade',
+      disponibilidad_explicacion:
+        'Você decide quando quer que lhe ofereçam plantões novos. Colocar-se como indisponível não altera os plantões que já aceitou nem o retira da Prestadora, e pode voltar atrás quando quiser.',
+      disponibilidad_disponible: 'Hoje está disponível para que lhe ofereçam plantões.',
+      disponibilidad_no_disponible: 'Hoje consta como indisponível para plantões novos.',
+      disponibilidad_ponerse_no_disponible: 'Colocar-me como indisponível',
+      disponibilidad_ponerse_disponible: 'Colocar-me como disponível',
     },
     calificaciones: {
       titulo: 'Minhas avaliações',

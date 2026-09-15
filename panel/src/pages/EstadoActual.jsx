@@ -127,7 +127,12 @@ export function EstadoActual() {
       // `lat`/`lng` es dónde vive cada uno, para poder medir la distancia hasta la casa del
       // Paciente. Viajan las coordenadas y no el domicilio escrito: acá no se muestra la
       // dirección de nadie, solo se calculan kilómetros (CLAUDE.md §6).
-      supabase.from('asistentes').select('id, nombre, estado, horas_semanales, canales, lat, lng'),
+      // `disponible_para_ofertas` es el interruptor que mueve el propio Asistente desde su
+      // aplicación. Viaja para que la lista de candidatos pueda decirlo; no saca a nadie de la
+      // lista ni impide asignarle la guardia (lib/candidatos.js).
+      supabase
+        .from('asistentes')
+        .select('id, nombre, estado, horas_semanales, canales, lat, lng, disponible_para_ofertas'),
       supabase.from('pacientes').select('id, nombre'),
       supabase
         .from('documentos_asistente')

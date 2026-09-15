@@ -134,6 +134,11 @@ export const GRUPOS = [
     copias: ['pwa-familias/src/components/EnlaceAlMapa.jsx'],
   },
   {
+    que: 'la escala de ánimo del reporte y su cara',
+    original: 'pwa-asistentes/src/lib/animoDelReporte.js',
+    copias: ['pwa-familias/src/lib/animoDelReporte.js'],
+  },
+  {
     que: 'el arranque de cada aplicación',
     original: 'panel/src/main.jsx',
     copias: ['pwa-asistentes/src/main.jsx', 'pwa-familias/src/main.jsx'],

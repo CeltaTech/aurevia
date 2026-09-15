@@ -10,13 +10,11 @@ import { useSeVe } from '../context/PerfilContext';
 // La lista legado no se importa: esta hoja carga un reporte nuevo, y un reporte nuevo se
 // escribe siempre con la presión separada en sistólica y diastólica.
 import { SIGNOS_VITALES, colorSigno } from '../lib/signosVitales';
+import { ESTADOS_ANIMO, caraDelAnimo } from '../lib/animoDelReporte';
 
 function esErrorDeRed(error) {
   return error instanceof TypeError;
 }
-
-const ESTADOS_ANIMO = ['muy_bien', 'bien', 'regular', 'mal', 'muy_mal'];
-const CARAS_ANIMO = { muy_bien: '😄', bien: '🙂', regular: '😐', mal: '🙁', muy_mal: '😣' };
 
 function parseNumero(texto) {
   if (texto === null || texto === undefined) return '';
@@ -312,7 +310,7 @@ export default function ReporteDiario() {
                   aria-pressed={estructurado.estado_animo === estado}
                   title={t.reporte[`animo_${estado}`]}
                 >
-                  <span aria-hidden="true">{CARAS_ANIMO[estado]}</span>
+                  <span aria-hidden="true">{caraDelAnimo(estado)}</span>
                   <span className="escala-animo-etiqueta">{t.reporte[`animo_${estado}`]}</span>
                 </button>
               ))}

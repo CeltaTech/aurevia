@@ -4,10 +4,9 @@ import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { useSeVe } from '../context/PerfilContext';
 import { SIGNOS_VITALES, SIGNOS_VITALES_LEGADO, colorSigno } from '../lib/signosVitales';
+import { caraDelAnimo } from '../lib/animoDelReporte';
 
 const CAMPOS_TEXTO = ['incidentes', 'observaciones'];
-
-const CARAS_ANIMO = { muy_bien: '😄', bien: '🙂', regular: '😐', mal: '🙁', muy_mal: '😣' };
 
 export default function ReporteDetalle() {
   const { id, reporteId } = useParams();
@@ -109,9 +108,9 @@ export default function ReporteDetalle() {
 
       <div className="reporte-preview-campo">
         <div className="reporte-preview-titulo">{t.reporte_detalle.campo_estado_animo}</div>
-        {reporte.estado_animo && CARAS_ANIMO[reporte.estado_animo] ? (
+        {reporte.estado_animo && caraDelAnimo(reporte.estado_animo) ? (
           <div className="escala-animo-lectura">
-            <span aria-hidden="true">{CARAS_ANIMO[reporte.estado_animo]}</span>
+            <span aria-hidden="true">{caraDelAnimo(reporte.estado_animo)}</span>
             <span>{t.reporte_detalle[`animo_${reporte.estado_animo}`]}</span>
           </div>
         ) : (

@@ -209,6 +209,7 @@ export const T = {
     reportes: {
       titulo: 'Reportes',
       sin_reportes: 'Todavía no hay reportes cargados para este Paciente.',
+      hubo_incidente: 'Hubo un incidente',
     },
     reporte_detalle: {
       titulo: 'Reporte',
@@ -672,6 +673,7 @@ export const T = {
     reportes: {
       titulo: 'Reports',
       sin_reportes: 'There are no reports for this Patient yet.',
+      hubo_incidente: 'An incident was reported',
     },
     reporte_detalle: {
       titulo: 'Report',
@@ -1093,6 +1095,7 @@ export const T = {
     reportes: {
       titulo: 'Relatórios',
       sin_reportes: 'Ainda não há relatórios para este Paciente.',
+      hubo_incidente: 'Houve um incidente',
     },
     reporte_detalle: {
       titulo: 'Relatório',

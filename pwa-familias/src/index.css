@@ -482,6 +482,19 @@ h3 {
   margin-bottom: 0.3rem;
 }
 
+/* El resumen del día adentro de cada tarjeta de la lista de reportes: el aviso de incidente y los
+   signos que se tomaron, uno al lado del otro. Se acomodan en varios renglones cuando no entran,
+   que en un teléfono angosto es casi siempre, y por eso la separación se da con `gap` y no con
+   un separador escrito: un punto suelto al final de un renglón no separa nada. */
+.reporte-resumen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.75rem;
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+}
+
 .signo-vital-normal {
   color: var(--verde-exito-texto);
 }

@@ -158,6 +158,8 @@ export const T = {
     domicilio: {
       temporal: 'Domicilio temporal',
       sin_motivo: 'Por estos días el Paciente no está en su domicilio habitual.',
+      abrir_en_mapa: 'Abrir {domicilio} en el mapa',
+      ver_en_el_mapa: 'Ver en el mapa',
     },
     paciente: {
       domicilio: 'Domicilio',
@@ -623,6 +625,8 @@ export const T = {
     domicilio: {
       temporal: 'Temporary address',
       sin_motivo: 'The Patient is not at their usual address these days.',
+      abrir_en_mapa: 'Open {domicilio} on the map',
+      ver_en_el_mapa: 'View on the map',
     },
     paciente: {
       domicilio: 'Address',
@@ -1042,6 +1046,8 @@ export const T = {
     domicilio: {
       temporal: 'Endereço temporário',
       sin_motivo: 'Nestes dias o Paciente não está no seu endereço habitual.',
+      abrir_en_mapa: 'Abrir {domicilio} no mapa',
+      ver_en_el_mapa: 'Ver no mapa',
     },
     paciente: {
       domicilio: 'Endereço',

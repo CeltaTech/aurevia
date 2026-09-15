@@ -339,6 +339,17 @@ h2 {
   font-size: 0.85rem;
 }
 
+/* El domicilio que abre el mapa del teléfono. Se subraya para que se vea que se toca: adentro de
+   un renglón de detalle, el solo cambio de color no alcanza para quien distingue mal los colores.
+   El área de toque llega al alto mínimo que se puede acertar con el pulgar parado en la calle. */
+.enlace-mapa {
+  color: var(--azul-medio-texto);
+  text-decoration: underline;
+  display: inline-block;
+  min-height: 44px;
+  line-height: 44px;
+}
+
 /* ---------- Ofertas de guardia ---------- */
 
 /* El plazo se lee antes que cualquier otra cosa de la tarjeta: es lo que decide si hay que

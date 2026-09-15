@@ -9,6 +9,7 @@ import { useSeVe } from '../context/PerfilContext';
 import { useCirculo } from '../context/CirculoContext';
 import { pantallaPermitida } from '../lib/interruptorDeCadaPantalla';
 import DomicilioTemporal from '../components/DomicilioTemporal';
+import EnlaceAlMapa from '../components/EnlaceAlMapa';
 import AvisoInstruccionPendiente from '../components/AvisoInstruccionPendiente';
 
 function segundosDesde(fecha) {
@@ -107,7 +108,7 @@ export default function PacienteDetalle() {
           Familia, así que el aviso de la instrucción sin firmar tiene que estar acá también. */}
       <AvisoInstruccionPendiente />
       <p className="guardia-card-detalle">
-        {t.paciente.domicilio}: {paciente.domicilio || '—'}
+        {t.paciente.domicilio}: <EnlaceAlMapa lugar={paciente} t={t} />
       </p>
       {/* La dirección de arriba es la de hoy: mientras dura una estadía en otro lado, es esa y
           no la de la ficha. Acá se dice cuando ese es el caso, con el motivo que cargó la

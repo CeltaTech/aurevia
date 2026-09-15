@@ -7,6 +7,7 @@ import { diaEnPalabras } from '../lib/fechaEnPalabras';
 import { mensajeDeError } from '../lib/errores';
 import { formatearImporte } from '../lib/dinero';
 import EstadoDocumental from '../components/EstadoDocumental';
+import EnlaceAlMapa from '../components/EnlaceAlMapa';
 
 // El perfil público de una persona de la vidriera, antes de contratarla.
 //
@@ -160,7 +161,8 @@ export default function PerfilPublicoAsistente() {
             )}
             {contacto.contacto.domicilio && (
               <p className="guardia-card-detalle">
-                {t.vidriera.contacto_domicilio}: {contacto.contacto.domicilio}
+                {t.vidriera.contacto_domicilio}:{' '}
+                <EnlaceAlMapa lugar={{ domicilio: contacto.contacto.domicilio }} t={t} />
               </p>
             )}
             <p className="guardia-card-detalle">{t.vidriera.contacto_ya_abierto}</p>

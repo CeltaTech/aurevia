@@ -5,6 +5,7 @@ import { useLocale } from '../i18n/LocaleContext';
 import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
 import DomicilioTemporal, { domiciliosDeLaGuardia } from '../components/DomicilioTemporal';
+import EnlaceAlMapa from '../components/EnlaceAlMapa';
 
 // Las guardias que le ofrecieron y todavía puede tomar.
 //
@@ -57,7 +58,9 @@ function TarjetaDeOferta({ oferta, onResponder, enCurso, t, locale }) {
       </div>
       {domicilios.map((domicilio) => (
         <Fragment key={domicilio.domicilio}>
-          <div className="guardia-card-detalle">{domicilio.domicilio}</div>
+          <div className="guardia-card-detalle">
+            <EnlaceAlMapa lugar={domicilio} t={t} />
+          </div>
           <DomicilioTemporal paciente={domicilio} t={t} />
         </Fragment>
       ))}

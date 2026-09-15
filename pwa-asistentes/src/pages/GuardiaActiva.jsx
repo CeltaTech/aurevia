@@ -11,6 +11,7 @@ import { obtenerUbicacion } from '../lib/ubicacionDelTelefono';
 import { useSeVe } from '../context/PerfilContext';
 import AntesDeLlegar from '../components/AntesDeLlegar';
 import DomicilioTemporal from '../components/DomicilioTemporal';
+import EnlaceAlMapa from '../components/EnlaceAlMapa';
 import PaseDeGuardia from '../components/PaseDeGuardia';
 import CodigoDePresencia from '../components/CodigoDePresencia';
 
@@ -412,7 +413,7 @@ export default function GuardiaActiva() {
             {sonVarios && <div className="guardia-card-paciente">{p.nombre}</div>}
             {veDomicilio && (
               <p className="guardia-card-detalle">
-                {t.guardia_activa.domicilio}: {p.domicilio}
+                {t.guardia_activa.domicilio}: <EnlaceAlMapa lugar={p} t={t} />
               </p>
             )}
             {/* Y si esa dirección no es la de siempre, se dice acá mismo, pegado a la

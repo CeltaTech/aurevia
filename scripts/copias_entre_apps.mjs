@@ -124,6 +124,16 @@ export const GRUPOS = [
     copias: ['pwa-familias/src/components/DomicilioTemporal.jsx'],
   },
   {
+    que: 'cómo se le entrega una dirección al mapa del teléfono',
+    original: 'pwa-asistentes/src/lib/enlaceAlMapa.js',
+    copias: ['pwa-familias/src/lib/enlaceAlMapa.js'],
+  },
+  {
+    que: 'el domicilio escrito de forma que abra el mapa del teléfono',
+    original: 'pwa-asistentes/src/components/EnlaceAlMapa.jsx',
+    copias: ['pwa-familias/src/components/EnlaceAlMapa.jsx'],
+  },
+  {
     que: 'el arranque de cada aplicación',
     original: 'panel/src/main.jsx',
     copias: ['pwa-asistentes/src/main.jsx', 'pwa-familias/src/main.jsx'],
@@ -151,7 +161,7 @@ export const GRUPOS = [
   {
     que: 'cómo se rellenan los huecos de un texto traducido',
     original: 'panel/src/lib/textos.js',
-    copias: ['pwa-asistentes/src/lib/textos.js'],
+    copias: ['pwa-asistentes/src/lib/textos.js', 'pwa-familias/src/lib/textos.js'],
   },
   {
     que: 'la sesión de quien entró a la aplicación',

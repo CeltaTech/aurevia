@@ -55,8 +55,9 @@ export function hayDomicilioTemporal(pacientes) {
 
 /* Las direcciones distintas de una guardia, sin repetir. Un turno que cubre a un matrimonio
    trae dos Pacientes con la misma dirección, y escribirla dos veces no informa nada.
-   Devuelve objetos con los mismos tres campos que trae un Paciente, así el resultado se le
-   pasa a este componente igual que un Paciente.
+   Devuelve objetos con los mismos campos del domicilio que trae un Paciente —incluidas `lat` y
+   `lng`, que son las del día de esa guardia—, así el resultado se le pasa igual que un Paciente
+   a este componente y al que abre el mapa del teléfono.
    Cuando dos personas comparten dirección y solo una la tiene marcada como temporal, gana la
    marca, y entre dos marcadas gana la que trae motivo escrito: callarlo sería mandar a alguien
    a la casa equivocada por redondear. */
@@ -67,6 +68,8 @@ export function domiciliosDeLaGuardia(pacientes) {
     if (!texto) continue;
     const actual = {
       domicilio: texto,
+      lat: paciente.lat,
+      lng: paciente.lng,
       domicilio_es_temporal: domicilioEsTemporal(paciente),
       domicilio_motivo: motivoDelDomicilio(paciente),
     };

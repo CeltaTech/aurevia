@@ -5,14 +5,7 @@ import { ErrorConMotivo } from './errorConMotivo.js';
 import { coordenadasDeDomicilio } from '../geocodificacion/index.js';
 import { CATALOGO_CIRCULO_FAMILIAR } from './catalogoCirculoFamiliar.js';
 import { laCuentaDelPanelEstaAlAlcance } from '../middleware/alcancePrestadora.js';
-
-const ETAPAS_INCORPORACION = [
-  'postulacion',
-  'verificacion_identidad',
-  'antecedentes_penales',
-  'entrevista',
-  'capacitacion',
-];
+import { APROBADAS, filasDeIncorporacion } from './etapasDeIncorporacion.js';
 
 // Comprueba que un tipo de Asistente exista y sea de los que esta Prestadora puede usar:
 // los generales de CeltaTech (`prestadora_id` vacío) o los que creó ella misma. Devuelve el
@@ -448,13 +441,13 @@ export async function activarVerificacionAltaAsistente(asistenteId, prestadoraId
 
   const politica = prestadora.politica_verificacion_alta_manual;
   if (politica === 'pendiente' || politica === 'aprobado') {
-    const filasVerificacion = ETAPAS_INCORPORACION.map((etapa) => ({
-      asistente_id: asistenteId,
-      etapa,
-      estado: politica === 'aprobado' ? 'aprobada' : 'pendiente',
-      revisado_por: politica === 'aprobado' ? usuarioPanelId : null,
-      completado_en: politica === 'aprobado' ? new Date().toISOString() : null,
-    }));
+    // Las etapas son las que esa Prestadora tiene configuradas, las mismas que arma una
+    // postulación aprobada. La política decide si nacen cumplidas o por cumplir, no cuáles son:
+    // un alta a mano y una postulación son dos puertas al mismo proceso.
+    const filasVerificacion = await filasDeIncorporacion(asistenteId, prestadoraId, {
+      aprobadas: politica === 'aprobado' ? APROBADAS.TODAS : APROBADAS.NINGUNA,
+      revisadoPor: usuarioPanelId,
+    });
     const { error: errorVerificaciones } = await supabase.from('verificaciones_asistente').insert(filasVerificacion);
     if (errorVerificaciones) throw new Error(errorVerificaciones.message);
   }

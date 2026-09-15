@@ -14,7 +14,8 @@ import {
   FILAS_DE_UN_ASISTENTE,
   FILAS_DE_UNA_FAMILIA,
 } from '../utils/cuentasPanel.js';
-import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
+import { responderError } from '../utils/errorConMotivo.js';
+import { APROBADAS, filasDeIncorporacion } from '../utils/etapasDeIncorporacion.js';
 import { RESULTADO_PENDIENTE } from '../utils/referenciasLaborales.js';
 import { coordenadasDeDomicilio } from '../geocodificacion/index.js';
 import { reenviarActivacionCuenta } from '../utils/activacionCuenta.js';
@@ -241,24 +242,10 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
     });
     if (errorAsistente) throw new Error(errorAsistente.message);
 
-    const { data: etapas, error: errorEtapas } = await supabase
-      .from('etapas_incorporacion_asistente')
-      .select('clave')
-      .eq('prestadora_id', prestadoraId)
-      .eq('activa', true)
-      .order('orden');
-    if (errorEtapas) throw new Error(errorEtapas.message);
-    if (!etapas || etapas.length === 0) {
-      throw new ErrorConMotivo('sin_etapas_incorporacion', 'La Prestadora no tiene etapas de incorporación activas');
-    }
-
-    const filasVerificacion = etapas.map(({ clave }, indice) => ({
-      asistente_id: asistenteId,
-      etapa: clave,
-      estado: indice === 0 ? 'aprobada' : 'pendiente',
-      revisado_por: indice === 0 ? req.usuarioPanel.id : null,
-      completado_en: indice === 0 ? new Date().toISOString() : null,
-    }));
+    const filasVerificacion = await filasDeIncorporacion(asistenteId, prestadoraId, {
+      aprobadas: APROBADAS.LA_PRIMERA,
+      revisadoPor: req.usuarioPanel.id,
+    });
     const { error: errorVerificaciones } = await supabase.from('verificaciones_asistente').insert(filasVerificacion);
     if (errorVerificaciones) throw new Error(errorVerificaciones.message);
 

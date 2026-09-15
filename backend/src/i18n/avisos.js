@@ -134,6 +134,24 @@ const ES = {
 
   continuidad_de_guardia: () => ({ titulo: 'Continuidad de guardia' }),
 
+  cambio_de_asistente: (d) => ({
+    asunto: d.turnos.length === 1 ? 'Cambió el Asistente de una guardia' : 'Cambió el Asistente de varias guardias',
+    texto: [
+      d.asistenteAnterior
+        ? `${d.asistenteAnterior} ya no hace ${d.turnos.length === 1 ? 'este turno' : 'estos turnos'}. Ahora ${d.turnos.length === 1 ? 'lo hace' : 'los hace'} ${d.asistenteNuevo ?? 'un Asistente sin nombre cargado'}.`
+        : `${d.turnos.length === 1 ? 'Este turno pasa' : 'Estos turnos pasan'} a ${d.asistenteNuevo ?? 'un Asistente sin nombre cargado'}.`,
+      ...d.turnos.map((turno) =>
+        `${turno.fecha}, de ${turno.horaInicio} a ${turno.horaFin}, para ${unirNombres(turno.pacientes, 'y', 'Paciente sin nombre cargado')}.`),
+    ].join('\n'),
+  }),
+
+  cambio_de_asistente_familia: (d) => ({
+    titulo: 'Cambio de Asistente',
+    cuerpo: d.turnos.length === 1
+      ? `La guardia del ${d.turnos[0].fecha}, de ${d.turnos[0].horaInicio} a ${d.turnos[0].horaFin}, la hace ${d.asistenteNuevo ?? 'otro Asistente'}.`
+      : `${d.turnos.length} guardias, desde la del ${d.turnos[0].fecha}, las hace ${d.asistenteNuevo ?? 'otro Asistente'}.`,
+  }),
+
   guardia_sin_cubrir: (d) => ({
     asunto: d.yaEmpezo ? 'Guardia sin cubrir: la hora de inicio ya pasó' : 'Guardia sin cubrir',
     texto: [
@@ -331,6 +349,24 @@ const EN = {
 
   continuidad_de_guardia: () => ({ titulo: 'Shift continuity' }),
 
+  cambio_de_asistente: (d) => ({
+    asunto: d.turnos.length === 1 ? 'The Assistant on a shift changed' : 'The Assistant on several shifts changed',
+    texto: [
+      d.asistenteAnterior
+        ? `${d.asistenteAnterior} no longer covers ${d.turnos.length === 1 ? 'this shift' : 'these shifts'}. ${d.asistenteNuevo ?? 'An Assistant with no name on file'} covers ${d.turnos.length === 1 ? 'it' : 'them'} now.`
+        : `${d.turnos.length === 1 ? 'This shift goes' : 'These shifts go'} to ${d.asistenteNuevo ?? 'an Assistant with no name on file'}.`,
+      ...d.turnos.map((turno) =>
+        `${turno.fecha}, from ${turno.horaInicio} to ${turno.horaFin}, for ${unirNombres(turno.pacientes, 'and', 'patient with no name on file')}.`),
+    ].join('\n'),
+  }),
+
+  cambio_de_asistente_familia: (d) => ({
+    titulo: 'Change of Assistant',
+    cuerpo: d.turnos.length === 1
+      ? `The shift on ${d.turnos[0].fecha}, from ${d.turnos[0].horaInicio} to ${d.turnos[0].horaFin}, will be covered by ${d.asistenteNuevo ?? 'another Assistant'}.`
+      : `${d.turnos.length} shifts, starting with the one on ${d.turnos[0].fecha}, will be covered by ${d.asistenteNuevo ?? 'another Assistant'}.`,
+  }),
+
   guardia_sin_cubrir: (d) => ({
     asunto: d.yaEmpezo ? 'Shift not covered: the start time has passed' : 'Shift not covered',
     texto: [
@@ -521,6 +557,24 @@ const PT = {
   }),
 
   continuidad_de_guardia: () => ({ titulo: 'Continuidade de plantão' }),
+
+  cambio_de_asistente: (d) => ({
+    asunto: d.turnos.length === 1 ? 'O Assistente de um plantão mudou' : 'O Assistente de vários plantões mudou',
+    texto: [
+      d.asistenteAnterior
+        ? `${d.asistenteAnterior} não faz mais ${d.turnos.length === 1 ? 'este plantão' : 'estes plantões'}. Agora ${d.turnos.length === 1 ? 'é feito' : 'são feitos'} por ${d.asistenteNuevo ?? 'um Assistente sem nome cadastrado'}.`
+        : `${d.turnos.length === 1 ? 'Este plantão passa' : 'Estes plantões passam'} para ${d.asistenteNuevo ?? 'um Assistente sem nome cadastrado'}.`,
+      ...d.turnos.map((turno) =>
+        `${turno.fecha}, das ${turno.horaInicio} às ${turno.horaFin}, para ${unirNombres(turno.pacientes, 'e', 'Paciente sem nome cadastrado')}.`),
+    ].join('\n'),
+  }),
+
+  cambio_de_asistente_familia: (d) => ({
+    titulo: 'Mudança de Assistente',
+    cuerpo: d.turnos.length === 1
+      ? `O plantão de ${d.turnos[0].fecha}, das ${d.turnos[0].horaInicio} às ${d.turnos[0].horaFin}, será feito por ${d.asistenteNuevo ?? 'outro Assistente'}.`
+      : `${d.turnos.length} plantões, a partir do de ${d.turnos[0].fecha}, serão feitos por ${d.asistenteNuevo ?? 'outro Assistente'}.`,
+  }),
 
   guardia_sin_cubrir: (d) => ({
     asunto: d.yaEmpezo ? 'Plantão sem cobertura: o horário de início já passou' : 'Plantão sem cobertura',

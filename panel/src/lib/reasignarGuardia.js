@@ -2,6 +2,7 @@ import { supabase } from './supabaseClient';
 import { mensajeDeBloqueo } from './matricula';
 import { mensajeDeModalidad } from './modalidades';
 import { mensajeDeError } from './errores';
+import { avisarCambioDeAsistente } from './avisarCambioDeAsistente';
 
 /* Cambiarle el Asistente a una guardia: un solo lugar para las tres cosas que hay que hacer.
    =========================================================================================
@@ -17,6 +18,8 @@ import { mensajeDeError } from './errores';
         ella. Asignar a alguien la cubre de verdad, así que ese incidente se cierra acá. Si no,
         el aviso de "necesita relevo" sigue encendido aunque el Paciente ya tenga quien lo
         cuide, y alguien va a salir a resolver un problema que ya no existe.
+     4. Se avisa el cambio, porque a la casa del Paciente entra otra persona. El aviso sale
+        después de guardar y no antes, y no puede voltear la reasignación: la guardia ya cambió.
 
    Dos pantallas hacen esta misma operación —la de Guardias y el Estado actual—, así que las tres
    cosas se escriben una sola vez y las dos la llaman (regla 12 de CLAUDE.md §7). Si mañana
@@ -68,6 +71,16 @@ export async function reasignarGuardia(guardia, asistenteId, fecha, t = null) {
       .eq('guardia_entrante_id', guardia.id)
       .is('resuelto_at', null);
     if (errorIncidente) return { error: mensajeDeError(errorIncidente, t) };
+  }
+
+  // Sólo si de verdad cambió de manos. Reasignar a quien ya la tenía —se mueve la fecha, se la
+  // saca de la vidriera— no le cambia a nadie quién viene, y avisarlo sería ruido.
+  if (guardia?.asistente_id !== asistenteId) {
+    await avisarCambioDeAsistente({
+      guardiaIds: [guardia.id],
+      asistenteNuevoId: asistenteId,
+      asistenteAnteriorId: guardia?.asistente_id ?? null,
+    });
   }
 
   return { error: null };

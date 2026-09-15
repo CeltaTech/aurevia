@@ -39,6 +39,17 @@ const DATOS = {
   },
   convocatoria_de_relevo: { fecha: '2026-10-07', horaInicio: '22:00', horaFin: '06:00' },
   continuidad_de_guardia: {},
+  cambio_de_asistente: {
+    asistenteNuevo: 'Rita Solano', asistenteAnterior: 'Marcos Peña',
+    turnos: [
+      { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'] },
+      { fecha: '2026-10-08', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena', 'Aníbal'] },
+    ],
+  },
+  cambio_de_asistente_familia: {
+    asistenteNuevo: 'Rita Solano',
+    turnos: [{ fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'] }],
+  },
   guardia_sin_cubrir: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
     yaEmpezo: false, horas: 5,

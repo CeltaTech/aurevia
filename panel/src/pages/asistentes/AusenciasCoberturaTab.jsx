@@ -13,6 +13,7 @@ import { guardiasAfectadas, guardiasSinCubrir } from '../../lib/guardiasAfectada
 import { diasComputados } from '../../lib/diasDeAusencia';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { con } from '../../lib/textos';
+import { avisarCambioDeAsistente } from '../../lib/avisarCambioDeAsistente';
 
 const TIPOS = ['enfermedad_inculpable', 'accidente_inculpable', 'otra_licencia', 'ausencia_no_justificada'];
 const API_URL = import.meta.env.VITE_API_URL;
@@ -277,6 +278,15 @@ export function AusenciasCoberturaTab({ asistente }) {
       setError(t.comun.error_generico);
       return;
     }
+    // Quien va a la casa del Paciente ya no es el de siempre, así que se avisa. El Asistente nuevo
+    // viaja explícito porque la cobertura no toca `guardias.asistente_id`: ahí sigue figurando el
+    // que faltó. Un aviso para todos los turnos y no uno por turno.
+    await avisarCambioDeAsistente({
+      guardiaIds: filas.map((fila) => fila.guardia_original_id),
+      asistenteNuevoId: sustitutoId,
+      asistenteAnteriorId: asistente?.id ?? null,
+    });
+
     setCoberturaForm((prev) => ({ ...prev, [ausencia.id]: {} }));
     recargar();
   }

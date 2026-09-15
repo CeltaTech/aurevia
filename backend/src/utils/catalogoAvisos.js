@@ -47,6 +47,8 @@
 //   nueva_solicitud_servicio       → routes/solicitudServicio.js:32 (enviarEmailCoordinador)
 //   aviso_cese_asistente           → utils/avisoAutomaticoCese.js (push, con respaldo WhatsApp)
 //   codigo_instruccion_circulo     → utils/instruccionesCirculo.js (WhatsApp, con caída a correo)
+//   cambio_de_asistente            → utils/avisoCambioDeAsistente.js (notificarCoordinador + push
+//                                    a la Familia), pedido por routes/panelGuardias.js
 // No hay ningún otro evento emitido. El vencimiento de documentos tiene un solo evento genérico,
 // `vencimiento_documento_asistente`, y no uno por tipo de documento, porque qué documentos se le
 // piden a un Asistente lo define el catálogo de cada Prestadora.
@@ -130,6 +132,15 @@ export const CATALOGO_AVISOS = [
     descripcion: 'Se cerró el servicio en el que participaba un Asistente, y nadie le avisó dentro del plazo',
     admite_whatsapp: true,
     admite_familia: false,
+  },
+  {
+    evento: 'cambio_de_asistente',
+    descripcion: 'Una guardia pasó a manos de otro Asistente',
+    admite_whatsapp: true,
+    // A la Familia le cambia quién entra a su casa, así que este aviso le puede llegar. Que le
+    // llegue o no lo decide la Prestadora en la pantalla de Avisos, como en todos los demás: acá
+    // se dice que el canal existe, nunca que está encendido.
+    admite_familia: true,
   },
   {
     evento: 'codigo_instruccion_circulo',

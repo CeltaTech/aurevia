@@ -55,7 +55,11 @@ panelMedicacionRouter.get('/pendientes', requiereRolPanel, async (req, res) => {
     (data || []).map(async (indicacion) => {
       const tipoRequerido = await tipoMatriculaRequerida(req.usuarioPanel.prestadoraId, indicacion.via_administracion);
       const sinMatricula = tipoRequerido
-        ? !(await hayAsistenteAsignadoConMatricula(indicacion.pacientes.id, tipoRequerido))
+        ? !(await hayAsistenteAsignadoConMatricula(
+            req.usuarioPanel.prestadoraId,
+            indicacion.pacientes.id,
+            tipoRequerido
+          ))
         : false;
       return { ...indicacion, tipoMatriculaRequerida: tipoRequerido, sinMatricula };
     })
@@ -93,7 +97,11 @@ panelMedicacionRouter.post('/:id/aceptar', requiereRolPanel, async (req, res) =>
   // aviso y no se anota nada — y la indicación queda aceptada igual (CLAUDE.md §7).
   const tipoRequerido = await tipoMatriculaRequerida(req.usuarioPanel.prestadoraId, indicacion.via_administracion);
   const sinMatricula = tipoRequerido
-    ? !(await hayAsistenteAsignadoConMatricula(indicacion.paciente_id, tipoRequerido))
+    ? !(await hayAsistenteAsignadoConMatricula(
+        req.usuarioPanel.prestadoraId,
+        indicacion.paciente_id,
+        tipoRequerido
+      ))
     : false;
   if (sinMatricula) {
     await registrarAvisoAlActivar({

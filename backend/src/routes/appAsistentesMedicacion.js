@@ -24,7 +24,11 @@ appAsistentesMedicacionRouter.get('/:pacienteId', requiereRolAsistente, exigeVis
   const ordenes = [];
   for (const indicacion of indicaciones) {
     const tipoRequerido = await tipoMatriculaRequerida(req.usuarioAsistente.prestadoraId, indicacion.via_administracion);
-    const habilitado = await asistenteTieneMatriculaVigente(req.usuarioAsistente.id, tipoRequerido);
+    const habilitado = await asistenteTieneMatriculaVigente(
+      req.usuarioAsistente.prestadoraId,
+      req.usuarioAsistente.id,
+      tipoRequerido
+    );
     if (habilitado) ordenes.push(indicacion);
   }
 

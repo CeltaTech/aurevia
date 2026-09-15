@@ -29,12 +29,16 @@ export async function tipoMatriculaRequerida(prestadoraId, viaAdministracion) {
   return data?.tipo_matricula_requerida ?? null;
 }
 
-export async function asistenteTieneMatriculaVigente(asistenteId, tipoRequerido) {
+// El filtro por Prestadora va aunque el identificador del Asistente ya sea de una sola: el motor
+// entra con la llave de servicio y se saltea la protección por fila, así que lo único que separa
+// una Prestadora de otra son estos filtros. Y de acá cuelga si se puede dar una medicación.
+export async function asistenteTieneMatriculaVigente(prestadoraId, asistenteId, tipoRequerido) {
   if (!tipoRequerido) return true;
   const hoyISO = new Date().toISOString().slice(0, 10);
   const { data } = await supabase
     .from('matriculas_asistente')
     .select('id')
+    .eq('prestadora_id', prestadoraId)
     .eq('asistente_id', asistenteId)
     .eq('tipo', tipoRequerido)
     .lte('vigente_desde', hoyISO)
@@ -52,22 +56,23 @@ export async function asistenteTieneMatriculaVigente(asistenteId, tipoRequerido)
 // personas de la misma casa, el Asistente atiende a las dos, y para la segunda no aparecía
 // nadie. De acá cuelga si se puede aceptar una indicación de medicación que requiere
 // matrícula, así que quedarse corto significa rechazar un pedido que sí se podía cumplir.
-export async function asistentesAsignadosAlPaciente(pacienteId) {
+export async function asistentesAsignadosAlPaciente(prestadoraId, pacienteId) {
   const hoyISO = new Date().toISOString().slice(0, 10);
   const { data } = await supabase
     .from('guardia_pacientes')
     .select('guardias!inner(asistente_id)')
+    .eq('prestadora_id', prestadoraId)
     .eq('paciente_id', pacienteId)
     .not('guardias.asistente_id', 'is', null)
     .gte('guardias.fecha', hoyISO);
   return [...new Set((data || []).map((f) => f.guardias?.asistente_id).filter(Boolean))];
 }
 
-export async function hayAsistenteAsignadoConMatricula(pacienteId, tipoRequerido) {
+export async function hayAsistenteAsignadoConMatricula(prestadoraId, pacienteId, tipoRequerido) {
   if (!tipoRequerido) return true;
-  const asignados = await asistentesAsignadosAlPaciente(pacienteId);
+  const asignados = await asistentesAsignadosAlPaciente(prestadoraId, pacienteId);
   for (const asistenteId of asignados) {
-    if (await asistenteTieneMatriculaVigente(asistenteId, tipoRequerido)) return true;
+    if (await asistenteTieneMatriculaVigente(prestadoraId, asistenteId, tipoRequerido)) return true;
   }
   return false;
 }

@@ -61,10 +61,15 @@ function manejarErrorMulter(err, req, res, next) {
 const COLUMNAS_ESTADO =
   'asistente_id, requiere_matricula, tipo_matricula, motivo_bloqueo, matricula_id, vigente_hasta, verificada_at, dias_para_vencer';
 
-async function estadoDelAsistente(asistenteId) {
+// El filtro por Prestadora va aunque el identificador del Asistente ya sea de
+// una sola: el motor entra con la llave de servicio y se saltea la protección
+// por fila, así que lo único que separa una Prestadora de otra son estos
+// filtros. La vista ya trae la columna, porque sale del Asistente.
+async function estadoDelAsistente(prestadoraId, asistenteId) {
   const { data } = await supabase
     .from('estado_matricula_asistente')
     .select(COLUMNAS_ESTADO)
+    .eq('prestadora_id', prestadoraId)
     .eq('asistente_id', asistenteId)
     .maybeSingle();
   return data ?? null;
@@ -75,7 +80,7 @@ async function estadoDelAsistente(asistenteId) {
 // ---------------------------------------------------------------------------
 
 appAsistentesMatriculaRouter.get('/', requiereRolAsistente, async (req, res) => {
-  const estado = await estadoDelAsistente(req.usuarioAsistente.id);
+  const estado = await estadoDelAsistente(req.usuarioAsistente.prestadoraId, req.usuarioAsistente.id);
 
   // Con cuántos días de anticipación avisa esta Prestadora. Es el mismo número
   // que usa para los demás papeles que vencen: dos ventanas distintas para la
@@ -89,6 +94,7 @@ appAsistentesMatriculaRouter.get('/', requiereRolAsistente, async (req, res) => 
   const { data: matriculas, error } = await supabase
     .from('matriculas_asistente')
     .select('id, tipo, numero_matricula, vigente_desde, vigente_hasta, archivo_url, verificada_at, cargada_por_el_asistente, created_at')
+    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('asistente_id', req.usuarioAsistente.id)
     .order('vigente_desde', { ascending: false });
   if (error) return responderError(res, error);
@@ -122,7 +128,7 @@ appAsistentesMatriculaRouter.post(
   async (req, res) => {
     const { numeroMatricula, vigenteDesde, vigenteHasta } = req.body;
 
-    const estado = await estadoDelAsistente(req.usuarioAsistente.id);
+    const estado = await estadoDelAsistente(req.usuarioAsistente.prestadoraId, req.usuarioAsistente.id);
     // El tipo no lo elige el Asistente: lo dice su tipo de Asistente en el
     // catálogo. Dejarlo elegir sería dejarlo cargar la Matrícula equivocada y
     // seguir trabado sin entender por qué.
@@ -152,6 +158,7 @@ appAsistentesMatriculaRouter.post(
     }
 
     const { error } = await supabase.from('matriculas_asistente').insert({
+      prestadora_id: asistente.prestadora_id,
       asistente_id: asistente.id,
       tipo: estado.tipo_matricula,
       numero_matricula: numeroMatricula || null,
@@ -163,7 +170,9 @@ appAsistentesMatriculaRouter.post(
     });
     if (error) return responderError(res, error);
 
-    res.json({ estado: await estadoDelAsistente(req.usuarioAsistente.id) });
+    res.json({
+      estado: await estadoDelAsistente(req.usuarioAsistente.prestadoraId, req.usuarioAsistente.id),
+    });
   }
 );
 

@@ -33,7 +33,7 @@
 
 **8.** Sacarlos a la configuración de la Prestadora, según lo contestado.
 
-**9.** **`matriculas_asistente` no tiene la columna de su Organización**, y toda tabla nace con ella. Las consultas de la aplicación del Asistente la piden sólo por `asistente_id` (`backend/src/routes/appAsistentesMatricula.js:90,154`) porque no hay por qué más filtrar, y lo mismo la vista `estado_matricula_asistente` que cuelga de ella. Como el motor entra con la llave de servicio, hoy el aislamiento de la Matrícula depende por entero de que un identificador de Asistente nunca se repita. Va una migración que agregue la columna, la complete desde `asistentes`, la deje obligatoria, rehaga la vista y ajuste las políticas; después, el filtro en cada consulta, con prueba.
+**9.** **Aplicar la migración que le pone a `matriculas_asistente` la columna de su Organización** — `supabase/migrations/20260916040000_la_matricula_del_asistente_dice_de_que_prestadora_es.sql`. Está escrita y sin aplicar: la base local no se puede levantar con Docker apagado y la nube no se alcanza sin red. El código del motor ya la supone —las consultas filtran por Prestadora y el alta escribe la columna—, así que hasta que corra, la aplicación del Asistente no muestra ninguna Matrícula y el alta falla. Al aplicarla: comprobar con `supabase migration list --linked` que quedó corrida, correr `node scripts/probar_aislamiento.mjs` y `node scripts/probar_altas_con_sesion.mjs` contra la base local, y mirar que la vista `estado_matricula_asistente` siga devolviendo la Matrícula vigente de un Asistente de Sandbox.
 
 ---
 

@@ -51,11 +51,6 @@ const CON_MOTIVO = new Map([
   // Catálogo legal por jurisdicción y modalidad. No es de ninguna Prestadora: dos Prestadoras
   // del mismo país tienen que ver el mismo texto.
   ['appAsistentesConsentimientos.js:textos_consentimiento', true],
-  // `matriculas_asistente` no tiene columna de Organización, así que esto no se arregla con un
-  // filtro: pide migración, y está anotado como paso en `docs/PLAN_HASTA_PRODUCCION.md`. La
-  // vista cuelga de esa misma tabla.
-  ['appAsistentesMatricula.js:matriculas_asistente', true],
-  ['appAsistentesMatricula.js:estado_matricula_asistente', true],
   // Depósito de archivos, no tabla: `supabase.storage.from(BUCKET)`. La ruta del archivo empieza
   // por la Prestadora y la política del depósito lo exige.
   ['appAsistentes.js:reportes-fotos', true],

@@ -668,10 +668,12 @@ CREATE TABLE ausencias (
 
 CREATE TABLE guardias_cobertura (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  prestadora_id UUID NOT NULL REFERENCES prestadoras(id),
   guardia_original_id UUID NOT NULL REFERENCES guardias(id),
   ausencia_id UUID REFERENCES ausencias(id),
   asistente_sustituto_id UUID NOT NULL REFERENCES asistentes(id),
   costo_adicional NUMERIC(12,2),  -- costo del reemplazo, además de lo que se sigue pagando al titular
+  moneda moneda_iso NOT NULL,     -- la completa fn_completar_moneda al insertar
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

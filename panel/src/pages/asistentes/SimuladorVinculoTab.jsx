@@ -8,9 +8,12 @@ import { formatearImporte } from '../../lib/dinero';
 import { calcularCese } from '../../lib/calcularCese';
 import { llamarApiLiquidaciones } from '../../lib/apiLiquidaciones';
 import { mensajeDeError } from '../../lib/errores';
+import { con } from '../../lib/textos';
+import { supabase } from '../../lib/supabaseClient';
 import {
   asistenteBajoVinculo, costoMensualDelVinculo, escalasPorTipoALaFecha,
 } from '../../lib/costoDelVinculo';
+import { costoMensualDeCobertura, ventanaDeCobertura } from '../../lib/costoDeCobertura';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { Alert } from '../../components/ui/Alert';
 import { AvisoEscalasProvisorias } from '../../components/AvisoEscalasProvisorias';
@@ -75,10 +78,40 @@ export function SimuladorVinculoTab({ asistente }) {
       });
   }
 
+  // Lo que ya costó cubrir las ausencias de esta persona. Sale de la base con el pase de quien
+  // mira, como el resto del Panel; las coberturas se alcanzan por la ausencia que las originó,
+  // porque la cobertura nombra al sustituto y no al titular.
+  const { desde: desdeCobertura, meses: mesesCobertura } = ventanaDeCobertura(hoy, asistente.fecha_alta);
+  const [coberturas, setCoberturas] = useState([]);
+  const [estadoCobertura, setEstadoCobertura] = useState('cargando');
+  const [errorCobertura, setErrorCobertura] = useState(null);
+
+  async function cargarCoberturas() {
+    setEstadoCobertura('cargando');
+    setErrorCobertura(null);
+    const { data, error: errorConsulta } = await supabase
+      .from('guardias_cobertura')
+      .select('id, costo_adicional, moneda, ausencias!inner(asistente_id, fecha_inicio)')
+      .eq('ausencias.asistente_id', asistente.id)
+      .gte('ausencias.fecha_inicio', desdeCobertura);
+    if (errorConsulta) {
+      setErrorCobertura(mensajeDeError(errorConsulta, t));
+      setEstadoCobertura('error');
+      return;
+    }
+    setCoberturas((data ?? []).map((fila) => ({
+      costo_adicional: fila.costo_adicional,
+      moneda: fila.moneda,
+      fecha: fila.ausencias?.fecha_inicio,
+    })));
+    setEstadoCobertura('listo');
+  }
+
   useEffect(() => {
     cargarConceptos();
+    cargarCoberturas();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [asistente.id]);
 
   const estado = estadoEscalas === 'error' || estadoFormulas === 'error'
     ? 'error'
@@ -116,11 +149,37 @@ export function SimuladorVinculoTab({ asistente }) {
   // una vez: repetirlo por columna haría parecer que son problemas distintos.
   const sinEscala = [...new Set(VINCULOS.flatMap((v) => mensual?.[v]?.sinEscala ?? []))];
 
+  // La cobertura no depende del vínculo —es lo que ya salió pagarle a quien la reemplazó—, así
+  // que el mismo número va en las dos columnas y se suma al total de cada una.
+  const cobertura = useMemo(
+    () => (estadoCobertura === 'listo'
+      ? costoMensualDeCobertura({ coberturas, moneda, desde: desdeCobertura, meses: mesesCobertura })
+      : null),
+    [estadoCobertura, coberturas, moneda, desdeCobertura, mesesCobertura],
+  );
+
+  // Este bloque necesita tres consultas: mientras cualquiera falle, muestra el error, y hasta
+  // que las tres estén, sigue cargando. Un número a medias acá es peor que la demora.
+  const estadoDelBloqueMensual = [estado, estadoConceptos, estadoCobertura].includes('error')
+    ? 'error'
+    : ([estado, estadoConceptos, estadoCobertura].every((e) => e === 'listo') ? 'listo' : 'cargando');
+
   function celdaMensual(vinculo) {
     const r = mensual?.[vinculo];
     if (!r) return '—';
     if (r.faltaDato) return t.asistentes.simulador.falta_dato_base;
     return formatearImporte(r.costo, moneda, locale);
+  }
+
+  function celdaCobertura() {
+    return cobertura ? formatearImporte(cobertura.porMes, moneda, locale) : '—';
+  }
+
+  function celdaTotal(vinculo) {
+    const r = mensual?.[vinculo];
+    if (!r || !cobertura) return '—';
+    if (r.faltaDato) return t.asistentes.simulador.falta_dato_base;
+    return formatearImporte(r.costo + cobertura.porMes, moneda, locale);
   }
 
   return (
@@ -134,10 +193,10 @@ export function SimuladorVinculoTab({ asistente }) {
       <h3>{t.asistentes.simulador.costo_mensual}</h3>
       <Alert variant="info">{t.asistentes.simulador.costo_mensual_explicacion}</Alert>
       <EstadoLista
-        estado={estado === 'listo' ? estadoConceptos : estado}
-        error={error ?? errorConceptos}
+        estado={estadoDelBloqueMensual}
+        error={error ?? errorConceptos ?? errorCobertura}
         vacio={false}
-        recargar={() => { recargar(); cargarConceptos(); }}
+        recargar={() => { recargar(); cargarConceptos(); cargarCoberturas(); }}
       >
         {mensual && (
           <>
@@ -155,8 +214,22 @@ export function SimuladorVinculoTab({ asistente }) {
                   <td>{celdaMensual('monotributo')}</td>
                   <td>{celdaMensual('dependencia')}</td>
                 </tr>
+                <tr>
+                  <td>{t.asistentes.simulador.cobertura}</td>
+                  <td>{celdaCobertura()}</td>
+                  <td>{celdaCobertura()}</td>
+                </tr>
+                <tr>
+                  <td><strong>{t.asistentes.simulador.total_mensual}</strong></td>
+                  <td><strong>{celdaTotal('monotributo')}</strong></td>
+                  <td><strong>{celdaTotal('dependencia')}</strong></td>
+                </tr>
               </tbody>
             </table>
+            <p>{con(t.asistentes.simulador.cobertura_explicacion, { meses: cobertura?.meses ?? 0 })}</p>
+            {cobertura?.enOtraMoneda > 0 && (
+              <Alert variant="info">{con(t.asistentes.simulador.cobertura_otra_moneda, { n: cobertura.enOtraMoneda })}</Alert>
+            )}
             {conceptos.length === 0 && (
               <Alert variant="info">{t.asistentes.simulador.sin_conceptos}</Alert>
             )}

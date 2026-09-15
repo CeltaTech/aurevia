@@ -104,6 +104,11 @@ export const GRUPOS = [
     copias: ['backend/src/utils/fotosDeIdentidad.js'],
   },
   {
+    que: 'los resultados de una referencia laboral y cuándo alcanzan las verificadas',
+    original: 'panel/src/lib/referenciasLaborales.js',
+    copias: ['backend/src/utils/referenciasLaborales.js'],
+  },
+  {
     que: 'cuándo una guardia quedó sin cerrar',
     original: 'panel/src/lib/guardiaSinCerrar.js',
     copias: ['pwa-asistentes/src/lib/guardiaSinCerrar.js'],

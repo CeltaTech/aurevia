@@ -15,6 +15,7 @@ import {
   FILAS_DE_UNA_FAMILIA,
 } from '../utils/cuentasPanel.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
+import { RESULTADO_PENDIENTE } from '../utils/referenciasLaborales.js';
 import { coordenadasDeDomicilio } from '../geocodificacion/index.js';
 import { reenviarActivacionCuenta } from '../utils/activacionCuenta.js';
 import { requierePermiso, permisosEfectivos } from '../utils/permisos.js';
@@ -260,6 +261,28 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
     }));
     const { error: errorVerificaciones } = await supabase.from('verificaciones_asistente').insert(filasVerificacion);
     if (errorVerificaciones) throw new Error(errorVerificaciones.message);
+
+    // Las referencias que la persona escribió en el formulario pasan a ser una fila cada una, para
+    // que se las pueda llamar y quede constancia de qué contestaron. Se copian acá y no se vuelven
+    // a tipear. Las que vengan mal formadas se descartan en silencio: la postulación ya las
+    // comprobó al entrar (`utils/postulacionCompleta.js`), y una fila sin teléfono no se puede
+    // llamar, así que no hay nada que avisar.
+    const referenciasDeLaPostulacion = (postulacion.referencias_laborales ?? [])
+      .filter((una) => una?.nombre && una?.telefono)
+      .map((una) => ({
+        prestadora_id: prestadoraId,
+        asistente_id: asistenteId,
+        nombre: String(una.nombre).trim(),
+        telefono: String(una.telefono).trim(),
+        vinculo: una.vinculo ? String(una.vinculo).trim() : null,
+        resultado: RESULTADO_PENDIENTE,
+      }));
+    if (referenciasDeLaPostulacion.length > 0) {
+      const { error: errorReferencias } = await supabase
+        .from('referencias_laborales_asistente')
+        .insert(referenciasDeLaPostulacion);
+      if (errorReferencias) throw new Error(errorReferencias.message);
+    }
 
     // SEGURIDAD: depende de que el SELECT de arriba (línea ~100) ya haya validado que
     // `postulacionId` pertenece al tenant del solicitante — no llamar este UPDATE con un

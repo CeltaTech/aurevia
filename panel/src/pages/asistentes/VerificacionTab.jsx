@@ -8,6 +8,7 @@ import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import { FotosDeIdentidad } from './FotosDeIdentidad';
+import { ReferenciasLaborales } from './ReferenciasLaborales';
 
 const ESTADOS = ['pendiente', 'aprobada', 'rechazada'];
 
@@ -76,6 +77,11 @@ export function VerificacionTab({ asistente }) {
           etapa, porque las claves de las etapas las inventa cada Prestadora y ninguna se puede
           nombrar desde acá. Carga sus propios datos, así que trae sus propios cuatro estados. */}
       <FotosDeIdentidad asistente={asistente} />
+
+      {/* Y por el mismo motivo, las referencias laborales: son de la persona, llegan solas desde
+          su postulación y ninguna clave de etapa las puede nombrar. También trae sus cuatro
+          estados, porque también carga sus propios datos. */}
+      <ReferenciasLaborales asistente={asistente} />
 
       <EstadoLista estado={estadoCombinado} error={error || errorEtapas} vacio={estadoCombinado === 'listo' && verificaciones.length === 0} recargar={recargar}>
         {etapas.map((etapaFila) => {

@@ -325,6 +325,7 @@ export async function deshacerAlta(userId, { prestadoraId, filas = [] } = {}) {
 // una de las dos (regla 12 de CLAUDE.md §7).
 export const FILAS_DE_UN_ASISTENTE = [
   { tabla: 'verificaciones_asistente', columna: 'asistente_id' },
+  { tabla: 'referencias_laborales_asistente', columna: 'asistente_id' },
   { tabla: 'asistentes' },
 ];
 

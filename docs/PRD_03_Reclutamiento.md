@@ -75,6 +75,27 @@ comparación automática de las dos caras —la columna «comparación por IA» 
 tratamiento de dato biométrico y **no está construida**: falta el documento legal del que salga el
 aviso al Asistente, y falta elegir proveedor (`SECURITY.md`, decisiones pendientes).
 
+### Referencias laborales — cómo quedó construido
+
+Las referencias que la persona cargó en su postulación pasan a la ficha del Asistente cuando se le
+crea la cuenta, una fila cada una y todas sin llamar. Desde la pestaña de verificación
+(`panel/src/pages/asistentes/ReferenciasLaborales.jsx`) se llama a cada una y queda anotado qué
+contestó: verificada, no responde o rechazada, con una nota interna. También se pueden cargar a
+mano, hasta las mismas cinco que admite el formulario, para quien entró sin postulación.
+
+**Quién llamó y cuándo los escribe el motor** (`backend/src/routes/panelReferenciasLaborales.js`),
+no la pantalla: son la firma de esa verificación. Volver el resultado a «sin llamar» los borra.
+
+**El mínimo de dos verificadas es configuración de cada Prestadora**, no un número escrito en el
+código (`configuracion_referencias_laborales` en `DATA_MODEL.md`). Se cambia desde Configuración,
+puede ser cero, y el tope es cinco porque más de cinco no se pueden cargar.
+
+**Y no bloquea nada.** Si faltan verificadas, la pantalla lo dice y aclara que incorporar igual a
+esa persona lo decide la Prestadora: el producto avisa, no prohíbe (`celtatech/CLAUDE.md` §7).
+
+**Están afuera de la lista de etapas**, por lo mismo que las dos fotos: las claves de las etapas las
+inventa cada Prestadora y ninguna se puede nombrar desde el código.
+
 **UI del progreso del aspirante:** mostrar estas 5 etapas como checklist con % de
 completitud (ej. "3 de 5 etapas completas — 60%"), no solo como un estado de texto plano —
 le da al aspirante una noción clara de cuánto falta, igual que un onboarding progresivo.
@@ -155,7 +176,9 @@ Terapista Ocupacional, Nutricionista, Voluntario/a, Otro — mínimo 1 obligator
 corregido respecto del documento fuente, que decía "Cuidadora Domiciliaria" — término
 prohibido por el glosario de `CLAUDE.md`). Estudios/cursos y experiencia
 laboral: formularios dinámicos (múltiples entradas), opcionales pero mejoran ranking.
-Referencias laborales: nombre/apellido/teléfono, 0 a 5, mínimo 2 para aprobar.
+Referencias laborales: nombre/apellido/teléfono, 0 a 5. Cuántas verificadas se esperan es
+configuración de cada Prestadora, y dos es el valor con el que nace — ver «Referencias laborales —
+cómo quedó construido», más arriba.
 
 ### Sección D — Experiencia clínica
 

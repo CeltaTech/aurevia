@@ -1350,6 +1350,31 @@ h2 {
   border-radius: 8px;
 }
 
+/* Cada referencia laboral, con su resultado y su nota. Una debajo de la otra y no en columnas:
+   son pocas —cinco como mucho— y cada una lleva adentro un campo de texto que necesita el ancho. */
+.panel-referencia-laboral {
+  background: var(--fondo-alt);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.panel-referencia-laboral h4 {
+  margin: 0 0 0.25rem;
+}
+
+/* El formulario de la referencia cargada a mano, separado de la lista por una línea: lo que hay
+   arriba es lo que ya está, lo que hay abajo es lo que se agrega. */
+.panel-referencia-nueva {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--borde-card);
+}
+
+.panel-referencia-nueva h4 {
+  margin: 0 0 0.25rem;
+}
+
 /* La entrada de archivo que dispara el botón de al lado. Sale del dibujo sin salir de la página:
    escondida con `display: none` hay navegadores que no la dejan abrir desde otro control. */
 .panel-entrada-oculta {

@@ -400,6 +400,54 @@ CREATE INDEX idx_verif_asistente ON verificaciones_asistente (asistente_id);
 CREATE INDEX idx_verif_etapa ON verificaciones_asistente (etapa);
 ```
 
+## Tablas: referencias_laborales_asistente / configuracion_referencias_laborales
+
+Las referencias laborales de un Asistente, una por una, para poder llamarlas y dejar constancia de
+qué contestó cada una. Creadas por
+`supabase/migrations/20260915220000_las_referencias_laborales_se_verifican_una_por_una.sql`.
+
+```sql
+CREATE TABLE referencias_laborales_asistente (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  prestadora_id UUID NOT NULL REFERENCES prestadoras(id) ON DELETE CASCADE,
+  asistente_id UUID NOT NULL REFERENCES asistentes(id) ON DELETE CASCADE,
+  nombre TEXT NOT NULL,
+  telefono TEXT NOT NULL,
+  vinculo TEXT,
+  resultado TEXT NOT NULL DEFAULT 'pendiente',  -- pendiente | verificada | no_responde | rechazada
+  notas TEXT,
+  verificada_por UUID REFERENCES usuarios(id) ON DELETE SET NULL,
+  verificada_en TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE configuracion_referencias_laborales (
+  prestadora_id UUID PRIMARY KEY REFERENCES prestadoras(id) ON DELETE CASCADE,
+  minimo_verificadas SMALLINT NOT NULL DEFAULT 2,  -- entre 0 y 5
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+- **No son una etapa de incorporación.** Las claves de `etapas_incorporacion_asistente` las inventa
+  cada Prestadora, así que ninguna se puede nombrar desde el código. Las referencias son de la
+  persona, igual que las dos fotos de identidad.
+- **Llegan solas desde la postulación:** `POST /api/panel/cuentas/asistente` copia acá las que la
+  persona cargó en su formulario, todas en `pendiente`. También se pueden cargar a mano, hasta el
+  tope de cinco, que es el mismo que admite ese formulario.
+- **La firma de la verificación —`verificada_por` y `verificada_en`— la escribe el motor**, nunca la
+  pantalla: por eso estas tres rutas van por `/api/panel/referencias-laborales` y no por Supabase
+  directo. Volver el resultado a `pendiente` las borra, y el CHECK
+  `referencias_laborales_asistente_verificada_tiene_firma` impide que quede al revés.
+- **Cuántas verificadas espera cada Prestadora es configuración, no un número escrito en el
+  código.** Sin fila, no se espera ninguna y no hay nada que avisar. `sembrar_configuracion_prestadora`
+  la siembra sola, como a toda tabla `configuracion_*` con clave primaria `prestadora_id`.
+- **El mínimo no bloquea nada.** Si faltan, la pantalla lo dice y aclara que la decisión es de la
+  Prestadora (`celtatech/CLAUDE.md` §7).
+- Los cuatro resultados y la cuenta contra el mínimo viven en `panel/src/lib/referenciasLaborales.js`,
+  que es el original de la copia que usa el motor.
+
 ## Depósito: fotos-identidad
 
 Las dos fotos con las que se verifica la identidad de un Asistente: la del documento y la de la

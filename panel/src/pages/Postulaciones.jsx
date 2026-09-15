@@ -6,14 +6,31 @@ import { useFiltros } from '../hooks/useFiltros';
 import { useZonasCobertura } from '../hooks/useZonasCobertura';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { PostulacionDetalle } from './PostulacionDetalle';
-import { contieneCodigo, traducirCodigos } from '../lib/postulacionCodigos';
+import { traducirCodigos } from '../lib/postulacionCodigos';
 import { totalesDePostulaciones } from '../lib/totalesDePostulaciones';
+import { filtrarPostulaciones } from '../lib/filtrarPostulaciones';
+import { formatearImporte } from '../lib/dinero';
 import { claseBadge } from '../lib/tonos';
 
 const ESTADOS = ['pendiente', 'en_revision', 'aprobado', 'rechazado'];
+const TIPOS_DE_SERVICIO = ['con_retiro', 'sin_retiro'];
+
+const FILTROS_INICIALES = {
+  busqueda: '',
+  estado: '',
+  especialidad: '',
+  zona: '',
+  disponibilidad: '',
+  situacion_fiscal: '',
+  urgencias: '',
+  tipo_servicio: '',
+  honorario_desde: '',
+  honorario_hasta: '',
+  distancia_desde: '',
+};
 
 export function Postulaciones() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const prestadoraId = usePrestadoraActual();
   const { filas, estado, error, recargar } = useSupabaseTable('postulaciones');
   const { filas: zonas } = useZonasCobertura(prestadoraId);
@@ -21,26 +38,10 @@ export function Postulaciones() {
     () => Object.fromEntries(zonas.map((z) => [z.codigo, z.nombre])),
     [zonas],
   );
-  const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '', estado: '', especialidad: '', zona: '', disponibilidad: '' });
+  const { f, set, limpiar, hayFiltros } = useFiltros(FILTROS_INICIALES);
   const [seleccionada, setSeleccionada] = useState(null);
 
-  const filasFiltradas = useMemo(() => {
-    return filas.filter((p) => {
-      const coincideBusqueda =
-        !f.busqueda ||
-        p.nombre?.toLowerCase().includes(f.busqueda.toLowerCase()) ||
-        p.email?.toLowerCase().includes(f.busqueda.toLowerCase()) ||
-        p.telefono?.toLowerCase().includes(f.busqueda.toLowerCase());
-      const coincideEstado = !f.estado || p.estado === f.estado;
-      return (
-        coincideBusqueda &&
-        coincideEstado &&
-        contieneCodigo(p.especialidades, f.especialidad) &&
-        contieneCodigo(p.zonas, f.zona) &&
-        contieneCodigo(p.disponibilidad, f.disponibilidad)
-      );
-    });
-  }, [filas, f]);
+  const filasFiltradas = useMemo(() => filtrarPostulaciones(filas, f), [filas, f]);
 
   // Los números son de todas las postulaciones traídas y no de las que quedaron después de los
   // filtros: contados sobre lo filtrado, elegir una situación dejaría las otras cuatro en cero.
@@ -112,6 +113,49 @@ export function Postulaciones() {
             <option key={codigo} value={codigo}>{label}</option>
           ))}
         </select>
+        <select value={f.situacion_fiscal} onChange={(e) => set('situacion_fiscal', e.target.value)} aria-label={t.postulaciones.filtro_situacion_fiscal}>
+          <option value="">{t.postulaciones.filtro_situacion_fiscal}</option>
+          {Object.entries(t.postulaciones.situacion_fiscal_labels).map(([codigo, label]) => (
+            <option key={codigo} value={codigo}>{label}</option>
+          ))}
+        </select>
+        <select value={f.urgencias} onChange={(e) => set('urgencias', e.target.value)} aria-label={t.postulaciones.filtro_urgencias}>
+          <option value="">{t.postulaciones.filtro_urgencias}</option>
+          <option value="si">{t.postulaciones.filtro_urgencias_si}</option>
+        </select>
+        <select value={f.tipo_servicio} onChange={(e) => set('tipo_servicio', e.target.value)} aria-label={t.postulaciones.filtro_tipo_servicio}>
+          <option value="">{t.postulaciones.filtro_tipo_servicio}</option>
+          {TIPOS_DE_SERVICIO.map((clave) => (
+            <option key={clave} value={clave}>{t.postulaciones[`tipo_servicio_${clave}`]}</option>
+          ))}
+        </select>
+        {/* El honorario y la distancia se escriben, no se eligen: son números que dependen de cada
+            Prestadora y de cada zona, y una lista de rangos armada de antemano sería un valor
+            operativo escrito en el código. */}
+        <input
+          type="number"
+          min="0"
+          placeholder={t.postulaciones.filtro_honorario_desde}
+          aria-label={t.postulaciones.filtro_honorario_desde}
+          value={f.honorario_desde}
+          onChange={(e) => set('honorario_desde', e.target.value)}
+        />
+        <input
+          type="number"
+          min="0"
+          placeholder={t.postulaciones.filtro_honorario_hasta}
+          aria-label={t.postulaciones.filtro_honorario_hasta}
+          value={f.honorario_hasta}
+          onChange={(e) => set('honorario_hasta', e.target.value)}
+        />
+        <input
+          type="number"
+          min="0"
+          placeholder={t.postulaciones.filtro_distancia_desde}
+          aria-label={t.postulaciones.filtro_distancia_desde}
+          value={f.distancia_desde}
+          onChange={(e) => set('distancia_desde', e.target.value)}
+        />
       </div>
 
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && filasFiltradas.length === 0} recargar={recargar} filtrado={hayFiltros} onLimpiarFiltros={limpiar}>
@@ -122,7 +166,11 @@ export function Postulaciones() {
               <th>{t.postulaciones.col_especialidades}</th>
               <th>{t.postulaciones.col_zonas}</th>
               <th>{t.postulaciones.col_fecha}</th>
+              <th>{t.postulaciones.col_honorario_pretendido}</th>
+              <th>{t.postulaciones.anios_experiencia}</th>
               <th>{t.postulaciones.col_situacion_fiscal}</th>
+              <th>{t.postulaciones.col_urgencias}</th>
+              <th>{t.postulaciones.como_conocio}</th>
               <th>{t.postulaciones.col_estado}</th>
               <th></th>
             </tr>
@@ -134,7 +182,13 @@ export function Postulaciones() {
                 <td>{traducirCodigos(p.especialidades, t.postulaciones.especialidades_labels)}</td>
                 <td>{traducirCodigos(p.zonas, zonasLabels)}</td>
                 <td>{new Date(p.creado_en).toLocaleDateString()}</td>
+                {/* La moneda sale de la fila, no de la Prestadora de quien mira: el importe está
+                    guardado con la suya. Sin dato, `formatearImporte` escribe un guión. */}
+                <td>{formatearImporte(p.honorario_pretendido, p.moneda, locale)}</td>
+                <td>{p.anios_experiencia ?? '—'}</td>
                 <td>{t.postulaciones.situacion_fiscal_labels[p.situacion_fiscal] ?? p.situacion_fiscal}</td>
+                <td>{p.disponible_urgencias ? t.comun.si : '—'}</td>
+                <td>{p.como_conocio || '—'}</td>
                 <td>
                   <span className={claseBadge(p.estado)}>{t.postulaciones[`estado_${p.estado}`]}</span>
                 </td>

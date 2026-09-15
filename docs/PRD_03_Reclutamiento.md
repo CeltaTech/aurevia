@@ -267,13 +267,40 @@ verificación, aprobadas y rechazadas.
 decidido si eso avisa o bloquea — ver `docs/PLAN_HASTA_PRODUCCION.md`, sección «Reclutamiento». Un
 número que diga «bloqueadas» antes de esa decisión adelanta la respuesta.
 
-Tabla de postulantes — columnas: nombre, especialidad, zona, pretensión de honorario/hora,
-años de experiencia, condición fiscal, disponible para urgencias, estado, canal de llegada.
-Orden por defecto: más reciente primero.
+### La tabla y los filtros — cómo quedaron construidos
 
-Filtros: texto libre, especialidad, estado (Pendiente/En revisión/Aprobada/Rechazada/
-Suspendida), zona, franja horaria, disponibilidad urgencias, distancia máxima, condición
-fiscal, rango de honorario/hora, tipo de servicio.
+Columnas: nombre, especialidades, zonas, fecha, pretensión de honorario por hora, años de
+experiencia, condición fiscal, urgencias, cómo nos conoció y situación. Más reciente primero, que
+es el orden con el que la pantalla pide los datos.
+
+- **La pretensión de honorario se muestra con su moneda**, la de la fila y no la de quien mira. La
+  columna nació junto con la de moneda, que completa sola el mismo disparador que el resto de los
+  importes. Quien no dijo cuánto pretende cobrar aparece con un guión: se pregunta en la
+  entrevista.
+- **La columna de cómo nos conoció se rotula por el dato que hay guardado.** El PRD original la
+  llamaba «canal de llegada», y son dos cosas distintas: acá un canal es por dónde sale un aviso
+  —WhatsApp, correo, notificación— y está escrito así en `panel/src/lib/modalidades.js`. Lo que la
+  postulación guarda es lo que la persona contestó, y así se rotula.
+- **Once condiciones no entran adentro de una pantalla.** El filtrado vive en
+  `panel/src/lib/filtrarPostulaciones.js`, con sus pruebas: varias de esas condiciones no son una
+  comparación sino una decisión, y una decisión se prueba.
+- **Quien no declaró un dato queda afuera sólo cuando ese dato se pide.** Buscando gente que
+  pretenda hasta cierto honorario, quien no lo dijo no cumple: meterla adentro la haría pasar por
+  alguien que pidió poco. Mientras ese filtro no se toque, aparece como todas.
+- **Un número escrito a medias no esconde a nadie.** Mientras se tipea «-» o «1e» el filtro
+  todavía no se entiende, y un filtro que no se entiende no puede vaciar la lista y hacer creer
+  que no hay postulantes.
+- **El honorario y la distancia se escriben, no se eligen de una lista.** Una lista de rangos
+  armada de antemano sería un valor operativo escrito en el código, distinto en cada Prestadora y
+  en cada zona.
+
+Filtros: texto libre, situación de la postulación, especialidad, zona, franja horaria, condición
+fiscal, urgencias, tipo de servicio —por horas o cama adentro—, rango de honorario por hora y
+distancia («viaja al menos tantos kilómetros», que es la pregunta que se hace quien busca a
+alguien para una casa lejos).
+
+**El filtro por «Suspendida» no existe porque esa situación no existe**: una postulación está
+pendiente, en revisión, aprobada o rechazada.
 
 Mapa geolocalizado del plantel activo agrupado por municipio — al llegar una solicitud de
 familia, filtra automáticamente las Asistentes disponibles más cercanas (mismo componente

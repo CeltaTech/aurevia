@@ -156,6 +156,15 @@ export function revisarPostulacion(cuerpo, { opciones = [], edadMinima = null, h
     if (!Number.isFinite(distancia) || distancia <= 0) return falla('distancia_maxima_invalida');
   }
 
+  // Lo que pretende cobrar por hora. No decirlo no traba la postulación —el PRD lo releva sin
+  // publicar montos y lo acuerda en la entrevista—, pero un cero o un número negativo sí, porque
+  // no es una pretensión sino un dato mal cargado, y la base lo rechazaría igual.
+  let honorario = null;
+  if (cuerpo.honorario_pretendido != null && cuerpo.honorario_pretendido !== '') {
+    honorario = Number(cuerpo.honorario_pretendido);
+    if (!Number.isFinite(honorario) || honorario <= 0) return falla('honorario_pretendido_invalido');
+  }
+
   const ubicacion = ubicacionDelDomicilio(cuerpo);
   if (ubicacion === 'invalida') return falla('ubicacion_invalida');
 
@@ -189,6 +198,10 @@ export function revisarPostulacion(cuerpo, { opciones = [], edadMinima = null, h
       referencias_laborales: referencias,
       experiencia_clinica: experienciaClinica,
       distancia_maxima_km: distancia,
+      // La moneda no viaja en el pedido: la completa la base con la de la Prestadora. Un
+      // formulario público no puede decir en qué moneda cobra la empresa que recibe la
+      // postulación.
+      honorario_pretendido: honorario,
       disponible_urgencias: cuerpo.disponible_urgencias === true,
       disponible_con_retiro: cuerpo.disponible_con_retiro === true,
       disponible_sin_retiro: cuerpo.disponible_sin_retiro === true,

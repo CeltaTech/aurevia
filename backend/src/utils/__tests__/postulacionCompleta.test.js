@@ -145,6 +145,22 @@ describe('revisarPostulacion', () => {
     assert.equal(revisar({ distancia_maxima_km: 'lejos' }).error, 'distancia_maxima_invalida');
   });
 
+  it('el honorario pretendido es opcional, pero si viene es un importe', () => {
+    assert.equal(revisar({}).datos.honorario_pretendido, null);
+    assert.equal(revisar({ honorario_pretendido: '' }).datos.honorario_pretendido, null);
+    assert.equal(revisar({ honorario_pretendido: 4500 }).datos.honorario_pretendido, 4500);
+    assert.equal(revisar({ honorario_pretendido: 0 }).error, 'honorario_pretendido_invalido');
+    assert.equal(revisar({ honorario_pretendido: -100 }).error, 'honorario_pretendido_invalido');
+    assert.equal(revisar({ honorario_pretendido: 'a convenir' }).error, 'honorario_pretendido_invalido');
+  });
+
+  it('la moneda del honorario no viaja en el pedido', () => {
+    // La completa la base con la de la Prestadora: un formulario público no puede decir en qué
+    // moneda cobra la empresa que recibe la postulación.
+    const { datos } = revisar({ honorario_pretendido: 4500, moneda: 'BRL' });
+    assert.equal(datos.moneda, undefined);
+  });
+
   it('el punto del mapa viaja entero o no viaja', () => {
     assert.equal(revisar({ lat: -34.6, lng: -58.4 }).error, null);
     assert.equal(revisar({ lat: -34.6 }).error, 'ubicacion_invalida');

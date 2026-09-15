@@ -32,15 +32,17 @@ import { estaSinCubrir } from './cobertura';
 import { inicioDeGuardia, finDeGuardia } from './horarios';
 
 /**
- * Los umbrales de tiempo que convierten una situación en urgente.
+ * Los umbrales de fábrica: con qué números arranca una Prestadora que todavía no configuró
+ * nada.
  *
- * Hoy son estos números y son iguales para toda Prestadora. **No deberían serlo**: son reglas
- * operativas, y la regla 1 de CLAUDE.md §7 dice que una regla operativa no se escribe en el
- * código. La tarea pendiente de "alertas configurables desde el Panel de la Prestadora" es la
- * que va a traerlos de la configuración. Para que ese cambio sea de una línea y no una
- * cacería por todo el proyecto, están todos juntos acá y **todas** las funciones de este
- * archivo los reciben por parámetro: el día que existan en la base, se pasa el objeto de la
- * Prestadora en lugar de este, y nada más cambia.
+ * **No son los del producto, son el punto de partida.** Cada Prestadora los tiene en su
+ * configuración y los cambia desde el Panel; de ahí los trae `umbralesDeLaPrestadora()`, que es
+ * lo que el `UmbralesProvider` le pasa a cada pantalla. Estos quedan para el caso en que la
+ * configuración todavía no exista —una Prestadora recién dada de alta— y para que ninguna
+ * pantalla se quede sin poder pintar un chip mientras la consulta viaja.
+ *
+ * Están todos juntos acá, y **todas** las funciones de este archivo los reciben por parámetro,
+ * para que no haya un segundo lugar donde alguien escriba «48» a mano.
  */
 export const UMBRALES = {
   /** Un hueco a menos de estas horas de empezar ya es urgente. */
@@ -50,6 +52,53 @@ export const UMBRALES = {
   /** Horas después del fin sin cerrar la guardia antes de considerarla un problema. */
   horas_para_cerrar: 2,
 };
+
+const MINUTOS_POR_HORA = 60;
+
+/** Un número de la base sólo reemplaza al de fábrica si es un número y es mayor que cero. */
+function numeroUtil(valor) {
+  const n = Number(valor);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/**
+ * Los umbrales de una Prestadora, armados con lo que ella ya tiene configurado.
+ *
+ * NO HAY TABLA NUEVA, Y ES A PROPÓSITO. Los tres números ya existen en la base, cada uno en la
+ * tabla donde esa Prestadora los decidió:
+ *
+ *   horas_hueco_urgente        ← `configuracion_aviso_guardia_sin_cubrir.horas_antes`
+ *   minutos_tolerancia_llegada ← `configuracion_ausencia_automatica.minutos_tolerancia_checkin`
+ *   horas_para_cerrar          ← `configuracion_escalada_coordinador.minutos_gracia_cierre_guardia`
+ *
+ * Copiarlos a una tabla propia del semáforo daría dos números para la misma pregunta, y el día
+ * que alguien cambie uno la grilla diría una cosa y el aviso otra: la guardia pintada de rojo a
+ * las 48 horas mientras el aviso sale a las 24. El color de la grilla y el aviso al Coordinador
+ * son la misma decisión mirada de dos maneras, así que salen del mismo número.
+ *
+ * QUE EL AVISO ESTÉ APAGADO NO APAGA EL COLOR. Dos de esas tablas tienen un `activo`, que dice
+ * si sale el aviso, no a partir de cuándo la situación es urgente. Una Prestadora que prefiere
+ * mirar la grilla en vez de recibir correos sigue teniendo su umbral, y por eso acá no se mira.
+ *
+ * @param config `{ avisoSinCubrir, ausenciaAutomatica, escaladaCoordinador }` — filas tal como
+ *               salen de la base. Cualquiera puede faltar.
+ */
+export function umbralesDeLaPrestadora(config = {}) {
+  const horasHueco = numeroUtil(config.avisoSinCubrir?.horas_antes);
+  const minutosLlegada = numeroUtil(config.ausenciaAutomatica?.minutos_tolerancia_checkin);
+  const minutosCierre = numeroUtil(config.escaladaCoordinador?.minutos_gracia_cierre_guardia);
+
+  return {
+    horas_hueco_urgente: horasHueco ?? UMBRALES.horas_hueco_urgente,
+    minutos_tolerancia_llegada: minutosLlegada ?? UMBRALES.minutos_tolerancia_llegada,
+    // La configuración lo guarda en minutos porque así se lo pregunta el Panel —«a los cuántos
+    // minutos de terminada se avisa»—; el semáforo razona en horas. La cuenta se hace acá, una
+    // sola vez, y no en cada pantalla.
+    horas_para_cerrar: minutosCierre
+      ? minutosCierre / MINUTOS_POR_HORA
+      : UMBRALES.horas_para_cerrar,
+  };
+}
 
 /**
  * Las situaciones posibles de una guardia. Son más que los estados de la base porque tres de

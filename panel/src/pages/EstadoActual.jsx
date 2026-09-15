@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
+import { useUmbrales } from '../context/UmbralesContext';
 import { esAdminOSuperior } from '../lib/roles';
 import { supabase } from '../lib/supabaseClient';
 import { Alert } from '../components/ui/Alert';
@@ -242,8 +243,11 @@ export function EstadoActual() {
 
   // El reloj entra en el contexto una sola vez por carga, a propósito: si cada cálculo
   // preguntara la hora por su cuenta, dos contadores de la misma pantalla podrían estar
-  // mirando momentos distintos y contradecirse.
-  const ctx = useMemo(() => ({ ahora: new Date(), ...ctxExtra }), [ctxExtra]);
+  // mirando momentos distintos y contradecirse. Los umbrales entran por el mismo motivo y con la
+  // misma regla: son los que configuró esta Prestadora, y tienen que ser los mismos que pinta la
+  // grilla de Guardias.
+  const umbrales = useUmbrales();
+  const ctx = useMemo(() => ({ ahora: new Date(), umbrales, ...ctxExtra }), [ctxExtra, umbrales]);
 
   /* Los nombres de los Pacientes, resumidos en una línea para el chip de la grilla.
      Se arma acá y no al cargar a propósito: el resumen depende del idioma ("y 3 más"), y

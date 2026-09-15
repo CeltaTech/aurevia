@@ -3,6 +3,7 @@ import { LocaleProvider } from './i18n/LocaleContext';
 import { PreferenciasVistaProvider } from './context/PreferenciasVistaContext';
 import { AuthProvider } from './context/AuthContext';
 import { EmpresaProvider } from './context/EmpresaContext';
+import { UmbralesProvider } from './context/UmbralesContext';
 import { PermisosProvider } from './context/PermisosContext';
 import { ModalidadesProvider } from './context/ModalidadesContext';
 import { TenantSessionProvider } from './context/TenantSessionContext';
@@ -74,6 +75,10 @@ function App() {
                 enrutador porque el menú lo consulta desde cualquier pantalla: un Asistente parado
                 en una puerta tiene que aparecer aunque nadie esté mirando la lista. */}
             <PedidosDeCodigoProvider>
+            {/* Los umbrales del semáforo de guardia. Van acá por el mismo motivo que los pedidos:
+                son los de la Prestadora que se está mirando ahora, y esa la decide la sesión de
+                soporte. */}
+            <UmbralesProvider>
             <AdvertenciaLegalProvider>
               <BrowserRouter>
                 <Routes>
@@ -215,6 +220,7 @@ function App() {
                 </Routes>
               </BrowserRouter>
             </AdvertenciaLegalProvider>
+            </UmbralesProvider>
             </PedidosDeCodigoProvider>
           </TenantSessionProvider>
           </ModalidadesProvider>

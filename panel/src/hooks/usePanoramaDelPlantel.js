@@ -21,6 +21,7 @@ import { supabase } from '../lib/supabaseClient';
 import { hoyISO, sumarDias } from '../lib/horarios';
 import { diasDeAvisoDeLaPrestadora } from '../lib/plazoDeAviso';
 import { usePrestadoraActual } from './usePrestadoraActual';
+import { useUmbrales } from '../context/UmbralesContext';
 import {
   DIAS_DE_HORIZONTE,
   documentacionPorAsistente,
@@ -35,6 +36,10 @@ const COLUMNAS_GUARDIA =
 
 export function usePanoramaDelPlantel() {
   const prestadoraId = usePrestadoraActual();
+  /* Los umbrales de esta Prestadora. Hoy el conteo sólo descarta lo cancelado y lo completado,
+     que salen de una columna; van igual para que el día que «activa» pase a depender del reloj
+     esta cuenta no quede contando con otros números que la grilla. */
+  const umbrales = useUmbrales();
   const [panorama, setPanorama] = useState({ guardias: null, documentacion: null });
 
   const cargar = useCallback(async () => {
@@ -57,10 +62,10 @@ export function usePanoramaDelPlantel() {
       ]);
 
     setPanorama({
-      guardias: error ? null : guardiasActivasPorAsistente(guardias),
+      guardias: error ? null : guardiasActivasPorAsistente(guardias, { umbrales }),
       documentacion: errorDocs ? null : documentacionPorAsistente(documentos, diasAviso),
     });
-  }, [prestadoraId]);
+  }, [prestadoraId, umbrales]);
 
   useEffect(() => {
     cargar();

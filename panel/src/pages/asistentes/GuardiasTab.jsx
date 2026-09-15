@@ -12,6 +12,7 @@ import {
   textoDePacientes,
 } from '../../lib/pacientesDeGuardia';
 import { situacionDeGuardia, tonoDeGuardia } from '../../lib/semaforoGuardia';
+import { useUmbrales } from '../../context/UmbralesContext';
 
 /* Lo que este Asistente ya trabajó.
    ==========================================================================
@@ -43,6 +44,9 @@ export function GuardiasTab({ asistente }) {
   const [datos, setDatos] = useState({ filas: [], tope: false });
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
+  /* Los umbrales de esta Prestadora, los mismos que pinta la grilla de Guardias: un turno que
+     allá figura sin cerrar no puede figurar acá como completado. */
+  const umbrales = useUmbrales();
 
   const cargar = useCallback(async () => {
     setEstado('cargando');
@@ -73,10 +77,11 @@ export function GuardiasTab({ asistente }) {
       if (errorPacientes) throw errorPacientes;
 
       const nombres = Object.fromEntries((pacientes ?? []).map((p) => [p.id, p.nombre]));
+      const ctx = { umbrales };
       const filas = conPacientes(guardias, porGuardia, nombres).map((g) => ({
         ...g,
-        situacion: situacionDeGuardia(g),
-        tono: tonoDeGuardia(g),
+        situacion: situacionDeGuardia(g, ctx),
+        tono: tonoDeGuardia(g, ctx),
       }));
 
       setDatos({ filas, tope: filas.length === TOPE });
@@ -85,7 +90,7 @@ export function GuardiasTab({ asistente }) {
       setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, [asistente.id, t]);
+  }, [asistente.id, t, umbrales]);
 
   useEffect(() => {
     cargar();

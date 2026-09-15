@@ -14,6 +14,7 @@ import {
   textoDePacientes,
 } from '../../lib/pacientesDeGuardia';
 import { estaActiva, situacionDeGuardia, tonoDeGuardia } from '../../lib/semaforoGuardia';
+import { useUmbrales } from '../../context/UmbralesContext';
 import { armarBuscadorDeRangos, tieneSignoFueraDeRango } from '../../lib/signosVitales';
 import { soloSinResolver } from '../../lib/alertaSinResolver';
 
@@ -97,6 +98,10 @@ function nombresDe(pacientes) {
    Guardias: no se vuelve a decidir acá qué significa cada estado. */
 export function GuardiasActivasDeLaFamilia({ pacientes }) {
   const { t } = useLocale();
+  /* Los mismos umbrales que pinta la grilla de Guardias, que son los que configuró esta
+     Prestadora. Sin esto la ficha de la Familia diría «sin cerrar» a las dos horas mientras la
+     grilla lo dice a los quince minutos, con los mismos datos delante. */
+  const umbrales = useUmbrales();
 
   const cargar = useCallback(async () => {
     const ids = idsDe(pacientes);
@@ -111,8 +116,9 @@ export function GuardiasActivasDeLaFamilia({ pacientes }) {
         .limit(TOPE_GUARDIAS),
     );
 
+    const ctx = { umbrales };
     const activas = guardias
-      .filter((g) => estaActiva(g))
+      .filter((g) => estaActiva(g, ctx))
       // Los dos caminos de `cargarGuardiasDePacientes` llegan mezclados, así que el orden se
       // rehace acá: primero la más próxima, que es lo que se quiere ver de un vistazo.
       .sort((a, b) => `${a.fecha} ${a.hora_inicio}`.localeCompare(`${b.fecha} ${b.hora_inicio}`))
@@ -124,12 +130,12 @@ export function GuardiasActivasDeLaFamilia({ pacientes }) {
     const filas = conPacientes(activas, porGuardia, nombresDe(pacientes)).map((g) => ({
       ...g,
       asistente_nombre: g.asistentes?.nombre || '—',
-      situacion: situacionDeGuardia(g),
-      tono: tonoDeGuardia(g),
+      situacion: situacionDeGuardia(g, ctx),
+      tono: tonoDeGuardia(g, ctx),
     }));
 
     return { filas, tope: filas.length === TOPE_GUARDIAS };
-  }, [pacientes]);
+  }, [pacientes, umbrales]);
 
   const { datos, estado, error, recargar } = useSeccion(cargar);
 

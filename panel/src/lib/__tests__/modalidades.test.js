@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   MODALIDAD,
+  MODALIDADES_DE_PRESTADORA,
+  contarPorModalidad,
   modalidadesHabilitadas,
   modalidadesDelAsistente,
   trabajaEnModalidad,
@@ -178,5 +180,49 @@ describe('los textos existen en los tres idiomas', () => {
     ]) {
       expect(typeof motivos[clave], `falta ${clave} en ${idioma}`).toBe('string');
     }
+  });
+});
+
+describe('contarPorModalidad', () => {
+  it('cuenta cada fila en su modalidad', () => {
+    const guardias = [
+      { canal_modalidad: MODALIDAD.DIRECTA },
+      { canal_modalidad: MODALIDAD.DIRECTA },
+      { canal_modalidad: MODALIDAD.SUBCONTRATACION },
+    ];
+    expect(contarPorModalidad(guardias, (g) => g.canal_modalidad)).toEqual({
+      directa: 2,
+      marketplace: 0,
+      subcontratacion: 1,
+    });
+  });
+
+  // Un renglón que falta se lee como "acá no se miró"; lo que se quiere decir es "acá no hay nada".
+  it('devuelve las tres modalidades aunque no haya ninguna fila', () => {
+    expect(Object.keys(contarPorModalidad([], () => null))).toEqual(MODALIDADES_DE_PRESTADORA);
+  });
+
+  it('cuenta dos veces a quien trabaja en las dos modalidades', () => {
+    const asistentes = [{ canales: [MODALIDAD.DIRECTA, MODALIDAD.MARKETPLACE] }];
+    expect(contarPorModalidad(asistentes, modalidadesDelAsistente)).toEqual({
+      directa: 1,
+      marketplace: 1,
+      subcontratacion: 0,
+    });
+  });
+
+  // Preferible que la suma de los renglones quede por debajo del total antes que inventarle un
+  // renglón a un valor que este archivo no conoce.
+  it('no cuenta en ningún lado lo que viene con una modalidad desconocida o sin ninguna', () => {
+    const filas = [{ m: 'lo_que_sea' }, { m: null }, {}];
+    expect(contarPorModalidad(filas, (f) => f.m)).toEqual({
+      directa: 0,
+      marketplace: 0,
+      subcontratacion: 0,
+    });
+  });
+
+  it('no se cae cuando la consulta no trajo nada', () => {
+    expect(contarPorModalidad(undefined, (f) => f.m).directa).toBe(0);
   });
 });

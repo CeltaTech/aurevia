@@ -13,6 +13,8 @@ import { diasDeAvisoDeLaPrestadora } from '../lib/plazoDeAviso';
 import { ESTADO_EN_CURSO } from '../lib/guardiaSinCerrar';
 import { hoyISO } from '../lib/horarios';
 import { soloSinResolver } from '../lib/alertaSinResolver';
+import { contarPorModalidad, MODALIDADES_DE_ASISTENTE, modalidadesDelAsistente } from '../lib/modalidades';
+import { ESTADO_ACTIVO, estaEnElPlantel } from '../lib/candidatos';
 
 // Los nombres de las modalidades salen de un solo lado: los mismos textos que usa la
 // solapa donde se activan y se desactivan, en Configuración → La Prestadora (Regla 12).
@@ -61,16 +63,21 @@ export function Dashboard() {
   const asistentes = useSupabaseTable(esAdmin ? 'asistentes' : 'asistentes_coordinador', { orderBy: 'created_at' });
   const familias = useSupabaseTable('familias', { orderBy: 'created_at' });
   const [guardiasEnCurso, setGuardiasEnCurso] = useState(null);
+  const [guardiasPorModalidad, setGuardiasPorModalidad] = useState(null);
   const [errorGuardias, setErrorGuardias] = useState(null);
+  const [vinculosPorModalidad, setVinculosPorModalidad] = useState(null);
+  const [errorVinculos, setErrorVinculos] = useState(null);
   const [ausentesSinRelevo, setAusentesSinRelevo] = useState(null);
   const [ausentesPorModalidad, setAusentesPorModalidad] = useState(null);
   const [documentosPorVencer, setDocumentosPorVencer] = useState(null);
   const [alertasIaSinResolver, setAlertasIaSinResolver] = useState(null);
   const [errorAlertas, setErrorAlertas] = useState(null);
 
-  // Cuántas guardias están pasando ahora mismo. Se pregunta con una cuenta y no trayendo las
-  // filas: de este número no se muestra ninguna guardia, así que traerlas sería pasear por el
-  // navegador el domicilio y el Paciente de cada una para descartarlos.
+  // Cuántas guardias están pasando ahora mismo, y de qué modalidad es cada una. De cada guardia
+  // viaja una sola columna —la modalidad—: de este número no se muestra ninguna guardia, así que
+  // traerlas enteras sería pasear por el navegador el domicilio y el Paciente de cada una para
+  // descartarlos. Con esa columna sola salen el total y el desglose de una sola consulta, que es
+  // lo mismo que hace el conteo de ausentes más abajo.
   //
   // El día es el de quien mira, igual que en la lista de Guardias, y el estado sale del punto
   // único de verdad que ya usan las dos aplicaciones (`lib/guardiaSinCerrar.js`). Van las dos
@@ -79,11 +86,14 @@ export function Dashboard() {
   // trabajando donde no hay nadie.
   const cargarGuardiasEnCurso = useCallback(async () => {
     setGuardiasEnCurso(null);
+    setGuardiasPorModalidad(null);
     setErrorGuardias(null);
 
-    const { count, error } = await supabase
+    // `canal_modalidad` es un nombre guardado de antes y no se renombra (regla 13); de
+    // `lib/modalidades.js` para afuera la cosa se llama modalidad.
+    const { data, error } = await supabase
       .from('guardias')
-      .select('id', { count: 'exact', head: true })
+      .select('canal_modalidad')
       .eq('estado', ESTADO_EN_CURSO)
       .eq('fecha', hoyISO());
 
@@ -91,12 +101,42 @@ export function Dashboard() {
       setErrorGuardias(t.comun.error_generico);
       return;
     }
-    setGuardiasEnCurso(count ?? 0);
+    setGuardiasEnCurso(data?.length ?? 0);
+    setGuardiasPorModalidad(contarPorModalidad(data, (g) => g.canal_modalidad));
   }, [t]);
+
+  // Cuántas personas tienen hoy vínculo activo con la Prestadora, y en qué modalidad trabaja cada
+  // una. Se pide una sola columna, la modalidad, y ni siquiera el nombre: de acá no sale ninguna
+  // ficha, sale un número por renglón.
+  //
+  // Quien trabaja en las dos modalidades cuenta en las dos, así que los renglones suman más que
+  // el plantel —lo dice la etiqueta: son vínculos, no personas—. Y la subcontratación nunca tiene
+  // ninguno, porque esa gente es de otra empresa: su renglón no se muestra.
+  //
+  // La consulta sale sola de esta pantalla, en vez de reusar el plantel que ya se carga arriba,
+  // porque ese plantel le llega al Coordinador por una vista que no trae la modalidad. Es la
+  // misma tabla y la misma columna que ya consulta el Estado actual para armar sus candidatos.
+  const cargarVinculosPorModalidad = useCallback(async () => {
+    if (!desgloseModalidadHabilitado) return;
+    setVinculosPorModalidad(null);
+    setErrorVinculos(null);
+
+    const { data, error } = await supabase
+      .from('asistentes')
+      .select('canales')
+      .eq('estado', ESTADO_ACTIVO);
+
+    if (error) {
+      setErrorVinculos(t.comun.error_generico);
+      return;
+    }
+    setVinculosPorModalidad(contarPorModalidad(data, modalidadesDelAsistente));
+  }, [desgloseModalidadHabilitado, t]);
 
   useEffect(() => {
     cargarGuardiasEnCurso();
-  }, [cargarGuardiasEnCurso]);
+    cargarVinculosPorModalidad();
+  }, [cargarGuardiasEnCurso, cargarVinculosPorModalidad]);
 
   const cargarAlertas = useCallback(async () => {
     if (!prestadoraId) return;
@@ -139,13 +179,8 @@ export function Dashboard() {
       setErrorAlertas(t.comun.error_generico);
       return;
     }
-    const porModalidad = { directa: 0, marketplace: 0, subcontratacion: 0 };
-    for (const fila of filasAusentes ?? []) {
-      const modalidad = fila.guardias?.canal_modalidad;
-      if (modalidad && modalidad in porModalidad) porModalidad[modalidad] += 1;
-    }
     setAusentesSinRelevo(filasAusentes?.length ?? 0);
-    setAusentesPorModalidad(porModalidad);
+    setAusentesPorModalidad(contarPorModalidad(filasAusentes, (fila) => fila.guardias?.canal_modalidad));
     setDocumentosPorVencer(countDocumentos ?? 0);
     setAlertasIaSinResolver(countAlertasIa ?? 0);
   }, [prestadoraId, t]);
@@ -155,16 +190,19 @@ export function Dashboard() {
   }, [cargarAlertas]);
 
   const estados = [postulaciones.estado, solicitudes.estado, asistentes.estado, familias.estado];
-  const estadoGeneral = estados.includes('error') || errorGuardias
+  // El desglose de vínculos no entra en la espera si la Prestadora tiene una sola modalidad: en
+  // ese caso ni se consulta, y quedaría esperando algo que nunca va a llegar.
+  const faltaElDesgloseDeVinculos = desgloseModalidadHabilitado && vinculosPorModalidad === null;
+  const estadoGeneral = estados.includes('error') || errorGuardias || errorVinculos
     ? 'error'
-    : estados.includes('cargando') || guardiasEnCurso === null
+    : estados.includes('cargando') || guardiasEnCurso === null || faltaElDesgloseDeVinculos
       ? 'cargando'
       : 'listo';
 
   const postulacionesHoy = postulaciones.filas.filter((p) => esHoy(p.creado_en)).length;
   const postulacionesSemana = postulaciones.filas.filter((p) => esEstaSemana(p.creado_en)).length;
   const solicitudesPendientes = solicitudes.filas.filter((s) => s.estado === 'nueva').length;
-  const asistentesDisponibles = asistentes.filas.filter((a) => a.estado === 'activo').length;
+  const asistentesDisponibles = asistentes.filas.filter(estaEnElPlantel).length;
   const familiasActivas = familias.filas.filter((f) => !f.deleted_at).length;
 
   return (
@@ -178,7 +216,14 @@ export function Dashboard() {
         </div>
         <EstadoLista
           estado={estadoGeneral}
-          error={postulaciones.error || solicitudes.error || asistentes.error || familias.error || errorGuardias}
+          error={
+            postulaciones.error ||
+            solicitudes.error ||
+            asistentes.error ||
+            familias.error ||
+            errorGuardias ||
+            errorVinculos
+          }
           vacio={false}
           recargar={() => {
             postulaciones.recargar();
@@ -186,6 +231,7 @@ export function Dashboard() {
             asistentes.recargar();
             familias.recargar();
             cargarGuardiasEnCurso();
+            cargarVinculosPorModalidad();
           }}
         >
           <div className="dashboard-metricas">
@@ -220,6 +266,41 @@ export function Dashboard() {
               <span className="metrica-label">{t.dashboard.familias_activas}</span>
             </div>
           </div>
+          {/* El desglose aparece solamente cuando la Prestadora trabaja de más de una manera: con
+              una sola, cada renglón repetiría el número de arriba.
+
+              Las guardias se abren en las tres modalidades y los vínculos en dos: en la
+              subcontratación el trabajo lo cubre otra empresa con su propio plantel, así que ahí
+              hay guardias y nunca hay gente nuestra. Mostrarle un cero a esa fila diría que esa
+              empresa se quedó sin nadie, que es otra cosa. */}
+          {desgloseModalidadHabilitado && guardiasPorModalidad && vinculosPorModalidad && (
+            <div className="dashboard-metricas dashboard-metricas-desglose">
+              {modalidades.map((modalidad) => (
+                <div key={`guardias-${modalidad}`} className="metrica-card metrica-card-secundaria">
+                  <span className="metrica-valor">{guardiasPorModalidad[modalidad] ?? 0}</span>
+                  <span className="metrica-label">
+                    {t.dashboard.guardias_en_curso_por_modalidad.replace(
+                      '{modalidad}',
+                      NOMBRE_MODALIDAD[modalidad]?.(t) ?? modalidad,
+                    )}
+                  </span>
+                </div>
+              ))}
+              {modalidades
+                .filter((modalidad) => MODALIDADES_DE_ASISTENTE.includes(modalidad))
+                .map((modalidad) => (
+                  <div key={`vinculos-${modalidad}`} className="metrica-card metrica-card-secundaria">
+                    <span className="metrica-valor">{vinculosPorModalidad[modalidad] ?? 0}</span>
+                    <span className="metrica-label">
+                      {t.dashboard.vinculos_activos_por_modalidad.replace(
+                        '{modalidad}',
+                        NOMBRE_MODALIDAD[modalidad]?.(t) ?? modalidad,
+                      )}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          )}
         </EstadoLista>
       </div>
 

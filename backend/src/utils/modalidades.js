@@ -42,9 +42,22 @@
 export const MODALIDAD = {
   DIRECTA: 'directa',
   MARKETPLACE: 'marketplace',
+  SUBCONTRATACION: 'subcontratacion',
 };
 
 export const MODALIDADES_DE_ASISTENTE = [MODALIDAD.DIRECTA, MODALIDAD.MARKETPLACE];
+
+/**
+ * Las tres en que puede trabajar una Prestadora. Es una más que las de una persona, y la que
+ * sobra es justamente la que ninguna persona puede tener: en la subcontratación el trabajo lo
+ * cubre otra empresa con su propio plantel, así que hay guardias de esa modalidad y nunca hay
+ * Asistentes nuestros en ella.
+ */
+export const MODALIDADES_DE_PRESTADORA = [
+  MODALIDAD.DIRECTA,
+  MODALIDAD.MARKETPLACE,
+  MODALIDAD.SUBCONTRATACION,
+];
 
 const lista = (x) => (Array.isArray(x) ? x : []);
 
@@ -65,6 +78,30 @@ export function modalidadesDelAsistente(asistente) {
 export function modalidadesHabilitadas(modalidades) {
   const habilitadas = MODALIDADES_DE_ASISTENTE.filter((m) => lista(modalidades).includes(m));
   return habilitadas.length ? habilitadas : [MODALIDAD.DIRECTA];
+}
+
+/**
+ * Cuántas filas hay en cada modalidad. Devuelve siempre las tres, en cero las que no tengan
+ * ninguna: un desglose al que le falta un renglón se lee como que ahí no se miró, y lo que se
+ * quiere decir es que ahí no hay nada.
+ *
+ * `modalidadDeLaFila` puede devolver una modalidad o varias —un Asistente puede trabajar en las
+ * dos, y entonces cuenta en las dos—. Lo que venga con una modalidad desconocida no se cuenta en
+ * ningún lado: la suma de los renglones puede ser menor que el total, y eso es preferible a
+ * inventarle un renglón a un valor que este archivo no conoce.
+ *
+ * @param {Array} filas
+ * @param {(fila: any) => string | string[] | null | undefined} modalidadDeLaFila
+ */
+export function contarPorModalidad(filas, modalidadDeLaFila) {
+  const cuenta = Object.fromEntries(MODALIDADES_DE_PRESTADORA.map((m) => [m, 0]));
+  for (const fila of lista(filas)) {
+    const suyas = modalidadDeLaFila(fila);
+    for (const modalidad of Array.isArray(suyas) ? suyas : [suyas]) {
+      if (modalidad && modalidad in cuenta) cuenta[modalidad] += 1;
+    }
+  }
+  return cuenta;
 }
 
 /** Si este Asistente trabaja en esa modalidad. */

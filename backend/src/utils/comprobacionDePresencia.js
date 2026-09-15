@@ -12,6 +12,7 @@ import {
   vencimientoEnSegundos,
 } from './codigoDeUnSoloUso.js';
 import { MOTIVOS_SIN_COMPROBAR } from './motivosSinComprobar.js';
+import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
 
 // Cómo se comprueba que el Asistente está realmente en el domicilio cuando marca la llegada y
 // cuando cierra (pendiente #113). El GPS sigue diciendo dónde está el teléfono; esto dice que
@@ -194,6 +195,14 @@ async function guardarComprobacion(fila) {
     .select('*')
     .single();
   if (error) throw new Error(error.message);
+
+  // La pantalla de la Prestadora se entera acá y no cuando le toque preguntar. Sale en toda
+  // escritura y no sólo en las que entran o salen de «esperando código»: por acá pasan dos
+  // escrituras por guardia, el aviso no lleva ningún dato y lo único que provoca del otro lado
+  // es que la lista se vuelva a pedir. Averiguar antes el estado anterior costaría una consulta
+  // por escritura —más de lo que ahorra— y dejaría la puerta abierta a olvidarse de un camino.
+  empujar(fila.prestadora_id, ASUNTOS.PEDIDOS_DE_CODIGO);
+
   return data;
 }
 
@@ -424,6 +433,10 @@ export async function emitirCodigoDeLaPrestadora({ comprobacionId, prestadoraId,
     .eq('id', comprobacionId)
     .eq('estado', 'pendiente_de_codigo');
   if (error) throw new Error(error.message);
+
+  // Ese pedido dejó de estar esperando. Quien lo esté mirando desde otra pantalla lo ve
+  // desaparecer solo, en vez de quedarse con un pedido que alguien ya resolvió.
+  empujar(prestadoraId, ASUNTOS.PEDIDOS_DE_CODIGO);
 
   return { codigo, minutos: minutosCodigoDeLaPrestadora };
 }

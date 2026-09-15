@@ -3,6 +3,7 @@ import { useAuth } from './AuthContext';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { useLocale } from '../i18n/LocaleContext';
 import { llamarApiComprobaciones } from '../lib/apiComprobaciones';
+import { escucharEnVivo, ASUNTOS } from '../lib/avisosEnVivo';
 import { mensajeDeError } from '../lib/errores';
 
 /* Los pedidos de código que están esperando, mirados desde cualquier pantalla del Panel.
@@ -14,12 +15,17 @@ import { mensajeDeError } from '../lib/errores';
    alcanza: quien está de turno pasa el día en Guardias o en Estado actual, y el pedido llegaría
    cuando a alguien se le ocurriera ir a mirar.
 
-   POR QUÉ PREGUNTANDO CADA TANTO Y NO CON UN AVISO DEL SERVIDOR. Porque hoy el Panel no tiene
-   ningún canal abierto contra el servidor —ni uno—, y abrir el primero para esta pantalla sería
-   una decisión de arquitectura que excede la tarea. El precedente que sí existe es
-   `TenantSessionContext`, que pregunta cada treinta segundos si la sesión de soporte sigue viva.
-   Acá el intervalo es más corto porque del otro lado hay alguien esperando en una puerta. Queda
-   anotado como lo que es: una solución de mientras tanto, no la definitiva.
+   CÓMO SE ENTERA. Por el canal en vivo (`lib/avisosEnVivo.js`): el motor empuja el asunto en
+   cuanto un pedido entra o se resuelve, y acá se vuelve a pedir la lista. El aviso no trae
+   ningún dato —dice qué cambió, no qué quedó—, así que la lista sale siempre de la misma ruta,
+   que comprueba la sesión y filtra por la Organización.
+
+   Y IGUAL SE PREGUNTA CADA TANTO, ESPACIADO. Que el aviso llegue en el momento lo da el canal;
+   que llegue siempre, no: puede estar caído sin que el navegador lo note, o el motor puede estar
+   corriendo en más de un proceso y el aviso nacer en uno distinto del que atiende esta conexión.
+   Sin esta vuelta de respaldo, un canal que se cae en silencio deja la pantalla quieta para
+   siempre, que es peor que llegar tarde. Con el canal andando no cambia nada de lo que se ve; sin
+   él, la pantalla se comporta como antes, sólo que más lenta.
 
    POR QUÉ ES UN CONTEXTO Y NO ESTADO DE LA PANTALLA. Porque lo consumen dos: el menú, que muestra
    cuántos hay esperando, y la pantalla del pase de guardia, que los muestra. Con estado propio en
@@ -36,11 +42,12 @@ import { mensajeDeError } from '../lib/errores';
 
 const PedidosDeCodigoContext = createContext(null);
 
-/* Cada cuánto se vuelve a preguntar. Es un ritmo de pantalla, no una decisión de negocio: no va
-   a la configuración de la Prestadora porque no cambia lo que el sistema hace, sólo cuánto tarda
-   en enterarse quien está mirando. Doce segundos es el orden de lo que aguanta alguien parado en
-   una puerta, y una consulta cada doce segundos por operador de turno no es carga para nadie. */
-const CADA_CUANTO_MS = 12 * 1000;
+/* Cada cuánto se vuelve a preguntar cuando el canal no avisó nada. Es la red de abajo, no el
+   camino normal: lo que se está cubriendo es que el canal se haya caído sin avisar, y eso no pasa
+   cada dos minutos. Es un ritmo de pantalla y no una decisión de negocio, así que no va a la
+   configuración de la Prestadora: no cambia lo que el sistema hace, sólo cuánto tarda en
+   enterarse quien está mirando el día que el canal falle. */
+const CADA_CUANTO_MS = 2 * 60 * 1000;
 
 export function PedidosDeCodigoProvider({ children }) {
   const { session } = useAuth();
@@ -89,9 +96,11 @@ export function PedidosDeCodigoProvider({ children }) {
       if (document.visibilityState === 'visible') recargar();
     };
     document.addEventListener('visibilitychange', alVolverAMirar);
+    const dejarDeEscuchar = escucharEnVivo(ASUNTOS.PEDIDOS_DE_CODIGO, recargar);
     return () => {
       clearInterval(reloj);
       document.removeEventListener('visibilitychange', alVolverAMirar);
+      dejarDeEscuchar();
     };
   }, [recargar, hayQuePreguntar]);
 

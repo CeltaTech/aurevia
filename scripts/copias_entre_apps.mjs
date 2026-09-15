@@ -35,6 +35,11 @@ export const GRUPOS = [
     ],
   },
   {
+    que: 'de qué avisa el canal en vivo',
+    original: 'backend/src/avisosEnVivo/asuntos.js',
+    copias: ['panel/src/lib/asuntosEnVivo.js'],
+  },
+  {
     que: 'el traductor de mensajes de error',
     original: 'panel/src/lib/errores.js',
     copias: ['pwa-asistentes/src/lib/errores.js', 'pwa-familias/src/lib/errores.js'],

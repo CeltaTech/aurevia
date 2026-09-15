@@ -66,6 +66,39 @@ export function sumarDias(fechaISO, dias) {
 }
 
 /**
+ * El día de un momento guardado, en el huso del aparato que lo muestra. Una fecha que ya viene
+ * escrita como día (`2026-08-01`) se devuelve tal cual: no tiene hora, así que no hay huso que
+ * aplicarle, y pasarla por `new Date` la correría un día en los husos de menos de cero.
+ */
+export function diaDelMomento(momento) {
+  if (!momento) return null;
+  if (typeof momento === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(momento.slice(0, 10)) && !momento.includes('T')) {
+    return momento.slice(0, 10);
+  }
+  const fecha = new Date(momento);
+  if (Number.isNaN(fecha.getTime())) return null;
+  const corrida = new Date(fecha.getTime() - fecha.getTimezoneOffset() * 60000);
+  return corrida.toISOString().slice(0, 10);
+}
+
+/**
+ * Cuántos días hace que algo está esperando. Es sólo para mostrar: cuánto tiempo lleva abierto
+ * es lo que dice cuál mirar primero, y por eso se cuenta en días enteros y nunca da negativo
+ * —algo anotado con fecha de mañana lleva esperando cero días, no menos uno—.
+ *
+ * Se cuenta de día a día y no de hora a hora a propósito: quien mira la pantalla piensa en
+ * «hace tres días», no en «hace 67 horas», y contar las horas haría que la misma fila diga dos
+ * y tres según a qué hora se la mire.
+ */
+export function diasDeEspera(desde, hasta = hoyISO()) {
+  const inicio = diaDelMomento(desde);
+  const fin = diaDelMomento(hasta);
+  if (!inicio || !fin) return null;
+  const unDia = 24 * 60 * 60 * 1000;
+  return Math.max(0, Math.round((Date.parse(`${fin}T00:00:00`) - Date.parse(`${inicio}T00:00:00`)) / unDia));
+}
+
+/**
  * La hora de reloj de un momento guardado (`2026-09-09T14:19:03Z` → `14:19`), en el huso del
  * aparato que lo muestra.
  *

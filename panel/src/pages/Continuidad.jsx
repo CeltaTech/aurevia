@@ -10,7 +10,7 @@ import { Alert } from '../components/ui/Alert';
 import { cargarPacientesDeGuardias, conPacientes, pacientesDeGuardia, textoDePacientes } from '../lib/pacientesDeGuardia';
 import { estaEnElPlantel } from '../lib/candidatos';
 import { laDioUnaPersona } from '../lib/fuentesAlertaTemprana';
-import { horaDelMomento } from '../lib/horarios';
+import { diaDelMomento, diasDeEspera, horaDelMomento } from '../lib/horarios';
 import { nombreMotivoGuardado } from '../lib/motivoDeCierre';
 import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
@@ -29,6 +29,22 @@ const TIPOS_RESOLUCION = ['suplente', 'franquero', 'emergencia', 'familiar'];
    puede escribir. */
 const VISTA_AVISOS_DE_CIERRE = 'notificaciones_cierre_servicio_quien_cerro';
 
+/* LAS EXCEPCIONES DE FAMILIAR, Y POR QUÉ SE MIRAN ACÁ
+
+   Cuando un incidente de relevo se resuelve con un familiar del Paciente cubriendo el turno, eso
+   se anota en `excepciones_familiar_relevo` con la fecha desde la que rige y sin fecha de fin:
+   el incidente queda resuelto y la excepción queda abierta. Una excepción abierta significa que
+   en esa casa hay alguien cuidando que no es personal de la Prestadora, así que mientras siga
+   abierta no está cubierto lo que se contrató. Sin esta sección se anotaba y no la leía nadie.
+
+   Se cierra escribiendo la fecha de fin. Cerrarla no deshace nada ni borra el hecho: dice que ya
+   volvió a haber personal en esa casa, y por eso la fila deja de pedir atención.
+
+   NO SE MUESTRA QUIÉN LA AUTORIZÓ. El dato se guarda —la tabla tiene la columna— pero traerlo a
+   la pantalla exigiría una vista aparte, porque `usuarios` deja leer únicamente la fila propia.
+   El mismo motivo por el que los avisos de cierre se leen de una vista. */
+const TABLA_EXCEPCIONES = 'excepciones_familiar_relevo';
+
 export function Continuidad() {
   const { t, locale } = useLocale();
   const { usuario } = useAuth();
@@ -36,6 +52,7 @@ export function Continuidad() {
   const [incidentes, setIncidentes] = useState([]);
   const [alertas, setAlertas] = useState([]);
   const [notificacionesCierre, setNotificacionesCierre] = useState([]);
+  const [excepciones, setExcepciones] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [incidenteResolviendo, setIncidenteResolviendo] = useState(null);
@@ -50,19 +67,36 @@ export function Continuidad() {
         { data: incidentesData, error: errorIncidentes },
         { data: alertasData, error: errorAlertas },
         { data: notificacionesData, error: errorNotificaciones },
+        { data: excepcionesData, error: errorExcepciones },
       ] = await Promise.all([
         supabase.from('incidentes_relevo').select('*').is('resuelto_at', null).order('iniciado_at', { ascending: true }),
         supabase.from('alertas_tempranas_guardia').select('*').is('resuelto_at', null).order('detectado_at', { ascending: true }),
         supabase.from(VISTA_AVISOS_DE_CIERRE).select('*').is('visto_at', null).order('created_at', { ascending: true }),
+        supabase.from(TABLA_EXCEPCIONES).select('*').is('hasta_at', null).order('desde_at', { ascending: true }),
       ]);
       if (errorIncidentes) throw errorIncidentes;
       if (errorAlertas) throw errorAlertas;
       if (errorNotificaciones) throw errorNotificaciones;
+      if (errorExcepciones) throw errorExcepciones;
+
+      // El incidente que originó cada excepción ya está resuelto, así que no viene en la consulta
+      // de arriba y hay que pedirlo aparte. Es el único camino hasta el Paciente: la excepción
+      // guarda de qué incidente salió, y el incidente, de qué turno.
+      const idsIncidentesDeExcepciones = Array.from(
+        new Set((excepcionesData ?? []).map((e) => e.incidente_id).filter(Boolean)),
+      );
+      const { data: incidentesDeExcepciones } = idsIncidentesDeExcepciones.length
+        ? await supabase.from('incidentes_relevo').select('id, guardia_entrante_id').in('id', idsIncidentesDeExcepciones)
+        : { data: [] };
+      const guardiaPorIncidente = Object.fromEntries(
+        (incidentesDeExcepciones ?? []).map((i) => [i.id, i.guardia_entrante_id]),
+      );
 
       const idsGuardias = Array.from(
         new Set([
           ...(incidentesData ?? []).flatMap((i) => [i.guardia_entrante_id, i.guardia_saliente_id].filter(Boolean)),
           ...(alertasData ?? []).map((a) => a.guardia_id),
+          ...Object.values(guardiaPorIncidente).filter(Boolean),
         ]),
       );
 
@@ -105,6 +139,15 @@ export function Continuidad() {
         cerrado_por_nombre: n.cerrado_por_nombre || '—',
       }));
 
+      const filasExcepciones = (excepcionesData ?? []).map((e) => {
+        const g = guardiasPorId[guardiaPorIncidente[e.incidente_id]];
+        return {
+          ...e,
+          paciente_nombre: nombresDelTurno(g),
+          dias_abierta: diasDeEspera(e.desde_at),
+        };
+      });
+
       const filas = (incidentesData ?? []).map((i) => {
         const gEntrante = guardiasPorId[i.guardia_entrante_id];
         const gSaliente = i.guardia_saliente_id ? guardiasPorId[i.guardia_saliente_id] : null;
@@ -134,6 +177,7 @@ export function Continuidad() {
       setIncidentes(filas);
       setAlertas(filasAlertas);
       setNotificacionesCierre(filasNotificaciones);
+      setExcepciones(filasExcepciones);
       setAsistentesDisponibles(asistentesData ?? []);
       setEstado('listo');
     } catch (err) {
@@ -170,6 +214,26 @@ export function Continuidad() {
         .from('notificaciones_cierre_servicio')
         .update({ visto_at: new Date().toISOString(), visto_por: usuario.id })
         .eq('id', notificacion.id);
+      if (errorUpdate) throw errorUpdate;
+      recargar();
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setActualizandoId(null);
+    }
+  }
+
+  // Cerrar una excepción es escribirle la fecha de fin, y nada más. No toca el incidente, que ya
+  // estaba resuelto, ni la guardia: dice que en esa casa volvió a haber personal de la
+  // Prestadora, y a partir de ahí la excepción es historia y deja de pedir atención.
+  async function cerrarExcepcion(excepcion) {
+    if (!(await confirmarDestructivo(t.continuidad.excepciones_confirmar_cerrar))) return;
+    setActualizandoId(excepcion.id);
+    try {
+      const { error: errorUpdate } = await supabase
+        .from(TABLA_EXCEPCIONES)
+        .update({ hasta_at: new Date().toISOString() })
+        .eq('id', excepcion.id);
       if (errorUpdate) throw errorUpdate;
       recargar();
     } catch (err) {
@@ -317,6 +381,43 @@ export function Continuidad() {
             <div className="panel-modal-acciones">
               <Button onClick={() => marcarVistaNotificacion(n)} disabled={actualizandoId === n.id}>
                 {t.continuidad.notificaciones_cierre_marcar_visto}
+              </Button>
+            </div>
+          </div>
+        ))}
+      </EstadoLista>
+
+      <h2>{t.continuidad.excepciones_titulo}</h2>
+      <p className="panel-explicacion">{t.continuidad.excepciones_explicacion}</p>
+
+      <EstadoLista
+        estado={estado}
+        error={null}
+        vacio={estado === 'listo' && excepciones.length === 0}
+        recargar={recargar}
+        mensajeVacio={t.continuidad.excepciones_vacio}
+      >
+        {excepciones.map((e) => (
+          <div key={e.id} className="panel-guardia-card guardia-ausente">
+            <div>
+              <strong>{t.continuidad.col_paciente}: {e.paciente_nombre}</strong>
+              <div>{t.continuidad.excepciones_col_familiar}: {e.familiar_nombre || '—'}</div>
+              <div>{t.continuidad.excepciones_col_desde}: {diaDelMomento(e.desde_at) || '—'}</div>
+              {/* Cuánto lleva abierta, que es lo que dice cuál mirar primero. El día en que se
+                  autorizó se dice aparte porque «hace tres días» y «el 12» contestan preguntas
+                  distintas: una, si esto se está estirando; la otra, contra qué turno mirarlo. */}
+              <div className="panel-guardia-alerta">
+                {e.dias_abierta === 0
+                  ? t.continuidad.excepciones_abierta_hoy
+                  : e.dias_abierta === 1
+                    ? t.continuidad.excepciones_abierta_un_dia
+                    : con(t.continuidad.excepciones_abierta_dias, { n: e.dias_abierta })}
+              </div>
+              {e.motivo && <div>{t.continuidad.col_motivo}: {e.motivo}</div>}
+            </div>
+            <div className="panel-modal-acciones">
+              <Button onClick={() => cerrarExcepcion(e)} disabled={actualizandoId === e.id}>
+                {t.continuidad.excepciones_cerrar}
               </Button>
             </div>
           </div>

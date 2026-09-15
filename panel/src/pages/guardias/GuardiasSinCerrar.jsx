@@ -8,7 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { ESTADO_EN_CURSO, guardiasSinCerrar } from '../../lib/guardiaSinCerrar';
-import { hoyISO } from '../../lib/horarios';
+import { diasDeEspera, hoyISO } from '../../lib/horarios';
 import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../../lib/pacientesDeGuardia';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
@@ -32,14 +32,6 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 //
 // Y no cierra nada por su cuenta: cada guardia se cierra de a una, con una persona apretando el
 // botón, escribiendo por qué y confirmando.
-
-// Cuántos días hace que la guardia quedó abierta. Es solo para mostrar: cuánto tiempo lleva
-// esperando es lo que dice cuál mirar primero.
-function diasDeEspera(fechaISO, hoy) {
-  const desde = new Date(`${fechaISO}T00:00:00`);
-  const hasta = new Date(`${hoy}T00:00:00`);
-  return Math.max(0, Math.round((hasta - desde) / 86400000));
-}
 
 export function GuardiasSinCerrar({ onCerrada }) {
   const { t } = useLocale();

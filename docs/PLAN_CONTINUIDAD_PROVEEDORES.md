@@ -153,19 +153,46 @@ que reemplazarlo — para no tener que decidir el procedimiento en el momento de
    `git push` o si hace falta un paso explícito, y dejarlo escrito en el automatismo, no en
    la memoria de nadie.
 
-### Gmail SMTP (envío de emails transaccionales)
+### Gmail (envío de correo transaccional)
 
-1. Uso actual: `SMTP_USER`/`SMTP_PASSWORD` (contraseña de aplicación de Gmail) vía
-   Nodemailer, ver `backend/.env`.
-2. Alternativas equivalentes: cualquier proveedor SMTP (SendGrid, Postmark, Amazon SES,
-   Resend) — Nodemailer soporta cualquiera cambiando solo el `transport` de conexión, sin
-   tocar la lógica de armado de emails.
-3. Pasos para migrar: dar de alta cuenta en el proveedor nuevo, generar credenciales SMTP
-   (o API key), reemplazar las 2 variables de entorno, y actualizar el `transport` de
-   Nodemailer si el proveedor nuevo requiere una API en vez de SMTP puro (ej. SendGrid vía
-   su SDK en lugar de SMTP).
-4. Verificar el remitente/dominio (SPF/DKIM) del proveedor nuevo antes del corte, para que
-   los emails no terminen en spam.
+**Antes que nada: hoy no se entrega ningún correo.** Railway no deja salir tráfico por los
+puertos de correo —se probaron los tres desde el propio servidor y los tres cortaron a los
+260 milisegundos, que es la firma de un bloqueo y no de una demora— y el motor manda por SMTP
+de Gmail en el puerto 465 (`backend/src/utils/email.js:5,25`). El camino decidido es la API
+de Gmail con OAuth2, que sale por el puerto 443 y no depende de tener un dominio verificado;
+falta hacerlo, y está como primer paso de `docs/PLAN_HASTA_PRODUCCION.md`, sección «El correo
+(hoy no llega ninguno)». **Este runbook describe el estado de hoy, no el que va a quedar**:
+el día que el envío pase a la API de Gmail, los puntos 1 y 3 de acá abajo se reescriben, y
+desaparece la restricción de que el proveedor de reemplazo tenga que hablar por algo que no
+sea SMTP.
+
+1. **Uso actual: una sola casilla compartida.** `SMTP_USER` y `SMTP_PASSWORD` —una contraseña
+   de aplicación de Gmail, cargada en Railway, ver `docs/SECRETOS.md`— con Nodemailer, en
+   `backend/src/utils/email.js`, que es el único archivo del producto que manda correo. Ahí
+   se resuelve a mano una IPv4 de `smtp.gmail.com`, porque la salida IPv6 de Railway da
+   `ENETUNREACH` y Nodemailer elige entre las dos familias al azar.
+2. **Y hay una segunda vía, escrita y apagada: casilla propia por Prestadora.** El motor ya
+   consulta `configuracion_email_prestadora` y, si esa Prestadora tiene la suya activa, arma
+   un transporte aparte con su servidor, su puerto y su contraseña, que lee de la caja fuerte
+   de la base con `leer_credencial_smtp_prestadora` (`crearTransporterPara`). No la usa
+   ninguna Prestadora, y no se va a usar por ahora: **también sale por SMTP, así que está
+   igual de bloqueada**, y queda apagada hasta que exista el módulo de avisos de CeltaTech.
+   Lo que cambia por Prestadora es el **nombre visible** del remitente, no la dirección
+   (`docs/MARCA.md:36-40`): no hay un dominio por cliente y no se planea tenerlo. Al migrar,
+   entonces, hay **un solo** juego de credenciales que reemplazar, no uno por Prestadora.
+3. **Alternativas equivalentes:** cualquier proveedor de correo que hable por el puerto 443
+   —la API de Gmail, Postmark, Amazon SES, Resend, SendGrid—, porque los de SMTP puro no
+   sirven mientras el motor corra en Railway. Dos ya se descartaron con la cuenta en la mano:
+   Resend rechaza todo destinatario sin un dominio propio verificado, y el plan gratuito de
+   SendGrid es una prueba de sesenta días.
+4. **Pasos para migrar:** dar de alta la cuenta en el proveedor nuevo, generar sus
+   credenciales, cargarlas en Railway con nombres propios y cambiar cómo se arma el
+   transporte en `backend/src/utils/email.js`. El armado de cada correo —a quién va, qué dice,
+   con qué marca— no se toca: eso sale de `destinatariosEvento` y de la marca de la
+   Prestadora, y no sabe por dónde viaja.
+5. **Verificar el remitente antes del corte** (SPF y DKIM del proveedor nuevo), o los correos
+   caen en correo no deseado. Los renglones de DNS van en Cloudflare sin proxi: proxiados, el
+   dominio no verifica nunca.
 
 ### GitHub (repositorio de código + Actions)
 

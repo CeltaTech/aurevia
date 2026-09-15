@@ -1,17 +1,21 @@
 import { supabase } from '../db/connection.js';
 import { enviarEmailCoordinador, configuracionEvento } from './email.js';
 
-const META_GRAPH_VERSION = 'v20.0';
+export const META_GRAPH_VERSION = 'v20.0';
 
 // Credenciales por prestadora — nunca en variables de entorno globales, cada prestadora
 // licenciataria tiene su propia cuenta de Meta Cloud API (docs/PRD_06_WhatsApp_IA.md punto C).
 // El token nunca vive en esta tabla en texto plano: se lee desde Supabase Vault a través de
 // la función leer_token_whatsapp (supabase/migrations/),
 // ejecutable solo con el service role que ya usa este backend.
-async function credencialesWhatsapp(prestadoraId) {
+//
+// Devuelve además `wabaId`, que es la cuenta de WhatsApp Business y no el número: los mensajes
+// salen por el número y las plantillas se dan de alta contra la cuenta. Son dos identificadores
+// distintos de Meta y no se pueden usar uno por otro.
+export async function credencialesWhatsapp(prestadoraId) {
   const { data: config } = await supabase
     .from('configuracion_whatsapp_prestadora')
-    .select('activo, phone_number_id')
+    .select('activo, phone_number_id, waba_id')
     .eq('prestadora_id', prestadoraId)
     .single();
 
@@ -20,7 +24,7 @@ async function credencialesWhatsapp(prestadoraId) {
   const { data: token, error } = await supabase.rpc('leer_token_whatsapp', { p_prestadora_id: prestadoraId });
   if (error || !token) return null;
 
-  return { phoneNumberId: config.phone_number_id, token };
+  return { phoneNumberId: config.phone_number_id, wabaId: config.waba_id, token };
 }
 
 // Envío de un mensaje de texto libre por Meta Cloud API. En producción, un mensaje que la

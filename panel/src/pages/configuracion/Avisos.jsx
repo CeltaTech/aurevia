@@ -843,13 +843,13 @@ function TabWhatsappPlantillas() {
     recargar();
   }, [recargar]);
 
-  async function marcarEnviadaMeta(fila) {
+  // El alta de la plantilla en Meta la hace el motor, que es el único lado que tiene el token de
+  // la Prestadora. Acá no se elige ningún estado: el que quede lo escribe lo que Meta conteste.
+  async function enviarAMeta(fila) {
     setActualizandoId(fila.id);
+    setError(null);
     try {
-      await llamarApi(`/whatsapp/plantillas/${fila.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ estado: 'enviada_meta' }),
-      });
+      await llamarApi(`/whatsapp/plantillas/${fila.id}/enviar-a-meta`, { method: 'POST' });
       recargar();
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -905,7 +905,7 @@ function TabWhatsappPlantillas() {
                 <td>{p.cuerpo_texto}</td>
                 <td>
                   {p.estado === 'borrador' && (
-                    <button onClick={() => marcarEnviadaMeta(p)} disabled={actualizandoId === p.id}>
+                    <button onClick={() => enviarAMeta(p)} disabled={actualizandoId === p.id}>
                       {t.configuracion.whatsapp_plantillas_enviar_meta}
                     </button>
                   )}

@@ -78,6 +78,11 @@ export const T = {
         dias_gratis_invalido: 'Los días gratis tienen que ser un número entero de cero para arriba, o quedar vacíos.',
         contactos_incluidos_invalido: 'Los contactos incluidos tienen que ser un número entero mayor que cero, o quedar vacíos.',
         renovacion_sin_periodo: 'Una forma que se cobra una sola vez no se puede renovar sola. Hace falta cargarle un período, o dejarla sin renovación.',
+        // El alta de una plantilla de mensaje en Meta. Cada frase dice qué falta y dónde se
+        // resuelve; ninguna repite lo que contestó Meta, que describe su propia API.
+        whatsapp_sin_cuenta: 'Esta Prestadora todavía no tiene cargada la cuenta de WhatsApp Business. Se carga en Configuración > Avisos, en WhatsApp.',
+        plantilla_ya_enviada: 'Esa plantilla ya salió hacia Meta, así que no se manda de nuevo. Conviene recargar la lista para ver cómo quedó.',
+        meta_no_acepto: 'Meta no aceptó la plantilla. Conviene revisar el nombre y el texto, y volver a intentar.',
       },
     },
     comun: {
@@ -2186,6 +2191,9 @@ export const T = {
         dias_gratis_invalido: 'Free days must be a whole number of zero or more, or be left empty.',
         contactos_incluidos_invalido: 'Included contacts must be a whole number greater than zero, or be left empty.',
         renovacion_sin_periodo: 'An arrangement charged only once cannot renew on its own. Give it a period, or leave it without renewal.',
+        whatsapp_sin_cuenta: 'This Provider does not have a WhatsApp Business account set up yet. It is set up under Settings > Notices, in WhatsApp.',
+        plantilla_ya_enviada: 'That template was already sent to Meta, so it is not sent again. It is worth reloading the list to see how it ended up.',
+        meta_no_acepto: 'Meta did not accept the template. It is worth reviewing the name and the text, and trying again.',
       },
     },
     comun: {
@@ -4264,6 +4272,9 @@ export const T = {
         dias_gratis_invalido: 'Os dias grátis precisam ser um número inteiro de zero para cima, ou ficar vazios.',
         contactos_incluidos_invalido: 'Os contatos incluídos precisam ser um número inteiro maior que zero, ou ficar vazios.',
         renovacion_sin_periodo: 'Uma forma cobrada uma única vez não pode se renovar sozinha. É preciso dar um período a ela, ou deixá-la sem renovação.',
+        whatsapp_sin_cuenta: 'Esta Prestadora ainda não tem a conta do WhatsApp Business cadastrada. Ela se cadastra em Configuração > Avisos, em WhatsApp.',
+        plantilla_ya_enviada: 'Esse modelo já foi enviado para a Meta, portanto não é enviado de novo. Convém recarregar a lista para ver como ficou.',
+        meta_no_acepto: 'A Meta não aceitou o modelo. Convém revisar o nome e o texto, e tentar novamente.',
       },
     },
     comun: {

@@ -9,6 +9,7 @@ import { avisoDelCatalogo, mezclarAvisosConCatalogo, VALORES_POR_DEFECTO_AVISO }
 import { cosaDelCatalogo, mezclarVisibilidadConCatalogo } from '../utils/catalogoVisibilidad.js';
 import { LIMITES_ALERTAS_IA, VALORES_POR_DEFECTO_ALERTAS_IA } from '../utils/revisarAlertasIA.js';
 import { validarUmbralesPremura } from '../utils/umbralesPremura.js';
+import { darDeAltaEnMeta } from '../utils/plantillasWhatsapp.js';
 import { LIMITES_AVISO_PREVIO_GUARDIA } from '../utils/revisarRecordatoriosPush.js';
 import { METROS_TOLERANCIA_POR_OMISION, MINUTOS_TOLERANCIA_POR_OMISION } from '../utils/toleranciaCheckin.js';
 import {
@@ -622,17 +623,67 @@ panelConfiguracionRouter.post('/whatsapp/plantillas', async (req, res) => {
   res.json({ ok: true });
 });
 
+// Lo único que se edita a mano es el texto, y solamente mientras la plantilla es un borrador. El
+// estado y el identificador de Meta los escribe el alta de acá abajo con lo que Meta contesta:
+// puestos a mano decían que la plantilla estaba aprobada sin que nadie lo hubiera preguntado.
 panelConfiguracionRouter.patch('/whatsapp/plantillas/:id', async (req, res) => {
-  const { cuerpo_texto, estado, meta_template_id, motivo_rechazo } = req.body;
+  const { cuerpo_texto } = req.body;
+  if (!cuerpo_texto) return responderError(res, new ErrorConMotivo('faltan_datos', 'Falta cuerpo_texto'));
+
   let query = supabase
     .from('plantillas_whatsapp')
-    .update({ cuerpo_texto, estado, meta_template_id, motivo_rechazo, updated_at: new Date().toISOString() })
-    .eq('id', req.params.id);
+    .update({ cuerpo_texto, updated_at: new Date().toISOString() })
+    .eq('id', req.params.id)
+    .eq('estado', 'borrador');
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query.select('id');
   if (error) return responderError(res, error);
-  if (!data?.length) return res.status(404).json({ error: 'No se encontró esa plantilla de WhatsApp' });
+  // La que no existe, la de otra Prestadora y la que ya salió hacia Meta contestan lo mismo: el
+  // texto de una plantilla que ya se mandó no se cambia de este lado sin que Meta se entere.
+  if (!data?.length) return responderError(res, new ErrorConMotivo('no_encontrado', 'Plantilla inexistente, de otra Prestadora o ya enviada'));
   res.json({ ok: true });
+});
+
+// Dar de alta la plantilla en Meta. Hasta que esto existió, el botón del Panel cambiaba el estado
+// guardado y nada más.
+panelConfiguracionRouter.post('/whatsapp/plantillas/:id/enviar-a-meta', async (req, res) => {
+  let query = supabase.from('plantillas_whatsapp').select('*').eq('id', req.params.id);
+  query = acotarAPrestadora(query, req.usuarioPanel);
+  const { data: filas, error } = await query;
+  if (error) return responderError(res, error);
+  const plantilla = filas?.[0];
+  if (!plantilla) return responderError(res, new ErrorConMotivo('no_encontrado', 'Plantilla inexistente o de otra Prestadora'));
+  if (plantilla.estado !== 'borrador') {
+    return responderError(res, new ErrorConMotivo('plantilla_ya_enviada', `Estado ${plantilla.estado}`));
+  }
+
+  let resultado;
+  try {
+    resultado = await darDeAltaEnMeta(plantilla);
+  } catch (err) {
+    // Lo que Meta objetó queda guardado en la fila: es lo que hay que corregir para volver a
+    // intentarlo, y la plantilla se queda en borrador justamente para poder corregirla.
+    if (err.motivo === 'meta_no_acepto') {
+      await supabase
+        .from('plantillas_whatsapp')
+        .update({ motivo_rechazo: err.message, updated_at: new Date().toISOString() })
+        .eq('id', plantilla.id);
+    }
+    return responderError(res, err);
+  }
+
+  const { error: errorGuardado } = await supabase
+    .from('plantillas_whatsapp')
+    .update({
+      meta_template_id: resultado.metaTemplateId,
+      estado: resultado.estado,
+      motivo_rechazo: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', plantilla.id);
+  if (errorGuardado) return responderError(res, errorGuardado);
+
+  res.json({ ok: true, estado: resultado.estado });
 });
 
 panelConfiguracionRouter.delete('/whatsapp/plantillas/:id', async (req, res) => {

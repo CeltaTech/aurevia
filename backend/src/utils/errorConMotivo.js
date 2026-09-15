@@ -88,6 +88,13 @@ const ESTADO_POR_MOTIVO = {
   // porque para la web es la misma situación —"probó demasiadas veces"—, pero el motivo es otro
   // y la pantalla dice otra cosa: los intentos agotados no se arreglan esperando, y esto sí.
   demasiados_pedidos: 429,
+  // Dar de alta una plantilla de mensaje en Meta. Los tres son 409 por lo mismo que el correo ya
+  // tomado: el pedido está bien armado y choca con el estado de las cosas —falta configurar la
+  // cuenta, la plantilla ya salió, o el texto no le sirve a Meta—. Ninguno es una falla de este
+  // lado, y los tres se arreglan haciendo algo distinto.
+  whatsapp_sin_cuenta: 409,
+  plantilla_ya_enviada: 409,
+  meta_no_acepto: 409,
 };
 
 // Lo que una ruta contesta cuando algo falló. Se escribe una sola vez para que ninguna ruta

@@ -1,7 +1,7 @@
 # PLAN_CONTINUIDAD_PROVEEDORES.md — Resguardos ante caída o salida de un proveedor
 
 > Origen: pendiente #15 de `docs/PLAN_HASTA_PRODUCCION.md` (inventario de dependencia de un solo
-> proveedor — Supabase/Railway/Cloudflare Pages/Gmail/GitHub). Este documento cubre los puntos 1 a 4
+> proveedor — Supabase/Railway/Cloudflare Pages/Resend/GitHub). Este documento cubre los puntos 1 a 4
 > del roadmap acordado con el Desarrollador el 2026-07-13 (de lo simple/prioritario a lo
 > complejo/no prioritario). El punto 5 (mirror en caliente de Supabase Auth) queda fuera de
 > este documento — se discute aparte, por separado, y no está recomendado (ver cierre).
@@ -163,46 +163,50 @@ que reemplazarlo — para no tener que decidir el procedimiento en el momento de
    `git push` o si hace falta un paso explícito, y dejarlo escrito en el automatismo, no en
    la memoria de nadie.
 
-### Gmail (envío de correo transaccional)
+### Resend (envío de correo transaccional)
 
-**Antes que nada: hoy no se entrega ningún correo.** Railway no deja salir tráfico por los
-puertos de correo —se probaron los tres desde el propio servidor y los tres cortaron a los
-260 milisegundos, que es la firma de un bloqueo y no de una demora— y el motor manda por SMTP
-de Gmail en el puerto 465 (`backend/src/utils/email.js:5,25`). El camino decidido es la API
-de Gmail con OAuth2, que sale por el puerto 443 y no depende de tener un dominio verificado;
-falta hacerlo, y está como primer paso de `docs/PLAN_HASTA_PRODUCCION.md`, sección «El correo
-(hoy no llega ninguno)». **Este runbook describe el estado de hoy, no el que va a quedar**:
-el día que el envío pase a la API de Gmail, los puntos 1 y 3 de acá abajo se reescriben, y
-desaparece la restricción de que el proveedor de reemplazo tenga que hablar por algo que no
-sea SMTP.
+**Por qué hay un despachante y no una casilla.** Railway no deja salir tráfico por los puertos
+de correo —se probaron los tres desde el propio servidor y los tres cortaron a los 260
+milisegundos, que es la firma de un bloqueo y no de una demora—, así que el motor no puede
+entrar a ninguna casilla: ni a una propia ni a la de una Prestadora. El envío sale por un
+despachante que habla por el puerto 443, como cualquier otro pedido web. Eso convierte la
+restricción en el primer filtro de cualquier reemplazo: **un proveedor de SMTP puro no sirve
+mientras el motor corra en Railway.**
 
-1. **Uso actual: una sola casilla compartida.** `SMTP_USER` y `SMTP_PASSWORD` —una contraseña
-   de aplicación de Gmail, cargada en Railway, ver `docs/SECRETOS.md`— con Nodemailer, en
-   `backend/src/utils/email.js`, que es el único archivo del producto que manda correo. Ahí
-   se resuelve a mano una IPv4 de `smtp.gmail.com`, porque la salida IPv6 de Railway da
-   `ENETUNREACH` y Nodemailer elige entre las dos familias al azar.
-2. **Y hay una segunda vía, escrita y apagada: casilla propia por Prestadora.** El motor ya
-   consulta `configuracion_email_prestadora` y, si esa Prestadora tiene la suya activa, arma
-   un transporte aparte con su servidor, su puerto y su contraseña, que lee de la caja fuerte
-   de la base con `leer_credencial_smtp_prestadora` (`crearTransporterPara`). No la usa
-   ninguna Prestadora, y no se va a usar por ahora: **también sale por SMTP, así que está
-   igual de bloqueada**, y queda apagada hasta que exista el módulo de avisos de CeltaTech.
-   Lo que cambia por Prestadora es el **nombre visible** del remitente, no la dirección
-   (`docs/MARCA.md:36-40`): no hay un dominio por cliente y no se planea tenerlo. Al migrar,
-   entonces, hay **un solo** juego de credenciales que reemplazar, no uno por Prestadora.
-3. **Alternativas equivalentes:** cualquier proveedor de correo que hable por el puerto 443
-   —la API de Gmail, Postmark, Amazon SES, Resend, SendGrid—, porque los de SMTP puro no
-   sirven mientras el motor corra en Railway. Dos ya se descartaron con la cuenta en la mano:
-   Resend rechaza todo destinatario sin un dominio propio verificado, y el plan gratuito de
-   SendGrid es una prueba de sesenta días.
-4. **Pasos para migrar:** dar de alta la cuenta en el proveedor nuevo, generar sus
-   credenciales, cargarlas en Railway con nombres propios y cambiar cómo se arma el
-   transporte en `backend/src/utils/email.js`. El armado de cada correo —a quién va, qué dice,
-   con qué marca— no se toca: eso sale de `destinatariosEvento` y de la marca de la
-   Prestadora, y no sabe por dónde viaja.
-5. **Verificar el remitente antes del corte** (SPF y DKIM del proveedor nuevo), o los correos
+1. **Uso actual: un despachante, con una dirección de envío por Prestadora.** `RESEND_API_KEY`
+   y `REMITENTE_AVISOS`, cargadas en Railway (ver `docs/SECRETOS.md`), consumidas en
+   `backend/src/utils/email.js`, que es el único archivo del producto que manda correo. Al
+   despachante se le autoriza el dominio `careonys.com` una sola vez, y de ahí cuelgan todas
+   las direcciones que haga falta, así que **el costo no sube por Prestadora**. Cada
+   Prestadora manda desde `[prestadora]@careonys.com` y las respuestas se reenvían a la
+   casilla que ella declare (`docs/MARCA.md`, sección 0).
+2. **El camino por SMTP sigue escrito, y es para la máquina de desarrollo.** Mientras no haya
+   credencial del despachante, `crearTransporterPara` arma un transporte de Nodemailer contra
+   `smtp.gmail.com` con `SMTP_USER` y `SMTP_PASSWORD`, resolviendo a mano una IPv4 porque la
+   salida IPv6 de Railway da `ENETUNREACH` y Nodemailer elige entre las dos familias al azar.
+   Ahí adentro también quedó la vía por casilla propia de cada Prestadora
+   (`configuracion_email_prestadora`, `leer_credencial_smtp_prestadora`), que no usa ninguna:
+   sale por SMTP, así que está igual de bloqueada.
+3. **Alternativas equivalentes:** cualquier despachante que hable por el puerto 443 —Amazon
+   SES, Postmark, Cloudflare Email Service, la API de Gmail—. **Amazon SES es la salida
+   pensada para cuando el plan gratuito quede chico**, porque cobra por correo mandado y no
+   tiene abono fijo. Uno ya se descartó con la cuenta en la mano: el plan gratuito de SendGrid
+   es una prueba de sesenta días.
+4. **Lo que hay que mirar antes de que apriete, y no el día que aprieta:** el plan gratuito de
+   Resend deja 3.000 correos por mes **y como mucho 100 por día**. El tope diario es el que se
+   descubre el peor día, así que el uso se cuenta y se muestra en el Panel.
+5. **Pasos para migrar:** dar de alta la cuenta en el despachante nuevo, autorizar
+   `careonys.com` allá, generar sus credenciales, cargarlas en Railway con nombres propios y
+   cambiar `transporteDelDespachante` en `backend/src/utils/email.js`. Es una pieza sola: el
+   armado de cada correo —a quién va, qué dice, con qué marca— sale de `destinatariosEvento` y
+   de la marca de la Prestadora, y no sabe por dónde viaja. Hay **un solo** juego de
+   credenciales que reemplazar, no uno por Prestadora.
+6. **Verificar el remitente antes del corte** (SPF y DKIM del proveedor nuevo), o los correos
    caen en correo no deseado. Los renglones de DNS van en Cloudflare sin proxi: proxiados, el
    dominio no verifica nunca.
+7. **El reenvío de las respuestas es de Cloudflare, no del despachante**, así que no se mueve
+   con él. Vive en Email Routing de `careonys.com`, una regla por Prestadora, y tiene su
+   propio techo: 200 reglas por dominio y 200 direcciones de destino por cuenta.
 
 ### GitHub (repositorio de código + Actions)
 

@@ -41,14 +41,14 @@
   nació con el rol comercial `admin_plataforma` y después pasó a ser la **sesión de soporte
   técnico** de `superadmin` — el rol comercial se fue entero a CeltaTech y ya no existe en
   Careonys.
-  **El correo, que es lo único estructural que sigue abierto.** Cada Prestadora ya puede tener su
-  propia casilla: la guarda `configuracion_email_prestadora` y la lee
-  `backend/src/routes/panelConfiguracion.js:580`, y lo que cambia por Prestadora en la casilla
-  compartida es el nombre visible (`docs/MARCA.md:36-40`). Lo que falta no es eso: **hoy no se
-  entrega ningún correo**, porque los dos caminos —la casilla compartida y la propia— salen por
-  SMTP (`backend/src/utils/email.js`) y Railway bloquea esos puertos. Se cierra con los pasos 1 a 3
-  de `docs/PLAN_HASTA_PRODUCCION.md`, pasando a la API de Gmail, y hay que hacerlo antes de dar de
-  alta la primera Prestadora real.
+  **El correo, que es lo único estructural que sigue abierto.** Railway bloquea los puertos de
+  correo, así que el motor no puede entrar a ninguna casilla —ni propia ni de una Prestadora— y
+  **hoy no se entrega ningún correo**. El envío ya pasa por un despachante que habla por el puerto
+  443 (`backend/src/utils/email.js`); falta dar de alta la cuenta, crear la dirección de envío
+  propia de cada Prestadora bajo `careonys.com` y el reenvío de las respuestas a la casilla que
+  ella declare (`docs/MARCA.md`, sección 0). Se cierra con la sección «El correo» de
+  `docs/PLAN_HASTA_PRODUCCION.md`, y hay que hacerlo antes de dar de alta la primera Prestadora
+  real.
 
 ## Roles de usuario
 

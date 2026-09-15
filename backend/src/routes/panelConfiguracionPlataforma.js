@@ -44,6 +44,6 @@ panelConfiguracionPlataformaRouter.patch('/mfa', requiereSuperadmin, async (req,
 // Acá no se cuenta cuántas Prestadoras hay contratadas ni se avisa por un umbral de contrataciones:
 // eso es dato del negocio de CeltaTech y no del producto.
 //
-// El envío de correo está decidido y no se vuelve a discutir: API de Gmail por OAuth2,
-// reutilizando la casilla notificaciones.aurevia@gmail.com, en pausa hasta después del MVP. El
-// único punto de integración es backend/src/utils/email.js.
+// El envío de correo está decidido y no se vuelve a discutir: sale por un despachante que habla
+// por el puerto 443, porque Railway bloquea los de correo. El único punto de integración es
+// backend/src/utils/email.js.

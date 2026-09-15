@@ -31,13 +31,28 @@ grande, y el producto queda en una línea discreta al pie, *"con la tecnología 
 ante una Familia o un Asistente, y se apaga con el entitlement `aurevia.marca.personalizada`
 — o sea que quitarla es una función paga, como en la mayoría del software vertical.
 
-Tres cosas que la decisión **descartó** explícitamente, para que nadie las reabra sin motivo:
+**Cada Prestadora manda desde su propia dirección de correo, bajo el dominio del producto.** Al
+dar de alta una Prestadora se le crea `[prestadora]@careonys.com`, y de ahí salen todos sus
+avisos. Esa dirección sólo manda: **las respuestas se reenvían a la casilla que la Prestadora
+declare**, que es la suya y vive donde ella quiera.
 
-- **Nada de dominios propios por Prestadora.** Un `portal.laprestadora.com` por cliente
-  significa certificado por cliente y, sobre todo, que cada Prestadora configure SPF y DKIM en
-  su propio dominio para que sus emails no caigan en correo no deseado. Una Prestadora chica
-  no lo va a hacer. El remitente sigue siendo la infraestructura del producto; lo único que
-  cambia es el **nombre visible** del remitente.
+El nombre de esa dirección sale, en este orden:
+
+1. Del dominio propio que la Prestadora haya declarado — `contacto@cuidardelsur.com` da
+   `cuidardelsur@careonys.com`.
+2. Del nombre de la Prestadora, si lo que declaró es una casilla de un proveedor gratuito.
+3. De ese mismo nombre con un sufijo, si ya está tomado.
+
+**Se fija en el alta y no cambia nunca**, porque ya quedó escrita en todos los correos que se
+mandaron. Es un nombre guardado, no una marca.
+
+Va bajo el dominio del producto y no bajo el de cada Prestadora porque la autorización para
+mandar —SPF y DKIM— se carga una sola vez, en `careonys.com`, y de ahí cuelgan todas las
+direcciones. Pedirle eso a cada Prestadora sería pedirle un trabajo que una Prestadora chica no
+va a hacer, y sus avisos terminarían en correo no deseado.
+
+Dos cosas que la decisión **descartó** explícitamente, para que nadie las reabra sin motivo:
+
 - **Nada de marca blanca total.** Si el producto es invisible, nadie sabe que existe.
 - **El nombre y el ícono de la PWA instalada se quedan con la marca del producto.** Hay un
   solo build para todas las Prestadoras. Es el punto donde el límite técnico y el estándar de

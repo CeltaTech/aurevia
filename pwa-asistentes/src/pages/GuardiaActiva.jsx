@@ -36,12 +36,18 @@ function ListaDeTareas({ titulo, tareas, vacio }) {
 }
 
 /**
- * Lo que se puede consultar de UN Paciente durante el turno: sus reportes anteriores y sus
- * órdenes de medicación.
+ * Lo que se puede consultar de UN Paciente durante el turno: sus órdenes de medicación y sus
+ * reportes anteriores.
  *
  * Cada Paciente tiene su propio bloque, con su nombre arriba cuando el turno cubre a más de
  * uno. Es a propósito: una lista de medicación sin decir de quién es, en una casa donde viven
  * dos personas, es la clase de pantalla que termina en un medicamento dado a quien no era.
+ *
+ * LA MEDICACIÓN SE VE SIN TOCAR NADA, y los reportes anteriores siguen detrás de un botón. No
+ * son la misma clase de dato: qué hay que darle hoy a esta persona es lo que se hace durante el
+ * turno, y un dato que hay que ir a buscar es un dato que alguien va a dejar de mirar el día que
+ * esté apurado. Los reportes de turnos pasados se consultan cuando hace falta, y desplegados le
+ * comerían la pantalla a lo de hoy.
  *
  * Las dos consultas se apagan por separado desde el Panel. Si la Prestadora apagó las dos, el
  * bloque entero desaparece: quedaría un nombre solo, sin nada abajo.
@@ -50,7 +56,6 @@ function DatosDelPaciente({ paciente, mostrarNombre, t }) {
   const [reportes, setReportes] = useState(null);
   const [mostrandoReportes, setMostrandoReportes] = useState(false);
   const [ordenesMedicacion, setOrdenesMedicacion] = useState(null);
-  const [mostrandoMedicacion, setMostrandoMedicacion] = useState(false);
   const seVe = useSeVe();
 
   async function verReportesAnteriores() {
@@ -69,37 +74,59 @@ function DatosDelPaciente({ paciente, mostrarNombre, t }) {
     }
   }
 
-  async function verOrdenesMedicacion() {
-    if (mostrandoMedicacion) {
-      setMostrandoMedicacion(false);
-      return;
-    }
-    setMostrandoMedicacion(true);
-    if (ordenesMedicacion === null) {
-      try {
-        const { ordenes } = await api.medicacionDelPaciente(paciente.id);
-        setOrdenesMedicacion(ordenes);
-      } catch {
-        setOrdenesMedicacion([]);
-      }
-    }
-  }
-
   const veReportes = seVe('asistente_reportes_anteriores');
   const veMedicacion = seVe('asistente_medicacion_del_paciente');
+
+  // La medicación se pide sola al abrir el turno. Si la consulta falla se muestra la lista
+  // vacía y no un error: el bloque dice entonces que no hay órdenes vigentes, que es lo mismo
+  // que decía antes cuando el botón fallaba. El turno no se traba por esto.
+  useEffect(() => {
+    if (!veMedicacion) return;
+    let activo = true;
+    api
+      .medicacionDelPaciente(paciente.id)
+      .then(({ ordenes }) => {
+        if (activo) setOrdenesMedicacion(ordenes);
+      })
+      .catch(() => {
+        if (activo) setOrdenesMedicacion([]);
+      });
+    return () => {
+      activo = false;
+    };
+  }, [paciente.id, veMedicacion]);
+
   if (!veReportes && !veMedicacion) return null;
 
-  // Los dos botones abren y cierran el bloque que tienen debajo. Un lector de pantalla no ve
-  // que el bloque se desplegó, así que hay que decírselo: `aria-expanded` dice si está
-  // abierto o cerrado, y `aria-controls` dice qué bloque es el que abre. Los dos bloques se
-  // dibujan siempre, vacíos mientras están cerrados, para que el botón nunca apunte a algo
-  // que no existe.
+  // El botón de los reportes abre y cierra el bloque que tiene debajo. Un lector de pantalla no
+  // ve que el bloque se desplegó, así que hay que decírselo: `aria-expanded` dice si está
+  // abierto o cerrado, y `aria-controls` dice qué bloque es el que abre. El bloque se dibuja
+  // siempre, vacío mientras está cerrado, para que el botón nunca apunte a algo que no existe.
   const idReportes = `reportes-anteriores-${paciente.id}`;
-  const idMedicacion = `ordenes-medicacion-${paciente.id}`;
 
   return (
     <div style={{ marginTop: '1rem' }}>
       {mostrarNombre && <h2 className="guardia-card-paciente">{paciente.nombre}</h2>}
+
+      {veMedicacion && (
+        <div style={{ marginTop: '1rem' }}>
+          <h3 className="guardia-card-paciente">{t.medicacion.titulo}</h3>
+          {ordenesMedicacion === null && <div className="estado-cargando" role="status">{t.comun.cargando}</div>}
+          {ordenesMedicacion?.length === 0 && (
+            <div className="estado-vacio" role="status">{t.medicacion.sin_ordenes}</div>
+          )}
+          {ordenesMedicacion?.map((o) => (
+            <div key={o.id} className="guardia-card">
+              <div className="guardia-card-detalle">
+                <strong>{o.medicamento}</strong> · {o.dosis} · {o.frecuencia} ({o.via_administracion})
+              </div>
+              <div className="guardia-card-detalle">
+                {t.medicacion.desde}: {o.fecha_desde} {o.fecha_hasta ? `— ${t.medicacion.hasta}: ${o.fecha_hasta}` : ''}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {veReportes && (
         <>
@@ -136,40 +163,6 @@ function DatosDelPaciente({ paciente, mostrarNombre, t }) {
         </>
       )}
 
-      {veMedicacion && (
-        <>
-          <button
-            className="btn btn-secondary btn-full"
-            onClick={verOrdenesMedicacion}
-            style={{ marginTop: '1rem' }}
-            aria-expanded={mostrandoMedicacion}
-            aria-controls={idMedicacion}
-            aria-label={mostrarNombre ? con(t.medicacion.ver_ordenes_de, { nombre: paciente.nombre }) : undefined}
-          >
-            {t.medicacion.ver_ordenes}
-          </button>
-          <div id={idMedicacion} style={mostrandoMedicacion ? { marginTop: '1rem' } : undefined}>
-            {mostrandoMedicacion && (
-              <>
-                {ordenesMedicacion === null && <div className="estado-cargando" role="status">{t.comun.cargando}</div>}
-                {ordenesMedicacion?.length === 0 && (
-                  <div className="estado-vacio" role="status">{t.medicacion.sin_ordenes}</div>
-                )}
-                {ordenesMedicacion?.map((o) => (
-                  <div key={o.id} className="guardia-card">
-                    <div className="guardia-card-detalle">
-                      <strong>{o.medicamento}</strong> · {o.dosis} · {o.frecuencia} ({o.via_administracion})
-                    </div>
-                    <div className="guardia-card-detalle">
-                      {t.medicacion.desde}: {o.fecha_desde} {o.fecha_hasta ? `— ${t.medicacion.hasta}: ${o.fecha_hasta}` : ''}
-                    </div>
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
-        </>
-      )}
     </div>
   );
 }

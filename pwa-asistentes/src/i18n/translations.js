@@ -318,8 +318,7 @@ export const T = {
       sin_codigo: 'No hay ningún código para mostrar en este momento.',
     },
     medicacion: {
-      ver_ordenes: 'Ver órdenes de medicación',
-      ver_ordenes_de: 'Ver órdenes de medicación de {nombre}',
+      titulo: 'Órdenes de medicación',
       sin_ordenes: 'No hay órdenes de medicación vigentes para este Paciente dentro de lo que este Asistente está habilitado a administrar.',
       desde: 'Desde',
       hasta: 'Hasta',
@@ -726,8 +725,7 @@ export const T = {
       sin_codigo: 'There is no code to show right now.',
     },
     medicacion: {
-      ver_ordenes: 'View medication orders',
-      ver_ordenes_de: 'View medication orders for {nombre}',
+      titulo: 'Medication orders',
       sin_ordenes: 'There are no active medication orders for this Patient that you are qualified to administer.',
       desde: 'From',
       hasta: 'Until',
@@ -1120,8 +1118,7 @@ export const T = {
       sin_codigo: 'Não há nenhum código para mostrar neste momento.',
     },
     medicacion: {
-      ver_ordenes: 'Ver ordens de medicação',
-      ver_ordenes_de: 'Ver ordens de medicação de {nombre}',
+      titulo: 'Ordens de medicação',
       sin_ordenes: 'Não há ordens de medicação vigentes para este Paciente dentro do que este Assistente está habilitado a administrar.',
       desde: 'Desde',
       hasta: 'Até',

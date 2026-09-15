@@ -1,4 +1,4 @@
-/**
+﻿/**
  * El alta de una Prestadora.
  *
  *   npm test --prefix backend
@@ -23,6 +23,11 @@ const PRESTADORA_PROPIA = '11111111-1111-1111-1111-111111111111';
 const USUARIO = '22222222-2222-2222-2222-222222222222';
 const NUEVA = '33333333-3333-3333-3333-333333333333';
 const ADMINISTRADOR = '44444444-4444-4444-4444-444444444444';
+/** Un dominio de casilla gratuita, el único que el catálogo de mentira reconoce como tal. */
+const DOMINIO_GRATUITO = 'correo-gratis.example';
+
+/** Las casillas de envío que ya están tomadas. Cada prueba carga las que le interesan. */
+let casillasTomadas = [];
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
@@ -44,8 +49,10 @@ const baseFalsa = createServer((req, res) => {
     const clave = `${req.method} ${ruta}`;
     llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null });
 
+    // A la respuesta preparada se le pasa el pedido entero: dos consultas distintas a la misma
+    // tabla llegan por la misma ruta y se distinguen por lo que preguntan.
     const preparada = respuestas.get(clave);
-    const valor = typeof preparada === 'function' ? preparada() : preparada;
+    const valor = typeof preparada === 'function' ? preparada({ url: req.url, metodo: req.method }) : preparada;
     if (valor === undefined) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: `la prueba no preparó respuesta para ${clave}` }));
@@ -72,6 +79,10 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 // su propio camino. Se borra en vez de darla por ausente, para que la prueba dé lo mismo corra
 // donde corra.
 delete process.env.PANEL_URL;
+// El dominio bajo el que cuelga la dirección de cada Prestadora sale de la dirección común del
+// producto, así que acá se fija una de mentira: sin ella no habría dominio y no se podría
+// comprobar con qué dirección queda la Prestadora nueva.
+process.env.REMITENTE_AVISOS = 'avisos@producto.example';
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma
 // en el momento en que se importa, y con la dirección que haya en ese instante.
@@ -134,6 +145,19 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/usuarios', () => []);
   // Y lo que se usa sólo cuando el alta se deshace.
   respuestas.set('DELETE /rest/v1/prestadoras', () => []);
+  // La dirección desde la que va a mandar. El catálogo dice qué dominios son de una casilla
+  // gratuita, y la consulta a `prestadoras` contesta dos preguntas distintas: qué casillas
+  // están tomadas —para no repetir ninguna— y con cuál quedó la Prestadora recién creada, que
+  // es la que se acaba de escribir.
+  casillasTomadas = [];
+  respuestas.set('GET /rest/v1/dominios_de_correo_gratuitos', ({ url }) => (
+    url.includes(`dominio=eq.${DOMINIO_GRATUITO}`) ? [{ dominio: DOMINIO_GRATUITO }] : []
+  ));
+  respuestas.set('GET /rest/v1/prestadoras', ({ url }) => (
+    url.includes('id=eq.')
+      ? [{ casilla_envio: filaEscritaEn('POST /rest/v1/prestadoras')?.casilla_envio ?? null }]
+      : casillasTomadas.map((casilla_envio) => ({ casilla_envio }))
+  ));
 });
 
 /**
@@ -321,6 +345,70 @@ describe('el alta que sale bien', () => {
   it('los espacios de más no crean nombres distintos', async () => {
     await darDeAlta({ nombre_fantasia: '  Cuidados del Litoral  ' });
     assert.equal(filaEscritaEn('POST /rest/v1/prestadoras').nombre_fantasia, 'Cuidados del Litoral');
+  });
+});
+
+describe('la Prestadora nace con su dirección de envío', () => {
+  it('el nombre sale del dominio propio que declaró', async () => {
+    const { estado, cuerpo } = await darDeAlta();
+    assert.equal(estado, 201);
+    assert.equal(filaEscritaEn('POST /rest/v1/prestadoras').casilla_envio, 'cuidadosdellitoral');
+    assert.equal(cuerpo.direccion_envio, 'cuidadosdellitoral@producto.example');
+  });
+
+  it('si la casilla que declaró es gratuita, el nombre sale de su nombre de fantasía', async () => {
+    const { cuerpo } = await darDeAlta({ email_respuestas: `cuidados@${DOMINIO_GRATUITO}` });
+    assert.equal(filaEscritaEn('POST /rest/v1/prestadoras').casilla_envio, 'cuidados-del-litoral');
+    assert.equal(cuerpo.direccion_envio, 'cuidados-del-litoral@producto.example');
+  });
+
+  it('los acentos y los signos no llegan a la dirección', async () => {
+    await darDeAlta({
+      nombre_fantasia: 'Atención Domiciliaria Ñandú & Cía.',
+      email_respuestas: `hola@${DOMINIO_GRATUITO}`,
+    });
+    assert.equal(
+      filaEscritaEn('POST /rest/v1/prestadoras').casilla_envio,
+      'atencion-domiciliaria-nandu-cia',
+    );
+  });
+
+  it('si el nombre ya está tomado, se le agrega un sufijo', async () => {
+    casillasTomadas = ['cuidadosdellitoral', 'cuidadosdellitoral-2'];
+    await darDeAlta();
+    assert.equal(filaEscritaEn('POST /rest/v1/prestadoras').casilla_envio, 'cuidadosdellitoral-3');
+  });
+
+  it('ninguna Prestadora manda desde la dirección común del producto', async () => {
+    await darDeAlta({
+      nombre_fantasia: 'Avisos',
+      email_respuestas: `contacto@${DOMINIO_GRATUITO}`,
+    });
+    assert.equal(filaEscritaEn('POST /rest/v1/prestadoras').casilla_envio, 'avisos-2');
+  });
+
+  it('si el nombre elegido chocó con otro, se elige otro y la Prestadora entra igual', async () => {
+    // Dos altas al mismo tiempo pueden elegir la misma casilla: la segunda choca contra el
+    // índice. La base contesta el choque una sola vez; al reintentar, ya con esa casilla
+    // tomada, el alta sale.
+    let intentos = 0;
+    respuestas.set('POST /rest/v1/prestadoras', () => {
+      intentos += 1;
+      if (intentos === 1) {
+        return falla(409, { code: '23505', message: 'duplicate key value violates unique constraint "prestadoras_casilla_envio_unica"' });
+      }
+      return [{ id: NUEVA, nombre_fantasia: ALTA_COMPLETA.nombre_fantasia, estado: 'prospecto' }];
+    });
+    respuestas.set('GET /rest/v1/prestadoras', ({ url }) => (
+      url.includes('id=eq.')
+        ? [{ casilla_envio: 'cuidadosdellitoral-2' }]
+        : (intentos === 0 ? [] : [{ casilla_envio: 'cuidadosdellitoral' }])
+    ));
+
+    const { estado, cuerpo } = await darDeAlta();
+    assert.equal(estado, 201);
+    assert.equal(intentos, 2, 'no volvió a intentar con otra casilla');
+    assert.equal(cuerpo.direccion_envio, 'cuidadosdellitoral-2@producto.example');
   });
 });
 

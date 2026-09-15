@@ -2,8 +2,9 @@ import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
-import { esDireccionDeCorreo } from '../utils/email.js';
+import { esDireccionDeCorreo, direccionDeEnvioDe } from '../utils/email.js';
 import { crearCuentaConPerfil } from '../utils/cuentasPanel.js';
+import { elegirCasillaDeEnvio } from '../utils/casillaDeEnvio.js';
 
 // Alta y listado de prestadoras licenciatarias — pendiente #30, ítem I.
 // Solo superadmin tiene uso legítimo de esto:
@@ -52,6 +53,28 @@ async function registrarAltaEnAuditoria(adminId, prestadoraId) {
 //
 // Nunca falla: si la limpieza tropieza, lo que tiene que llegar a la pantalla es el problema de
 // verdad —por qué no se pudo crear el acceso— y no el tropiezo de la limpieza.
+function insertarPrestadora({ razonSocial, nombreFantasia, pais, identificacionFiscal, casillaEnvio }) {
+  return supabase
+    .from('prestadoras')
+    .insert({
+      razon_social: razonSocial,
+      nombre_fantasia: nombreFantasia,
+      pais,
+      identificacion_fiscal: identificacionFiscal || null,
+      casilla_envio: casillaEnvio,
+      fecha_alta: new Date().toISOString().slice(0, 10),
+    })
+    .select('id, nombre_fantasia, estado')
+    .single();
+}
+
+// Dos índices únicos pueden rechazar este insert —el del nombre de fantasía y el de la casilla
+// de envío—, y no se contestan igual: el del nombre lo corrige quien está dando el alta, y el de
+// la casilla lo resuelve el motor eligiendo otra. Por eso se mira cuál de los dos fue.
+function esChoqueDeCasilla(error) {
+  return error?.code === '23505' && String(error.message ?? '').includes('casilla_envio');
+}
+
 async function deshacerPrestadora(prestadoraId) {
   const { error } = await supabase.from('prestadoras').delete().eq('id', prestadoraId);
   if (error) console.error('Quedó una Prestadora sin administrador y sin borrar:', prestadoraId, error.message);
@@ -137,17 +160,31 @@ panelPrestadorasRouter.post('/', requiereRolPanel, requiereSuperadmin, async (re
     return responderError(res, new ErrorConMotivo('pais_sin_moneda', `país ${pais} fuera del catálogo de monedas`));
   }
 
-  const { data: prestadora, error } = await supabase
-    .from('prestadoras')
-    .insert({
-      razon_social: razonSocial,
-      nombre_fantasia: nombreFantasia,
-      pais,
-      identificacion_fiscal: identificacionFiscal || null,
-      fecha_alta: new Date().toISOString().slice(0, 10),
-    })
-    .select('id, nombre_fantasia, estado')
-    .single();
+  // La dirección desde la que va a mandar sus avisos se elige acá, una sola vez, y entra con
+  // ella: se fija al darla de alta y no cambia nunca (`utils/casillaDeEnvio.js`). Si no se pudo
+  // elegir ninguna, la Prestadora entra igual y manda desde la dirección común del producto.
+  let casillaEnvio = await elegirCasillaDeEnvio({ nombreFantasia, emailRespuestas });
+
+  let { data: prestadora, error } = await insertarPrestadora({
+    razonSocial, nombreFantasia, pais, identificacionFiscal, casillaEnvio,
+  });
+
+  // Dos altas al mismo tiempo pueden elegir la misma casilla: la que llega segunda choca contra
+  // el índice y se vuelve a elegir, ya con la primera tomada. Si vuelve a chocar, la Prestadora
+  // entra sin casilla propia antes que no entrar.
+  if (error && esChoqueDeCasilla(error)) {
+    casillaEnvio = await elegirCasillaDeEnvio({ nombreFantasia, emailRespuestas });
+    ({ data: prestadora, error } = await insertarPrestadora({
+      razonSocial, nombreFantasia, pais, identificacionFiscal, casillaEnvio,
+    }));
+
+    if (error && esChoqueDeCasilla(error)) {
+      casillaEnvio = null;
+      ({ data: prestadora, error } = await insertarPrestadora({
+        razonSocial, nombreFantasia, pais, identificacionFiscal, casillaEnvio,
+      }));
+    }
+  }
 
   if (error) {
     // Dos Prestadoras no se llaman igual (índice `prestadoras_nombre_fantasia_unico`), y quien
@@ -197,5 +234,12 @@ panelPrestadorasRouter.post('/', requiereRolPanel, requiereSuperadmin, async (re
 
   await registrarAltaEnAuditoria(req.usuarioPanel.id, prestadora.id);
 
-  res.status(201).json({ prestadora, administrador, casilla_respuestas_guardada: !errorCasilla });
+  res.status(201).json({
+    prestadora,
+    administrador,
+    casilla_respuestas_guardada: !errorCasilla,
+    // La dirección desde la que va a mandar. Sale nula cuando no se le pudo fijar una propia, y
+    // entonces esta Prestadora manda desde la dirección común del producto.
+    direccion_envio: await direccionDeEnvioDe(prestadora.id),
+  });
 });

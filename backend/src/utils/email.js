@@ -34,8 +34,16 @@ function credencialDelDespachante() {
 
 // La dirección desde la que sale el correo del producto. `REMITENTE_AVISOS` existe para que la
 // casilla de envío no dependa de la del usuario SMTP, que es de la máquina de desarrollo.
-function direccionRemitente() {
+export function direccionRemitente() {
   return process.env.REMITENTE_AVISOS || process.env.SMTP_USER || null;
+}
+
+// El dominio bajo el que cuelgan todas las direcciones del producto. Sale de la dirección común
+// y no de una variable propia: las dos dirían siempre lo mismo, y dos variables que tienen que
+// coincidir terminan no coincidiendo.
+export function dominioDeEnvio() {
+  const [, dominio] = String(direccionRemitente() ?? '').split('@');
+  return dominio || null;
 }
 
 // Si no hay ningún medio configurado, el motor no intenta mandar y no falla: es lo que ya
@@ -120,6 +128,26 @@ async function crearTransporterCompartido() {
   });
 }
 
+// La dirección desde la que manda esta Prestadora: la casilla que se le fijó al darla de alta,
+// con el dominio del producto. Se arma acá y no se guarda entera, porque el dominio es
+// configuración del producto y guardarlo junto al nombre lo metería adentro de los datos.
+// El nombre lo elige `utils/casillaDeEnvio.js`.
+//
+// Sin casilla propia devuelve `null` y el correo sale desde la dirección común: es lo que
+// hacían todas hasta que existió esta columna, y lo que hacen las que se dieron de alta antes.
+export async function direccionDeEnvioDe(prestadoraId) {
+  const dominio = dominioDeEnvio();
+  if (!prestadoraId || !dominio) return null;
+
+  const { data } = await supabase
+    .from('prestadoras')
+    .select('casilla_envio')
+    .eq('id', prestadoraId)
+    .maybeSingle();
+
+  return data?.casilla_envio ? `${data.casilla_envio}@${dominio}` : null;
+}
+
 // Pendiente #18 (docs/PLAN_HASTA_PRODUCCION.md), candidato 8 — cada Prestadora puede configurar sus
 // propias credenciales SMTP (configuracion_email_prestadora, backend/src/db/
 // schema_email_remitente_prestadora_01.sql), en vez de mandar siempre "desde" la cuenta
@@ -128,11 +156,12 @@ async function crearTransporterCompartido() {
 async function crearTransporterPara(prestadoraId) {
   const clave = credencialDelDespachante();
   if (clave && direccionRemitente()) {
-    // La casilla propia por Prestadora no se consulta en este camino, y es a propósito: sale
-    // por SMTP, así que está tan bloqueada como cualquier otra. La dirección propia de cada
-    // Prestadora se resuelve de otra manera —una dirección suya bajo el dominio del producto,
-    // despachada por el mismo despachante— y todavía no está hecha.
-    return { transporter: transporteDelDespachante(clave), from: direccionRemitente() };
+    // La casilla SMTP propia por Prestadora no se consulta en este camino, y es a propósito:
+    // sale por SMTP, así que está tan bloqueada como cualquier otra. Lo que sí se usa es la
+    // dirección propia de esa Prestadora bajo el dominio del producto, que despacha el mismo
+    // despachante. Si no tiene ninguna, manda desde la dirección común.
+    const propia = await direccionDeEnvioDe(prestadoraId);
+    return { transporter: transporteDelDespachante(clave), from: propia || direccionRemitente() };
   }
 
   if (prestadoraId) {
@@ -210,11 +239,10 @@ async function emailDeContactoDePrestadora(prestadoraId) {
   return data?.email ?? null;
 }
 
-// Hoy la dirección del remitente es una sola para todas, y lo que cambia por Prestadora es el
-// nombre que se lee en el buzón de quien lo recibe. La dirección propia por Prestadora está
-// decidida y todavía no hecha (`docs/MARCA.md`). Si esa Prestadora no tiene nombre de fantasía
-// cargado, se manda la dirección sola: un correo sin nombre visible llega igual, y quedarse
-// esperando el dato sería no mandar nada.
+// El nombre que se lee en el buzón de quien recibe el correo: el de la Prestadora que lo manda.
+// Acompaña a la dirección, que también es suya cuando tiene casilla propia. Si esa Prestadora no
+// tiene nombre de fantasía cargado, se manda la dirección sola: un correo sin nombre visible
+// llega igual, y quedarse esperando el dato sería no mandar nada.
 async function remitenteVisible(direccion, prestadoraId) {
   if (!direccion || !prestadoraId) return direccion;
   const { nombre } = await marcaDeLaPrestadora(prestadoraId);

@@ -632,7 +632,7 @@ CREATE TABLE escalas_legales (
   tipo TEXT NOT NULL,       -- ver catálogo de tipos en PRD_02B_Gestion_Personal.md sección 4.2
   categoria TEXT,           -- ej: 'jornada_completa', '12_16hs_semana', nombre de una causal
   valor NUMERIC(14,4) NOT NULL,
-  unidad TEXT NOT NULL,     -- 'monto_fijo_mensual' | 'porcentaje' | 'dias' | 'meses' | 'monto_por_hora'
+  unidad TEXT NOT NULL,     -- 'monto_fijo_mensual' | 'porcentaje' | 'dias' | 'meses' | 'horas' | 'monto_por_hora'
   vigencia_desde DATE NOT NULL,
   vigencia_hasta DATE,      -- NULL = vigente
   fuente TEXT,              -- referencia normativa (ej: "CCT 743/16 paritaria jul-2026")

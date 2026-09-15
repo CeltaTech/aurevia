@@ -138,6 +138,16 @@ guarda en `datos_reservados_asistente.score_riesgo_reclasificacion` y se recalcu
 acumula histórico (si se necesita histórico, agregar tabla aparte cuando haya ese
 requerimiento).
 
+**Tres de los siete se deducen de la ficha y no se cargan a mano** — antigüedad del vínculo,
+horas semanales y exclusividad de zona salen de `asistentes.fecha_alta`,
+`asistentes.horas_semanales` y `asistentes.zonas`. Se calculan cada vez que el puntaje se
+muestra, así que «recalculado cuando cambian sus datos» es literal y no hace falta ningún job.
+A partir de cuántos meses y de cuántas horas el indicio está pleno son valores legales y viven
+en `escalas_legales` (`tipo = 'umbral_riesgo_dependencia'`); si el umbral no está vigente, el
+indicador no se deduce y la pantalla lo dice. El indicador de zona no lleva umbral: una sola
+zona asignada es el indicio. Los otros cuatro se cargan a mano porque no tienen de dónde salir,
+y la exclusividad de facturación además no podría deducirse sin cruzar Organizaciones.
+
 ## Ausencias y cobertura
 
 Flujo (8 pasos, resumido):

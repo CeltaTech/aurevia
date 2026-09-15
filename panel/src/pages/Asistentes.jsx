@@ -13,7 +13,11 @@ import {
   coincideConElFiltro,
   opcionesDelPlantel,
 } from '../lib/resumenDelPlantel';
+import { resolverEscalasVigentes } from '../lib/escalasLegales';
+import { calcularScoreRiesgo } from '../lib/scoreRiesgo';
+import { deducirIndicadores, indicadoresParaElPuntaje } from '../lib/indicadoresDeducidos';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
+import { useEscalasLegales } from '../hooks/useEscalasLegales';
 import { useFiltros } from '../hooks/useFiltros';
 import { useTiposAsistente } from '../hooks/useTiposAsistente';
 import { usePanoramaDelPlantel } from '../hooks/usePanoramaDelPlantel';
@@ -51,6 +55,26 @@ export function Asistentes() {
   // Los dos datos que había que entrar a la ficha para ver. Llegan aparte de la lista y no la
   // demoran: mientras no estén, las tarjetas se muestran sin ellos.
   const panorama = usePanoramaDelPlantel();
+  // El puntaje de riesgo se muestra recalculado, no como quedó guardado la última vez que
+  // alguien entró a la ficha: tres de sus siete indicadores salen de datos del Asistente que
+  // cambian solos —cuándo entró, cuántas horas hace, en cuántas zonas trabaja—. Las escalas se
+  // piden una vez para toda la lista, y sólo cuando la columna se muestra.
+  const { filas: escalasCrudas, estado: estadoEscalas } = useEscalasLegales(esAdmin ? usuario?.prestadora_id : null);
+  const hoy = new Date().toISOString().slice(0, 10);
+  const escalasResueltas = useMemo(
+    () => (estadoEscalas === 'listo' ? resolverEscalasVigentes(escalasCrudas, hoy) : null),
+    [escalasCrudas, estadoEscalas, hoy],
+  );
+  // Mientras las escalas no estén —o cuando quien mira no tiene una Prestadora propia, como el
+  // Superadmin fuera de una sesión de soporte— el renglón no muestra número: un cero se leería
+  // como «sin riesgo», y lo que pasa es que todavía no se pudo calcular.
+  function puntajeDeRiesgo(asistente) {
+    if (!escalasResueltas) return null;
+    const { valores } = deducirIndicadores(asistente, escalasResueltas, hoy);
+    const indicadores = indicadoresParaElPuntaje(asistente.indicadores_riesgo, valores);
+    return calcularScoreRiesgo(indicadores, escalasResueltas).score;
+  }
+
   const [mostrarNuevo, setMostrarNuevo] = useState(false);
   const [mostrarPasarAlCatalogo, setMostrarPasarAlCatalogo] = useState(false);
 
@@ -222,7 +246,7 @@ export function Asistentes() {
                   </span>
                 )}
                 {esAdmin && <span><strong>{t.asistentes.col_vinculo}:</strong> {t.asistentes[`vinculo_${a.tipo_vinculo}`]}</span>}
-                {esAdmin && <span><strong>{t.asistentes.col_score_riesgo}:</strong> {a.score_riesgo_reclasificacion ?? 0}</span>}
+                {esAdmin && <span><strong>{t.asistentes.col_score_riesgo}:</strong> {puntajeDeRiesgo(a) ?? '—'}</span>}
               </div>
               <div className="lista-tarjeta-acciones">
                 <Button variant="secondary" onClick={() => navigate(`/asistentes/${a.id}`)}>{t.comun.ver_detalle}</Button>

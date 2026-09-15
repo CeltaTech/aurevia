@@ -103,9 +103,9 @@ CREATE POLICY panel_lee_entrevistas_postulacion
   ON public.entrevistas_postulacion
   FOR SELECT
   USING (
-    (public.es_superadmin() AND prestadora_id = public.current_tenant())
+    (interno.es_superadmin() AND prestadora_id = interno.current_tenant())
     OR (
-      prestadora_id = public.current_tenant()
+      prestadora_id = interno.current_tenant()
       AND EXISTS (
         SELECT 1 FROM public.usuarios u
         WHERE u.id = auth.uid()

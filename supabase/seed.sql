@@ -954,13 +954,30 @@ VALUES ('9a000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-0000000
        ('9a000000-0000-4000-8000-000000000002', '50000000-0000-4000-8000-000000000003',
         '22222222-2222-4222-8222-222222222222', current_date - 100, current_date + 600);
 
--- Matrículas. Esta tabla no tiene columna de Prestadora: queda acotada por el
--- Asistente, que sí la tiene. Por eso es la que más vale probar.
-INSERT INTO public.matriculas_asistente (id, asistente_id, tipo, numero_matricula, vigente_desde, registrado_por)
-VALUES ('9b000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001',
+-- Matrículas. La Prestadora va escrita, y la clave foránea compuesta contra
+-- asistentes (id, prestadora_id) no deja que sea otra que la de su Asistente.
+INSERT INTO public.matriculas_asistente (id, prestadora_id, asistente_id, tipo, numero_matricula, vigente_desde, registrado_por)
+VALUES ('9b000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+        '30000000-0000-4000-8000-000000000001',
         'enfermeria', 'MP-10001', current_date - 400, '20000000-0000-4000-8000-000000000003'),
-       ('9b000000-0000-4000-8000-000000000002', '50000000-0000-4000-8000-000000000003',
+       ('9b000000-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222',
+        '50000000-0000-4000-8000-000000000003',
         'enfermeria', 'MP-20002', current_date - 300, '50000000-0000-4000-8000-000000000002');
+
+-- La Matrícula vigente de quien sí la necesita. Clara Cabrera es la única del
+-- poblado cuyo tipo de Asistente exige matrícula de enfermería, así que sin esta
+-- fila la vista `estado_matricula_asistente` nunca devuelve una Matrícula
+-- resuelta: las otras dos cuelgan de tipos que no la piden y el empalme las
+-- descarta por tipo. Lleva vencimiento a propósito, para que `dias_para_vencer`
+-- tenga algo que calcular.
+INSERT INTO public.matriculas_asistente (id, prestadora_id, asistente_id, tipo, numero_matricula,
+                                         vigente_desde, vigente_hasta, registrado_por,
+                                         verificada_at, verificada_por, metodo_verificacion)
+VALUES ('9b000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111',
+        '30000000-0000-4000-8000-000000000003',
+        'enfermeria', 'MP-10003', current_date - 200, current_date + 300,
+        '20000000-0000-4000-8000-000000000003',
+        now() - interval '199 days', '20000000-0000-4000-8000-000000000003', 'documento_a_la_vista');
 
 -- Mensajes entre el Asistente y la Prestadora.
 INSERT INTO public.mensajes_asistente (id, prestadora_id, asistente_id, usuario_id, mensaje)

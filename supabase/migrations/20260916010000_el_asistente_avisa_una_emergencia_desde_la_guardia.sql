@@ -108,7 +108,7 @@ CREATE POLICY coordinador_lee_emergencias_de_su_zona
   ON public.emergencias_guardia
   FOR SELECT
   USING (
-    prestadora_id = public.current_tenant()
+    prestadora_id = interno.current_tenant()
     AND EXISTS (
       SELECT 1
       FROM public.usuarios u
@@ -124,9 +124,9 @@ CREATE POLICY panel_lee_emergencias_guardia
   ON public.emergencias_guardia
   FOR SELECT
   USING (
-    prestadora_id = public.current_tenant()
+    prestadora_id = interno.current_tenant()
     AND (
-      public.es_superadmin()
+      interno.es_superadmin()
       OR EXISTS (
         SELECT 1 FROM public.usuarios u
         WHERE u.id = auth.uid() AND u.rol = 'admin_prestadora'::text

@@ -49,10 +49,20 @@ pregunta a la base para que uno nuevo no quede afuera por olvido
 mitad**, y por eso la que queda pendiente en `docs/PLAN_HASTA_PRODUCCION.md` tiene que bajar los
 archivos además del volcado.
 
-**Repetir esta prueba:** no hace falta repetirla en cada sesión. Se recomienda repetirla
-si cambia el esquema de forma significativa (nueva tabla con relaciones complejas, cambio
-de motor de base) o, como mínimo, una vez cada varios meses, para detectar si algún cambio
-futuro rompió silenciosamente la restaurabilidad del dump.
+**Repetir esta prueba:** ya no se hace a mano. `backend/scripts/probar_restauracion.mjs` hace
+los seis pasos de arriba y además compara los archivos del espejo: baja el último respaldo,
+lo restaura en una base efímera, compara las tablas y las filas contra producción y los
+archivos contra el almacenamiento, y borra el contenedor y la descarga al terminar. Lo corre
+el Desarrollador, porque pide las llaves del bucket y de la base. **Contesta una de tres
+cosas**, y la tercera es la que importa: `bien`, `roto`, o `no_probado` —todo coincidió pero
+no había una sola fila ni un solo archivo que comparar, así que el verde no significa nada y
+la prueba hay que rehacerla con datos cargados—. Qué decide cada una está en
+`backend/src/utils/comprobacionDeRestauracion.js`, que sí tiene pruebas propias.
+
+No hace falta repetirla en cada sesión: alcanza cuando cambia el esquema de forma
+significativa (una tabla nueva con relaciones complejas, un cambio de motor de base) o, como
+mínimo, una vez cada varios meses, para detectar si algún cambio futuro rompió en silencio la
+restaurabilidad del volcado.
 
 ## Punto 3 — Plan de migración de Supabase Auth (documentado, no ejecutado)
 

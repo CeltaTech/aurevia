@@ -443,6 +443,11 @@ decisión de producto sobre esto todavía.
 Estos datos viajan solo en el body de requests autenticadas, nunca en query params, nunca
 en logs de aplicación accesibles a todo el equipo.
 
+## Dónde vive cada secreto
+
+En `docs/SECRETOS.md`: qué secreto existe, para qué sirve, dónde vive, qué se rompe mientras se
+rota y cuándo se rotó por última vez. Sin ningún valor adentro, y no se le agrega ninguno.
+
 ## Cumplimiento normativo
 
 - Ley 25.326 (Protección de Datos Personales, Argentina) aplica a todos los datos de

@@ -6,6 +6,7 @@
 // Panel: las tareas, la matrícula y la correspondencia con el texto viejo.
 
 import { esTipoGeneral, nombreTipo } from './tipoDeAsistente';
+import { comparable } from './textoComparable';
 
 export { esTipoGeneral, nombreTipo };
 
@@ -51,19 +52,6 @@ export function viasVedadasPorMatricula(tipo, configuracionVias) {
 // sugiere nada: es preferible una casilla vacía que un tipo equivocado, porque
 // el tipo es lo que decide si a esa persona se le exige matrícula.
 // ---------------------------------------------------------------------------
-
-// Deja el texto comparable: sin mayúsculas, sin tildes, sin nada que no sea
-// letra. "Enfermería" y "ENFERMERIA" tienen que dar lo mismo.
-//
-// `normalize('NFD')` separa la letra de su tilde —la "é" pasa a ser "e" más un
-// signito aparte—; el último paso, que se queda solo con la a a la z, tira ese
-// signito junto con espacios, puntos y números.
-function comparable(texto) {
-  return (texto || '')
-    .normalize('NFD')
-    .toLowerCase()
-    .replace(/[^a-z]/g, '');
-}
 
 // La raíz de la palabra, sin las vocales del final. Es lo que hace que
 // "enfermero", "enfermera" y "enfermería" se reconozcan como la misma cosa sin

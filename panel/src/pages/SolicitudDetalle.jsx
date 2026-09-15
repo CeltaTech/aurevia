@@ -10,8 +10,11 @@ import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
+import { AsistentesSugeridos } from './solicitudes/AsistentesSugeridos';
+import { NuevaGuardiaModal } from './guardias/NuevaGuardiaModal';
 
 const ESTADOS = ['nueva', 'en_gestion', 'asignada', 'cancelada', 'completada'];
+const ESTADO_ASIGNADA = 'asignada';
 const API_URL = import.meta.env.VITE_API_URL;
 
 export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
@@ -25,6 +28,34 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
   const [error, setError] = useState(null);
   const [convirtiendo, setConvirtiendo] = useState(false);
   const [errorConversion, setErrorConversion] = useState(null);
+  // Qué Asistente y qué Pacientes se eligieron en la lista de sugeridos, mientras la ventana de
+  // guardia nueva está abierta. En nulo, esa ventana no está.
+  const [guardiaNueva, setGuardiaNueva] = useState(null);
+
+  // Una Solicitud con una guardia asignada ya no es una Solicitud nueva ni en gestión, y que ese
+  // estado lo tenga que mover alguien a mano es pedirle a una persona que copie lo que el sistema
+  // acaba de ver. Si el cambio de estado falla, la guardia quedó creada igual: se avisa y la
+  // ventana no se cierra, para que se pueda guardar el estado a mano ahí mismo.
+  async function guardiaCreada() {
+    setGuardiaNueva(null);
+    if ((solicitud.estado || 'nueva') === ESTADO_ASIGNADA) {
+      onActualizada();
+      return;
+    }
+
+    const { error: errorEstado } = await supabase
+      .from('solicitudes')
+      .update({ estado: ESTADO_ASIGNADA })
+      .eq('id', solicitud.id);
+
+    if (errorEstado) {
+      setNuevoEstado(ESTADO_ASIGNADA);
+      setError(t.comun.error_generico);
+      return;
+    }
+
+    onActualizada();
+  }
 
   async function handleConvertirEnFamilia() {
     const confirmado = await confirmarDestructivo(t.solicitudes.confirmar_convertir_familia);
@@ -122,6 +153,8 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
           onChange={(e) => setNota(e.target.value)}
         />
 
+        <AsistentesSugeridos solicitud={solicitud} onAsignar={setGuardiaNueva} />
+
         {esAdminOSuperior(usuario?.rol) && (
           <div className="panel-resultado-calculo">
             {solicitud.familia_id ? (
@@ -147,6 +180,18 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
           </Button>
         </div>
       </div>
+
+      {/* La misma ventana de guardia nueva que usa la pantalla de Guardias, con el Asistente y
+          los Pacientes ya elegidos. La fecha y el horario se completan ahí, porque lo que la
+          Familia dejó escrito en la Solicitud es una frase —"lunes y jueves a la mañana"— y no
+          un turno. */}
+      {guardiaNueva && (
+        <NuevaGuardiaModal
+          inicial={guardiaNueva}
+          onClose={() => setGuardiaNueva(null)}
+          onCreada={guardiaCreada}
+        />
+      )}
     </div>
   );
 }

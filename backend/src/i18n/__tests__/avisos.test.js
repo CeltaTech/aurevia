@@ -33,7 +33,11 @@ const DATOS = {
   aviso_demora_asistente: { fecha: '2026-10-07', horaInicio: '08:00', origen: 'un origen', motivo: 'tránsito' },
   incidente_relevo_sin_resolver: { guardiaId: 'g-1', nivel: 2, minutos: 45 },
   incidente_relevo_respaldo: { guardiaId: 'g-1', minutos: 45 },
-  incidente_relevo_fase_automatica: { guardiaId: 'g-1', minutosUmbral: 60 },
+  incidente_relevo_fase_automatica: {
+    guardiaId: 'g-1', minutosUmbral: 60,
+    contactados: 3, sinNivel: false, sinOrden: false, quedaElFamiliar: true,
+  },
+  convocatoria_de_relevo: { fecha: '2026-10-07', horaInicio: '22:00', horaFin: '06:00' },
   continuidad_de_guardia: {},
   guardia_sin_cubrir: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],

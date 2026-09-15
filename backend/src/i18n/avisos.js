@@ -111,8 +111,25 @@ const ES = {
   }),
 
   incidente_relevo_fase_automatica: (d) => ({
-    asunto: 'Fase automática de escalada alcanzada (envío automático pendiente de plantilla Meta)',
-    texto: `Guardia ${d.guardiaId} superó el umbral de fase automática (${d.minutosUmbral} minutos) sin resolverse. El envío automático a Asistentes todavía no está activo — requiere acción manual.`,
+    asunto: 'Fase automática de escalada: se salió a buscar quién cubre',
+    texto: [
+      `Guardia ${d.guardiaId} superó el umbral de fase automática (${d.minutosUmbral} minutos) sin resolverse.`,
+      d.sinNivel
+        ? 'No hay ningún nivel de escalada configurado para este incidente, así que no se contactó a nadie.'
+        : d.sinOrden
+          ? 'El nivel de escalada no tiene cargado ningún orden de prioridad, así que no se contactó a nadie.'
+          : d.contactados > 0
+            ? `Se le escribió a ${d.contactados} ${d.contactados === 1 ? 'Asistente' : 'Asistentes'}, en el orden de prioridad configurado.`
+            : 'No había nadie disponible para contactar en el orden de prioridad configurado.',
+      d.quedaElFamiliar
+        ? 'El orden de prioridad incluye al familiar: esa opción la tiene que autorizar una persona, así que queda en sus manos.'
+        : null,
+      'Nadie quedó asignado a la guardia: quien conteste lo tiene que asignar una persona.',
+    ].filter(Boolean).join('\n'),
+  }),
+
+  convocatoria_de_relevo: (d) => ({
+    titulo: `Se busca quién cubra una guardia: ${d.fecha}, de ${d.horaInicio} a ${d.horaFin}`,
   }),
 
   continuidad_de_guardia: () => ({ titulo: 'Continuidad de guardia' }),
@@ -291,8 +308,25 @@ const EN = {
   }),
 
   incidente_relevo_fase_automatica: (d) => ({
-    asunto: 'Automatic escalation phase reached (automatic sending pending a Meta template)',
-    texto: `Shift ${d.guardiaId} passed the automatic phase threshold (${d.minutosUmbral} minutes) without being resolved. Automatic sending to care workers is not active yet — this needs to be handled by hand.`,
+    asunto: 'Automatic escalation phase: the search for cover has started',
+    texto: [
+      `Shift ${d.guardiaId} passed the automatic phase threshold (${d.minutosUmbral} minutes) without being resolved.`,
+      d.sinNivel
+        ? 'There is no escalation level configured for this incident, so nobody was contacted.'
+        : d.sinOrden
+          ? 'The escalation level has no priority order on file, so nobody was contacted.'
+          : d.contactados > 0
+            ? `${d.contactados} ${d.contactados === 1 ? 'care worker was' : 'care workers were'} contacted, in the configured priority order.`
+            : 'Nobody in the configured priority order was available to contact.',
+      d.quedaElFamiliar
+        ? 'The priority order includes the family member: that option has to be authorised by a person, so it is left to you.'
+        : null,
+      'Nobody has been assigned to the shift: whoever answers still has to be assigned by a person.',
+    ].filter(Boolean).join('\n'),
+  }),
+
+  convocatoria_de_relevo: (d) => ({
+    titulo: `Cover needed for a shift: ${d.fecha}, from ${d.horaInicio} to ${d.horaFin}`,
   }),
 
   continuidad_de_guardia: () => ({ titulo: 'Shift continuity' }),
@@ -465,8 +499,25 @@ const PT = {
   }),
 
   incidente_relevo_fase_automatica: (d) => ({
-    asunto: 'Fase automática de escalada atingida (envio automático pendente de modelo da Meta)',
-    texto: `O plantão ${d.guardiaId} passou o limite da fase automática (${d.minutosUmbral} minutos) sem se resolver. O envio automático aos Asistentes ainda não está ativo — é preciso agir manualmente.`,
+    asunto: 'Fase automática de escalada: saiu-se à procura de quem cubra',
+    texto: [
+      `O plantão ${d.guardiaId} passou o limite da fase automática (${d.minutosUmbral} minutos) sem se resolver.`,
+      d.sinNivel
+        ? 'Não há nenhum nível de escalada configurado para este incidente, portanto ninguém foi contatado.'
+        : d.sinOrden
+          ? 'O nível de escalada não tem nenhuma ordem de prioridade cadastrada, portanto ninguém foi contatado.'
+          : d.contactados > 0
+            ? `${d.contactados} ${d.contactados === 1 ? 'Assistente foi contatado' : 'Assistentes foram contatados'}, na ordem de prioridade configurada.`
+            : 'Não havia ninguém disponível para contatar na ordem de prioridade configurada.',
+      d.quedaElFamiliar
+        ? 'A ordem de prioridade inclui o familiar: essa opção precisa ser autorizada por uma pessoa, portanto fica nas suas mãos.'
+        : null,
+      'Ninguém ficou designado ao plantão: quem responder ainda precisa ser designado por uma pessoa.',
+    ].filter(Boolean).join('\n'),
+  }),
+
+  convocatoria_de_relevo: (d) => ({
+    titulo: `Procura-se quem cubra um plantão: ${d.fecha}, das ${d.horaInicio} às ${d.horaFin}`,
   }),
 
   continuidad_de_guardia: () => ({ titulo: 'Continuidade de plantão' }),

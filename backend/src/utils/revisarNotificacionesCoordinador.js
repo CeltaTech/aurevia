@@ -3,6 +3,7 @@ import { notificarCoordinador, avisarPorWhatsapp } from './whatsapp.js';
 import { enviarPushFamilia } from './push.js';
 import { configuracionEvento } from './email.js';
 import { necesitaNotificar } from './insistencia.js';
+import { correrFaseAutomatica } from './faseAutomaticaRelevo.js';
 import { pacientesDeGuardia, pacientesDeGuardias } from './pacientesDeGuardia.js';
 import { intervaloParaPremura } from './umbralesPremura.js';
 import { horasEntre } from './horasDeGuardia.js';
@@ -322,17 +323,26 @@ async function revisarIncidentes(config, ahora, idioma) {
       && !incidente.fase_automatica_notificada_at
       && minutosPremura >= minutosAntesFaseAutomatica
     ) {
-      // El envío automático del mensaje de escalada a los Asistentes (orden_prioridad de
-      // configuracion_escalada_relevo) requiere plantilla de WhatsApp aprobada por Meta —
-      // se completa en el test final con una prestadora real. Por ahora se avisa al
-      // Coordinador de que la fase automática debería haber arrancado, sin dejarlo pasar
-      // en silencio.
+      // Acá el sistema deja de esperar a una persona y sale a buscar quién cubre, con el orden de
+      // prioridad y el texto que la Prestadora cargó en `configuracion_escalada_relevo`
+      // (`utils/faseAutomaticaRelevo.js`). Nadie queda asignado: se pregunta quién puede.
+      //
+      // Si la búsqueda falla entera, el aviso a quien coordina sale igual. Es lo único que impide
+      // que un incidente se quede esperando en silencio a un proceso que no pudo hacer nada.
+      let loQueSeHizo = { contactados: 0, sinNivel: false, sinOrden: false, quedaElFamiliar: false };
+      try {
+        loQueSeHizo = await correrFaseAutomatica({ incidente, prestadoraId, idioma });
+      } catch (err) {
+        console.error(`Error corriendo la fase automática del incidente ${incidente.id}:`, err.message);
+      }
+
       await notificarCoordinador({
         evento: 'incidente_relevo_sin_resolver',
         prestadoraId,
         ...aviso('incidente_relevo_fase_automatica', idioma, {
           guardiaId: incidente.guardia_entrante_id,
           minutosUmbral: minutosAntesFaseAutomatica,
+          ...loQueSeHizo,
         }),
       });
       await supabase.from('incidentes_relevo').update({ fase_automatica_notificada_at: ahora.toISOString() }).eq('id', incidente.id);

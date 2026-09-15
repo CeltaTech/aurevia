@@ -1,4 +1,5 @@
 import { obtenerValorEscala, obtenerFormulaVigente } from './escalasLegales';
+import { SEMANAS_POR_MES } from './costoDelVinculo';
 
 // Causales que nunca calculan un monto automático — quedan siempre para el abogado.
 // Ver docs/PRD_02B_Gestion_Personal.md sección "Fuera de alcance". A diferencia de las
@@ -46,7 +47,9 @@ function mejorRemuneracion(asistente) {
     return Number(asistente.sueldo_basico);
   }
   if (asistente.valor_hora && asistente.horas_semanales) {
-    return Number(asistente.valor_hora) * Number(asistente.horas_semanales) * 4.33;
+    // Cuántas semanas tiene un mes no se escribe dos veces: es el mismo número con el que el
+    // Simulador pasa un valor hora a un costo mensual.
+    return Number(asistente.valor_hora) * Number(asistente.horas_semanales) * SEMANAS_POR_MES;
   }
   return 0;
 }

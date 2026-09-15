@@ -65,6 +65,11 @@ export const GRUPOS = [
     copias: ['backend/src/utils/escalasLegales.js'],
   },
   {
+    que: 'cuánto se le paga a un Asistente por un mes',
+    original: 'panel/src/lib/calcularLiquidacion.js',
+    copias: ['backend/src/utils/calcularLiquidacion.js'],
+  },
+  {
     que: 'la marca de la Prestadora y qué funciones tiene encendidas',
     original: 'pwa-familias/src/context/PerfilContext.jsx',
     copias: ['pwa-asistentes/src/context/PerfilContext.jsx'],

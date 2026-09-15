@@ -269,6 +269,20 @@ export const T = {
       ya_llego: 'La llegada de esta guardia ya está marcada, así que este aviso no cambia nada.',
       sin_conexion: 'Sin conexión. Queda guardado en el teléfono y se envía solo cuando vuelva la señal.',
     },
+    // El botón de emergencia de la guardia en curso. Dos cosas se dicen sin rodeos: que esto no
+    // reemplaza llamar a quien haya que llamar, y que sin señal todavía no se enteró nadie.
+    emergencia: {
+      boton: 'Avisar una emergencia',
+      reportar_otra: 'Avisar otra emergencia',
+      titulo: 'Avisar una emergencia',
+      explicacion: 'Esto le llega a la Prestadora en el momento. Si hace falta atención médica o de seguridad, llame primero al número que corresponda: este aviso no reemplaza esa llamada.',
+      detalle: '¿Qué está pasando?',
+      detalle_placeholder: 'Escriba lo que está pasando, con sus palabras.',
+      confirmar: 'Enviar el aviso',
+      enviando: 'Enviando el aviso…',
+      reportada: 'Aviso enviado a las {hora}. La Prestadora ya lo tiene.',
+      sin_conexion: 'Sin conexión: el aviso quedó guardado en el teléfono y todavía no lo recibió nadie. Se envía solo cuando vuelva la señal. Mientras tanto, avise por otro medio.',
+    },
     // El pase de guardia, al marcar la llegada y al cerrar (pendiente #113). Nunca traba: si no
     // hay nadie que muestre el código se le pide a la Prestadora, y si tampoco así, se entra
     // igual eligiendo un motivo. Los cinco motivos son un código técnico fijo, en el mismo
@@ -686,6 +700,18 @@ export const T = {
       ya_llego: 'Arrival for this shift is already recorded, so this notice changes nothing.',
       sin_conexion: 'No connection. It is saved on the phone and will be sent on its own once the signal is back.',
     },
+    emergencia: {
+      boton: 'Report an emergency',
+      reportar_otra: 'Report another emergency',
+      titulo: 'Report an emergency',
+      explicacion: 'This reaches the Provider right away. If medical or security assistance is needed, call the appropriate number first: this notice does not replace that call.',
+      detalle: 'What is happening?',
+      detalle_placeholder: 'Describe what is happening, in your own words.',
+      confirmar: 'Send the notice',
+      enviando: 'Sending the notice…',
+      reportada: 'Notice sent at {hora}. The Provider already has it.',
+      sin_conexion: 'No connection: the notice is saved on the phone and nobody has received it yet. It will be sent on its own once the signal is back. In the meantime, report it by another means.',
+    },
     pase_de_guardia: {
       titulo_checkin: 'Shift handover',
       titulo_checkout: 'Shift handover to close',
@@ -1079,6 +1105,18 @@ export const T = {
       motivo_otro: 'Outro',
       ya_llego: 'A chegada deste plantão já está marcada, então este aviso não muda nada.',
       sin_conexion: 'Sem conexão. Fica salvo no telefone e é enviado sozinho quando o sinal voltar.',
+    },
+    emergencia: {
+      boton: 'Avisar uma emergência',
+      reportar_otra: 'Avisar outra emergência',
+      titulo: 'Avisar uma emergência',
+      explicacion: 'Isto chega à Prestadora na hora. Se for necessário atendimento médico ou de segurança, ligue primeiro para o número correspondente: este aviso não substitui essa ligação.',
+      detalle: 'O que está acontecendo?',
+      detalle_placeholder: 'Escreva o que está acontecendo, com suas palavras.',
+      confirmar: 'Enviar o aviso',
+      enviando: 'Enviando o aviso…',
+      reportada: 'Aviso enviado às {hora}. A Prestadora já o tem.',
+      sin_conexion: 'Sem conexão: o aviso ficou salvo no telefone e ninguém o recebeu ainda. É enviado sozinho quando o sinal voltar. Enquanto isso, avise por outro meio.',
     },
     pase_de_guardia: {
       titulo_checkin: 'Passagem de plantão',

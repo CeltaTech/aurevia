@@ -40,6 +40,8 @@ export async function sincronizarCola() {
           await api.registrarSalida(item.guardiaId, item.payload);
         } else if (item.tipo === 'aviso_demora') {
           await api.avisarDemora(item.guardiaId, item.payload);
+        } else if (item.tipo === 'emergencia') {
+          await api.avisarEmergencia(item.guardiaId, item.payload);
         }
         await quitarDeCola(item.id);
         avisar();

@@ -49,6 +49,7 @@
 //   codigo_instruccion_circulo     → utils/instruccionesCirculo.js (WhatsApp, con caída a correo)
 //   cambio_de_asistente            → utils/avisoCambioDeAsistente.js (notificarCoordinador + push
 //                                    a la Familia), pedido por routes/panelGuardias.js
+//   emergencia_en_guardia          → routes/appAsistentes.js (notificarCoordinador)
 // No hay ningún otro evento emitido. El vencimiento de documentos tiene un solo evento genérico,
 // `vencimiento_documento_asistente`, y no uno por tipo de documento, porque qué documentos se le
 // piden a un Asistente lo define el catálogo de cada Prestadora.
@@ -141,6 +142,18 @@ export const CATALOGO_AVISOS = [
     // llegue o no lo decide la Prestadora en la pantalla de Avisos, como en todos los demás: acá
     // se dice que el canal existe, nunca que está encendido.
     admite_familia: true,
+  },
+  {
+    evento: 'emergencia_en_guardia',
+    descripcion: 'El Asistente avisó una emergencia desde una guardia en curso',
+    admite_whatsapp: true,
+    // No le llega a la Familia por esta puerta. Que haya pasado algo en la casa de su Paciente es
+    // exactamente lo que una Familia quiere saber, pero quién se lo dice y con qué palabras es una
+    // decisión de la Prestadora, no una consecuencia automática de que alguien apretó un botón.
+    admite_familia: false,
+    // No se puede apagar, por lo mismo que el código del Círculo: hay una persona esperando del
+    // otro lado. La configuración elige por qué canal sale y a qué dirección, nunca si sale.
+    se_puede_apagar: false,
   },
   {
     evento: 'codigo_instruccion_circulo',

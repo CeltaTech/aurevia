@@ -11,6 +11,7 @@ import { obtenerUbicacion } from '../lib/ubicacionDelTelefono';
 import { useSeVe } from '../context/PerfilContext';
 import AntesDeLlegar from '../components/AntesDeLlegar';
 import DomicilioTemporal from '../components/DomicilioTemporal';
+import EmergenciaEnGuardia from '../components/EmergenciaEnGuardia';
 import EnlaceAlMapa from '../components/EnlaceAlMapa';
 import PaseDeGuardia from '../components/PaseDeGuardia';
 import CodigoDePresencia from '../components/CodigoDePresencia';
@@ -589,6 +590,17 @@ export default function GuardiaActiva() {
               </div>
             </div>
           )}
+
+          {/* Lo que no admite esperar al cierre. Queda al final del bloque de la guardia en curso
+              y no arriba de todo: el lugar de arriba es para lo que se hace siempre, y esto se usa
+              casi nunca. Se muestra mientras la guardia está en curso, que es cuando esta persona
+              está adentro de la casa. */}
+          <EmergenciaEnGuardia
+            t={t}
+            locale={locale}
+            guardiaId={id}
+            alRegistrar={() => revisarPendientes()}
+          />
         </>
       )}
 

@@ -30,6 +30,7 @@ import { ServicioDetalle } from './pages/servicios/ServicioDetalle';
 import { Guardias } from './pages/Guardias';
 import { Reportes } from './pages/Reportes';
 import { Alertas } from './pages/Alertas';
+import { EmergenciasEnGuardia } from './pages/EmergenciasEnGuardia';
 import { Comunicacion } from './pages/Comunicacion';
 import { Evv } from './pages/Evv';
 import { PaseDeGuardia } from './pages/PaseDeGuardia';
@@ -123,6 +124,10 @@ function App() {
                     <Route path="guardias" element={<Guardias />} />
                     <Route path="reportes" element={<Reportes />} />
                     <Route path="alertas" element={<Alertas />} />
+                    {/* Lo que un Asistente avisó apretando el botón de emergencia de su guardia.
+                        Sin candado propio, igual que sus vecinas de Cumplimiento: quien está de
+                        turno cuando entra una es el Coordinador, y el motor pide lo mismo. */}
+                    <Route path="emergencias" element={<EmergenciasEnGuardia />} />
                     <Route path="comunicacion" element={<Comunicacion />} />
                     {/* El pase de guardia (pendiente #113) va al lado de la verificación de
                         guardias y no adentro: aquélla audita hacia atrás con un rango de fechas,

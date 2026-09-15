@@ -144,7 +144,12 @@ export function Layout() {
     {
       titulo: t.nav.grupo_cumplimiento,
       enlaces: [
-        // Primero el pase de guardia, que es lo único de este grupo que se atiende en el
+        // Primero lo que avisó una persona que está adentro de una casa. No lleva contador: el
+        // aviso de una emergencia sale en el momento por WhatsApp o por correo, y esta pantalla
+        // es donde se lee lo que ese aviso no puede decir. Se ve con las dos modalidades, porque
+        // en las dos hay Asistentes trabajando en un domicilio.
+        { a: '/emergencias', texto: t.nav.emergencias, ver: hayPlantel },
+        // Después el pase de guardia, que es lo otro de este grupo que se atiende en el
         // momento: lo demás se mira cuando se puede. Lleva el contador de quiénes están
         // esperando, y se ve con las dos modalidades porque en las dos hay Asistentes que
         // llegan a un domicilio.

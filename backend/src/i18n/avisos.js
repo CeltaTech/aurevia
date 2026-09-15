@@ -101,6 +101,14 @@ const ES = {
     texto: `Guardia del ${d.fecha} a las ${d.horaInicio}. Origen: ${d.origen}. Motivo: ${d.motivo}.`,
   }),
 
+  // Lo que escribió el Asistente no entra acá. Este mensaje sale por WhatsApp o por correo, y lo
+  // escribió alguien que está mirando a un Paciente (`celtatech/CLAUDE.md` §6). El texto se lee
+  // entrando al Panel, que es donde el permiso se comprueba.
+  emergencia_en_guardia: (d) => ({
+    asunto: 'Emergencia avisada desde una guardia',
+    texto: `Guardia del ${d.fecha} a las ${d.horaInicio}. El Asistente avisó una emergencia. El detalle está en el Panel.`,
+  }),
+
   incidente_relevo_sin_resolver: (d) => ({
     asunto: 'Incidente de continuidad de guardia sin resolver',
     texto: `Guardia ${d.guardiaId}, nivel de escalada actual: ${d.nivel}. Sin resolver hace ${Math.round(d.minutos)} minutos.`,
@@ -339,6 +347,11 @@ const EN = {
     texto: `Shift on ${d.fecha} at ${d.horaInicio}. Source: ${d.origen}. Reason: ${d.motivo}.`,
   }),
 
+  emergencia_en_guardia: (d) => ({
+    asunto: 'Emergency reported from a shift',
+    texto: `Shift on ${d.fecha} at ${d.horaInicio}. The care worker reported an emergency. The details are in the Panel.`,
+  }),
+
   incidente_relevo_sin_resolver: (d) => ({
     asunto: 'Shift handover incident unresolved',
     texto: `Shift ${d.guardiaId}, current escalation level: ${d.nivel}. Unresolved for ${Math.round(d.minutos)} minutes.`,
@@ -561,6 +574,11 @@ const PT = {
   aviso_demora_asistente: (d) => ({
     asunto: 'Aviso de atraso do Asistente',
     texto: `Plantão de ${d.fecha} às ${d.horaInicio}. Origem: ${d.origen}. Motivo: ${d.motivo}.`,
+  }),
+
+  emergencia_en_guardia: (d) => ({
+    asunto: 'Emergência avisada a partir de um plantão',
+    texto: `Plantão de ${d.fecha} às ${d.horaInicio}. O Assistente avisou uma emergência. O detalhe está no Painel.`,
   }),
 
   incidente_relevo_sin_resolver: (d) => ({

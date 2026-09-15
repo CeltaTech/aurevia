@@ -726,6 +726,82 @@ appAsistentesRouter.post('/guardias/:id/aviso-demora', requiereRolAsistente, asy
   res.json({ ok: true, avisoAt: detectadoAt, motivo });
 });
 
+/* El botón de emergencia de la Guardia Activa.
+   --------------------------------------------------------------------------
+   Es lo que se aprieta cuando pasa algo que no admite esperar al cierre de la guardia. No tiene
+   lista de tipos para elegir: se escribe qué está pasando y se manda. Quien está en el medio de
+   una emergencia no tiene que buscar su caso en un desplegable, y clasificarlas es una decisión
+   de negocio de la Prestadora que no se inventa acá.
+
+   LO QUE ESCRIBIÓ NO SALE HACIA AFUERA. El aviso inmediato dice que hay una emergencia, de qué
+   guardia y de cuándo; el texto se lee entrando al Panel (`celtatech/CLAUDE.md` §6).
+
+   Y NO SE PUEDE APAGAR. El evento está en el catálogo con `se_puede_apagar: false`: la Prestadora
+   elige por qué canal sale y a qué dirección, nunca si sale. */
+appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async (req, res) => {
+  const detalle = typeof req.body?.detalle === 'string' ? req.body.detalle.trim() : '';
+  if (!detalle) {
+    return responderError(res, new ErrorConMotivo('faltan_datos', 'emergencia sin detalle'));
+  }
+
+  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  if (!guardia) {
+    return res.status(404).json({ error: 'Guardia no encontrada' });
+  }
+
+  /* Cuándo pasó, no cuándo se pudo enviar. Es la única ruta de la aplicación que acepta el momento
+     del teléfono, y tiene motivo: un aviso que estuvo media hora en la cola sin conexión guardado
+     con la hora de la sincronización contaría mal lo que pasó, y acá esa media hora es el dato.
+     Se acepta sólo hacia atrás: una hora futura sería un reloj mal puesto, y con eso no se escribe
+     nada. */
+  const delTelefono = Date.parse(req.body?.ocurrido_at ?? '');
+  const ahora = Date.now();
+  const reportadoAt = new Date(Number.isNaN(delTelefono) || delTelefono > ahora ? ahora : delTelefono).toISOString();
+
+  const { data: emergencia, error } = await supabase
+    .from('emergencias_guardia')
+    .insert({
+      prestadora_id: guardia.prestadora_id,
+      guardia_id: guardia.id,
+      reportado_por: req.usuarioAsistente.id,
+      reportado_at: reportadoAt,
+      // Un tope, para que un teléfono con un problema no escriba un texto sin fin. Se recorta y se
+      // guarda igual: un aviso de emergencia no se pierde porque alguien escribió de más.
+      detalle: detalle.slice(0, 2000),
+    })
+    .select('id')
+    .maybeSingle();
+
+  if (error) {
+    return responderError(res, error);
+  }
+
+  // Igual que el aviso de demora: se guarda primero y se avisa después, adentro de un `try`. Si el
+  // envío falla, la fila queda con `ultima_notificacion_at` en blanco y nunca se le devuelve un
+  // error a quien avisó — su acto ya está guardado, que es lo que lo protege.
+  try {
+    const idioma = await idiomaDeLaPrestadora(guardia.prestadora_id);
+    await notificarCoordinador({
+      evento: 'emergencia_en_guardia',
+      prestadoraId: guardia.prestadora_id,
+      ...aviso('emergencia_en_guardia', idioma, {
+        fecha: guardia.fecha,
+        horaInicio: guardia.hora_inicio,
+      }),
+    });
+    if (emergencia?.id) {
+      await supabase
+        .from('emergencias_guardia')
+        .update({ ultima_notificacion_at: new Date().toISOString(), veces_notificado: 1 })
+        .eq('id', emergencia.id);
+    }
+  } catch (e) {
+    console.error('Error avisando al Coordinador de una emergencia en guardia:', e.message);
+  }
+
+  res.json({ ok: true, reportadoAt });
+});
+
 // ============================================================================
 // Reporte Diario — estructurar (IA Nivel 1, no persiste todavía)
 // ============================================================================

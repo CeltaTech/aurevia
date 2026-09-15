@@ -63,6 +63,39 @@ del coordinador). Botón "Ver reportes anteriores". Botón "Reporte de emergenci
 simplificado + alerta inmediata al coordinador, separado del flujo normal de check-out).
 Botón "Check-out" habilitado recién después de las horas mínimas de la modalidad.
 
+### El botón de emergencia — cómo quedó construido
+
+**La palabra no aparece escrita en ninguna línea de la aplicación.** El botón, el formulario y los
+avisos salen de `pwa-asistentes/src/i18n/translations.js` en los tres idiomas, como todo el resto.
+
+Se aprieta desde la Guardia Activa (`pwa-asistentes/src/components/EmergenciaEnGuardia.jsx`) y
+**no tiene lista de tipos para elegir**: se escribe qué está pasando y se manda. Quien está en el
+medio de una emergencia no busca su caso en un desplegable, y clasificarlas es una decisión de
+negocio de cada Prestadora que el producto no inventa.
+
+**Sale aunque no haya señal.** Es un tipo más de la cola sin conexión
+(`pwa-asistentes/src/lib/colaOffline.js`), y por eso el motor acepta acá —y sólo acá— el momento
+que marca el teléfono: un aviso que estuvo media hora esperando red guardado con la hora de la
+sincronización contaría mal lo que pasó. Se acepta hacia atrás nada más; una hora futura es un
+reloj mal puesto.
+
+**Se guarda primero y se avisa después.** La fila queda en `emergencias_guardia`
+(`backend/src/routes/appAsistentes.js`, `POST /guardias/:id/emergencia`) y recién entonces sale el
+aviso al Coordinador, adentro de un `try`: si el envío falla, quien reportó igual recibe que salió
+bien —su acto ya está guardado— y la fila queda sin marca de notificada.
+
+**El evento no se puede apagar.** Está en `backend/src/utils/catalogoAvisos.js` con
+`se_puede_apagar: false`: la Prestadora elige por qué canal sale y a qué dirección, nunca si sale.
+
+**El detalle no viaja por el canal público.** El aviso inmediato dice que hay una emergencia, de
+qué guardia y de cuándo; el texto que escribió el Asistente es información sensible
+(`celtatech/CLAUDE.md` §6) y se lee entrando al Panel, en «Emergencias avisadas»
+(`panel/src/pages/EmergenciasEnGuardia.jsx`, `backend/src/routes/panelEmergencias.js`). Ahí se
+marca atendida con una nota de qué se hizo, y queda con nombre y hora.
+
+**Está afuera de la bandeja de alertas y de la de alertas tempranas**, y no es un descuido: esas
+dos las deduce un programa, y ésta la apretó una persona que está adentro de una casa.
+
 ### Flujo de Reporte Diario (dispara IA Nivel 1 al hacer check-out)
 
 1. **Dictado o escritura libre** — textarea grande + botón de micrófono, placeholder

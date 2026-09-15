@@ -56,6 +56,9 @@ const DATOS = {
     busqueda: { ofrecida: true, invitados: 3, sinContestar: 1, aceptaron: 0 },
     veces: 1,
   },
+  // El aviso no lleva el detalle a propósito: lo que escribió el Asistente es información sensible
+  // y se lee entrando al Panel (`celtatech/CLAUDE.md` §6).
+  emergencia_en_guardia: { fecha: '2026-10-07', horaInicio: '08:00' },
   alerta_ia_coordinador: { esRoja: true },
   alerta_ia_familia: { esRoja: false },
   vencimiento_documentos: {

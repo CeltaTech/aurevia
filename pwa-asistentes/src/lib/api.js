@@ -48,6 +48,10 @@ export const api = {
   // dos exige ubicación: sin GPS se manda igual y lo único que se pierde es la estimación.
   registrarSalida: (id, datos) => pedido(`/guardias/${id}/salida`, { method: 'POST', body: JSON.stringify(datos) }),
   avisarDemora: (id, datos) => pedido(`/guardias/${id}/aviso-demora`, { method: 'POST', body: JSON.stringify(datos) }),
+  // Lo que pasa durante la guardia y no admite esperar al cierre. Manda el momento en que pasó,
+  // porque si el aviso queda en la cola sin conexión lo que importa es esa hora y no la de la
+  // sincronización.
+  avisarEmergencia: (id, datos) => pedido(`/guardias/${id}/emergencia`, { method: 'POST', body: JSON.stringify(datos) }),
   // El pase de guardia (pendiente #113). Tres pedidos y ninguno más:
   //   - el código que este Asistente muestra cuando es él el que se va y llega el relevo;
   //   - el aviso de que no hay nadie que pueda mostrarle el código, que aparece en la pantalla

@@ -12,6 +12,7 @@ import { fechaLimiteDeAviso } from '../lib/reglaVencimientos';
 import { diasDeAvisoDeLaPrestadora } from '../lib/plazoDeAviso';
 import { ESTADO_EN_CURSO } from '../lib/guardiaSinCerrar';
 import { hoyISO } from '../lib/horarios';
+import { soloSinResolver } from '../lib/alertaSinResolver';
 
 // Los nombres de las modalidades salen de un solo lado: los mismos textos que usa la
 // solapa donde se activan y se desactivan, en Configuración → La Prestadora (Regla 12).
@@ -64,6 +65,7 @@ export function Dashboard() {
   const [ausentesSinRelevo, setAusentesSinRelevo] = useState(null);
   const [ausentesPorModalidad, setAusentesPorModalidad] = useState(null);
   const [documentosPorVencer, setDocumentosPorVencer] = useState(null);
+  const [alertasIaSinResolver, setAlertasIaSinResolver] = useState(null);
   const [errorAlertas, setErrorAlertas] = useState(null);
 
   // Cuántas guardias están pasando ahora mismo. Se pregunta con una cuenta y no trayendo las
@@ -101,6 +103,7 @@ export function Dashboard() {
     setAusentesSinRelevo(null);
     setAusentesPorModalidad(null);
     setDocumentosPorVencer(null);
+    setAlertasIaSinResolver(null);
     setErrorAlertas(null);
 
     // Trae la modalidad de trabajo de cada incidente —columna `guardias.canal_modalidad`, un
@@ -122,7 +125,17 @@ export function Dashboard() {
       .not('fecha_vencimiento', 'is', null)
       .lte('fecha_vencimiento', fechaLimiteDeAviso(diasAviso));
 
-    if (errorAusentes || errorDocumentos) {
+    // Las que la IA dejó escritas y todavía no miró nadie. Qué significa «sin resolver» no se
+    // escribe acá: lo dice `lib/alertaSinResolver.js`, el mismo archivo que consultan la lista de
+    // Alertas y la ficha de la Familia. Se cuentan sin traer las filas porque de este número no se
+    // muestra ninguna alerta, y cada una nombra a un Paciente y describe lo que le está pasando.
+    // Van todos los niveles juntos: separar lo que urge de lo que no es trabajo de la pantalla de
+    // Alertas, que las tiene delante; acá el número dice cuánto quedó sin mirar.
+    const { count: countAlertasIa, error: errorAlertasIa } = await soloSinResolver(
+      supabase.from('alertas').select('id', { count: 'exact', head: true }),
+    );
+
+    if (errorAusentes || errorDocumentos || errorAlertasIa) {
       setErrorAlertas(t.comun.error_generico);
       return;
     }
@@ -134,6 +147,7 @@ export function Dashboard() {
     setAusentesSinRelevo(filasAusentes?.length ?? 0);
     setAusentesPorModalidad(porModalidad);
     setDocumentosPorVencer(countDocumentos ?? 0);
+    setAlertasIaSinResolver(countAlertasIa ?? 0);
   }, [prestadoraId, t]);
 
   useEffect(() => {
@@ -228,6 +242,12 @@ export function Dashboard() {
             <Link to="/asistentes" className={`metrica-card${documentosPorVencer > 0 ? ' metrica-card-alerta' : ''}`}>
               <span className="metrica-valor">{documentosPorVencer}</span>
               <span className="metrica-label">{t.dashboard.documentacion_por_vencer}</span>
+            </Link>
+            {/* El enlace lleva a la lista de Alertas, que abre filtrada en las pendientes: lo que
+                este número cuenta está a la vista al llegar, sin tocar ningún filtro. */}
+            <Link to="/alertas" className={`metrica-card${alertasIaSinResolver > 0 ? ' metrica-card-alerta' : ''}`}>
+              <span className="metrica-valor">{alertasIaSinResolver}</span>
+              <span className="metrica-label">{t.dashboard.alertas_ia_sin_resolver}</span>
             </Link>
           </div>
           {desgloseModalidadHabilitado && ausentesPorModalidad && (

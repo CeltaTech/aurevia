@@ -722,6 +722,7 @@ export const T = {
       ausentes_sin_relevo: 'Ausentes sin relevo previo',
       ausentes_sin_relevo_por_modalidad: 'Ausentes sin relevo previo — {modalidad}',
       documentacion_por_vencer: 'Documentación por vencer',
+      alertas_ia_sin_resolver: 'Alertas de IA sin resolver',
     },
     // Guía de primeros pasos de una Prestadora nueva (pendiente #139). Vive en la pantalla de
     // entrada del Panel (Estado actual, ver App.jsx) y cubre otros cinco pasos que el checklist
@@ -2880,6 +2881,7 @@ export const T = {
       ausentes_sin_relevo: 'Absences without prior relief',
       ausentes_sin_relevo_por_modalidad: 'Absences without prior relief — {modalidad}',
       documentacion_por_vencer: 'Documentation about to expire',
+      alertas_ia_sin_resolver: 'Unresolved AI alerts',
     },
     guia_primeros_pasos: {
       titulo: 'Getting started guide',
@@ -5015,6 +5017,7 @@ export const T = {
       ausentes_sin_relevo: 'Ausências sem revezamento prévio',
       ausentes_sin_relevo_por_modalidad: 'Ausências sem revezamento prévio — {modalidad}',
       documentacion_por_vencer: 'Documentação a vencer',
+      alertas_ia_sin_resolver: 'Alertas de IA sem resolver',
     },
     guia_primeros_pasos: {
       titulo: 'Guia de primeiros passos',

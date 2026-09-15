@@ -15,6 +15,7 @@ import {
 } from '../../lib/pacientesDeGuardia';
 import { SITUACION, situacionDeGuardia, tonoDeGuardia } from '../../lib/semaforoGuardia';
 import { armarBuscadorDeRangos, tieneSignoFueraDeRango } from '../../lib/signosVitales';
+import { soloSinResolver } from '../../lib/alertaSinResolver';
 
 /* Lo que le está pasando a los Pacientes de una Familia: guardias, reportes y alertas.
    ==========================================================================
@@ -289,11 +290,12 @@ export function AlertasDeLaFamilia({ pacientes }) {
     const ids = idsDe(pacientes);
     if (ids.length === 0) return { filas: [], tope: false };
 
-    const { data, error: errorAlertas } = await supabase
-      .from('alertas')
-      .select('id, created_at, nivel, descripcion, paciente_id')
+    const { data, error: errorAlertas } = await soloSinResolver(
+      supabase
+        .from('alertas')
+        .select('id, created_at, nivel, descripcion, paciente_id'),
+    )
       .in('paciente_id', ids)
-      .eq('resuelta', false)
       .order('created_at', { ascending: false });
 
     if (errorAlertas) throw errorAlertas;

@@ -8,6 +8,7 @@ import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
 import { mensajeDeError } from '../lib/errores';
+import { sigueSinResolver, sigueSinResolverYEsCritica } from '../lib/alertaSinResolver';
 
 // Alertas de la IA Nivel 2 (backend/src/utils/revisarAlertasIA.js): la IA lee los últimos
 // reportes de cada Paciente y, si detecta un patrón preocupante, deja una alerta con dos
@@ -82,8 +83,8 @@ export function Alertas() {
   const filasFiltradas = useMemo(() => {
     return filas
       .filter((a) => {
-        if (f.estado === 'pendientes' && a.resuelta) return false;
-        if (f.estado === 'resueltas' && !a.resuelta) return false;
+        if (f.estado === 'pendientes' && !sigueSinResolver(a)) return false;
+        if (f.estado === 'resueltas' && sigueSinResolver(a)) return false;
         if (f.nivel !== 'todos' && a.nivel !== f.nivel) return false;
         return true;
       })
@@ -95,7 +96,7 @@ export function Alertas() {
   }, [filas, f]);
 
   const pendientesRojas = useMemo(
-    () => filas.filter((a) => !a.resuelta && a.nivel === 'roja').length,
+    () => filas.filter(sigueSinResolverYEsCritica).length,
     [filas],
   );
 
@@ -157,7 +158,7 @@ export function Alertas() {
                     </span>
                   </td>
                   <td>{a.descripcion || '—'}</td>
-                  <td>{a.resuelta ? t.alertas.estado_resuelta : t.alertas.estado_pendiente}</td>
+                  <td>{sigueSinResolver(a) ? t.alertas.estado_pendiente : t.alertas.estado_resuelta}</td>
                   <td>
                     <Button variant="secondary" onClick={() => setAbierta(abierta === a.id ? null : a.id)}>
                       {abierta === a.id ? t.alertas.ocultar_detalle : t.alertas.ver_detalle}
@@ -224,7 +225,7 @@ function DetalleAlerta({ alerta, resolviendo, onResolver, onCerrar }) {
         <div>{t.alertas.reportes_analizados_texto.replace('{cantidad}', cantidadReportes)}</div>
       </div>
 
-      {!alerta.resuelta && (
+      {sigueSinResolver(alerta) && (
         <div className="panel-modal-acciones">
           <Button onClick={() => onResolver(alerta)} disabled={resolviendo}>
             {t.alertas.marcar_resuelta}

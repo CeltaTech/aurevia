@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { nombreTipo } from '../lib/tipoDeAsistente';
@@ -23,6 +23,21 @@ export default function PerfilPublicoAsistente() {
   const { t, locale } = useLocale();
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState('');
+  const [abriendo, setAbriendo] = useState(false);
+  const navegar = useNavigate();
+
+  async function escribirle() {
+    if (abriendo) return;
+    setAbriendo(true);
+    try {
+      const { conversacion_id } = await api.abrirConversacionConAsistente(id);
+      navegar(`/mensajes/${conversacion_id}`);
+    } catch (e) {
+      setError(mensajeDeError(e, t, 'Perfil público del Asistente'));
+    } finally {
+      setAbriendo(false);
+    }
+  }
 
   useEffect(() => {
     let activo = true;
@@ -74,6 +89,13 @@ export default function PerfilPublicoAsistente() {
           {t.vidriera.antiguedad.replace('{meses}', asistente.antiguedad_meses)}
         </p>
       )}
+
+      {/* Escribirle es libre: lo que se cobra es el dato de contacto, y adentro del chat sale
+          tapado hasta que esta Familia lo abra. El botón se apaga mientras el hilo se abre, y si
+          ya existía uno con esta persona lleva a ese mismo: no hay dos hilos por pareja. */}
+      <button type="button" className="btn btn-primary" onClick={escribirle} disabled={abriendo}>
+        {abriendo ? t.comun.cargando : t.chat.escribirle}
+      </button>
 
       {verificacion && (
         <EstadoDocumental

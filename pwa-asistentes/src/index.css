@@ -546,3 +546,88 @@ h2 {
   font-size: 0.95rem;
   margin-bottom: 0.4rem;
 }
+
+/* ---------- El hilo de mensajes del Marketplace ---------- */
+
+/* Los dos lados se distinguen por el lado en el que están y por el fondo, no por el color solo:
+   quien no distingue colores tiene que poder seguir la conversación igual. */
+
+.hilo-de-mensajes {
+  display: flex;
+  flex-direction: column;
+}
+
+/* El aviso de que los datos de contacto van tapados. No es una alarma —no falló nada— así que no
+   usa el color del peligro: dice algo que conviene saber antes de escribir. */
+.aviso-suave {
+  background: var(--fondo-alt);
+  border-left: 4px solid var(--azul-medio);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  color: var(--texto-secundario);
+  font-size: 0.85rem;
+}
+
+.hilo-videollamada {
+  margin-bottom: 1rem;
+}
+
+.lista-mensajes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mensaje {
+  max-width: 85%;
+  border-radius: 12px;
+  padding: 0.6rem 0.9rem;
+  background: #FFFFFF;
+  border: 1px solid var(--borde-card);
+}
+
+.mensaje-propio {
+  align-self: flex-end;
+  background: var(--fondo-alt);
+}
+
+.mensaje-ajeno {
+  align-self: flex-start;
+}
+
+.mensaje-cuerpo {
+  margin: 0;
+  color: var(--texto-principal);
+  /* Un mensaje se escribe con los renglones que quiso quien lo escribió, y una dirección larga
+     no puede empujar la pantalla para el costado. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mensaje-cuando {
+  margin: 0.25rem 0 0;
+  color: var(--texto-secundario);
+  font-size: 0.75rem;
+}
+
+.form-mensaje {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.form-mensaje textarea {
+  width: 100%;
+  border: 1px solid var(--borde-card);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--texto-principal);
+  resize: vertical;
+}

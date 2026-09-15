@@ -3,7 +3,7 @@ import { Outlet, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
 import { iniciarSincronizacionAutomatica } from '../lib/sincronizarCola';
-import { useMarca } from '../context/PerfilContext';
+import { useMarca, useOfreceMarketplace } from '../context/PerfilContext';
 import { con } from '../lib/textos';
 import { api } from '../lib/api';
 
@@ -11,6 +11,7 @@ export default function Layout() {
   const { logout } = useAuth();
   const { t } = useLocale();
   const marca = useMarca();
+  const ofreceMarketplace = useOfreceMarketplace();
 
   // Cuántas guardias le ofrecieron y todavía no contestó. El número va en la pestaña de abajo
   // porque una oferta con fecha límite que nadie mira es una oferta perdida: si hubiera que
@@ -87,6 +88,13 @@ export default function Layout() {
             </>
           )}
         </NavLink>
+        {/* El chat con las Familias de la vidriera. Sólo aparece donde la Prestadora trabaja
+            de esa manera: en una que asigna ella a su gente no hay ninguna conversación. */}
+        {ofreceMarketplace && (
+          <NavLink to="/mensajes" className={({ isActive }) => (isActive ? 'active' : '')}>
+            {t.nav.mensajes}
+          </NavLink>
+        )}
         <NavLink to="/perfil" className={({ isActive }) => (isActive ? 'active' : '')}>
           {t.nav.perfil}
         </NavLink>

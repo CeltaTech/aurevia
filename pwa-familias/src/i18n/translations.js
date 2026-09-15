@@ -17,6 +17,9 @@ export const T = {
       // Están solo los que puede recibir esta aplicación: cuando se pide una función que la
       // Prestadora tiene apagada, y los cinco de la activación de la cuenta.
       motivos: {
+        // La videollamada pedida en una Prestadora que no configuró dónde se hacen las suyas. La
+        // pantalla no ofrece el botón; esto se lee si se llegó por otro camino.
+        videollamada_no_configurada: 'Esta Prestadora todavía no configuró las videollamadas, así que por ahora la conversación sigue por escrito.',
         no_disponible: 'Esta función no está activada en esta Prestadora.',
         // No es lo mismo que el de arriba y no se dicen igual. Arriba: la Prestadora no ofrece
         // esto. Acá: existe, pero el titular de la cuenta no se lo dio a esta persona. Quien lee
@@ -72,6 +75,9 @@ export const T = {
       campo_obligatorio: 'Hace falta completar este campo.',
     },
     nav: {
+      // El chat con la otra punta del Marketplace. Sólo aparece donde la Prestadora ofrece esa
+      // modalidad de trabajo.
+      mensajes: 'Mensajes',
       pacientes: 'Mis Pacientes',
       // El código para el Asistente que llega. Va en el menú de abajo porque se busca con el
       // timbre sonando: tiene que estar a un toque desde cualquier pantalla.
@@ -83,6 +89,35 @@ export const T = {
       // El nombre de la zona de navegación de abajo. Sin él un lector de pantalla anuncia
       // "navegación" a secas y la lista de enlaces queda suelta.
       menu_principal: 'Menú principal',
+    },
+    // EL CHAT CON LA OTRA PUNTA DEL MARKETPLACE. Lo dibuja `components/HiloDeMensajes.jsx`, que
+    // es el mismo archivo en las dos aplicaciones, así que estas claves tienen que existir en las
+    // dos y decir lo mismo.
+    chat: {
+      titulo: 'Mensajes',
+      sin_conversaciones: 'Todavía no hay ninguna conversación.',
+      // El número de mensajes sin leer se ve por dónde está; dicho en voz alta, un "3" solo no
+      // dice nada. Esta frase es la que se escucha.
+      sin_leer_uno: '1 mensaje sin leer',
+      sin_leer: '{n} mensajes sin leer',
+      escribirle: 'Escribirle un mensaje',
+      // El aviso del tapado dice las dos cosas que hacen falta para no equivocarse: que el dato
+      // de contacto no pasa, y que lo que el producto no reconoce sí pasa. El producto avisa, no
+      // bloquea.
+      contacto_tapado: 'Los datos de contacto quedan tapados hasta que se abra el contacto de esta persona. Lo que no se reconozca como un dato de contacto se ve del otro lado tal como se escribió.',
+      contacto_tapado_ya_paso: 'En esta conversación ya se tapó algo.',
+      tapado_en_este_mensaje: 'con datos de contacto tapados',
+      escribir: 'Escribir un mensaje',
+      enviar: 'Enviar',
+      enviando: 'Enviando…',
+      sin_mensajes: 'Todavía no hay mensajes en esta conversación.',
+      empezar_videollamada: 'Empezar una videollamada',
+      entrar_a_la_videollamada: 'Entrar a la videollamada',
+      // Lo que escribe el producto adentro del hilo. No lo dijo ninguna persona, y por eso la
+      // frase sale de acá y no viaja como texto desde el motor.
+      avisos: {
+        videollamada_empezo: 'Empezó una videollamada.',
+      },
     },
     marca: {
       con_tecnologia_de: 'con la tecnología de {{producto}}',
@@ -468,6 +503,7 @@ export const T = {
       dato_invalido: 'Something was entered incorrectly. Please check what you typed.',
       falla_del_sistema: 'Something failed on our side. Please try again shortly.',
       motivos: {
+        videollamada_no_configurada: 'This provider has not set up video calls yet, so for now the conversation continues in writing.',
         no_disponible: 'This feature is not switched on at this Provider.',
         sin_acceso: 'The account holder did not include this in what you can see. Any change is requested by them from the Provider.',
         codigo_incorrecto: 'That code is not correct. Please check it and type it again.',
@@ -496,12 +532,32 @@ export const T = {
       campo_obligatorio: 'This field needs to be filled in.',
     },
     nav: {
+      mensajes: 'Messages',
       pacientes: 'My Patients',
       codigo: 'Code',
       buscar: 'Search',
       perfil: 'My Profile',
       cerrar_sesion: 'Log out',
       menu_principal: 'Main menu',
+    },
+    chat: {
+      titulo: 'Messages',
+      sin_conversaciones: 'There are no conversations yet.',
+      sin_leer_uno: '1 unread message',
+      sin_leer: '{n} unread messages',
+      escribirle: 'Send them a message',
+      contacto_tapado: 'Contact details stay hidden until this person’s contact is unlocked. Anything not recognised as a contact detail is shown to the other side exactly as written.',
+      contacto_tapado_ya_paso: 'Something has already been hidden in this conversation.',
+      tapado_en_este_mensaje: 'contact details hidden',
+      escribir: 'Write a message',
+      enviar: 'Send',
+      enviando: 'Sending…',
+      sin_mensajes: 'There are no messages in this conversation yet.',
+      empezar_videollamada: 'Start a video call',
+      entrar_a_la_videollamada: 'Join the video call',
+      avisos: {
+        videollamada_empezo: 'A video call has started.',
+      },
     },
     marca: {
       con_tecnologia_de: 'powered by {{producto}}',
@@ -842,6 +898,7 @@ export const T = {
       dato_invalido: 'Há um dado carregado errado. Convém revisar o que foi escrito.',
       falla_del_sistema: 'Algo falhou do nosso lado. É possível tentar de novo daqui a pouco.',
       motivos: {
+        videollamada_no_configurada: 'Esta Prestadora ainda não configurou as videochamadas, então por enquanto a conversa segue por escrito.',
         no_disponible: 'Esta função não está ativada nesta Prestadora.',
         sin_acceso: 'O titular da conta não incluiu isto no que foi concedido. A mudança é ele quem pede à Prestadora.',
         codigo_incorrecto: 'Esse código não está correto. Convém revisá-lo e digitá-lo de novo.',
@@ -870,12 +927,32 @@ export const T = {
       campo_obligatorio: 'É necessário preencher este campo.',
     },
     nav: {
+      mensajes: 'Mensagens',
       pacientes: 'Meus Pacientes',
       codigo: 'Código',
       buscar: 'Buscar',
       perfil: 'Meu Perfil',
       cerrar_sesion: 'Sair',
       menu_principal: 'Menu principal',
+    },
+    chat: {
+      titulo: 'Mensagens',
+      sin_conversaciones: 'Ainda não há nenhuma conversa.',
+      sin_leer_uno: '1 mensagem não lida',
+      sin_leer: '{n} mensagens não lidas',
+      escribirle: 'Escrever uma mensagem',
+      contacto_tapado: 'Os dados de contato ficam ocultos até que o contato desta pessoa seja liberado. O que não for reconhecido como dado de contato aparece do outro lado exatamente como foi escrito.',
+      contacto_tapado_ya_paso: 'Nesta conversa já houve algo oculto.',
+      tapado_en_este_mensaje: 'com dados de contato ocultos',
+      escribir: 'Escrever uma mensagem',
+      enviar: 'Enviar',
+      enviando: 'Enviando…',
+      sin_mensajes: 'Ainda não há mensagens nesta conversa.',
+      empezar_videollamada: 'Iniciar uma videochamada',
+      entrar_a_la_videollamada: 'Entrar na videochamada',
+      avisos: {
+        videollamada_empezo: 'Começou uma videochamada.',
+      },
     },
     marca: {
       con_tecnologia_de: 'com a tecnologia de {{producto}}',

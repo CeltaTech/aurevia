@@ -79,4 +79,18 @@ export const api = {
   // El perfil público de una persona de la vidriera. De acá no sale ningún dato de contacto:
   // llegar a la persona es lo que el Marketplace vende y tiene su propio circuito.
   asistenteDelMarketplace: (id) => pedido(`/marketplace/asistentes/${id}`),
+  // EL CHAT CON UN ASISTENTE DE LA VIDRIERA. El chat no se cobra: lo que se cobra es el dato de
+  // contacto, y por eso sale tapado de acá hasta que esa pareja lo abra. Quien tapa es el motor,
+  // una sola vez para las dos puntas.
+  conversacionesDelMarketplace: () => pedido('/marketplace/conversaciones'),
+  conversacionDelMarketplace: (id) => pedido(`/marketplace/conversaciones/${id}`),
+  // La conversación la abre siempre la Familia, desde el perfil público de la persona. Si ya
+  // existía, devuelve la misma: no hay dos hilos para la misma pareja.
+  abrirConversacionConAsistente: (asistenteId) =>
+    pedido(`/marketplace/asistentes/${asistenteId}/conversacion`, { method: 'POST' }),
+  escribirEnConversacion: (id, cuerpo) =>
+    pedido(`/marketplace/conversaciones/${id}/mensajes`, { method: 'POST', body: JSON.stringify({ cuerpo }) }),
+  // La videollamada de esta Prestadora. Donde no configuró ninguna, el motor contesta que no hay
+  // y la pantalla no ofrece el botón.
+  abrirVideollamada: (id) => pedido(`/marketplace/conversaciones/${id}/videollamada`, { method: 'POST' }),
 };

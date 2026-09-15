@@ -21,6 +21,9 @@ export const T = {
       // Pacientes cuyo reporte falta, y eso una búsqueda por motivo no lo hace. Vive en
       // guardia_activa.cerrar_faltan_reportes y la arma GuardiaActiva.jsx.
       motivos: {
+        // La videollamada pedida en una Prestadora que no configuró dónde se hacen las suyas. La
+        // pantalla no ofrece el botón; esto se lee si se llegó por otro camino.
+        videollamada_no_configurada: 'Esta Prestadora todavía no configuró las videollamadas, así que por ahora la conversación sigue por escrito.',
         falta_checkin: 'Esta guardia todavía no tiene el check-in marcado, así que no se puede cerrar.',
         falta_paciente: 'Falta saber de qué Paciente habla este Reporte Diario. Conviene volver a la guardia y entrar por el Paciente que corresponde.',
         // La misma frase que ve quien todavía no intentó cerrar: es la misma regla, contada
@@ -79,6 +82,9 @@ export const T = {
       pendiente_de_enviar: 'Guardado, pendiente de enviar',
     },
     nav: {
+      // El chat con la otra punta del Marketplace. Sólo aparece donde la Prestadora ofrece esa
+      // modalidad de trabajo.
+      mensajes: 'Mensajes',
       guardias: 'Mis Guardias',
       ofertas: 'Ofrecidas',
       perfil: 'Mi Perfil',
@@ -90,6 +96,34 @@ export const T = {
       // en voz alta, un "3" solo no dice nada. Esta frase es la que se escucha.
       ofertas_sin_contestar_una: '1 guardia ofrecida sin contestar',
       ofertas_sin_contestar: '{n} guardias ofrecidas sin contestar',
+    },
+    // EL CHAT CON LA OTRA PUNTA DEL MARKETPLACE. Lo dibuja `components/HiloDeMensajes.jsx`, que
+    // es el mismo archivo en las dos aplicaciones, así que estas claves tienen que existir en las
+    // dos y decir lo mismo.
+    chat: {
+      titulo: 'Mensajes',
+      sin_conversaciones: 'Todavía no hay ninguna conversación.',
+      // El número de mensajes sin leer se ve por dónde está; dicho en voz alta, un "3" solo no
+      // dice nada. Esta frase es la que se escucha.
+      sin_leer_uno: '1 mensaje sin leer',
+      sin_leer: '{n} mensajes sin leer',
+      // El aviso del tapado dice las dos cosas que hacen falta para no equivocarse: que el dato
+      // de contacto no pasa, y que lo que el producto no reconoce sí pasa. El producto avisa, no
+      // bloquea.
+      contacto_tapado: 'Los datos de contacto quedan tapados hasta que se abra el contacto de esta persona. Lo que no se reconozca como un dato de contacto se ve del otro lado tal como se escribió.',
+      contacto_tapado_ya_paso: 'En esta conversación ya se tapó algo.',
+      tapado_en_este_mensaje: 'con datos de contacto tapados',
+      escribir: 'Escribir un mensaje',
+      enviar: 'Enviar',
+      enviando: 'Enviando…',
+      sin_mensajes: 'Todavía no hay mensajes en esta conversación.',
+      empezar_videollamada: 'Empezar una videollamada',
+      entrar_a_la_videollamada: 'Entrar a la videollamada',
+      // Lo que escribe el producto adentro del hilo. No lo dijo ninguna persona, y por eso la
+      // frase sale de acá y no viaja como texto desde el motor.
+      avisos: {
+        videollamada_empezo: 'Empezó una videollamada.',
+      },
     },
     marca: {
       con_tecnologia_de: 'con la tecnología de {{producto}}',
@@ -457,6 +491,7 @@ export const T = {
       dato_invalido: 'Something was entered incorrectly. Please check what you typed.',
       falla_del_sistema: 'Something failed on our side. Please try again shortly.',
       motivos: {
+        videollamada_no_configurada: 'This provider has not set up video calls yet, so for now the conversation continues in writing.',
         falta_checkin: 'This shift has no check-in yet, so it cannot be closed.',
         falta_paciente: 'We still need to know which Patient this Daily Report is about. Go back to the shift and open the report from the right Patient.',
         continuidad: 'You cannot close this shift yet: leaving before your relief arrives is not allowed. If this is an emergency, tell the Coordinator so they can authorise it.',
@@ -496,6 +531,7 @@ export const T = {
       pendiente_de_enviar: 'Saved, pending to send',
     },
     nav: {
+      mensajes: 'Messages',
       guardias: 'My Shifts',
       ofertas: 'Offered',
       perfil: 'My Profile',
@@ -503,6 +539,24 @@ export const T = {
       menu_principal: 'Main menu',
       ofertas_sin_contestar_una: '1 offered shift with no reply yet',
       ofertas_sin_contestar: '{n} offered shifts with no reply yet',
+    },
+    chat: {
+      titulo: 'Messages',
+      sin_conversaciones: 'There are no conversations yet.',
+      sin_leer_uno: '1 unread message',
+      sin_leer: '{n} unread messages',
+      contacto_tapado: 'Contact details stay hidden until this person’s contact is unlocked. Anything not recognised as a contact detail is shown to the other side exactly as written.',
+      contacto_tapado_ya_paso: 'Something has already been hidden in this conversation.',
+      tapado_en_este_mensaje: 'contact details hidden',
+      escribir: 'Write a message',
+      enviar: 'Send',
+      enviando: 'Sending…',
+      sin_mensajes: 'There are no messages in this conversation yet.',
+      empezar_videollamada: 'Start a video call',
+      entrar_a_la_videollamada: 'Join the video call',
+      avisos: {
+        videollamada_empezo: 'A video call has started.',
+      },
     },
     marca: {
       con_tecnologia_de: 'powered by {{producto}}',
@@ -829,6 +883,7 @@ export const T = {
       dato_invalido: 'Há um dado carregado errado. É preciso revisar o que foi escrito.',
       falla_del_sistema: 'Algo falhou do nosso lado. É preciso tentar de novo daqui a pouco.',
       motivos: {
+        videollamada_no_configurada: 'Esta Prestadora ainda não configurou as videochamadas, então por enquanto a conversa segue por escrito.',
         falta_checkin: 'Este plantão ainda não tem o check-in marcado, então não é possível encerrá-lo.',
         falta_paciente: 'Falta saber de qual Paciente fala este Relatório Diário. Convém voltar ao plantão e entrar pelo Paciente que corresponde.',
         continuidad: 'Ainda não é possível encerrar este plantão: não é permitido sair sem que a substituição chegue. Se for uma urgência, é preciso avisar o Coordenador para que ele autorize.',
@@ -868,6 +923,7 @@ export const T = {
       pendiente_de_enviar: 'Salvo, pendente de envio',
     },
     nav: {
+      mensajes: 'Mensagens',
       guardias: 'Meus Plantões',
       ofertas: 'Oferecidos',
       perfil: 'Meu Perfil',
@@ -875,6 +931,24 @@ export const T = {
       menu_principal: 'Menu principal',
       ofertas_sin_contestar_una: '1 plantão oferecido sem resposta',
       ofertas_sin_contestar: '{n} plantões oferecidos sem resposta',
+    },
+    chat: {
+      titulo: 'Mensagens',
+      sin_conversaciones: 'Ainda não há nenhuma conversa.',
+      sin_leer_uno: '1 mensagem não lida',
+      sin_leer: '{n} mensagens não lidas',
+      contacto_tapado: 'Os dados de contato ficam ocultos até que o contato desta pessoa seja liberado. O que não for reconhecido como dado de contato aparece do outro lado exatamente como foi escrito.',
+      contacto_tapado_ya_paso: 'Nesta conversa já houve algo oculto.',
+      tapado_en_este_mensaje: 'com dados de contato ocultos',
+      escribir: 'Escrever uma mensagem',
+      enviar: 'Enviar',
+      enviando: 'Enviando…',
+      sin_mensajes: 'Ainda não há mensagens nesta conversa.',
+      empezar_videollamada: 'Iniciar uma videochamada',
+      entrar_a_la_videollamada: 'Entrar na videochamada',
+      avisos: {
+        videollamada_empezo: 'Começou uma videochamada.',
+      },
     },
     marca: {
       con_tecnologia_de: 'com a tecnologia de {{producto}}',

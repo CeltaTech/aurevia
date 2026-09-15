@@ -188,6 +188,21 @@ export const GRUPOS = [
     original: 'pwa-familias/src/components/CodigoDePresencia.jsx',
     copias: ['pwa-asistentes/src/components/CodigoDePresencia.jsx'],
   },
+  {
+    que: 'el hilo de mensajes del Marketplace',
+    original: 'pwa-familias/src/components/HiloDeMensajes.jsx',
+    copias: ['pwa-asistentes/src/components/HiloDeMensajes.jsx'],
+  },
+  {
+    que: 'la lista de conversaciones del Marketplace',
+    original: 'pwa-familias/src/pages/Mensajes.jsx',
+    copias: ['pwa-asistentes/src/pages/Mensajes.jsx'],
+  },
+  {
+    que: 'una conversación del Marketplace',
+    original: 'pwa-familias/src/pages/Conversacion.jsx',
+    copias: ['pwa-asistentes/src/pages/Conversacion.jsx'],
+  },
 ];
 
 // OJO CON ESTO, para no volver a averiguarlo:

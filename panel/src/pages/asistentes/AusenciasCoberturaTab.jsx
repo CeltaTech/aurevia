@@ -9,7 +9,9 @@ import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { generarConstanciaAusencia, descargarPDF } from '../../lib/generarDocumentoCese';
 import { ESTADO_ACTIVO } from '../../lib/candidatos';
+import { guardiasAfectadas } from '../../lib/guardiasAfectadas';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
+import { con } from '../../lib/textos';
 
 const TIPOS = ['enfermedad_inculpable', 'accidente_inculpable', 'otra_licencia', 'ausencia_no_justificada'];
 const API_URL = import.meta.env.VITE_API_URL;
@@ -65,10 +67,43 @@ export function AusenciasCoberturaTab({ asistente }) {
 
   useEffect(() => { recargar(); }, [asistente.id]);
 
+  // Qué guardias deja sin Asistente esta ausencia. Se pregunta al guardarla y queda escrito en la
+  // ausencia: lo que hay que cubrir son turnos, no un rango de fechas, y sin esta lista la
+  // cobertura quedaba colgada de la ausencia sin decir de qué día. Cuál cuenta lo decide
+  // `guardiasAfectadas`, y acá sólo se traen las de esta persona desde el primer día.
+  //
+  // Las guardias de la ausencia abierta se piden igual: sin fecha de fin la lista alcanza todo lo
+  // que ya esté armado hacia adelante, y se vuelve a calcular el día que se le cargue el cierre.
+  async function guardiasDeLaAusencia() {
+    const consulta = supabase
+      .from('guardias')
+      .select('id, fecha, estado')
+      .eq('asistente_id', asistente.id)
+      .gte('fecha', nueva.fecha_inicio);
+    const { data, error: errorGuardias } = nueva.fecha_fin
+      ? await consulta.lte('fecha', nueva.fecha_fin)
+      : await consulta;
+    if (errorGuardias) throw errorGuardias;
+    return guardiasAfectadas(data ?? [], nueva);
+  }
+
   async function registrarAusencia() {
     if (!nueva.fecha_inicio) return;
     setGuardando(true);
     setError(null);
+
+    let afectadas;
+    try {
+      afectadas = await guardiasDeLaAusencia();
+    } catch {
+      // Sin saber qué turnos quedan descubiertos la ausencia no se guarda. Guardarla igual la
+      // dejaría con la lista vacía, que se lee como «no afectó a ninguno» y no como «no se pudo
+      // averiguar»: nadie iría a buscar una cobertura que la pantalla dice que no hace falta.
+      setGuardando(false);
+      setError(t.comun.error_generico);
+      return;
+    }
+
     const { error: errorInsert } = await supabase.from('ausencias').insert({
       prestadora_id: prestadoraId,
       asistente_id: asistente.id,
@@ -76,6 +111,7 @@ export function AusenciasCoberturaTab({ asistente }) {
       fecha_inicio: nueva.fecha_inicio,
       fecha_fin: nueva.fecha_fin || null,
       observaciones: nueva.observaciones || null,
+      guardias_afectadas: afectadas,
     });
     setGuardando(false);
     if (errorInsert) {
@@ -151,6 +187,17 @@ export function AusenciasCoberturaTab({ asistente }) {
               {a.fecha_fin ? ` → ${new Date(a.fecha_fin).toLocaleDateString()}` : ` (${t.asistentes.ausencias.en_curso})`}
             </p>
             {a.observaciones && <p>{a.observaciones}</p>}
+
+            {/* Cuántos turnos dejó descubiertos. Las ausencias cargadas antes de que esto se
+                escribiera tienen la columna vacía, y ahí no se dice nada: cero y «no se sabe» no
+                son lo mismo, y escribir cero haría creer que no hay nada que cubrir. */}
+            {Array.isArray(a.guardias_afectadas) && (
+              <p>
+                {a.guardias_afectadas.length === 0
+                  ? t.asistentes.ausencias.sin_guardias_afectadas
+                  : con(t.asistentes.ausencias.guardias_afectadas, { n: a.guardias_afectadas.length })}
+              </p>
+            )}
 
             <Button variant="secondary" onClick={() => descargarConstancia(a)}>
               {t.asistentes.ausencias.descargar_constancia}

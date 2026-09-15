@@ -69,7 +69,7 @@ Existe el andamiaje —base, disparadores, cobros, consentimiento—, la Familia
 
 **17.** Vista mapa del plantel por zona, si va. No hay ninguna librería de mapas en el Panel.
 
-**18.** Las cinco observaciones de apariencia: el domicilio no abre el mapa del teléfono; la medicación sigue detrás de un botón; la aplicación de Familia abre en la lista de Pacientes; la lista de reportes no muestra ánimo, ni incidentes, ni signos; y las dos aplicaciones nunca pasaron por su etapa de diseño.
+**18. Usted** — Las dos observaciones de apariencia que quedan, porque las dos son decisiones de diseño: ¿con qué pantalla abre la aplicación de Familia cuando hay más de un Paciente — hoy abre en la lista, y con uno solo ya se saltea al detalle? ¿Y cuál es la identidad visual de las dos aplicaciones, que nunca pasaron por su etapa de diseño?
 
 **19. Usted** — Rotación y retención de Asistentes: ¿cuál es la fórmula y cuál el umbral?
 

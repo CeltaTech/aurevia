@@ -632,7 +632,7 @@ CREATE TABLE escalas_legales (
   tipo TEXT NOT NULL,       -- ver catálogo de tipos en PRD_02B_Gestion_Personal.md sección 4.2
   categoria TEXT,           -- ej: 'jornada_completa', '12_16hs_semana', nombre de una causal
   valor NUMERIC(14,4) NOT NULL,
-  unidad TEXT NOT NULL,     -- 'monto_fijo_mensual' | 'porcentaje' | 'dias' | 'meses' | 'horas' | 'monto_por_hora'
+  unidad TEXT NOT NULL,     -- 'monto_fijo_mensual' | 'porcentaje' | 'dias' | 'meses' | 'horas' | 'anios' | 'monto_por_hora'
   vigencia_desde DATE NOT NULL,
   vigencia_hasta DATE,      -- NULL = vigente
   fuente TEXT,              -- referencia normativa (ej: "CCT 743/16 paritaria jul-2026")
@@ -792,9 +792,56 @@ CREATE TABLE postulaciones (
   mensaje TEXT,
   estado VARCHAR(30) DEFAULT 'pendiente',
   canal VARCHAR(50) DEFAULT 'web',
-  creado_en TIMESTAMPTZ DEFAULT now()
+  creado_en TIMESTAMPTZ DEFAULT now(),
+  -- Agregadas después, con el formulario completo de PRD_03. Domicilio, lat y lng se llaman
+  -- igual que en `asistentes` porque una postulación aprobada se convierte en Asistente.
+  dni TEXT,
+  idioma TEXT,
+  prestadora_id UUID,
+  asistente_id UUID,
+  nota_interna TEXT,
+  fecha_nacimiento DATE,
+  domicilio TEXT,
+  lat DOUBLE PRECISION,
+  lng DOUBLE PRECISION,
+  localidad TEXT,
+  nacionalidad TEXT,
+  cuil TEXT,
+  genero TEXT,
+  foto_perfil_url TEXT,
+  tipo_registro_afip TEXT,
+  obra_social TEXT,
+  estudios JSONB NOT NULL DEFAULT '[]'::jsonb,
+  experiencia_laboral JSONB NOT NULL DEFAULT '[]'::jsonb,
+  referencias_laborales JSONB NOT NULL DEFAULT '[]'::jsonb,
+  experiencia_clinica TEXT[] NOT NULL DEFAULT '{}',
+  distancia_maxima_km NUMERIC(6,2),
+  disponible_urgencias BOOLEAN NOT NULL DEFAULT FALSE,
+  disponible_con_retiro BOOLEAN NOT NULL DEFAULT FALSE,
+  disponible_sin_retiro BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+-- Las listas de opciones del formulario de postulación, una fila por opción y por Prestadora:
+-- género, nacionalidad, tipo de registro ante AFIP y los cinco subgrupos de experiencia clínica.
+-- Una sola tabla y no ocho: son la misma cosa, una opción con su nombre y su orden.
+CREATE TABLE opciones_postulacion (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  prestadora_id UUID NOT NULL REFERENCES prestadoras(id) ON DELETE CASCADE,
+  grupo TEXT NOT NULL,      -- 'genero' | 'nacionalidad' | 'tipo_registro_afip' | 'experiencia_clinica_*'
+  clave TEXT NOT NULL,      -- lo que se guarda en la postulación
+  etiqueta TEXT NOT NULL,   -- lo que se lee en pantalla
+  orden SMALLINT NOT NULL DEFAULT 100,
+  activo BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (prestadora_id, grupo, clave)
 );
 ```
+
+`opciones_postulacion` nace vacía a propósito: qué géneros, qué nacionalidades y qué experiencia
+clínica ofrece su formulario lo carga cada Prestadora. El formulario público no consulta la base
+—se las pide al motor, que resuelve la Prestadora por el dominio del sitio—, así que la tabla no
+tiene política para quien no inició sesión.
 
 RLS activada desde la creación de ambas tablas (regla 8 de `CLAUDE.md`); el backend Express
 escribe con la Service Role Key (bypassea RLS por ser server-only), sin policies públicas de

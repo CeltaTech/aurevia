@@ -164,6 +164,38 @@ Grilla días (L-D) x franjas (Mañana 6-14 / Tarde 14-22 / Noche 22-6) — mapea
 `asistentes.disponibilidad` (JSONB) en `DATA_MODEL.md`. Más checkboxes: disponible para
 urgencias, disponible con retiro (por horas), disponible sin retiro (cama adentro).
 
+### Cómo quedó construido
+
+`postulaciones` guarda todos los campos de las seis secciones. Los que son lista de renglones
+—estudios y cursos, experiencia laboral, referencias— van como documento adentro de la
+postulación, porque se leen enteros con ella y nunca por separado. Domicilio, latitud y longitud
+se llaman igual que en `asistentes`: una postulación aprobada se convierte en Asistente y los dos
+nombres tienen que coincidir.
+
+**Las listas de opciones no están escritas en la pantalla.** Género, nacionalidad, tipo de
+registro ante AFIP y los cinco subgrupos de experiencia clínica viven en `opciones_postulacion`,
+una fila por opción y por Prestadora, y el motor las entrega en `GET
+/api/publico/:prestadora/postulacion-asistente/opciones`. Las opciones que este documento enumera
+más arriba son lo que se esperaba encontrar, no lo que el sistema impone: **cada Prestadora carga
+las suyas, y la tabla nace vacía.** El catálogo completo de experiencia clínica quedó en el
+documento fuente, que no está en el repositorio, así que no se sembró ninguno: inventarlo sería
+inventar contenido de negocio.
+
+**La mayoría de edad no son dieciocho escritos en el código.** La edad mínima para trabajar es un
+valor legal y vive en `escalas_legales` (`tipo = 'edad_minima_para_trabajar'`), resuelta a la
+fecha de la postulación y en la jurisdicción de la Prestadora. Si no hay escala vigente, **no se
+rechaza a nadie por edad**: la postulación entra con su fecha de nacimiento y quien la revisa
+decide.
+
+Lo que comprueba el servidor antes de guardar —edad, forma del CUIL y que corresponda al
+documento, que lo elegido esté en el catálogo, que las listas traigan renglones completos, que la
+distancia sea una distancia y que el punto del mapa viaje entero— está en
+`backend/src/utils/postulacionCompleta.js`, escrito una sola vez y probado aparte. Los motivos de
+rechazo salen como claves y ninguno nombra una tabla ni una columna.
+
+**Falta la pantalla.** Dónde vive el formulario público es una decisión abierta — ver
+`docs/PLAN_HASTA_PRODUCCION.md`, sección «Reclutamiento».
+
 ## Panel de administración — sección Postulantes
 
 Estadísticas en tiempo real: total postulantes, pendientes de revisión, en verificación,

@@ -91,6 +91,12 @@ export const api = {
   ofertas: () => pedido('/ofertas'),
   responderOferta: (id, respuesta, motivo) =>
     pedido(`/ofertas/${id}/responder`, { method: 'POST', body: JSON.stringify({ respuesta, motivo }) }),
+  // Las calificaciones que le pusieron, y el descargo que puede dejar ante cada una. El
+  // descargo se carga una sola vez y no se edita nunca: la base lo sostiene con la policy
+  // `asistente_carga_su_descargo`, que sólo deja escribir mientras el campo esté vacío.
+  calificaciones: () => pedido('/calificaciones'),
+  cargarDescargo: (id, descargo) =>
+    pedido(`/calificaciones/${id}/descargo`, { method: 'PATCH', body: JSON.stringify({ descargo }) }),
   suscribirPush: (suscripcion) => pedido('/push/suscribir', { method: 'POST', body: JSON.stringify(suscripcion) }),
   desuscribirPush: (endpoint) => pedido('/push/suscribir', { method: 'DELETE', body: JSON.stringify({ endpoint }) }),
 };

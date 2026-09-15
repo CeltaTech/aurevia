@@ -10,6 +10,7 @@ import OfertasDeGuardia from './pages/OfertasDeGuardia';
 import GuardiaActiva from './pages/GuardiaActiva';
 import ReporteDiario from './pages/ReporteDiario';
 import MiPerfil from './pages/MiPerfil';
+import MisCalificaciones from './pages/MisCalificaciones';
 
 function RutaPrivada({ children }) {
   const { session, cargando } = useAuth();
@@ -48,6 +49,10 @@ function Rutas() {
             personas y cada una tiene su propia hoja (tarea 93h). */}
         <Route path="guardias/:id/reporte/:pacienteId" element={<ReporteDiario />} />
         <Route path="perfil" element={<MiPerfil />} />
+        {/* Las calificaciones que le pusieron y el descargo que puede dejar ante cada una
+            (pendiente #85). Cuelga de Mi Perfil y no de la barra de abajo: la barra es para el
+            trabajo del día, y esto se mira cada tanto. */}
+        <Route path="calificaciones" element={<MisCalificaciones />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

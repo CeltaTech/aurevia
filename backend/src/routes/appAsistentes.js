@@ -1126,8 +1126,10 @@ appAsistentesRouter.get('/calificaciones', requiereRolAsistente, async (req, res
 
 appAsistentesRouter.patch('/calificaciones/:id/descargo', requiereRolAsistente, async (req, res) => {
   const { descargo } = req.body || {};
+  // El `motivo` es lo que después le permite a la pantalla decir qué pasó en el idioma de quien
+  // mira. Sin él, un 409 se lee como "ya existe un registro igual", que acá no significa nada.
   if (!descargo || !descargo.trim()) {
-    return res.status(400).json({ error: 'Falta el texto del descargo' });
+    return res.status(400).json({ error: 'Falta el texto del descargo', motivo: 'descargo_vacio' });
   }
 
   const { data: calificacion } = await supabase
@@ -1138,10 +1140,13 @@ appAsistentesRouter.patch('/calificaciones/:id/descargo', requiereRolAsistente, 
     .maybeSingle();
 
   if (!calificacion) {
-    return res.status(404).json({ error: 'Calificación no encontrada' });
+    return res.status(404).json({ error: 'Calificación no encontrada', motivo: 'calificacion_no_encontrada' });
   }
   if (calificacion.descargo_asistente) {
-    return res.status(409).json({ error: 'Ya hay un descargo cargado para esta calificación, no puede editarse' });
+    return res.status(409).json({
+      error: 'Ya hay un descargo cargado para esta calificación, no puede editarse',
+      motivo: 'descargo_ya_cargado',
+    });
   }
 
   // Acá se está guardando un texto que escribió una persona sobre una calificación que la
@@ -1156,7 +1161,10 @@ appAsistentesRouter.patch('/calificaciones/:id/descargo', requiereRolAsistente, 
     .select('id');
   if (error) return responderError(res, error);
   if (!guardada?.length) {
-    return res.status(404).json({ error: 'No se encontró esa calificación, el descargo no quedó guardado' });
+    return res.status(404).json({
+      error: 'No se encontró esa calificación, el descargo no quedó guardado',
+      motivo: 'calificacion_no_encontrada',
+    });
   }
 
   res.json({ ok: true });

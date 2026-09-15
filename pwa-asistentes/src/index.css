@@ -527,3 +527,22 @@ h2 {
   font-size: 0.8rem;
   margin-top: 0.5rem;
 }
+
+/* ---------- Mis calificaciones (pendiente #85) ---------- */
+
+/* El descargo va separado por una línea de lo que dijo la Familia. Son dos voces distintas
+   adentro de la misma tarjeta, y sin la línea se leen como una sola. Ningún color: teñir un
+   descargo lo convertiría en una defensa o en una queja, y es lo que la persona tiene para
+   decir, nada más. */
+.calificacion-descargo {
+  border-top: 1px solid var(--borde-card);
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+}
+
+.calificacion-descargo h3 {
+  font-family: var(--font-display);
+  color: var(--azul-oscuro);
+  font-size: 0.95rem;
+  margin-bottom: 0.4rem;
+}

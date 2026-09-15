@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { activarPush, desactivarPush, pushSoportado, suscripcionActual } from '../lib/push';
@@ -84,6 +85,12 @@ export default function MiPerfil() {
           <span className={`badge badge-${perfil.estado}`}>{traducirValor(t.perfil, `estado_${perfil.estado}`)}</span>
         </div>
       </div>
+
+      {/* Lo que dijeron de su trabajo, y lo que él tiene para contestar (pendiente #85). Va acá
+          y no en la barra de abajo porque no es trabajo del día: se mira cada tanto. */}
+      <p style={{ marginTop: '1rem' }}>
+        <Link to="/calificaciones">{t.perfil.ver_calificaciones}</Link>
+      </p>
 
       {/* La Matrícula va antes que las notificaciones porque es lo único de esta
           pantalla que puede dejarlo sin trabajo. Si le corresponde y está trabada,

@@ -60,6 +60,11 @@ export const T = {
         demasiados_intentos: 'Se probaron demasiados códigos seguidos. Soltar uno nuevo ya no devuelve intentos: hace falta entrar igual eligiendo un motivo.',
         demasiados_pedidos: 'Se hicieron demasiados pedidos en poco tiempo. Conviene esperar un minuto y volver a probar, o entrar igual eligiendo un motivo.',
         ya_comprobada: 'Esta llegada ya quedó comprobada.',
+        // Los del descargo ante una calificación. Se escribe una sola vez, así que el segundo
+        // intento no es un choque de datos: es que ya está dicho lo que había para decir.
+        descargo_vacio: 'El descargo está vacío. Hace falta escribir algo antes de dejarlo.',
+        descargo_ya_cargado: 'Esta calificación ya tiene su descargo escrito, y un descargo no se edita.',
+        calificacion_no_encontrada: 'Esa calificación ya no está.',
       },
     },
     comun: {
@@ -344,6 +349,34 @@ export const T = {
       notificaciones_no_soportadas: 'Este navegador no admite notificaciones push.',
       notificaciones_permiso_denegado: 'El permiso de notificaciones está denegado. Se habilita desde la configuración del navegador.',
       notificaciones_error: 'No se pudieron activar las notificaciones. Conviene volver a intentar.',
+      // El enlace a las calificaciones vive en Mi Perfil y no en la barra de abajo: la barra es
+      // para el trabajo del día —las guardias y las ofertas—, y esto se mira cada tanto.
+      ver_calificaciones: 'Ver mis calificaciones',
+    },
+    // Lo que las Familias dijeron de su trabajo, y lo que él tiene para decir al respecto. Una
+    // calificación no se puede borrar ni corregir, así que lo único que equilibra la balanza es
+    // que la persona calificada pueda dejar su versión al lado.
+    calificaciones: {
+      titulo: 'Mis calificaciones',
+      explicacion:
+        'Acá están las calificaciones que le pusieron. Ante cada una se puede dejar un descargo, que queda escrito al lado y se lee junto con ella.',
+      sin_calificaciones: 'Todavía no hay ninguna calificación.',
+      estrellas: '{n} de 5',
+      cuando: 'Del {fecha}',
+      sin_comentario: 'Sin comentario escrito.',
+      visible_publica: 'Esta calificación se ve en el perfil público.',
+      no_visible_publica: 'Esta calificación no se ve en el perfil público.',
+      descargo_titulo: 'Mi descargo',
+      descargo_en: 'Escrito el {fecha}',
+      abrir: 'Dejar mi descargo',
+      campo: 'Lo que quiera dejar dicho',
+      // Se avisa antes de escribir y se vuelve a avisar antes de guardar. No es una advertencia
+      // de más: es la única oportunidad que va a tener de decir lo suyo sobre esa calificación.
+      una_sola_vez: 'El descargo se escribe una sola vez y después no se puede cambiar.',
+      confirmar_aviso: 'Va a quedar guardado tal como está escrito, y no se va a poder corregir.',
+      confirmar: 'Sí, dejarlo así',
+      guardando: 'Guardando…',
+      guardado: 'El descargo quedó guardado.',
     },
     // Pendiente #102 — consentimiento para el registro de ubicación.
     consentimientos: {
@@ -437,6 +470,9 @@ export const T = {
         demasiados_intentos: 'Too many codes were tried in a row. Releasing a new one no longer restores attempts: it is still possible to go in by choosing a reason.',
         demasiados_pedidos: 'Too many requests were made in a short time. Please wait a minute and try again, or go in anyway by choosing a reason.',
         ya_comprobada: 'This arrival has already been verified.',
+        descargo_vacio: 'The reply is empty. Please write something before leaving it.',
+        descargo_ya_cargado: 'This rating already has its reply written, and a reply cannot be edited.',
+        calificacion_no_encontrada: 'That rating is no longer there.',
       },
     },
     comun: {
@@ -690,6 +726,27 @@ export const T = {
       notificaciones_no_soportadas: 'This browser does not support push notifications.',
       notificaciones_permiso_denegado: 'You denied notification permission. Enable it from your browser settings.',
       notificaciones_error: 'Could not enable notifications. Please try again.',
+      ver_calificaciones: 'See my ratings',
+    },
+    calificaciones: {
+      titulo: 'My ratings',
+      explicacion:
+        'These are the ratings you were given. You can leave a reply to each one, which is kept next to it and read together with it.',
+      sin_calificaciones: 'There are no ratings yet.',
+      estrellas: '{n} out of 5',
+      cuando: 'From {fecha}',
+      sin_comentario: 'No written comment.',
+      visible_publica: 'This rating is shown on the public profile.',
+      no_visible_publica: 'This rating is not shown on the public profile.',
+      descargo_titulo: 'My reply',
+      descargo_en: 'Written on {fecha}',
+      abrir: 'Leave my reply',
+      campo: 'What you want to put on record',
+      una_sola_vez: 'The reply is written once and cannot be changed afterwards.',
+      confirmar_aviso: 'It will be saved exactly as written, and it will not be possible to correct it.',
+      confirmar: 'Yes, leave it like this',
+      guardando: 'Saving…',
+      guardado: 'The reply has been saved.',
     },
     consentimientos: {
       titulo: 'Permissions that are yours to give',
@@ -778,6 +835,9 @@ export const T = {
         demasiados_intentos: 'Foram tentados códigos demais seguidos. Liberar um novo já não devolve tentativas: é preciso entrar mesmo assim escolhendo um motivo.',
         demasiados_pedidos: 'Foram feitos pedidos demais em pouco tempo. Convém esperar um minuto e tentar de novo, ou entrar mesmo assim escolhendo um motivo.',
         ya_comprobada: 'Esta chegada já foi verificada.',
+        descargo_vacio: 'A resposta está vazia. É preciso escrever algo antes de deixá-la.',
+        descargo_ya_cargado: 'Esta avaliação já tem a sua resposta escrita, e uma resposta não se edita.',
+        calificacion_no_encontrada: 'Essa avaliação não está mais lá.',
       },
     },
     comun: {
@@ -1031,6 +1091,27 @@ export const T = {
       notificaciones_no_soportadas: 'Este navegador não suporta notificações push.',
       notificaciones_permiso_denegado: 'A permissão de notificações está negada. Ela se habilita nas configurações do navegador.',
       notificaciones_error: 'Não foi possível ativar as notificações. É preciso tentar novamente.',
+      ver_calificaciones: 'Ver as minhas avaliações',
+    },
+    calificaciones: {
+      titulo: 'Minhas avaliações',
+      explicacion:
+        'Aqui estão as avaliações que lhe deram. Diante de cada uma é possível deixar uma resposta, que fica escrita ao lado e se lê junto com ela.',
+      sin_calificaciones: 'Ainda não há nenhuma avaliação.',
+      estrellas: '{n} de 5',
+      cuando: 'De {fecha}',
+      sin_comentario: 'Sem comentário escrito.',
+      visible_publica: 'Esta avaliação aparece no perfil público.',
+      no_visible_publica: 'Esta avaliação não aparece no perfil público.',
+      descargo_titulo: 'Minha resposta',
+      descargo_en: 'Escrita em {fecha}',
+      abrir: 'Deixar a minha resposta',
+      campo: 'O que quiser deixar dito',
+      una_sola_vez: 'A resposta é escrita uma só vez e depois não pode ser alterada.',
+      confirmar_aviso: 'Vai ficar guardada tal como está escrita, e não será possível corrigi-la.',
+      confirmar: 'Sim, deixar assim',
+      guardando: 'Salvando…',
+      guardado: 'A resposta foi salva.',
     },
     consentimientos: {
       titulo: 'Permissões que dependem de você',

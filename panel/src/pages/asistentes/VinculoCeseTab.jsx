@@ -18,8 +18,10 @@ import { AvisoEscalasProvisorias } from '../../components/AvisoEscalasProvisoria
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import {
-  generarLiquidacionFinal, generarTelegramaCese, generarNotificacionFinPeriodoPrueba, descargarPDF,
+  generarLiquidacionFinal, generarTelegramaCese, generarNotificacionFinPeriodoPrueba,
 } from '../../lib/generarDocumentoCese';
+import { bajarYGuardarDocumentoDeCese, verDocumentoGuardado } from '../../lib/documentosGuardados';
+import { TIPO_LIQUIDACION, TIPO_TELEGRAMA, TIPO_NOTIFICACION_PRUEBA } from '../../lib/documentosDeCese';
 
 const CAUSALES_CON_TELEGRAMA = new Set(['despido_con_justa_causa', 'despido_sin_causa', 'abandono_de_trabajo']);
 
@@ -58,6 +60,11 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
   const [revisadoAbogado, setRevisadoAbogado] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
+  // Cuál botón está trabajando, no si hay alguno trabajando: en la tabla hay un botón por cese y
+  // por documento, y apagarlos todos mientras se baja uno haría creer que falló algo. Guarda
+  // `<cese>-<tipo>`, que es lo que distingue a uno de otro.
+  const [trabajando, setTrabajando] = useState(null);
+  const [errorDocumento, setErrorDocumento] = useState(null);
 
   function cargarCeses() {
     setEstadoCeses('cargando');
@@ -134,24 +141,74 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
     onActualizado();
   }
 
-  function descargarLiquidacion(cese) {
-    const doc = generarLiquidacionFinal({ asistente, cese, causalLabel: t.asistentes.causales[cese.causal], nombreEmpresa: empresa?.nombre ?? '' });
-    descargarPDF(doc, `liquidacion-${asistente.nombre}-${cese.fecha_cese}.pdf`);
+  // Qué documento le corresponde a cada botón. El telegrama y la notificación de fin de período
+  // de prueba comparten botón porque son el mismo aviso para dos causales distintas, y nunca
+  // aparecen los dos: lo decide la causal del cese.
+  function documentoDelCese(cese, tipo) {
+    if (tipo === TIPO_LIQUIDACION) {
+      return generarLiquidacionFinal({ asistente, cese, causalLabel: t.asistentes.causales[cese.causal], nombreEmpresa: empresa?.nombre ?? '' });
+    }
+    if (tipo === TIPO_NOTIFICACION_PRUEBA) {
+      return generarNotificacionFinPeriodoPrueba({ asistente, cese, nombreEmpresa: empresa?.nombre ?? '' });
+    }
+    return generarTelegramaCese({ asistente, cese, causalLabel: t.asistentes.causales[cese.causal], nombreEmpresa: empresa?.nombre ?? '' });
   }
 
-  function descargarTelegramaONotificacion(cese) {
-    if (cese.causal === 'periodo_de_prueba') {
-      const doc = generarNotificacionFinPeriodoPrueba({ asistente, cese, nombreEmpresa: empresa?.nombre ?? '' });
-      descargarPDF(doc, `notificacion-fin-periodo-prueba-${asistente.nombre}-${cese.fecha_cese}.pdf`);
-      return;
+  // Bajar el documento es también guardarlo: lo que se le entregó a esa persona queda, en vez de
+  // vivir sólo en la carpeta de descargas de quien apretó el botón.
+  //
+  // Si la copia falla, se dice. El archivo ya está bajado —eso pasó antes y no depende de la
+  // red—, así que lo único que se perdió es la copia guardada, y taparlo dejaría creer que hay
+  // una constancia que no existe.
+  async function bajarDocumento(cese, tipo) {
+    setTrabajando(`${cese.id}-${tipo}`);
+    setErrorDocumento(null);
+    try {
+      await bajarYGuardarDocumentoDeCese(documentoDelCese(cese, tipo), {
+        ceseId: cese.id, tipo, persona: asistente.nombre, fecha: cese.fecha_cese,
+      });
+      cargarCeses();
+    } catch (err) {
+      setErrorDocumento(mensajeDeError(err, t));
+    } finally {
+      setTrabajando(null);
     }
-    const doc = generarTelegramaCese({ asistente, cese, causalLabel: t.asistentes.causales[cese.causal], nombreEmpresa: empresa?.nombre ?? '' });
-    descargarPDF(doc, `telegrama-cese-${asistente.nombre}-${cese.fecha_cese}.pdf`);
+  }
+
+  async function verGuardado(cese, tipo) {
+    setErrorDocumento(null);
+    try {
+      const url = await verDocumentoGuardado(cese.id, tipo);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      setErrorDocumento(mensajeDeError(err, t));
+    }
+  }
+
+  // El par de botones de un documento: bajarlo —que es también guardarlo— y, cuando ya quedó
+  // guardado, volver a verlo tal como se entregó. El segundo aparece recién cuando hay algo que
+  // ver, así que la tabla dice sola de qué ceses hay constancia y de cuáles no.
+  function BotonesDeDocumento({ cese, tipo, etiqueta }) {
+    const corriendo = trabajando === `${cese.id}-${tipo}`;
+    const guardado = Boolean(cese.documentos_generados?.[tipo]);
+    return (
+      <>
+        <Button variant="secondary" onClick={() => bajarDocumento(cese, tipo)} disabled={corriendo}>
+          {corriendo ? t.comun.guardando : etiqueta}
+        </Button>
+        {guardado && (
+          <Button variant="secondary" onClick={() => verGuardado(cese, tipo)} title={t.asistentes.cese.documento_guardado}>
+            {t.asistentes.cese.ver_documento_guardado}
+          </Button>
+        )}
+      </>
+    );
   }
 
   return (
     <div>
       <h2>{t.asistentes.tabs.historial_ceses}</h2>
+      {errorDocumento && <Alert variant="error">{errorDocumento}</Alert>}
       <EstadoLista estado={estadoCeses} error={errorCeses} vacio={estadoCeses === 'listo' && ceses.length === 0} recargar={cargarCeses}>
         <table className="panel-tabla">
           <thead>
@@ -177,11 +234,13 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
                   )}
                 </td>
                 <td>
-                  <Button variant="secondary" onClick={() => descargarLiquidacion(c)}>{t.asistentes.cese.descargar_liquidacion}</Button>
+                  <BotonesDeDocumento cese={c} tipo={TIPO_LIQUIDACION} etiqueta={t.asistentes.cese.descargar_liquidacion} />
                   {(CAUSALES_CON_TELEGRAMA.has(c.causal) || c.causal === 'periodo_de_prueba') && (
-                    <Button variant="secondary" onClick={() => descargarTelegramaONotificacion(c)}>
-                      {c.causal === 'periodo_de_prueba' ? t.asistentes.cese.descargar_notificacion_prueba : t.asistentes.cese.descargar_telegrama}
-                    </Button>
+                    c.causal === 'periodo_de_prueba' ? (
+                      <BotonesDeDocumento cese={c} tipo={TIPO_NOTIFICACION_PRUEBA} etiqueta={t.asistentes.cese.descargar_notificacion_prueba} />
+                    ) : (
+                      <BotonesDeDocumento cese={c} tipo={TIPO_TELEGRAMA} etiqueta={t.asistentes.cese.descargar_telegrama} />
+                    )
                   )}
                 </td>
               </tr>

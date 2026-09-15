@@ -89,6 +89,11 @@ export const GRUPOS = [
     copias: ['backend/src/utils/ausenciaQueTapa.js'],
   },
   {
+    que: 'cómo se llama y dónde se guarda cada documento generado del legajo',
+    original: 'panel/src/lib/documentosDeCese.js',
+    copias: ['backend/src/utils/documentosDeCese.js'],
+  },
+  {
     que: 'cuándo una guardia quedó sin cerrar',
     original: 'panel/src/lib/guardiaSinCerrar.js',
     copias: ['pwa-asistentes/src/lib/guardiaSinCerrar.js'],

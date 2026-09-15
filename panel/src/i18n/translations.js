@@ -92,6 +92,11 @@ export const T = {
         titulo_de_contenido_repetido: 'Ya hay otra pieza de contenido con ese título. Conviene ponerle uno que se distinga.',
         enlace_invalido: 'El enlace tiene que ser una dirección web que empiece con https://, o quedar vacío.',
         orden_invalido: 'El orden tiene que ser un número entero.',
+        // Los documentos del cese que quedan guardados. Ninguna frase nombra el depósito ni la
+        // columna donde se anotan: quien la lee sólo necesita saber qué pasó con su documento.
+        documento_invalido: 'Ese documento no se pudo guardar. Conviene volver a generarlo y probar de nuevo.',
+        cese_no_encontrado: 'No se encontró ese cese. Conviene recargar la lista.',
+        documento_no_generado: 'Ese documento todavía no se generó, así que no hay ninguna copia guardada.',
       },
     },
     comun: {
@@ -1121,6 +1126,8 @@ export const T = {
         descargar_liquidacion: 'Descargar liquidación',
         descargar_telegrama: 'Descargar telegrama',
         descargar_notificacion_prueba: 'Descargar notificación',
+        ver_documento_guardado: 'Ver el guardado',
+        documento_guardado: 'Queda una copia guardada de este documento.',
       },
       causales: {
         renuncia: 'Renuncia',
@@ -2332,6 +2339,9 @@ export const T = {
         titulo_de_contenido_repetido: 'Another piece of content already has that title. It is worth choosing a different one.',
         enlace_invalido: 'The link must be a web address starting with https://, or be left empty.',
         orden_invalido: 'The order must be a whole number.',
+        documento_invalido: 'That document could not be saved. Please generate it again and retry.',
+        cese_no_encontrado: 'That termination was not found. Please reload the list.',
+        documento_no_generado: 'That document has not been generated yet, so there is no saved copy.',
       },
     },
     comun: {
@@ -3345,6 +3355,8 @@ export const T = {
         descargar_liquidacion: 'Download settlement',
         descargar_telegrama: 'Download notice',
         descargar_notificacion_prueba: 'Download notification',
+        ver_documento_guardado: 'View the saved copy',
+        documento_guardado: 'A saved copy of this document is kept.',
       },
       causales: {
         renuncia: 'Resignation',
@@ -4542,6 +4554,9 @@ export const T = {
         titulo_de_contenido_repetido: 'Já existe outro conteúdo com esse título. Convém escolher um que se distinga.',
         enlace_invalido: 'O link precisa ser um endereço web que comece com https://, ou ficar vazio.',
         orden_invalido: 'A ordem precisa ser um número inteiro.',
+        documento_invalido: 'Esse documento não pôde ser guardado. Convém gerá-lo novamente e tentar de novo.',
+        cese_no_encontrado: 'Esse desligamento não foi encontrado. Convém recarregar a lista.',
+        documento_no_generado: 'Esse documento ainda não foi gerado, então não há nenhuma cópia guardada.',
       },
     },
     comun: {
@@ -5555,6 +5570,8 @@ export const T = {
         descargar_liquidacion: 'Baixar liquidação',
         descargar_telegrama: 'Baixar telegrama',
         descargar_notificacion_prueba: 'Baixar notificação',
+        ver_documento_guardado: 'Ver a cópia guardada',
+        documento_guardado: 'Fica uma cópia guardada deste documento.',
       },
       causales: {
         renuncia: 'Demissão voluntária',

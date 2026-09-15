@@ -112,14 +112,20 @@ export const IDENTIDAD = {
   // variables de entorno (CLAUDE.md §6).
   remitenteEmail: '',
 
-  // Casilla de contacto de la marca. Hoy la usa el "subject" VAPID de las
-  // notificaciones push (backend/src/utils/push.js): la dirección a la que el
-  // servicio de push del navegador escribe si hay un problema con los envíos.
-  // ATENCIÓN: careonys.com sí está registrado, pero todavía no tiene correo
-  // configurado — esta casilla no recibe nada por ahora. Es igual mejor que lo
-  // que había antes (soporte@aurevia.app, sobre un dominio que ni siquiera
-  // estaba registrado). Queda pendiente darle de alta el correo de verdad.
-  emailSoporte: 'soporte@careonys.com',
+  // Dirección técnica a la que escribe quien opera la infraestructura, no una
+  // casilla de atención al público. Hoy la usa el "subject" VAPID de las
+  // notificaciones push (backend/src/utils/push.js): es adonde el servicio de
+  // push del navegador avisa si hay un problema con los envíos, y ninguna
+  // Familia ni ningún Asistente la ve nunca.
+  //
+  // Va sobre celtatech.com y no sobre el dominio del producto, por una razón
+  // práctica: es la única de las dos que recibe. celtatech.com tiene el reenvío
+  // activo (celtatech/docs/CUENTAS.md, «Correo»); careonys.com está registrado
+  // y todavía no tiene correo, así que una dirección suya no llega a nadie, y
+  // un aviso que no llega es peor que no tener aviso, porque parece que existe.
+  // El día que careonys.com tenga casilla, esto se decide de nuevo mirando quién
+  // tiene que leer el aviso: hoy es quien opera, y quien opera es la empresa.
+  emailSoporte: 'soporte@celtatech.com',
 
   // Colores del manifiesto de las PWA y del sistema de diseño.
   colorPrimario: '#1a2744',

@@ -4,6 +4,7 @@ import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcan
 import { supabase } from '../db/connection.js';
 import { marcarAusenteYCrearIncidente } from '../utils/marcarAusente.js';
 import { avisarCambioDeAsistente } from '../utils/avisoCambioDeAsistente.js';
+import { sugerirMotivoDelAviso } from '../utils/motivoSugeridoDelAviso.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
 export const panelGuardiasRouter = Router();
@@ -92,4 +93,38 @@ panelGuardiasRouter.post('/aviso-cambio-asistente', requiereRolPanel, exigirOrga
   });
 
   res.json({ ok: true });
+});
+
+/* La tercera excepción: quien atiende el teléfono cuenta lo que le dijeron y el motor sugiere
+   cuál de los motivos de la Prestadora es. El aviso lo sigue guardando el Panel contra la base,
+   con el pase de la persona, igual que antes — acá no se escribe nada.
+
+   POR QUÉ PASA POR EL MOTOR. La clave de la API del modelo vive en el servidor y no puede salir
+   al navegador (`celtatech/CLAUDE.md` §6). Es toda la razón: no hay ninguna decisión acá que el
+   Panel no pudiera tomar.
+
+   LA LISTA LA TRAE EL MOTOR, NO EL PEDIDO. El navegador manda lo que se contó y nada más. Los
+   motivos se leen de la base acotados a la Organización activa de quien llama: mandados en el
+   pedido, cualquiera podría hacer que la sugerencia salga de una lista que no es la suya, y una
+   sugerencia de un motivo ajeno es una filtración de cómo trabaja otra Prestadora.
+
+   LO QUE SE CONTÓ NO SE GUARDA. Entra, se usa para preguntar y se va con la respuesta. Lo que
+   queda escrito es el motivo que elija la persona, como venía siendo. */
+panelGuardiasRouter.post('/motivo-del-aviso', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
+  const texto = typeof req.body?.texto === 'string' ? req.body.texto.trim() : '';
+  if (!texto) return res.status(400).json({ error: 'No se indicó lo que se avisó' });
+
+  let query = supabase.from('motivos_aviso_previo_guardia').select('nombre, activo');
+  query = acotarAPrestadora(query, req.usuarioPanel);
+  const { data: motivos, error } = await query;
+
+  if (error) return responderError(res, error);
+
+  const { motivo } = await sugerirMotivoDelAviso({
+    texto,
+    motivos: motivos ?? [],
+    prestadoraId: req.usuarioPanel.prestadoraId,
+  });
+
+  res.json({ motivo });
 });

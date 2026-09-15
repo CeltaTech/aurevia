@@ -26,6 +26,14 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
   const [cancelacionOrigen, setCancelacionOrigen] = useState('');
   const [cancelacionAlcance, setCancelacionAlcance] = useState('');
   const [avisoPrevioMotivo, setAvisoPrevioMotivo] = useState('');
+  const [avisoPrevioTexto, setAvisoPrevioTexto] = useState('');
+  const [sugiriendoMotivo, setSugiriendoMotivo] = useState(false);
+  // Qué contestó la sugerencia la última vez: '' mientras no se pidió ninguna, 'sugerido' cuando
+  // el motivo de abajo lo puso el motor, 'sin_sugerencia' cuando ninguno de los motivos de la
+  // Prestadora correspondía. El aviso de que fue una sugerencia tiene que quedar a la vista
+  // mientras la persona mira el desplegable: si desapareciera al aplicarla, el motivo elegido por
+  // el motor se vería igual que uno elegido a mano.
+  const [sugerencia, setSugerencia] = useState('');
   const [nuevoAsistenteId, setNuevoAsistenteId] = useState('');
   const [nuevaFecha, setNuevaFecha] = useState(guardia.fecha);
   const [procesando, setProcesando] = useState(false);
@@ -127,6 +135,40 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
     await onActualizada();
     setProcesando(false);
     onClose();
+  }
+
+  /* Lo que contó quien llamó, leído por el motor, para que el desplegable venga preelegido.
+     Quien atiende el teléfono sostiene la conversación y elige un motivo al mismo tiempo, y lo
+     que se elige mal ahí no se nota nunca más: la Prestadora termina contando mal sus ausencias.
+
+     Es una sugerencia y nada más. Se aplica sobre el mismo desplegable de siempre, que se puede
+     cambiar con un clic, y si el motor no encuentra ninguno que corresponda, el desplegable queda
+     como estaba. La pantalla sin IA es exactamente la que era antes.
+
+     LO QUE SE CONTÓ NO SE GUARDA. Este texto sube al motor para esta pregunta y no se manda en el
+     alta: lo que se escribe en `alertas_tempranas_guardia` es el motivo elegido, como siempre.
+     Puede traer el diagnóstico de quien llama o el de un familiar suyo, que es dato de salud de
+     una persona que no es Paciente de nadie (`celtatech/CLAUDE.md` §6). */
+  async function handleSugerirMotivo() {
+    setError(null);
+    setSugerencia('');
+    setSugiriendoMotivo(true);
+    try {
+      const { motivo } = await llamarApiPanel('/guardias/motivo-del-aviso', {
+        method: 'POST',
+        body: JSON.stringify({ texto: avisoPrevioTexto }),
+      });
+      if (motivo) {
+        setAvisoPrevioMotivo(motivo);
+        setSugerencia('sugerido');
+      } else {
+        setSugerencia('sin_sugerencia');
+      }
+    } catch (e) {
+      setError(mensajeDeError(e, t));
+    } finally {
+      setSugiriendoMotivo(false);
+    }
   }
 
   async function handleRegistrarAvisoPrevio() {
@@ -328,11 +370,33 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
           <div className="panel-resultado-calculo">
             <h3>{t.guardias.detalle.aviso_previo_titulo}</h3>
             <FormField
+              label={t.guardias.detalle.aviso_previo_texto}
+              name="aviso_previo_texto"
+              type="textarea"
+              rows={3}
+              ayuda={t.guardias.detalle.aviso_previo_texto_ayuda}
+              value={avisoPrevioTexto}
+              onChange={(e) => setAvisoPrevioTexto(e.target.value)}
+            />
+            <Button
+              variant="secondary"
+              onClick={handleSugerirMotivo}
+              disabled={procesando || sugiriendoMotivo || !avisoPrevioTexto.trim()}
+            >
+              {sugiriendoMotivo ? t.guardias.detalle.sugiriendo_motivo : t.guardias.detalle.sugerir_motivo}
+            </Button>
+            {sugerencia === 'sugerido' && (
+              <p className="panel-explicacion">{t.guardias.detalle.motivo_sugerido}</p>
+            )}
+            {sugerencia === 'sin_sugerencia' && (
+              <p className="panel-explicacion">{t.guardias.detalle.motivo_sin_sugerencia}</p>
+            )}
+            <FormField
               label={t.guardias.detalle.aviso_previo_motivo}
               name="aviso_previo_motivo"
               type="select"
               value={avisoPrevioMotivo}
-              onChange={(e) => setAvisoPrevioMotivo(e.target.value)}
+              onChange={(e) => { setAvisoPrevioMotivo(e.target.value); setSugerencia(''); }}
             >
               <option value="">{t.guardias.nueva_guardia.elegir}</option>
               {motivosAvisoPrevio.filter((m) => m.activo).map((m) => (

@@ -27,6 +27,37 @@ function ListaDeTareas({ titulo, tareas, vacio }) {
   );
 }
 
+// El estado documental del Asistente, tal como se le puede contar a la Familia.
+//
+// Dos cosas que este bloque no hace, y las dos son deliberadas. No nombra ningún papel: el
+// nombre de un tipo de documento puede ser dato de salud, y la Familia contrató un servicio,
+// no la ficha médica de quien lo presta. Y no afirma nada que el producto no haya comprobado:
+// la última línea dice con todas las letras qué no se verifica —identidad, antecedentes,
+// autenticidad—, que es la parte que en este tema termina en juicio cuando falta.
+function Documentacion({ documentacion, t }) {
+  if (!documentacion) return null;
+  const { resumen, matricula, alDia, papelesExigidos } = documentacion;
+  const hayExigencias = resumen !== 'sin_exigencias';
+  return (
+    <>
+      <h2 style={{ marginTop: '1.5rem' }}>{t.asistente.documentacion_titulo}</h2>
+      <p>{t.asistente[`documentacion_${resumen}`]}</p>
+      {hayExigencias && (
+        <p className="guardia-card-detalle">
+          {t.asistente.documentacion_cuenta
+            .replace('{alDia}', alDia)
+            .replace('{total}', papelesExigidos)}
+        </p>
+      )}
+      {matricula !== 'no_corresponde' && (
+        <p>{t.asistente[`documentacion_matricula_${matricula}`]}</p>
+      )}
+      {hayExigencias && <p className="guardia-card-detalle">{t.asistente.documentacion_sin_nombres}</p>}
+      <p className="guardia-card-detalle">{t.asistente.documentacion_que_no_se_verifica}</p>
+    </>
+  );
+}
+
 export default function AsistenteAsignado() {
   const { id } = useParams();
   const { t } = useLocale();
@@ -80,7 +111,7 @@ export default function AsistenteAsignado() {
   if (datos === null) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
   if (!datos.asistente) return <div className="estado-vacio" role="status">{t.comun.vacio}</div>;
 
-  const { asistente, tipo, tareas, certificado, evaluaciones, guardiaId } = datos;
+  const { asistente, tipo, tareas, certificado, documentacion, evaluaciones, guardiaId } = datos;
 
   return (
     <div>
@@ -97,6 +128,8 @@ export default function AsistenteAsignado() {
       <p className="guardia-card-detalle">
         {certificado ? t.asistente.certificado_vigente : t.asistente.certificado_vencido}
       </p>
+
+      <Documentacion documentacion={documentacion} t={t} />
 
       {tipo && (
         <>

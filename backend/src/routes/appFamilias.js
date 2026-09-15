@@ -17,6 +17,7 @@ import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { llegadaEstimadaDeGuardia } from '../utils/estimarLlegadaDeGuardia.js';
 import { darDeBajaElAcceso } from '../utils/bajaDelAcceso.js';
+import { estadoDocumentalParaLaFamilia } from '../utils/estadoDocumentalParaLaFamilia.js';
 
 export const appFamiliasRouter = Router();
 
@@ -523,6 +524,10 @@ appFamiliasRouter.get('/pacientes/:id/alertas', requiereRolFamilia, exigeVisible
 // Además devuelve el tipo del Asistente con sus dos listas de tareas: qué le
 // corresponde hacer y qué no. Es el motivo por el que existe el catálogo de
 // tipos: que la Familia lo lea antes y no lo discuta en la puerta.
+//
+// Y el estado documental agregado, que arma `utils/estadoDocumentalParaLaFamilia.js`: cuántos
+// papeles exige esta Prestadora y cuántos están al día, más cómo está la Matrícula. Cuentas y
+// nada más: de acá no sale el nombre de ningún tipo de documento ni el número de una Matrícula.
 // ============================================================================
 
 appFamiliasRouter.get('/pacientes/:id/asistente', requiereRolFamilia, async (req, res) => {
@@ -542,7 +547,7 @@ appFamiliasRouter.get('/pacientes/:id/asistente', requiereRolFamilia, async (req
     .maybeSingle();
 
   if (!guardia?.asistente_id) {
-    return res.json({ asistente: null, certificado: null, evaluaciones: [], guardiaId: null });
+    return res.json({ asistente: null, certificado: null, documentacion: null, evaluaciones: [], guardiaId: null });
   }
 
   const { data: asistente } = await supabase
@@ -567,6 +572,41 @@ appFamiliasRouter.get('/pacientes/:id/asistente', requiereRolFamilia, async (req
     .limit(1)
     .maybeSingle();
 
+  // El estado documental, agregado. La Familia ve cuánto se cumplió de lo que la Prestadora
+  // exige, y nunca qué papel es cuál: el nombre de un tipo de documento puede ser dato de
+  // salud. Las cuatro consultas van juntas porque ninguna depende de la anterior.
+  const [{ data: tiposExigidos }, { data: documentos }, { data: matricula }, { data: prestadora }] =
+    await Promise.all([
+      supabase
+        .from('tipos_documento_asistente')
+        .select('id, requiere_vencimiento')
+        .eq('prestadora_id', paciente.prestadora_id)
+        .eq('activo', true),
+      supabase
+        .from('documentos_asistente')
+        .select('tipo_documento_id, fecha_vencimiento')
+        .eq('prestadora_id', paciente.prestadora_id)
+        .eq('asistente_id', guardia.asistente_id),
+      supabase
+        .from('estado_matricula_asistente')
+        .select('requiere_matricula, matricula_id, vigente_hasta, verificada_at')
+        .eq('asistente_id', guardia.asistente_id)
+        .eq('prestadora_id', paciente.prestadora_id)
+        .maybeSingle(),
+      supabase
+        .from('prestadoras')
+        .select('dias_aviso_vencimiento_documentos')
+        .eq('id', paciente.prestadora_id)
+        .maybeSingle(),
+    ]);
+
+  const documentacion = estadoDocumentalParaLaFamilia({
+    tiposExigidos: tiposExigidos || [],
+    documentos: documentos || [],
+    matricula: matricula || null,
+    diasAviso: prestadora?.dias_aviso_vencimiento_documentos ?? undefined,
+  });
+
   // Las calificaciones anteriores solo se piden si esta Prestadora deja calificar. Donde la
   // función está apagada, mostrar las estrellas que alguien puso antes sería seguir puntuando
   // a un trabajador por la ventana.
@@ -586,6 +626,7 @@ appFamiliasRouter.get('/pacientes/:id/asistente', requiereRolFamilia, async (req
     tipo,
     tareas,
     certificado: certificado || null,
+    documentacion,
     evaluaciones,
     guardiaId: guardia.id,
   });

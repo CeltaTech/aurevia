@@ -435,6 +435,8 @@ decisión de producto sobre esto todavía.
 - Sueldos, honorarios, montos de `ceses`.
 - Causales de cese.
 - Certificados médicos, antecedentes penales.
+- Fotos de identidad del Asistente (la del documento y la de la cara), en el depósito
+  `fotos-identidad`.
 - Datos de salud del paciente (`patologias`, `medicacion_habitual`, contenido de `reportes`).
 - Texto libre de reportes y salida de los prompts de IA (ver `AI_PROMPTS.md`).
 
@@ -455,10 +457,32 @@ proveedores regionales (Money Suite menciona Truora/Veriff/Idfy como referencia 
 para verificación de antecedentes + validación facial en LATAM) — decisión pendiente de
 negocio y de presupuesto, no bloquea el desarrollo de las etapas 1-2.
 
+## Verificación de identidad (etapa del Proceso de Incorporación de Asistentes)
+
+Las dos fotos con las que se verifica la identidad —la del documento y la de la cara— viven en el
+depósito `fotos-identidad`, creado por
+`supabase/migrations/20260915210000_las_dos_fotos_de_la_verificacion_de_identidad_tienen_donde_vivir.sql`.
+
+- **Es privado y no tiene ninguna política, a propósito.** Nadie lo alcanza con su propio pase.
+  Lo escribe y lo lee el motor con la llave de servicio, después de comprobar de qué Prestadora es
+  el Asistente (`backend/src/routes/panelVerificacionIdentidad.js`). Con RLS encendida y ninguna
+  política, la base niega sola: falla cerrado. Es la misma forma de `certificados-medicos`,
+  `autorizaciones-monitoreo` y `documentos-cese`.
+- **La ruta empieza por la Prestadora** y se arma siempre con los mismos tres datos —Prestadora,
+  Asistente y cuál de las dos fotos es—, nunca con algo que venga en el pedido. Va sin extensión:
+  el formato viaja en el tipo de contenido.
+- **Las fotos se sirven con dirección firmada que vence al minuto**, nunca con dirección pública.
+- **Comparar las dos caras no lo hace el producto.** Hoy las mira una persona y marca la etapa.
+  Compararlas automáticamente es tratamiento de dato biométrico, y no se construye hasta que estén
+  las dos decisiones de más abajo.
+
 ## Decisiones de seguridad pendientes (no bloquean desarrollo, hay que saberlas)
 
 - Proveedor de reconocimiento facial para la etapa de verificación de identidad del Proceso
   de Incorporación de Asistentes: no elegido.
+- Documento legal del que salga el aviso al Asistente por el tratamiento de su dato biométrico:
+  no existe. Sin ese documento no hay aviso —`celtatech/CLAUDE.md` §7 dice que no se improvisa—,
+  y sin aviso no se compara ninguna cara.
 - Si se automatiza la consulta de antecedentes penales: proveedor no elegido.
 - Cómo la Prestadora le cobra a la Familia el cuidado prestado **en prestación directa**: no hay
   decisión de negocio, y por lo tanto tampoco de seguridad de datos de pago. En la modalidad

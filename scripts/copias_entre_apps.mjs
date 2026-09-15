@@ -99,6 +99,11 @@ export const GRUPOS = [
     copias: ['backend/src/utils/documentosDeCese.js'],
   },
   {
+    que: 'qué fotos verifican la identidad de un Asistente y dónde se guardan',
+    original: 'panel/src/lib/fotosDeIdentidad.js',
+    copias: ['backend/src/utils/fotosDeIdentidad.js'],
+  },
+  {
     que: 'cuándo una guardia quedó sin cerrar',
     original: 'panel/src/lib/guardiaSinCerrar.js',
     copias: ['pwa-asistentes/src/lib/guardiaSinCerrar.js'],

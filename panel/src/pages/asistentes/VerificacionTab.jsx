@@ -3,11 +3,11 @@ import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEtapasIncorporacion } from '../../hooks/useEtapasIncorporacion';
 import { supabase } from '../../lib/supabaseClient';
-import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
+import { FotosDeIdentidad } from './FotosDeIdentidad';
 
 const ESTADOS = ['pendiente', 'aprobada', 'rechazada'];
 
@@ -71,6 +71,11 @@ export function VerificacionTab({ asistente }) {
       <p className="panel-explicacion">{t.asistentes.verificacion.explicacion}</p>
       {(error || errorEtapas) && <Alert variant="error">{error || errorEtapas}</Alert>}
       {todasAprobadas && <Alert variant="info">{t.asistentes.verificacion.proceso_completo}</Alert>}
+
+      {/* Antes de las etapas, y afuera de su lista: las dos fotos son de la persona y no de una
+          etapa, porque las claves de las etapas las inventa cada Prestadora y ninguna se puede
+          nombrar desde acá. Carga sus propios datos, así que trae sus propios cuatro estados. */}
+      <FotosDeIdentidad asistente={asistente} />
 
       <EstadoLista estado={estadoCombinado} error={error || errorEtapas} vacio={estadoCombinado === 'listo' && verificaciones.length === 0} recargar={recargar}>
         {etapas.map((etapaFila) => {

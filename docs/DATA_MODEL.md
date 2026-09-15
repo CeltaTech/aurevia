@@ -400,11 +400,28 @@ CREATE INDEX idx_verif_asistente ON verificaciones_asistente (asistente_id);
 CREATE INDEX idx_verif_etapa ON verificaciones_asistente (etapa);
 ```
 
+## Depósito: fotos-identidad
+
+Las dos fotos con las que se verifica la identidad de un Asistente: la del documento y la de la
+cara. Creado por
+`supabase/migrations/20260915210000_las_dos_fotos_de_la_verificacion_de_identidad_tienen_donde_vivir.sql`.
+
+- Privado y sin ninguna política: lo escribe y lo lee el motor con la llave de servicio, después
+  de comprobar de qué Prestadora es el Asistente. Mismo patrón que `documentos-cese`.
+- La ruta es `<prestadora_id>/<asistente_id>/<documento|perfil>`, sin extensión, y se vuelve a
+  armar con esos tres datos cada vez que hay que buscar una foto.
+- **No hay ninguna columna que diga si una foto está cargada.** Como la ruta se deduce, el archivo
+  es la única verdad posible; una columna podría decir que sí cuando el archivo ya no está.
+- Qué tipos hay y cómo se arma la ruta está en `panel/src/lib/fotosDeIdentidad.js`, que es el
+  original de la copia que usa el motor.
+
 ## Tabla: validaciones_faciales
 
-Solo si se implementa reconocimiento facial en la etapa "verificación de identidad" (hoy
-descrita como "DNI + reconocimiento facial con IA" en el sitio público — no hay proveedor
-elegido todavía, ver `SECURITY.md` sección de decisiones pendientes).
+**No está construida, y no se construye todavía.** Guardar las dos fotos y mostrarlas juntas ya
+está hecho (depósito `fotos-identidad`, acá arriba): hoy las compara una persona. Esta tabla haría
+falta el día que las compare el producto, que es tratamiento de dato biométrico y necesita dos
+cosas que no existen: el documento legal del que salga el aviso al Asistente, y un proveedor
+elegido (ver `SECURITY.md`, decisiones pendientes).
 
 ```sql
 CREATE TABLE validaciones_faciales (

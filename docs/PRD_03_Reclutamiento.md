@@ -57,6 +57,24 @@ Estas 5 etapas post-postulación son exactamente `etapa_filtro` en `verificacion
 (`DATA_MODEL.md`) — mismos nombres, no inventar variantes: `postulacion`,
 `verificacion_identidad`, `antecedentes_penales`, `entrevista`, `capacitacion`.
 
+### Verificación de identidad — cómo quedó construido
+
+Las dos fotos se cargan y se ven juntas desde la ficha del Asistente, en la pestaña de
+verificación (`panel/src/pages/asistentes/FotosDeIdentidad.jsx`). Quedan guardadas en el depósito
+`fotos-identidad` (`DATA_MODEL.md`), que sube y firma el motor
+(`backend/src/routes/panelVerificacionIdentidad.js`).
+
+**El bloque de las fotos está afuera de la lista de etapas**, y no es un olvido: cada Prestadora
+define las etapas de su proceso y les pone las claves que quiera (Configuración > El cuidado), así
+que no hay ninguna clave que el código pueda buscar. Las dos fotos son de la persona, no de una
+etapa.
+
+**Las compara una persona, no el producto.** Quien revisa las mira una al lado de la otra y marca
+la etapa como venía haciéndolo; lo que cambió es que ahora queda guardado lo que miró. La
+comparación automática de las dos caras —la columna «comparación por IA» del cuadro— es
+tratamiento de dato biométrico y **no está construida**: falta el documento legal del que salga el
+aviso al Asistente, y falta elegir proveedor (`SECURITY.md`, decisiones pendientes).
+
 **UI del progreso del aspirante:** mostrar estas 5 etapas como checklist con % de
 completitud (ej. "3 de 5 etapas completas — 60%"), no solo como un estado de texto plano —
 le da al aspirante una noción clara de cuánto falta, igual que un onboarding progresivo.

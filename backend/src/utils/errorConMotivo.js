@@ -95,6 +95,13 @@ const ESTADO_POR_MOTIVO = {
   whatsapp_sin_cuenta: 409,
   plantilla_ya_enviada: 409,
   meta_no_acepto: 409,
+  // La IA escribiendo el texto de una plantilla. Los dos primeros son 409 —el pedido está bien
+  // armado y choca con el estado de las cosas—; el tercero es 503, que es lo que la web dice
+  // cuando algo no está disponible en este momento y conviene volver a intentar, que es
+  // exactamente lo que pasa cuando el modelo contesta algo que no se puede leer.
+  ia_no_configurada: 409,
+  plantilla_sin_rechazo: 409,
+  ia_sin_propuesta: 503,
 };
 
 // Lo que una ruta contesta cuando algo falló. Se escribe una sola vez para que ninguna ruta

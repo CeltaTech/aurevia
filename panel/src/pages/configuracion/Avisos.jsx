@@ -870,6 +870,8 @@ function TabWhatsappPlantillas() {
   const [creandoNueva, setCreandoNueva] = useState(false);
   const [actualizandoId, setActualizandoId] = useState(null);
   const [consultando, setConsultando] = useState(false);
+  const [corrigiendo, setCorrigiendo] = useState(null);
+  const [aplicando, setAplicando] = useState(false);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -915,6 +917,38 @@ function TabWhatsappPlantillas() {
       setError(mensajeDeError(err, t));
     } finally {
       setConsultando(false);
+    }
+  }
+
+  // La IA lee lo que Meta objetó y propone otro texto. Acá no se guarda nada: la propuesta se
+  // muestra, y quien coordina decide si la usa.
+  async function corregirConIA(fila) {
+    setActualizandoId(fila.id);
+    setError(null);
+    try {
+      const { propuesta } = await llamarApi(`/whatsapp/plantillas/${fila.id}/corregir`, { method: 'POST' });
+      setCorrigiendo({ plantilla: fila, propuesta });
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setActualizandoId(null);
+    }
+  }
+
+  async function aplicarCorreccion() {
+    setAplicando(true);
+    setError(null);
+    try {
+      await llamarApi(`/whatsapp/plantillas/${corrigiendo.plantilla.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ cuerpo_texto: corrigiendo.propuesta.cuerpo }),
+      });
+      setCorrigiendo(null);
+      recargar();
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setAplicando(false);
     }
   }
 
@@ -981,6 +1015,11 @@ function TabWhatsappPlantillas() {
                       {t.configuracion.whatsapp_plantillas_enviar_meta}
                     </button>
                   )}
+                  {p.motivo_rechazo && (
+                    <button onClick={() => corregirConIA(p)} disabled={actualizandoId === p.id}>
+                      {t.configuracion.whatsapp_plantillas_corregir_ia}
+                    </button>
+                  )}
                   <button onClick={() => borrar(p)} disabled={actualizandoId === p.id}>{t.comun.borrar}</button>
                 </td>
               </tr>
@@ -992,6 +1031,70 @@ function TabWhatsappPlantillas() {
       {creandoNueva && (
         <NuevaPlantillaWhatsapp onClose={() => setCreandoNueva(false)} onCreada={() => { setCreandoNueva(false); recargar(); }} />
       )}
+
+      {corrigiendo && (
+        <CorreccionDeLaIA
+          plantilla={corrigiendo.plantilla}
+          propuesta={corrigiendo.propuesta}
+          aplicando={aplicando}
+          onAplicar={aplicarCorreccion}
+          onClose={() => setCorrigiendo(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* Lo que la IA dice además del texto: qué se completa en cada hueco, y una línea con lo que
+   conviene mirar antes de mandarlo a Meta. Sin los huecos a la vista, el texto llega con
+   `{{1}}` y `{{2}}` y nadie sabe qué va adentro de cada uno. */
+function QueDijoLaIA({ propuesta }) {
+  const { t } = useLocale();
+  if (!propuesta) return null;
+
+  return (
+    <div className="panel-explicacion">
+      {propuesta.nota && <p>{propuesta.nota}</p>}
+      {propuesta.huecos?.length > 0 && (
+        <ul>
+          {propuesta.huecos.map((hueco, i) => (
+            <li key={i}>{con(t.configuracion.whatsapp_plantillas_hueco, { numero: i + 1, que: hueco })}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/* La corrección de una plantilla que Meta rechazó. Se muestra el texto propuesto y no se guarda
+   solo: quien coordina lo lee y decide. El botón de usarlo aparece únicamente mientras la
+   plantilla es un borrador, que es lo único que el motor deja editar — el texto de una plantilla
+   que ya salió no se cambia de este lado sin que Meta se entere. */
+function CorreccionDeLaIA({ plantilla, propuesta, aplicando, onAplicar, onClose }) {
+  const modal = useModalAccesible(onClose);
+  const { t } = useLocale();
+
+  return (
+    <div className="panel-modal-fondo" onClick={onClose}>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.configuracion.whatsapp_plantillas_correccion_titulo}</h2>
+        <p className="panel-explicacion">
+          {t.configuracion.whatsapp_plantillas_motivo_rechazo}: {plantilla.motivo_rechazo}
+        </p>
+        <p>{propuesta.cuerpo}</p>
+        <QueDijoLaIA propuesta={propuesta} />
+        {plantilla.estado !== 'borrador' && (
+          <Alert variant="info">{t.configuracion.whatsapp_plantillas_correccion_no_se_aplica}</Alert>
+        )}
+        <div className="panel-modal-acciones">
+          <Button variant="secondary" onClick={onClose} disabled={aplicando}>{t.comun.cerrar}</Button>
+          {plantilla.estado === 'borrador' && (
+            <Button onClick={onAplicar} disabled={aplicando}>
+              {aplicando ? t.comun.guardando : t.configuracion.whatsapp_plantillas_correccion_usar}
+            </Button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1004,6 +1107,26 @@ function NuevaPlantillaWhatsapp({ onClose, onCreada }) {
   const [cuerpoTexto, setCuerpoTexto] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
+  const [proposito, setProposito] = useState('');
+  const [redactando, setRedactando] = useState(false);
+  const [propuesta, setPropuesta] = useState(null);
+
+  async function redactarConIA() {
+    setRedactando(true);
+    setError(null);
+    try {
+      const { propuesta: escrita } = await llamarApi('/whatsapp/plantillas/redactar', {
+        method: 'POST',
+        body: JSON.stringify({ proposito, categoria }),
+      });
+      setCuerpoTexto(escrita.cuerpo);
+      setPropuesta(escrita);
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setRedactando(false);
+    }
+  }
 
   async function handleGuardar() {
     setGuardando(true);
@@ -1032,7 +1155,22 @@ function NuevaPlantillaWhatsapp({ onClose, onCreada }) {
             <option key={c} value={c}>{traducirValor(t.configuracion, `whatsapp_plantillas_categoria_${c}`)}</option>
           ))}
         </FormField>
+        {/* La IA escribe el texto a partir de para qué es el mensaje. Lo que devuelve entra en el
+            cuadro de abajo, que se sigue pudiendo editar: la plantilla sale hacia Meta cuando la
+            aprueba quien coordina, nunca sola. */}
+        <FormField
+          label={t.configuracion.whatsapp_plantillas_proposito}
+          name="proposito"
+          type="textarea"
+          value={proposito}
+          onChange={(e) => setProposito(e.target.value)}
+          placeholder={t.configuracion.whatsapp_plantillas_proposito_ejemplo}
+        />
+        <Button variant="secondary" onClick={redactarConIA} disabled={redactando || !proposito.trim()}>
+          {redactando ? t.configuracion.whatsapp_plantillas_redactando : t.configuracion.whatsapp_plantillas_redactar_ia}
+        </Button>
         <FormField label={t.configuracion.whatsapp_plantillas_col_cuerpo} name="cuerpo_texto" type="textarea" value={cuerpoTexto} onChange={(e) => setCuerpoTexto(e.target.value)} required />
+        <QueDijoLaIA propuesta={propuesta} />
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>
           <Button onClick={handleGuardar} disabled={guardando || !nombreInterno || !cuerpoTexto}>

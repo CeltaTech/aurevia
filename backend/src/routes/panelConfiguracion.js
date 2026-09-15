@@ -10,6 +10,8 @@ import { cosaDelCatalogo, mezclarVisibilidadConCatalogo } from '../utils/catalog
 import { LIMITES_ALERTAS_IA, VALORES_POR_DEFECTO_ALERTAS_IA } from '../utils/revisarAlertasIA.js';
 import { validarUmbralesPremura } from '../utils/umbralesPremura.js';
 import { darDeAltaEnMeta, traerEstadosDeMeta } from '../utils/plantillasWhatsapp.js';
+import { redactarPlantillaWhatsapp, corregirPlantillaWhatsapp } from '../utils/iaPlantillasWhatsapp.js';
+import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import { LIMITES_AVISO_PREVIO_GUARDIA } from '../utils/revisarRecordatoriosPush.js';
 import { METROS_TOLERANCIA_POR_OMISION, MINUTOS_TOLERANCIA_POR_OMISION } from '../utils/toleranciaCheckin.js';
 import {
@@ -661,6 +663,52 @@ panelConfiguracionRouter.patch('/whatsapp/plantillas/:id', async (req, res) => {
   // texto de una plantilla que ya se mandó no se cambia de este lado sin que Meta se entere.
   if (!data?.length) return responderError(res, new ErrorConMotivo('no_encontrado', 'Plantilla inexistente, de otra Prestadora o ya enviada'));
   res.json({ ok: true });
+});
+
+// La IA escribe el texto, y quien coordina decide. Las dos rutas que siguen no guardan nada ni le
+// mandan nada a Meta: devuelven una propuesta, que se ve en la pantalla antes de usarla. Guardarla
+// sola sería escribir en nombre de la Prestadora un texto que nadie leyó
+// (`docs/PRD_06_WhatsApp_IA.md:49`).
+panelConfiguracionRouter.post('/whatsapp/plantillas/redactar', async (req, res) => {
+  const { proposito, categoria } = req.body ?? {};
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+  try {
+    // El idioma no se le pregunta a la pantalla: es el de la Prestadora, resuelto donde ya se
+    // resuelve para todos los avisos.
+    const propuesta = await redactarPlantillaWhatsapp({
+      proposito,
+      categoria,
+      idioma: await idiomaDeLaPrestadora(prestadoraId),
+      prestadoraId,
+    });
+    res.json({ propuesta });
+  } catch (err) {
+    responderError(res, err);
+  }
+});
+
+// Corregir la que Meta rechazó, leyendo lo que Meta objetó. Lo que hoy queda escrito en la fila es
+// la sigla con la que Meta nombra su objeción, en inglés; acá se convierte en otro texto.
+panelConfiguracionRouter.post('/whatsapp/plantillas/:id/corregir', async (req, res) => {
+  let query = supabase
+    .from('plantillas_whatsapp')
+    .select('id, categoria, idioma, cuerpo_texto, motivo_rechazo')
+    .eq('id', req.params.id);
+  query = acotarAPrestadora(query, req.usuarioPanel);
+  const { data: filas, error } = await query;
+  if (error) return responderError(res, error);
+  const plantilla = filas?.[0];
+  if (!plantilla) return responderError(res, new ErrorConMotivo('no_encontrado', 'Plantilla inexistente o de otra Prestadora'));
+
+  try {
+    const propuesta = await corregirPlantillaWhatsapp({
+      plantilla,
+      prestadoraId: req.usuarioPanel.prestadoraId,
+    });
+    res.json({ propuesta });
+  } catch (err) {
+    responderError(res, err);
+  }
 });
 
 // Dar de alta la plantilla en Meta. Hasta que esto existió, el botón del Panel cambiaba el estado

@@ -45,6 +45,18 @@ export function hayMedioDeEnvio() {
   return Boolean(process.env.SMTP_USER);
 }
 
+// ¿Esto tiene forma de dirección de correo? Vive acá, que es el archivo del correo, porque la
+// pregunta va a aparecer en más de un lugar —el alta de una Prestadora, la pantalla que pide la
+// casilla de respuestas— y la respuesta tiene que ser la misma en todos.
+//
+// Comprueba la forma y nada más: que una dirección exista, que reciba y que sea de quien dice
+// ser no se sabe hasta mandarle algo. Por eso no intenta ser exhaustiva — una expresión que
+// quiera abarcar todo lo que la norma permite termina rechazando direcciones válidas.
+export function esDireccionDeCorreo(texto) {
+  if (typeof texto !== 'string') return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@.]+$/.test(texto.trim());
+}
+
 // El despachante recibe el remitente como un solo texto. nodemailer lo acepta partido en nombre
 // y dirección, que es como lo arma `remitenteVisible`; acá se juntan, y el nombre va entre
 // comillas para que una coma en el nombre de fantasía no parta la dirección en dos.

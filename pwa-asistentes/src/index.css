@@ -429,6 +429,17 @@ h2 {
   margin-bottom: 0.75rem;
 }
 
+/* El micrófono, mientras está escuchando. Se marca con el color de alerta —el mismo que ya usa
+   todo lo que está pasando en este momento— y no con una animación: el botón queda a la vista
+   sin llamar la atención por encima de lo que la persona está contando. Que esté escuchando se
+   dice además con todas las letras adentro del botón, porque un cambio de color solo no lo ve
+   quien distingue mal los colores. */
+.btn.dictado-escuchando {
+  border-color: var(--naranja-alerta);
+  background: color-mix(in oklch, var(--naranja-alerta) 12%, transparent);
+  color: var(--naranja-alerta-texto);
+}
+
 /* El rótulo de un campo del reporte. Los que nombran a un grupo entero —los cinco signos
    vitales, las cinco caras del estado de ánimo— no son rótulos de un control, así que ahí
    se dibuja `.campo-titulo` en vez de un `label`, que sin control al que apuntar no nombra

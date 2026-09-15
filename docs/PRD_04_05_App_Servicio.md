@@ -108,6 +108,34 @@ dos las deduce un programa, y ésta la apretó una persona que está adentro de 
 4. **Confirmar y enviar** — persiste el reporte, hace el check-out (lat/lng/timestamp),
    notifica push a la Familia, guardia pasa a `completada`.
 
+### El micrófono — cómo quedó construido
+
+**Lo dicta el propio teléfono.** Se usa el reconocimiento de voz que ya trae el navegador, que en
+Android y en iPhone es el mismo que usa el teclado. **El audio no viaja hasta ningún servidor del
+producto, no se graba ningún archivo y no hace falta ninguna credencial nueva.** Lo que se dice
+adentro de la casa de una persona no sale de ahí, y no hubo que elegir proveedor de transcripción
+ni sumarle un costo por minuto a la Prestadora.
+
+**Donde el navegador no lo tiene, el botón no se dibuja.** No aparece apagado ni con una
+explicación: la caja de texto sigue estando y quien quiera dictar tiene el micrófono de su propio
+teclado. Nada de lo que se podía hacer deja de poderse.
+
+**Lo dictado cae en la misma caja donde se escribe a mano**, no en una ventana aparte con su
+propia confirmación. El dictado es otra forma de escribir: lo que el teléfono entendió mal se
+corrige ahí mismo antes de mandarlo, y lo que ya venía escrito no se pisa —el texto nuevo se suma
+al final.
+
+**Está en las tres cajas largas**: el relato libre y, en la revisión, incidentes y observaciones.
+Las dos últimas importan sobre todo cuando la Prestadora no usa la ayuda para redactar, porque
+entonces son las únicas donde hay algo que contar.
+
+**Sigue escuchando entre frase y frase**, y muestra aparte lo que va oyendo antes de darlo por
+firme. Quien cuenta cómo pasó el día hace pausas; cortar en la primera obligaría a apretar el
+botón diez veces. Lo provisorio se muestra y no se guarda.
+
+**Y se apaga solo al salir de la pantalla.** Un teléfono escuchando adentro de la casa de otra
+persona no queda encendido porque se tocó «volver».
+
 ### Mi Perfil
 Foto, datos personales, especialidades y zonas, estado de monotributo y seguro (con fecha de
 vencimiento), Certificado de Aptitud (ver QR, compartir), historial de evaluaciones recibidas.

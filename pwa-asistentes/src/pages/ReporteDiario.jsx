@@ -11,6 +11,7 @@ import { useSeVe } from '../context/PerfilContext';
 // escribe siempre con la presión separada en sistólica y diastólica.
 import { SIGNOS_VITALES, colorSigno } from '../lib/signosVitales';
 import { ESTADOS_ANIMO, caraDelAnimo } from '../lib/animoDelReporte';
+import BotonDeDictado from '../components/BotonDeDictado';
 
 function esErrorDeRed(error) {
   return error instanceof TypeError;
@@ -35,7 +36,7 @@ function signosIniciales(signosIA) {
 
 export default function ReporteDiario() {
   const { id, pacienteId } = useParams();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const navigate = useNavigate();
   const seVe = useSeVe();
 
@@ -47,7 +48,8 @@ export default function ReporteDiario() {
   const [textoLibre, setTextoLibre] = useState('');
   const [estructurando, setEstructurando] = useState(false);
   const [estructurado, setEstructurado] = useState(null);
-  const [foto, setFoto] = useState(null);
+  // Del archivo elegido se guarda sólo la ruta que devuelve el motor: el archivo en sí no se
+  // vuelve a mirar, y tenerlo en memoria en un teléfono no aporta nada.
   const [fotoUrl, setFotoUrl] = useState(null);
   const [confirmando, setConfirmando] = useState(false);
   const [error, setError] = useState('');
@@ -147,7 +149,6 @@ export default function ReporteDiario() {
   async function alSubirFoto(evento) {
     const archivo = evento.target.files?.[0];
     if (!archivo) return;
-    setFoto(archivo);
     try {
       const { fotoUrl: ruta } = await api.subirFotoReporte(id, archivo);
       setFotoUrl(ruta);
@@ -224,6 +225,16 @@ export default function ReporteDiario() {
               onChange={(e) => setTextoLibre(e.target.value)}
               placeholder={t.reporte.texto_libre_placeholder}
               rows={6}
+            />
+            {/* Contar el día hablando es la forma natural de contarlo, y es la única que se puede
+                hacer con una mano ocupada. Lo dictado cae en esta misma caja y se corrige acá. */}
+            <BotonDeDictado
+              t={t}
+              locale={locale}
+              valor={textoLibre}
+              alCambiar={setTextoLibre}
+              campo={t.reporte.texto_libre_label}
+              disabled={estructurando}
             />
           </div>
           <button className="btn btn-primary btn-full" onClick={alEstructurar} disabled={estructurando || !textoLibre.trim() || !enLinea}>
@@ -325,6 +336,14 @@ export default function ReporteDiario() {
               onChange={(e) => actualizarCampo('incidentes', e.target.value)}
               rows={2}
             />
+            <BotonDeDictado
+              t={t}
+              locale={locale}
+              valor={estructurado.incidentes || ''}
+              alCambiar={(texto) => actualizarCampo('incidentes', texto)}
+              campo={t.reporte.campo_incidentes}
+              disabled={confirmando}
+            />
           </div>
 
           <div className="reporte-preview-campo">
@@ -334,6 +353,16 @@ export default function ReporteDiario() {
               value={estructurado.observaciones || ''}
               onChange={(e) => actualizarCampo('observaciones', e.target.value)}
               rows={3}
+            />
+            {/* Las dos cajas largas de la revisión también se dictan: cuando la Prestadora no usa
+                la ayuda para redactar, éstas son las únicas donde hay algo que contar. */}
+            <BotonDeDictado
+              t={t}
+              locale={locale}
+              valor={estructurado.observaciones || ''}
+              alCambiar={(texto) => actualizarCampo('observaciones', texto)}
+              campo={t.reporte.campo_observaciones}
+              disabled={confirmando}
             />
           </div>
 

@@ -340,6 +340,17 @@ export const T = {
       desde: 'Desde',
       hasta: 'Hasta',
     },
+    /* El micrófono que acompaña a una caja de texto. Lo escucha el propio teléfono: no se graba
+       ningún archivo y el audio no viaja hasta el servidor del producto. */
+    dictado: {
+      dictar: 'Dictar',
+      escuchando: 'Escuchando — tocar para parar',
+      hable_ahora: 'Hable ahora. Lo que diga se va escribiendo abajo.',
+      error_sin_permiso: 'El teléfono no dio permiso para usar el micrófono. Se habilita desde los permisos de esta aplicación.',
+      error_sin_voz: 'No se escuchó nada. Pruebe hablando más cerca del teléfono.',
+      error_sin_conexion: 'El dictado necesita internet. Sin señal, el texto se escribe a mano.',
+      error_falla: 'El dictado no pudo arrancar en este teléfono. El texto se puede escribir a mano.',
+    },
     reporte: {
       titulo: 'Reporte Diario',
       titulo_de: 'Reporte Diario de {nombre}',
@@ -760,6 +771,15 @@ export const T = {
       desde: 'From',
       hasta: 'Until',
     },
+    dictado: {
+      dictar: 'Dictate',
+      escuchando: 'Listening — tap to stop',
+      hable_ahora: 'Please speak now. What you say is written below.',
+      error_sin_permiso: 'The phone did not allow microphone access. It can be enabled in this app’s permissions.',
+      error_sin_voz: 'Nothing was heard. Please try speaking closer to the phone.',
+      error_sin_conexion: 'Dictation needs an internet connection. Without one, the text can be typed.',
+      error_falla: 'Dictation could not start on this phone. The text can be typed instead.',
+    },
     reporte: {
       titulo: 'Daily Report',
       titulo_de: "{nombre}'s Daily Report",
@@ -1165,6 +1185,15 @@ export const T = {
       sin_ordenes: 'Não há ordens de medicação vigentes para este Paciente dentro do que este Assistente está habilitado a administrar.',
       desde: 'Desde',
       hasta: 'Até',
+    },
+    dictado: {
+      dictar: 'Ditar',
+      escuchando: 'Escutando — tocar para parar',
+      hable_ahora: 'Fale agora. O que disser é escrito abaixo.',
+      error_sin_permiso: 'O telefone não deu permissão para usar o microfone. Habilita-se nas permissões deste aplicativo.',
+      error_sin_voz: 'Não se escutou nada. Experimente falar mais perto do telefone.',
+      error_sin_conexion: 'O ditado precisa de internet. Sem sinal, o texto se escreve à mão.',
+      error_falla: 'O ditado não pôde começar neste telefone. O texto pode ser escrito à mão.',
     },
     reporte: {
       titulo: 'Relatório Diário',

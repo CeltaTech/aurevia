@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
+import { useModalidades } from '../../context/ModalidadesContext';
 import { esAdminOSuperior } from '../../lib/roles';
+import { MODALIDAD } from '../../lib/modalidades';
 import { pestanasDe } from '../../lib/pestanasDelAsistente';
 import { supabase } from '../../lib/supabaseClient';
 import { PerfilTab } from './PerfilTab';
@@ -13,6 +15,7 @@ import { VinculoCeseTab } from './VinculoCeseTab';
 import { SimuladorVinculoTab } from './SimuladorVinculoTab';
 import { ScoreRiesgoTab } from './ScoreRiesgoTab';
 import { GuardiasTab } from './GuardiasTab';
+import { EvaluacionesTab } from './EvaluacionesTab';
 import { AusenciasCoberturaTab } from './AusenciasCoberturaTab';
 import { ComunicacionTab } from './ComunicacionTab';
 import { mensajeDeError } from '../../lib/errores';
@@ -23,12 +26,14 @@ export function AsistenteDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { usuario } = useAuth();
+  const { tieneModalidad } = useModalidades();
   const [asistente, setAsistente] = useState(null);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [tab, setTab] = useState('perfil');
 
   const esAdmin = esAdminOSuperior(usuario?.rol);
+  const marketplace = tieneModalidad(MODALIDAD.MARKETPLACE);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -64,7 +69,7 @@ export function AsistenteDetalle() {
       <h1>{asistente.nombre}</h1>
 
       <div className="panel-tabs">
-        {pestanasDe(esAdmin).map((tabId) => (
+        {pestanasDe({ esAdmin, marketplace }).map((tabId) => (
           <button
             key={tabId}
             className={`panel-tab ${tab === tabId ? 'panel-tab-activo' : ''}`}
@@ -84,6 +89,7 @@ export function AsistenteDetalle() {
         {tab === 'simulador' && esAdmin && <SimuladorVinculoTab asistente={asistente} />}
         {tab === 'score_riesgo' && esAdmin && <ScoreRiesgoTab asistente={asistente} onActualizado={recargar} />}
         {tab === 'guardias' && <GuardiasTab asistente={asistente} />}
+        {tab === 'evaluaciones' && marketplace && <EvaluacionesTab asistente={asistente} />}
         {tab === 'ausencias' && <AusenciasCoberturaTab asistente={asistente} />}
         {tab === 'comunicacion' && <ComunicacionTab asistente={asistente} />}
       </div>

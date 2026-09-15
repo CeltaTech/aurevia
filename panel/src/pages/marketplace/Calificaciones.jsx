@@ -3,9 +3,9 @@ import { useLocale } from '../../i18n/LocaleContext';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
+import { Estrellas } from '../../components/ui/Estrellas';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
-import { con } from '../../lib/textos';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -87,12 +87,8 @@ export function MarketplaceCalificaciones() {
             {calificaciones.map((c) => (
               <tr key={c.id}>
                 <td>{c.asistente_nombre || '—'}</td>
-                {/* Las estrellas dibujadas no se leen: un lector de pantalla las nombraría una
-                    por una, o directamente las saltearía. Al lado va el mismo dato escrito,
-                    que no se ve pero sí se escucha. */}
                 <td>
-                  <span aria-hidden="true">{'★'.repeat(c.estrellas)}{'☆'.repeat(Math.max(0, 5 - c.estrellas))}</span>
-                  <span className="solo-lectores-pantalla">{con(t.comun.puntaje_estrellas, { n: c.estrellas })}</span>
+                  <Estrellas cantidad={c.estrellas} />
                 </td>
                 <td>{c.comentario || '—'}</td>
                 <td>{c.descargo_asistente || t.marketplace.sin_descargo}</td>

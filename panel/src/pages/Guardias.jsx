@@ -13,18 +13,14 @@ import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../li
 import { reasignarGuardia } from '../lib/reasignarGuardia';
 import { moverGuardia } from '../lib/moverGuardia';
 import { mensajeDeError } from '../lib/errores';
+// Las dos vienen del punto único de verdad de las fechas. Esta pantalla tenía su propia copia de
+// `hoyISO`, escrita con `toISOString()` a secas, que devuelve el día en huso cero: quien mira
+// desde Buenos Aires después de las nueve de la noche abría la lista en el día siguiente, y las
+// guardias que estaba buscando ya no estaban. La de `lib/horarios.js` corre el huso antes de
+// cortar, y es la que usa todo el resto del Panel.
+import { hoyISO, sumarDias } from '../lib/horarios';
 
 const ESTADOS = ['programada', 'activa', 'completada', 'cancelada', 'ausente', 'pausada'];
-
-function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function sumarDias(fechaISO, dias) {
-  const f = new Date(`${fechaISO}T00:00:00`);
-  f.setDate(f.getDate() + dias);
-  return f.toISOString().slice(0, 10);
-}
 
 export function Guardias() {
   const { t } = useLocale();

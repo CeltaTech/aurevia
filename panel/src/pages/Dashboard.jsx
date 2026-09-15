@@ -10,6 +10,8 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { supabase } from '../lib/supabaseClient';
 import { fechaLimiteDeAviso } from '../lib/reglaVencimientos';
 import { diasDeAvisoDeLaPrestadora } from '../lib/plazoDeAviso';
+import { ESTADO_EN_CURSO } from '../lib/guardiaSinCerrar';
+import { hoyISO } from '../lib/horarios';
 
 // Los nombres de las modalidades salen de un solo lado: los mismos textos que usa la
 // solapa donde se activan y se desactivan, en Configuración → La Prestadora (Regla 12).
@@ -57,10 +59,42 @@ export function Dashboard() {
   // Coordinador consulta la vista sin vínculo laboral/score de riesgo — ver schema_etapa2i.sql.
   const asistentes = useSupabaseTable(esAdmin ? 'asistentes' : 'asistentes_coordinador', { orderBy: 'created_at' });
   const familias = useSupabaseTable('familias', { orderBy: 'created_at' });
+  const [guardiasEnCurso, setGuardiasEnCurso] = useState(null);
+  const [errorGuardias, setErrorGuardias] = useState(null);
   const [ausentesSinRelevo, setAusentesSinRelevo] = useState(null);
   const [ausentesPorModalidad, setAusentesPorModalidad] = useState(null);
   const [documentosPorVencer, setDocumentosPorVencer] = useState(null);
   const [errorAlertas, setErrorAlertas] = useState(null);
+
+  // Cuántas guardias están pasando ahora mismo. Se pregunta con una cuenta y no trayendo las
+  // filas: de este número no se muestra ninguna guardia, así que traerlas sería pasear por el
+  // navegador el domicilio y el Paciente de cada una para descartarlos.
+  //
+  // El día es el de quien mira, igual que en la lista de Guardias, y el estado sale del punto
+  // único de verdad que ya usan las dos aplicaciones (`lib/guardiaSinCerrar.js`). Van las dos
+  // condiciones juntas a propósito: una guardia de ayer que sigue en curso no está pasando, es
+  // una que nadie cerró, y eso se mira en otro lado —contarla acá diría que hay gente
+  // trabajando donde no hay nadie.
+  const cargarGuardiasEnCurso = useCallback(async () => {
+    setGuardiasEnCurso(null);
+    setErrorGuardias(null);
+
+    const { count, error } = await supabase
+      .from('guardias')
+      .select('id', { count: 'exact', head: true })
+      .eq('estado', ESTADO_EN_CURSO)
+      .eq('fecha', hoyISO());
+
+    if (error) {
+      setErrorGuardias(t.comun.error_generico);
+      return;
+    }
+    setGuardiasEnCurso(count ?? 0);
+  }, [t]);
+
+  useEffect(() => {
+    cargarGuardiasEnCurso();
+  }, [cargarGuardiasEnCurso]);
 
   const cargarAlertas = useCallback(async () => {
     if (!prestadoraId) return;
@@ -107,9 +141,9 @@ export function Dashboard() {
   }, [cargarAlertas]);
 
   const estados = [postulaciones.estado, solicitudes.estado, asistentes.estado, familias.estado];
-  const estadoGeneral = estados.includes('error')
+  const estadoGeneral = estados.includes('error') || errorGuardias
     ? 'error'
-    : estados.includes('cargando')
+    : estados.includes('cargando') || guardiasEnCurso === null
       ? 'cargando'
       : 'listo';
 
@@ -130,16 +164,27 @@ export function Dashboard() {
         </div>
         <EstadoLista
           estado={estadoGeneral}
-          error={postulaciones.error || solicitudes.error || asistentes.error || familias.error}
+          error={postulaciones.error || solicitudes.error || asistentes.error || familias.error || errorGuardias}
           vacio={false}
           recargar={() => {
             postulaciones.recargar();
             solicitudes.recargar();
             asistentes.recargar();
             familias.recargar();
+            cargarGuardiasEnCurso();
           }}
         >
           <div className="dashboard-metricas">
+            {/* Va primero porque es lo único de esta sección que está pasando ahora mismo: las
+                otras cuatro cuentan lo que se acumuló hasta hoy. Y lleva enlace, a diferencia de
+                ellas, porque de acá sí se sigue a algún lado: la lista de Guardias abre en hoy,
+                así que las que este número cuenta están a la vista al llegar. No se le manda el
+                estado por la dirección porque esa pantalla no lee filtros de ahí, y un enlace que
+                promete un filtro que no se aplica es peor que no prometer nada. */}
+            <Link to="/guardias" className="metrica-card">
+              <span className="metrica-valor">{guardiasEnCurso}</span>
+              <span className="metrica-label">{t.dashboard.guardias_en_curso}</span>
+            </Link>
             <div className="metrica-card">
               <span className="metrica-valor">{postulacionesHoy}</span>
               <span className="metrica-label">{t.dashboard.postulaciones_hoy}</span>

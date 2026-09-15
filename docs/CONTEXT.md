@@ -11,7 +11,7 @@
   fase actual) → evoluciona a marketplace (familia elige directamente) y B2B (obras
   sociales / prepagas, y coordinación de prestadoras terceras).
 - Precio de referencia de lanzamiento: **nunca hardcodear** — se carga desde configuración
-  (Módulo 8 del Panel Admin), no desde una constante en el código. Mientras no haya
+  (la lista de precios del Panel), no desde una constante en el código. Mientras no haya
   benchmark validado, la interfaz pública muestra "A consultar".
 - Zona de cobertura inicial: CABA y GBA (norte, oeste, sur) y La Plata y alrededores —
   también configurable, no hardcodear la lista de zonas en componentes.
@@ -38,14 +38,17 @@
   — y hardcodeos de marca sacados de `generarDocumentoCese.js`/`calcularCese.js`) ya están
   aplicados y verificados contra Supabase real. Desde entonces se sumó el modo "dentro de una
   Prestadora" (ver `TenantSessionContext.jsx`), que va más allá de lo que pedía el Bloque 4;
-  nació con el rol comercial `admin_plataforma` y el 2026-07-28, en la Etapa 2 de la separación
-  CeltaTech/Careonys, pasó a ser la **sesión de soporte técnico** de `superadmin` — el rol
-  comercial se fue entero a CeltaTech y ya no existe en Careonys. **Único
-  hardcodeo estructural que sigue abierto, a propósito**: el correo sale de una sola cuenta
-  de Gmail compartida entre todas las Prestadoras (`backend/src/utils/email.js`, `SMTP_USER`).
-  Se cierra con los pasos 1 a 3 de `docs/PLAN_HASTA_PRODUCCION.md`, y hay que hacerlo antes de
-  dar de alta la primera Prestadora real: hoy el correo no se entrega, porque Railway bloquea
-  los puertos de SMTP.
+  nació con el rol comercial `admin_plataforma` y después pasó a ser la **sesión de soporte
+  técnico** de `superadmin` — el rol comercial se fue entero a CeltaTech y ya no existe en
+  Careonys.
+  **El correo, que es lo único estructural que sigue abierto.** Cada Prestadora ya puede tener su
+  propia casilla: la guarda `configuracion_email_prestadora` y la lee
+  `backend/src/routes/panelConfiguracion.js:580`, y lo que cambia por Prestadora en la casilla
+  compartida es el nombre visible (`docs/MARCA.md:36-40`). Lo que falta no es eso: **hoy no se
+  entrega ningún correo**, porque los dos caminos —la casilla compartida y la propia— salen por
+  SMTP (`backend/src/utils/email.js`) y Railway bloquea esos puertos. Se cierra con los pasos 1 a 3
+  de `docs/PLAN_HASTA_PRODUCCION.md`, pasando a la API de Gmail, y hay que hacerlo antes de dar de
+  alta la primera Prestadora real.
 
 ## Roles de usuario
 
@@ -114,47 +117,39 @@ Etapa 2 — Panel de administración
   Nota: el sitio público sigue en Express como capa de validación/envío de email, pero
   ambos (sitio y panel) leen/escriben la misma base Supabase.
 
-  Estado (2026-07-08): Módulo 1 (Dashboard), Módulo 2 (Postulaciones), Módulo 3 (Solicitudes
-  de Servicio) y Módulo 4 (Plantel de Asistentes) + `PRD_02B_Gestion_Personal.md` completo
-  (vínculo dual monotributo/dependencia, motor `calcularCese` con las 13 causales, Simulador
-  de Vínculo, Score de Riesgo de reclasificación, Ausencias y Cobertura) construidos en
-  código y con su esquema ya aplicado y verificado (RLS activa y probada) contra la base
-  Supabase real. El esquema vigente vive en `supabase/migrations/`.
+  Qué hay construido hoy, por área. Cada una tiene su esquema aplicado, sus rutas en
+  `backend/src/routes/` y su pantalla en `panel/src/pages/`; lo que falta está en
+  `docs/PLAN_HASTA_PRODUCCION.md` y no se repite acá. **El mapa de módulos numerados de los PRD
+  originales ya no describe el producto**: quedó chico, y lo que manda es esta lista.
 
-  Módulo 5 (Familias y Pacientes) completo: se resolvió un gap arquitectónico compartido
-  con Asistentes (ninguna de las dos tablas puede poblarse sin una cuenta real de Supabase
-  Auth previa) construyendo un mecanismo de creación de cuentas reutilizable
-  (`backend/src/utils/cuentasPanel.js`, `POST /api/panel/cuentas/familia`), sin envío de
-  invitación por email todavía (las PWA de Etapa 3/4 no existen). El esquema de las tablas
-  `familias`/`pacientes` ya está aplicado y verificado contra Supabase real (ver
-  `supabase/migrations/`). La pantalla propia (`panel/src/pages/Familias.jsx` +
-  `familias/FamiliaDetalle.jsx`) muestra contacto y
-  Pacientes; guardias activas/historial de reportes/alertas activas quedan marcadas como "no
-  disponible todavía" porque dependen de datos que solo genera la PWA de Asistentes (Etapa
-  3, no construida). El lado Asistente del mecanismo de cuentas (depende de una UI del Proceso
-  de Incorporación de Asistentes que no existe) sigue afuera.
+  - **Reclutamiento e incorporación** — postulaciones, entrevistas, verificación de identidad
+    con las dos fotos, referencias laborales, documentación y Matrícula.
+    Falta únicamente la pantalla pública del formulario de postulación.
+  - **Plantel y gestión del personal** — vínculo dual monotributo/dependencia, ceses con las
+    trece causales, simulador de vínculo, score de riesgo de reclasificación, ausencias y
+    cobertura, liquidaciones y pagos a Asistentes.
+  - **Familias, Pacientes y Servicios** — ficha, círculo familiar con qué ve cada persona,
+    instrucciones que firma el titular, y el Servicio contratado con su continuidad.
+  - **Guardias** — series y guardias, ofertas, cobertura, grilla, acciones masivas, guardias sin
+    cerrar, pase de guardia con código de presencia, emergencias en guardia, domicilios
+    temporales y seguimiento de ubicación. Tiene rutas (`panelGuardias.js`, `panelComprobaciones.js`,
+    `panelEmergencias.js`) y pantallas (`panel/src/pages/Guardias.jsx`, `PaseDeGuardia.jsx`,
+    `EmergenciasEnGuardia.jsx`, `panel/src/pages/guardias/`).
+  - **Reportes, alertas y medicación** — el reporte diario que arma la IA, las alertas por
+    patrones, los signos vitales con su autorización, y las indicaciones de medicación.
+  - **El dinero** — lista de precios y prestaciones, facturación a las Familias, cobros,
+    informes a obras sociales y los rieles de cobro del Marketplace.
+  - **Marketplace** — vidriera, perfiles públicos, conversaciones con videollamada, formas de
+    cobro que arma cada Prestadora, accesos, calificaciones y auditoría legal.
+  - **Configuración y gobierno** — configuración por Prestadora y de plataforma, usuarios y
+    permisos, segundo factor con su recuperación, auditoría, importación, contenidos, avisos en
+    vivo y los canales de aviso (correo, WhatsApp, push).
 
-  Módulo 6 (Guardias), estado 2026-07-10: solo el schema de datos está construido y
-  verificado contra Supabase real (8 tablas con RLS multi-tenant vía FKs compuestas —
-  series_guardias, guardias, domicilios_temporales_paciente, personal_emergencia,
-  incidentes_relevo, configuracion_escalada_relevo, excepciones_familiar_relevo,
-  guardias_tracking_gps; el esquema vigente vive en `supabase/migrations/`).
-  Todavía **no existen** rutas backend (CRUD) ni pantallas de Panel para este módulo.
-  Módulo 7 queda para sesiones siguientes.
-
-  Módulo 8 (Precios/Prestaciones), primer corte: las tablas `lista_precios`, `prestaciones`,
-  `paquetes_prestaciones` y `paquete_prestacion_items` ya están aplicadas y verificadas
-  contra Supabase real (ver `supabase/migrations/`). Regla de negocio central (confirmada
-  con el usuario): ningún medio público habla de precios — la lista de precios es solo referencia
-  interna, y cada Paciente tiene su propia Prestación con precio final ajustado a su caso.
-  La Prestación guarda una foto del precio de lista al momento de armarse (no una
-  referencia viva); si el precio de lista cambia después, un trigger marca las Prestaciones
-  vigentes como "a revisar" para que el Coordinador decida — nunca se ajustan solas. Varias
-  Prestaciones de un mismo Paciente pueden agruparse en un paquete con precio propio.
-  Pantallas: `panel/src/pages/ListaPrecios.jsx` (Admin edita, Coordinador solo ve) y
-  `panel/src/pages/familias/PrestacionesPaciente.jsx` (modal desde la ficha de Familia).
-  Explícitamente marcado como esquema provisional, a evolucionar con el uso real — la
-  política de cuánto trasladar de un aumento de precio a cada cliente queda diferida.
+  Sobre los precios, la regla de negocio central sigue vigente: ningún medio público habla de
+  precios — la lista es referencia interna, y cada Paciente tiene su Prestación con precio final
+  ajustado a su caso. La Prestación guarda una foto del precio de lista al armarse, no una
+  referencia viva; si la lista cambia después, un disparador marca las Prestaciones vigentes como
+  «a revisar» para que decida el Coordinador. Nunca se ajustan solas.
 
 Etapas 3 y 4 — PWA Asistentes / PWA Familias
   Framework: React 18 + Vite + Vite PWA Plugin
@@ -219,17 +214,22 @@ Ver `SECURITY.md` para autenticación, RLS y manejo de datos sensibles.
 
 ## Riesgo legal que condiciona el producto
 
-Ver `CLAUDE.md` (raíz de `Workspace/`) — sección "El riesgo legal que condiciona el diseño". No se repite acá.
+Ver `celtatech/CLAUDE.md` §7 y `celtatech/docs/REGLAS_PRODUCTOS_CAREONYS.md` §3. No se repite acá.
 
-## Gap identificado, no resuelto por ningún PRD original: cobro a las familias
+## Cómo la Prestadora le cobra a las Familias
 
-Ningún documento original especificó **cómo la Prestadora le cobra a las Familias** por el
-cuidado prestado (medio de pago, facturación, retención de fondos). El "Modelo UPE" cubre la
-facturación a IOMA vía Planillas 3, pero no el cobro directo a familias particulares. **En
-prestación directa sigue necesitando una decisión de negocio explícita antes de construirse.**
+Ningún documento original lo especificó: el «Modelo UPE» cubre la facturación al financiador vía
+Planillas 3, pero no el cobro directo a familias particulares. Se construyó después, y hoy los dos
+caminos están hechos.
 
-**En la modalidad Marketplace está resuelto y construido**
-(`docs/PRD_07_Modalidad_Marketplace.md`): la Familia le paga a la Prestadora por una pasarela,
+**En prestación directa**, la factura del círculo familiar vive en `facturas_familia`, la maneja
+`backend/src/routes/panelCobros.js`, se emite y se sigue desde `panel/src/pages/Facturacion.jsx`, y
+la Familia la ve en su aplicación (`facturas()` / `factura(id)` en `pwa-familias/src/lib/api.js`).
+Una factura no cuelga de ningún Paciente: se le factura al círculo entero, y un mismo comprobante
+puede llevar renglones de más de una persona cuidada. Qué se cobra y cada cuánto lo decide la
+Prestadora; el producto no fija precio ni período.
+
+**En la modalidad Marketplace** (`docs/PRD_07_Modalidad_Marketplace.md`), la Familia le paga a la Prestadora por una pasarela,
 y **cada Prestadora arma su propia forma de cobrar** con las piezas que el producto le da
 —importe, cada cuánto, período gratuito, saldo de contactos, si se renueva sola— en
 `formas_de_cobro_marketplace`. Lo que cada Familia tiene habilitado vive en
@@ -245,16 +245,3 @@ mismo trabajo diario avisa al teléfono de quien paga unos días antes de que ll
 silencioso (§3.8). Y un cobro que no entra no apaga nada en el acto: abre un período de gracia de
 siete días, se avisa una vez, cada riel reintenta mientras dura, y recién al llegar esa fecha sin
 que la plata haya entrado el acceso se suspende (§3.9).
-
-## Changelog de este documento
-
-- v1 (2026-07-07): primera versión, generada para poblar `Workspace/docs/` a partir de
-  la lectura completa de la documentación del proyecto y separando lo vinculante de lo
-  que no lo es.
-- v2 (2026-07-09): se documenta el cambio societario CeltaTech / prestadora licenciataria y la dirección
-  de multi-tenancy futura, sin implementar nada todavía.
-- v3 (2026-07-10): barrido completo contra la realidad del código — Bloques 1-3 de
-  multi-tenancy ya aplicados y verificados (rol `admin` renombrado a `admin_prestadora` en
-  dato y código, RLS vía `current_tenant()`/`es_superadmin()`, filtrado de tenant en
-  backend), solo el Bloque 4 sigue pendiente; se documenta el estado real de Módulo 6
-  (Guardias): schema aplicado, sin rutas backend ni UI de Panel todavía.

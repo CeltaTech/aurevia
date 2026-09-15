@@ -205,6 +205,14 @@ const ES = {
     titulo: 'El cobro no se pudo hacer',
     cuerpo: `No se pudo cobrar ${d.importe}. El acceso sigue funcionando hasta el ${d.dia}; si para entonces el cobro no entró, queda suspendido.`,
   }),
+
+  // No dice por qué se cerró el servicio: el motivo es del Paciente y de su Familia. Y no dice
+  // nada del desempeño del Asistente, porque este aviso sale justamente cuando el cierre no
+  // tuvo que ver con él.
+  cese_de_servicio: () => ({
+    titulo: 'Finalización de servicio',
+    cuerpo: 'Se cerró el servicio en el que participaba. Para más información, puede comunicarse con el coordinador.',
+  }),
 };
 
 // El aviso tiene que servir para actuar, no solo para enterarse. Por eso dice en qué punto está la
@@ -377,6 +385,11 @@ const EN = {
     titulo: 'The payment could not be taken',
     cuerpo: `${d.importe} could not be charged. Access keeps working until ${d.dia}; if the payment has not come through by then, it is suspended.`,
   }),
+
+  cese_de_servicio: () => ({
+    titulo: 'Service ended',
+    cuerpo: 'The service you were part of has ended. For more information, please get in touch with the coordinator.',
+  }),
 };
 
 function estadoDeLaBusquedaEN({ ofrecida, invitados, sinContestar, aceptaron }) {
@@ -545,6 +558,11 @@ const PT = {
   cobro_no_realizado: (d) => ({
     titulo: 'A cobrança não pôde ser feita',
     cuerpo: `Não foi possível cobrar ${d.importe}. O acesso continua funcionando até ${d.dia}; se até lá a cobrança não entrar, fica suspenso.`,
+  }),
+
+  cese_de_servicio: () => ({
+    titulo: 'Fim do serviço',
+    cuerpo: 'O serviço do qual participava foi encerrado. Para mais informações, pode entrar em contato com o coordenador.',
   }),
 };
 

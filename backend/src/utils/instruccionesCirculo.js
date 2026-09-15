@@ -2,8 +2,8 @@ import { supabase } from '../db/connection.js';
 import { accesosParaGuardar, mezclarAccesosConCatalogo } from './catalogoCirculoFamiliar.js';
 import { visibilidadDeLaPrestadora } from './visibilidadPrestadora.js';
 import { textoDeLaInstruccion, huellaDelDocumento, IDIOMA_DEL_DOCUMENTO } from './documentoInstruccionCirculo.js';
-import { enviarWhatsApp } from './whatsapp.js';
-import { enviarEmail } from './email.js';
+import { avisarPorWhatsapp } from './whatsapp.js';
+import { enviarEmail, configuracionEvento } from './email.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import { aviso } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
@@ -228,8 +228,17 @@ export async function pedirCodigo({ instruccionId, familiaId }) {
 
   if (titular?.telefono) {
     try {
-      await enviarWhatsApp({ prestadoraId: instruccion.prestadora_id, telefono: titular.telefono, texto: cuerpo });
-      return { enviadoA: 'telefono' };
+      // Lo empieza la Prestadora, así que sólo sale por la plantilla que le eligió al aviso. Sin
+      // plantilla aprobada `avisarPorWhatsapp` devuelve que no salió, y el código va por correo:
+      // la Familia lo está esperando en la pantalla para poder firmar.
+      const config = await configuracionEvento('codigo_instruccion_circulo', instruccion.prestadora_id);
+      const salio = await avisarPorWhatsapp({
+        config,
+        prestadoraId: instruccion.prestadora_id,
+        telefono: titular.telefono,
+        valores: [textos.asunto, cuerpo],
+      });
+      if (salio) return { enviadoA: 'telefono' };
     } catch (error) {
       // Se anota que falló el canal, nunca el número ni el código (CLAUDE.md §6).
       console.error('pedirCodigo: falló el envío por WhatsApp, cae a correo:', error.message);

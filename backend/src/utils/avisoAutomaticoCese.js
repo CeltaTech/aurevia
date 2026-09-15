@@ -1,6 +1,11 @@
 import { supabase } from '../db/connection.js';
 import { enviarPushAsistente } from './push.js';
-import { enviarWhatsApp } from './whatsapp.js';
+import { avisarPorWhatsapp } from './whatsapp.js';
+import { configuracionEvento } from './email.js';
+import { aviso } from '../i18n/avisos.js';
+import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
+
+const EVENTO_CESE = 'aviso_cese_asistente';
 
 // Aviso automático al Asistente cuando se cierra el servicio de su Paciente por una causa
 // ajena a su desempeño (Fase 6, docs/PLAN dentro de
@@ -48,15 +53,24 @@ export async function revisarAvisosAutomaticosCese() {
 }
 
 async function enviarAvisoCese({ pendiente, prestadoraId }) {
-  const titulo = 'Aviso: finalización de servicio';
-  const cuerpo = 'Se cerró el servicio en el que participaba. Para más información, puede comunicarse con el coordinador.';
+  const config = await configuracionEvento(EVENTO_CESE, prestadoraId);
+  // Apagado en la pantalla de Avisos, no se manda por ningún canal. La marca de enviado se pone
+  // igual más abajo: el plazo ya venció y este pendiente no tiene que volver mañana.
+  const apagado = config?.activo === false;
 
-  await enviarPushAsistente(pendiente.asistente_id, { titulo, cuerpo });
+  if (!apagado) {
+    const { titulo, cuerpo } = aviso('cese_de_servicio', await idiomaDeLaPrestadora(prestadoraId));
+    await enviarPushAsistente(pendiente.asistente_id, { titulo, cuerpo });
 
-  const telefono = pendiente.asistentes?.telefono;
-  if (telefono) {
     try {
-      await enviarWhatsApp({ prestadoraId, telefono, texto: `${titulo}\n\n${cuerpo}` });
+      // Lo empieza la Prestadora, así que va por la plantilla que le eligió al aviso. Sin
+      // plantilla aprobada no sale, y queda el aviso al celular, que ya salió arriba.
+      await avisarPorWhatsapp({
+        config,
+        prestadoraId,
+        telefono: pendiente.asistentes?.telefono,
+        valores: [titulo, cuerpo],
+      });
     } catch (err) {
       console.error(`Error enviando WhatsApp de aviso de cese (asistente ${pendiente.asistente_id}):`, err.message);
     }

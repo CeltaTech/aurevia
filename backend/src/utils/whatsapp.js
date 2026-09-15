@@ -132,17 +132,20 @@ export async function plantillaDelEvento(plantillaId, prestadoraId) {
 /**
  * Manda el aviso de un evento por WhatsApp, con la plantilla que la Prestadora le eligió.
  *
- * Es el único camino por el que un aviso sale por WhatsApp, y existe para que la decisión —hay
- * plantilla aprobada, entonces sale; no hay, entonces no— esté escrita una sola vez y no en cada
- * proceso que avisa.
+ * Es el único camino por el que un aviso sale por WhatsApp, y existe para que las dos condiciones
+ * —la Prestadora encendió el canal para ese aviso, y le eligió una plantilla que Meta aprobó—
+ * estén escritas una sola vez y no en cada proceso que avisa.
  *
  * @param {object} config     La fila de `configuracion_notificaciones` de ese evento.
  * @param {string[]} valores  Con qué se completan los huecos de la plantilla, en orden.
- * @returns {Promise<boolean>} si el mensaje salió. Falso sin plantilla elegida o aprobada.
+ * @returns {Promise<boolean>} si el mensaje salió. Falso con el canal apagado, sin teléfono, o
+ *                             sin plantilla elegida o aprobada.
  * @throws lo que devuelva Meta. Quien llama decide si eso cae a otro canal o sólo se registra.
  */
 export async function avisarPorWhatsapp({ config, prestadoraId, telefono, valores }) {
-  const plantilla = await plantillaDelEvento(config?.plantilla_whatsapp_id, prestadoraId);
+  if (!config?.whatsapp_activo || !telefono) return false;
+
+  const plantilla = await plantillaDelEvento(config.plantilla_whatsapp_id, prestadoraId);
   if (!plantilla) return false;
 
   await enviarWhatsAppPorPlantilla({ prestadoraId, telefono, plantilla, valores });
@@ -164,18 +167,16 @@ export async function notificarCoordinador({ evento, prestadoraId, asunto, texto
   const config = await configuracionEvento(evento, prestadoraId);
   if (config && config.activo === false) return;
 
-  if (config?.whatsapp_activo && telefono) {
-    try {
-      const salio = await avisarPorWhatsapp({
-        config,
-        prestadoraId,
-        telefono,
-        valores: [asunto, texto],
-      });
-      if (salio) return;
-    } catch (err) {
-      console.error(`Error enviando WhatsApp de notificación (${evento}), cae a email:`, err.message);
-    }
+  try {
+    const salio = await avisarPorWhatsapp({
+      config,
+      prestadoraId,
+      telefono,
+      valores: [asunto, texto],
+    });
+    if (salio) return;
+  } catch (err) {
+    console.error(`Error enviando WhatsApp de notificación (${evento}), cae a email:`, err.message);
   }
 
   await enviarEmailCoordinador({ evento, prestadoraId, asunto, texto });

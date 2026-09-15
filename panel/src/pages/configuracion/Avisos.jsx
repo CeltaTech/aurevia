@@ -139,12 +139,18 @@ function TabNotificaciones() {
                     />
                   </td>
                   <td>
-                    <input
-                      type="checkbox"
-                      checked={fila.activo}
-                      onChange={(e) => set(fila.evento, 'activo', e.target.checked)}
-                      aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.notificaciones_col_activo, nombre: nombreEvento })}
-                    />
+                    {/* Un aviso que la persona está esperando para poder seguir no se apaga, así
+                        que no se le dibuja la casilla: ofrecerla sería ofrecer algo que no ocurre. */}
+                    {fila.se_puede_apagar === false
+                      ? <span className="panel-dato-vacio" title={t.configuracion.notificaciones_no_se_apaga}>—</span>
+                      : (
+                        <input
+                          type="checkbox"
+                          checked={fila.activo}
+                          onChange={(e) => set(fila.evento, 'activo', e.target.checked)}
+                          aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.notificaciones_col_activo, nombre: nombreEvento })}
+                        />
+                      )}
                   </td>
                   <td>
                     {fila.admite_whatsapp

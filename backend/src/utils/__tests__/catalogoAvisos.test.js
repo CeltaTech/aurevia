@@ -10,7 +10,7 @@
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
 
-import { CATALOGO_AVISOS, avisoDelCatalogo, mezclarAvisosConCatalogo } from '../catalogoAvisos.js';
+import { CATALOGO_AVISOS, avisoDelCatalogo, mezclarAvisosConCatalogo, sePuedeApagar } from '../catalogoAvisos.js';
 
 describe('catálogo de avisos', () => {
   it('no hay dos avisos con la misma clave', () => {
@@ -63,6 +63,22 @@ describe('mezclarAvisosConCatalogo', () => {
     assert.equal(guardia.activo, false);
     assert.deepEqual(guardia.emails, ['coordinacion@ejemplo.com']);
     assert.equal(guardia.whatsapp_activo, true);
+  });
+
+  it('un aviso se puede apagar mientras no diga lo contrario', () => {
+    assert.equal(sePuedeApagar(avisoDelCatalogo('guardia_sin_cubrir')), true);
+    // La Familia lo está esperando en la pantalla para poder firmar: acá se elige el canal, no
+    // si sale.
+    assert.equal(sePuedeApagar(avisoDelCatalogo('codigo_instruccion_circulo')), false);
+  });
+
+  it('los avisos que no se apagan salen apagados de la mezcla como encendidos', () => {
+    const mezclados = mezclarAvisosConCatalogo([
+      { evento: 'codigo_instruccion_circulo', emails: [], activo: false },
+    ]);
+    const codigo = mezclados.find((aviso) => aviso.evento === 'codigo_instruccion_circulo');
+    assert.equal(codigo.se_puede_apagar, false);
+    assert.equal(codigo.activo, true);
   });
 
   it('una fila vieja de un aviso que ya no existe no reaparece', () => {

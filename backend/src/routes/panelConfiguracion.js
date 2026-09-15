@@ -5,7 +5,7 @@ import { supabase } from '../db/connection.js';
 import { accionesDePermisos } from '../utils/permisos.js';
 import { exigirAdministracion, exigirAdminDePrestadora } from '../middleware/exigirAdministracion.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
-import { avisoDelCatalogo, mezclarAvisosConCatalogo, VALORES_POR_DEFECTO_AVISO } from '../utils/catalogoAvisos.js';
+import { avisoDelCatalogo, mezclarAvisosConCatalogo, sePuedeApagar, VALORES_POR_DEFECTO_AVISO } from '../utils/catalogoAvisos.js';
 import { cosaDelCatalogo, mezclarVisibilidadConCatalogo } from '../utils/catalogoVisibilidad.js';
 import { LIMITES_ALERTAS_IA, VALORES_POR_DEFECTO_ALERTAS_IA } from '../utils/revisarAlertasIA.js';
 import { validarUmbralesPremura } from '../utils/umbralesPremura.js';
@@ -314,7 +314,9 @@ panelConfiguracionRouter.patch('/notificaciones/:evento', async (req, res) => {
       evento: aviso.evento,
       descripcion: aviso.descripcion,
       emails: Array.isArray(emails) ? emails.map((correo) => String(correo).trim()).filter(Boolean) : [...VALORES_POR_DEFECTO_AVISO.emails],
-      activo: activo === undefined ? VALORES_POR_DEFECTO_AVISO.activo : Boolean(activo),
+      // Un aviso que la persona está esperando para poder seguir no se apaga aunque el navegador
+      // lo mande apagado: la pantalla no ofrece esa casilla, y el emisor tampoco la obedecería.
+      activo: sePuedeApagar(aviso) ? (activo === undefined ? VALORES_POR_DEFECTO_AVISO.activo : Boolean(activo)) : true,
       // Un canal que este aviso no usa se guarda apagado aunque el navegador lo mande
       // encendido: dejarlo prendido haría creer que el aviso sale por ahí, y no sale.
       whatsapp_activo: aviso.admite_whatsapp ? Boolean(whatsapp_activo) : false,

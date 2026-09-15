@@ -34,7 +34,9 @@ async function respaldoWhatsappSiFalla({ prestadoraId, asistenteId, enviadoPorPu
   if (enviadoPorPush) return;
 
   const config = await configuracionEvento(EVENTO_AVISO_RUTINA, prestadoraId);
-  if (!config || config.activo === false || !config.whatsapp_activo) return;
+  // Que el canal esté encendido y tenga plantilla aprobada lo mira `avisarPorWhatsapp`, en un
+  // solo lugar. Acá sólo se mira si la Prestadora apagó el aviso entero.
+  if (config?.activo === false) return;
 
   const { data: asistente } = await supabase
     .from('asistentes')

@@ -341,6 +341,34 @@ describe('el aviso de un evento por WhatsApp', () => {
     assert.equal(pedidosAMeta[0].cuerpo.type, 'template');
   });
 
+  it('con el canal apagado no sale aunque haya plantilla elegida', async () => {
+    respuestas.set('GET /rest/v1/plantillas_whatsapp', () => [plantilla()]);
+
+    const salio = await avisarPorWhatsapp({
+      config: { whatsapp_activo: false, plantilla_whatsapp_id: PLANTILLA },
+      prestadoraId: PRESTADORA,
+      telefono: TELEFONO,
+      valores: ['Guardia sin cubrir', 'La guardia de mañana sigue sin Asistente.'],
+    });
+
+    assert.equal(salio, false);
+    assert.equal(pedidosAMeta.length, 0);
+  });
+
+  it('sin teléfono no sale', async () => {
+    respuestas.set('GET /rest/v1/plantillas_whatsapp', () => [plantilla()]);
+
+    const salio = await avisarPorWhatsapp({
+      config: { whatsapp_activo: true, plantilla_whatsapp_id: PLANTILLA },
+      prestadoraId: PRESTADORA,
+      telefono: null,
+      valores: ['Guardia sin cubrir', 'La guardia de mañana sigue sin Asistente.'],
+    });
+
+    assert.equal(salio, false);
+    assert.equal(pedidosAMeta.length, 0);
+  });
+
   it('sin plantilla elegida no se manda nada y se dice que no salió', async () => {
     const salio = await avisarPorWhatsapp({
       config: { whatsapp_activo: true, plantilla_whatsapp_id: null },

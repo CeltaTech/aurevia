@@ -25,6 +25,11 @@
 //                     los entrega solamente con una plantilla aprobada, la que la Prestadora le
 //                     elija en `plantilla_whatsapp_id`.
 //   admite_familia  — si el aviso, además de al Coordinador, le puede llegar a la Familia.
+//   se_puede_apagar — si la Prestadora puede decidir que este aviso no se mande. Casi todos sí.
+//                     Los que no son los que la persona está esperando en ese mismo momento para
+//                     poder seguir —hoy, el código de un solo uso del Círculo—: ahí la
+//                     configuración elige por qué canal sale, nunca si sale. Dibujarles la casilla
+//                     de encendido sería ofrecer un apagado que el código no obedece.
 //
 // Dónde se emite cada uno:
 //   guardia_sin_cubrir             → utils/revisarGuardiasSinCubrir.js:100 (notificarCoordinador)
@@ -38,6 +43,8 @@
 //   aviso_rutina_asistente         → utils/revisarRecordatoriosPush.js:24 (push, con respaldo WhatsApp)
 //   nueva_postulacion_asistente    → routes/postulacionAsistente.js:40 (enviarEmailCoordinador)
 //   nueva_solicitud_servicio       → routes/solicitudServicio.js:32 (enviarEmailCoordinador)
+//   aviso_cese_asistente           → utils/avisoAutomaticoCese.js (push, con respaldo WhatsApp)
+//   codigo_instruccion_circulo     → utils/instruccionesCirculo.js (WhatsApp, con caída a correo)
 // No hay ningún otro evento emitido. El vencimiento de documentos tiene un solo evento genérico,
 // `vencimiento_documento_asistente`, y no uno por tipo de documento, porque qué documentos se le
 // piden a un Asistente lo define el catálogo de cada Prestadora.
@@ -116,6 +123,21 @@ export const CATALOGO_AVISOS = [
     admite_whatsapp: false,
     admite_familia: false,
   },
+  {
+    evento: 'aviso_cese_asistente',
+    descripcion: 'Se cerró el servicio en el que participaba un Asistente, y nadie le avisó dentro del plazo',
+    admite_whatsapp: true,
+    admite_familia: false,
+  },
+  {
+    evento: 'codigo_instruccion_circulo',
+    descripcion: 'El código de un solo uso con el que la Familia firma una instrucción de acceso al Círculo',
+    admite_whatsapp: true,
+    admite_familia: false,
+    // La Familia lo está esperando en la pantalla para poder seguir. Acá se elige por qué canal
+    // sale: con plantilla aprobada va por WhatsApp, y si no, por correo.
+    se_puede_apagar: false,
+  },
 ];
 
 // Lo que vale para un aviso que todavía no tiene fila guardada. No son valores elegidos acá:
@@ -137,6 +159,12 @@ export function avisoDelCatalogo(evento) {
   return CATALOGO_AVISOS.find((aviso) => aviso.evento === evento) ?? null;
 }
 
+// Punto único: la ausencia del campo significa que sí se puede apagar, y esa lectura no se
+// escribe dos veces.
+export function sePuedeApagar(aviso) {
+  return aviso?.se_puede_apagar !== false;
+}
+
 // El catálogo completo con lo que cada Prestadora haya guardado encima. Función pura, sin base
 // de datos, para que se pueda probar sola (utils/__tests__/catalogoAvisos.test.js).
 //
@@ -152,11 +180,14 @@ export function mezclarAvisosConCatalogo(filasGuardadas) {
       descripcion: aviso.descripcion,
       admite_whatsapp: aviso.admite_whatsapp,
       admite_familia: aviso.admite_familia,
+      se_puede_apagar: sePuedeApagar(aviso),
       // Para que la pantalla pueda distinguir "la Prestadora eligió esto" de "todavía no eligió
       // nada y esto es lo que pasa mientras tanto".
       configurado: Boolean(fila),
       emails: fila?.emails ?? [...VALORES_POR_DEFECTO_AVISO.emails],
-      activo: fila?.activo ?? VALORES_POR_DEFECTO_AVISO.activo,
+      // Un aviso que no se puede apagar se muestra encendido aunque una fila vieja diga que no:
+      // su emisor no mira esta columna, y mostrar «apagado» sería describir algo que no pasa.
+      activo: sePuedeApagar(aviso) ? (fila?.activo ?? VALORES_POR_DEFECTO_AVISO.activo) : true,
       whatsapp_activo: fila?.whatsapp_activo ?? VALORES_POR_DEFECTO_AVISO.whatsapp_activo,
       notificar_familia: fila?.notificar_familia ?? VALORES_POR_DEFECTO_AVISO.notificar_familia,
       plantilla_whatsapp_id: fila?.plantilla_whatsapp_id ?? VALORES_POR_DEFECTO_AVISO.plantilla_whatsapp_id,

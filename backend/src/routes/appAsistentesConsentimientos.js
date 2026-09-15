@@ -69,10 +69,15 @@ async function textoVigente({ jurisdiccion, clave, modalidad, idioma }) {
   return data || null;
 }
 
-async function decisionViva(asistenteId, clave) {
+// El filtro por Prestadora va aunque el identificador del Asistente ya sea de una sola: el motor
+// entra a la base con la llave de servicio y se saltea la protección por fila, así que lo único
+// que separa una Prestadora de otra son estos filtros. Es la puerta de entrada de todo lo demás:
+// lo que se actualiza o se borra después va por el identificador que sale de acá.
+async function decisionViva(prestadoraId, asistenteId, clave) {
   const { data } = await supabase
     .from('consentimientos_asistente')
     .select('id, decision, version_mostrada, decidido_at, texto_consentimiento_id')
+    .eq('prestadora_id', prestadoraId)
     .eq('asistente_id', asistenteId)
     .eq('clave', clave)
     .is('retirado_at', null)
@@ -108,7 +113,7 @@ appAsistentesConsentimientosRouter.get('/', requiereRolAsistente, async (req, re
     // error: es el caso normal de un país sin documento legal cargado.
     if (!texto) continue;
 
-    const decision = await decisionViva(contexto.asistente.id, clave);
+    const decision = await decisionViva(contexto.asistente.prestadora_id, contexto.asistente.id, clave);
     items.push({
       clave,
       modalidad,
@@ -171,7 +176,7 @@ appAsistentesConsentimientosRouter.post('/', requiereRolAsistente, async (req, r
     return res.status(409).json({ error: 'Todavía no hay texto de consentimiento para este país' });
   }
 
-  const viva = await decisionViva(contexto.asistente.id, clave);
+  const viva = await decisionViva(contexto.asistente.prestadora_id, contexto.asistente.id, clave);
   if (viva) {
     if (viva.texto_consentimiento_id === texto.id && viva.decision === decision) {
       return res.json({ ok: true, sin_cambios: true });
@@ -223,7 +228,7 @@ appAsistentesConsentimientosRouter.post('/retirar', requiereRolAsistente, async 
     return res.status(400).json({ error: 'Consentimiento desconocido' });
   }
 
-  const viva = await decisionViva(req.usuarioAsistente.id, clave);
+  const viva = await decisionViva(req.usuarioAsistente.prestadoraId, req.usuarioAsistente.id, clave);
   if (!viva || viva.decision !== 'otorgado') {
     return res.status(409).json({ error: 'No hay un consentimiento vigente para retirar' });
   }

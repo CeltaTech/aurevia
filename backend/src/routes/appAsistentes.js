@@ -1300,9 +1300,13 @@ appAsistentesRouter.delete('/push/suscribir', requiereRolAsistente, async (req, 
     return res.status(400).json({ error: 'Falta el endpoint de la suscripción' });
   }
 
+  // El filtro por Prestadora va aunque el identificador del Asistente ya sea de una sola: el motor
+  // entra con la llave de servicio y se saltea la protección por fila, así que lo único que separa
+  // una Prestadora de otra son estos filtros. Y esto borra.
   const { error } = await supabase
     .from('push_subscriptions')
     .delete()
+    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('endpoint', endpoint)
     .eq('asistente_id', req.usuarioAsistente.id);
   if (error) {
@@ -1321,9 +1325,12 @@ appAsistentesRouter.delete('/push/suscribir', requiereRolAsistente, async (req, 
 // ============================================================================
 
 appAsistentesRouter.get('/calificaciones', requiereRolAsistente, async (req, res) => {
+  // Mismo motivo que en la baja del aviso al celular: una misma persona tiene una ficha por cada
+  // Prestadora donde trabaja, y sin este filtro vería las calificaciones de la otra.
   const { data, error } = await supabase
     .from('calificaciones_asistente')
     .select('id, estrellas, comentario, visible_publica, descargo_asistente, descargo_en, created_at')
+    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('asistente_id', req.usuarioAsistente.id)
     .order('created_at', { ascending: false });
   if (error) return responderError(res, error);
@@ -1341,6 +1348,7 @@ appAsistentesRouter.patch('/calificaciones/:id/descargo', requiereRolAsistente, 
   const { data: calificacion } = await supabase
     .from('calificaciones_asistente')
     .select('id, descargo_asistente')
+    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('id', req.params.id)
     .eq('asistente_id', req.usuarioAsistente.id)
     .maybeSingle();

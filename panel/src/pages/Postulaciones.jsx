@@ -4,6 +4,7 @@ import { useSupabaseTable } from '../hooks/useSupabaseTable';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { useFiltros } from '../hooks/useFiltros';
 import { useZonasCobertura } from '../hooks/useZonasCobertura';
+import { useOpcionesPostulacion } from '../hooks/useOpcionesPostulacion';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { PostulacionDetalle } from './PostulacionDetalle';
 import { traducirCodigos } from '../lib/postulacionCodigos';
@@ -38,6 +39,8 @@ export function Postulaciones() {
     () => Object.fromEntries(zonas.map((z) => [z.codigo, z.nombre])),
     [zonas],
   );
+  // Las especialidades son las que cargó esta Prestadora, no dos escritas en las traducciones.
+  const { filas: especialidades, labels: especialidadesLabels } = useOpcionesPostulacion(prestadoraId, 'especialidad');
   const { f, set, limpiar, hayFiltros } = useFiltros(FILTROS_INICIALES);
   const [seleccionada, setSeleccionada] = useState(null);
 
@@ -97,8 +100,8 @@ export function Postulaciones() {
         </select>
         <select value={f.especialidad} onChange={(e) => set('especialidad', e.target.value)} aria-label={t.postulaciones.filtro_especialidad}>
           <option value="">{t.postulaciones.filtro_especialidad}</option>
-          {Object.entries(t.postulaciones.especialidades_labels).map(([codigo, label]) => (
-            <option key={codigo} value={codigo}>{label}</option>
+          {especialidades.map((e) => (
+            <option key={e.clave} value={e.clave}>{e.etiqueta}</option>
           ))}
         </select>
         <select value={f.zona} onChange={(e) => set('zona', e.target.value)} aria-label={t.postulaciones.filtro_zona}>
@@ -179,7 +182,7 @@ export function Postulaciones() {
             {filasFiltradas.map((p) => (
               <tr key={p.id}>
                 <td>{p.nombre}</td>
-                <td>{traducirCodigos(p.especialidades, t.postulaciones.especialidades_labels)}</td>
+                <td>{traducirCodigos(p.especialidades, especialidadesLabels)}</td>
                 <td>{traducirCodigos(p.zonas, zonasLabels)}</td>
                 <td>{new Date(p.creado_en).toLocaleDateString()}</td>
                 {/* La moneda sale de la fila, no de la Prestadora de quien mira: el importe está

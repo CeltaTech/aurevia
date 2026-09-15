@@ -6,10 +6,10 @@
 // una comodidad para quien escribe; lo que decide si el dato entra se comprueba del lado del
 // servidor.
 //
-// LAS OPCIONES NO ESTÁN ESCRITAS ACÁ. Género, nacionalidad, tipo de registro ante AFIP y la
-// experiencia clínica salen de `opciones_postulacion`, una fila por opción y por Prestadora. Esta
-// función recibe las que estén activas y comprueba que lo elegido sea una de ellas; no sabe
-// cuáles son ni cuántas.
+// LAS OPCIONES NO ESTÁN ESCRITAS ACÁ. Género, nacionalidad, tipo de registro ante AFIP, las
+// especialidades y la experiencia clínica salen de `opciones_postulacion`, una fila por opción y
+// por Prestadora. Esta función recibe las que estén activas y comprueba que lo elegido sea una de
+// ellas; no sabe cuáles son ni cuántas.
 //
 // LA EDAD MÍNIMA ES UN VALOR LEGAL. Viene de `escalas_legales`
 // (`tipo = 'edad_minima_para_trabajar'`), a la escala vigente el día de la postulación. **Si no
@@ -126,6 +126,16 @@ export function revisarPostulacion(cuerpo, { opciones = [], edadMinima = null, h
     if (!clavesActivas(opciones, grupo).has(elegido)) return falla(`${campo}_no_es_una_opcion`);
   }
 
+  // Las especialidades llegan como códigos separados por coma, y cada uno tiene que ser una de
+  // las que esa Prestadora cargó. Sin esto el catálogo no sería un catálogo: cualquier programa
+  // que llame a esta dirección podría inventar una especialidad que después nadie puede filtrar
+  // ni nombrar en el Panel.
+  const especialidadesElegidas = cuerpo.especialidades.split(',').map((e) => e.trim()).filter(Boolean);
+  const especialidadesValidas = clavesActivas(opciones, 'especialidad');
+  if (!especialidadesElegidas.length || !especialidadesElegidas.every((clave) => especialidadesValidas.has(clave))) {
+    return falla('especialidades_no_es_una_opcion');
+  }
+
   const experienciaClinica = cuerpo.experiencia_clinica ?? [];
   if (!Array.isArray(experienciaClinica)) return falla('experiencia_clinica_mal_formada');
   const clinicasValidas = new Set(
@@ -175,7 +185,9 @@ export function revisarPostulacion(cuerpo, { opciones = [], edadMinima = null, h
       dni: String(cuerpo.dni),
       telefono: cuerpo.telefono,
       email: cuerpo.email,
-      especialidades: cuerpo.especialidades,
+      // Sin los espacios con que hayan llegado: lo que se guarda es la lista de códigos, y el
+      // Panel la parte por coma para filtrar.
+      especialidades: especialidadesElegidas.join(','),
       zonas: cuerpo.zonas,
       disponibilidad: cuerpo.disponibilidad,
       anios_experiencia: cuerpo.anios_experiencia ?? null,

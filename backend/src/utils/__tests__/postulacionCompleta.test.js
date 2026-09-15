@@ -18,7 +18,7 @@ const COMPLETA = {
   dni: '30111222',
   telefono: '+54 9 11 5555 0000',
   email: 'ada.ponce@ejemplo.test',
-  especialidades: 'Cuidado de adultos mayores',
+  especialidades: 'cuidado_adultos_mayores',
   zonas: 'Zona Norte',
   disponibilidad: 'Lunes a viernes, mañana',
   situacion_fiscal: 'monotributo',
@@ -32,6 +32,11 @@ const OPCIONES = [
   { grupo: 'experiencia_clinica_patologias', clave: 'demencias', activo: true },
   { grupo: 'experiencia_clinica_cuidado_directo', clave: 'higiene', activo: true },
   { grupo: 'genero', clave: 'retirada', activo: false },
+  // Las especialidades también son catálogo de la Prestadora, y no dos claves fijas: las de esta
+  // no son ni enfermería ni kinesiología.
+  { grupo: 'especialidad', clave: 'cuidado_adultos_mayores', activo: true },
+  { grupo: 'especialidad', clave: 'acompanamiento_terapeutico', activo: true },
+  { grupo: 'especialidad', clave: 'ya_no_la_buscamos', activo: false },
 ];
 
 function revisar(extra = {}, contexto = {}) {
@@ -119,6 +124,36 @@ describe('revisarPostulacion', () => {
 
   it('una opción dada de baja ya no se puede elegir', () => {
     assert.equal(revisar({ genero: 'retirada' }).error, 'genero_no_es_una_opcion');
+  });
+
+  it('las especialidades son las que cargó la Prestadora, no dos escritas en el código', () => {
+    assert.equal(revisar({ especialidades: 'acompanamiento_terapeutico' }).error, null);
+    assert.equal(
+      revisar({ especialidades: 'cuidado_adultos_mayores,acompanamiento_terapeutico' }).error,
+      null,
+    );
+    // Las dos que hasta hoy estaban escritas en el archivo de traducciones, y que esta
+    // Prestadora no tiene: una función que siguiera aceptándolas pasaría todas las demás pruebas.
+    assert.equal(revisar({ especialidades: 'enfermeria' }).error, 'especialidades_no_es_una_opcion');
+    assert.equal(revisar({ especialidades: 'kinesiologia' }).error, 'especialidades_no_es_una_opcion');
+    // Alcanza con que una sola no esté: la lista entra completa o no entra.
+    assert.equal(
+      revisar({ especialidades: 'cuidado_adultos_mayores,inventada' }).error,
+      'especialidades_no_es_una_opcion',
+    );
+  });
+
+  it('una especialidad que la Prestadora dio de baja ya no se puede elegir', () => {
+    assert.equal(revisar({ especialidades: 'ya_no_la_buscamos' }).error, 'especialidades_no_es_una_opcion');
+  });
+
+  it('las especialidades se guardan como códigos, sin los espacios con que llegaron', () => {
+    const { datos } = revisar({ especialidades: ' cuidado_adultos_mayores , acompanamiento_terapeutico ' });
+    assert.equal(datos.especialidades, 'cuidado_adultos_mayores,acompanamiento_terapeutico');
+  });
+
+  it('una lista de especialidades que son todas espacios no es una lista', () => {
+    assert.equal(revisar({ especialidades: ' , , ' }).error, 'especialidades_no_es_una_opcion');
   });
 
   it('la experiencia clínica se comprueba contra todos sus subgrupos', () => {

@@ -4,6 +4,7 @@ import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
 import { useConfirmarDestructivo } from '../context/TenantSessionContext';
 import { useZonasCobertura } from '../hooks/useZonasCobertura';
+import { useOpcionesPostulacion } from '../hooks/useOpcionesPostulacion';
 import { useTiposAsistente } from '../hooks/useTiposAsistente';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { esAdminOSuperior } from '../lib/roles';
@@ -32,6 +33,8 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
     () => Object.fromEntries(zonas.map((z) => [z.codigo, z.nombre])),
     [zonas],
   );
+  // Las especialidades son las que cargó esta Prestadora, no dos escritas en las traducciones.
+  const { labels: especialidadesLabels } = useOpcionesPostulacion(prestadoraId, 'especialidad');
   const { paraElegir: tiposAsistente } = useTiposAsistente();
   const [nuevoEstado, setNuevoEstado] = useState(postulacion.estado);
   const [tipoAsistenteId, setTipoAsistenteId] = useState('');
@@ -125,7 +128,7 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
           <dt>{t.postulaciones.email}</dt>
           <dd>{postulacion.email}</dd>
           <dt>{t.postulaciones.col_especialidades}</dt>
-          <dd>{traducirCodigos(postulacion.especialidades, t.postulaciones.especialidades_labels)}</dd>
+          <dd>{traducirCodigos(postulacion.especialidades, especialidadesLabels)}</dd>
           <dt>{t.postulaciones.col_zonas}</dt>
           <dd>{traducirCodigos(postulacion.zonas, zonasLabels)}</dd>
           <dt>{t.postulaciones.disponibilidad}</dt>

@@ -832,10 +832,6 @@ export const T = {
       filtro_distancia_desde: 'Viaja al menos (km)',
       col_honorario_pretendido: 'Honorario pretendido',
       col_urgencias: 'Urgencias',
-      especialidades_labels: {
-        enfermeria: 'Enfermería',
-        kinesiologia: 'Kinesiología',
-      },
       disponibilidad_labels: { manana: 'Mañana', tarde: 'Tarde', noche: 'Noche', fines_semana: 'Fines de semana' },
       situacion_fiscal_labels: {
         monotributo: 'Monotributo',
@@ -3201,10 +3197,6 @@ export const T = {
       filtro_distancia_desde: 'Travels at least (km)',
       col_honorario_pretendido: 'Expected fee',
       col_urgencias: 'Urgent cover',
-      especialidades_labels: {
-        enfermeria: 'Nursing',
-        kinesiologia: 'Physical therapy',
-      },
       disponibilidad_labels: { manana: 'Morning', tarde: 'Afternoon', noche: 'Night', fines_semana: 'Weekends' },
       situacion_fiscal_labels: {
         monotributo: 'Monotributo (self-employed)',
@@ -5548,10 +5540,6 @@ export const T = {
       filtro_distancia_desde: 'Viaja pelo menos (km)',
       col_honorario_pretendido: 'Honorário pretendido',
       col_urgencias: 'Urgências',
-      especialidades_labels: {
-        enfermeria: 'Enfermagem',
-        kinesiologia: 'Fisioterapia',
-      },
       disponibilidad_labels: { manana: 'Manhã', tarde: 'Tarde', noche: 'Noite', fines_semana: 'Fins de semana' },
       situacion_fiscal_labels: {
         monotributo: 'Monotributo (autônomo)',

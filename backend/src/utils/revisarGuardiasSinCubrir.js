@@ -2,6 +2,8 @@ import { supabase } from '../db/connection.js';
 import { notificarCoordinador } from './whatsapp.js';
 import { necesitaNotificar } from './insistencia.js';
 import { pacientesDeGuardias } from './pacientesDeGuardia.js';
+import { aviso } from '../i18n/avisos.js';
+import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
 // Aviso al Coordinador cuando se viene una guardia que todavía no tiene a nadie
 // (pendiente #106, docs/PLAN_HASTA_PRODUCCION.md).
@@ -54,6 +56,9 @@ export async function revisarGuardiasSinCubrir() {
 async function revisarPrestadora({ prestadora_id: prestadoraId, horas_antes: horasAntes, horas_entre_avisos: horasEntreAvisos }, ahora) {
   const limite = new Date(ahora.getTime() + horasAntes * MS_POR_HORA);
 
+  // Una sola vez por Prestadora: todos los avisos de esta vuelta los lee la misma gente.
+  const idioma = await idiomaDeLaPrestadora(prestadoraId);
+
   // El filtro por `fecha` es solo para no traerse la agenda entera: la ventana fina se
   // decide después contra la hora de inicio, que la base guarda en otra columna.
   const { data: guardias, error } = await supabase
@@ -97,11 +102,25 @@ async function revisarPrestadora({ prestadora_id: prestadoraId, horas_antes: hor
     })) continue;
 
     const veces = (guardia.aviso_sin_cubrir_veces ?? 0) + 1;
+    const invitaciones = guardia.ofertas_guardia ?? [];
     await notificarCoordinador({
       evento: EVENTO,
       prestadoraId,
-      asunto: asuntoDelAviso({ inicio, ahora }),
-      texto: textoDelAviso({ guardia, pacientes: pacientesPorGuardia.get(guardia.id) ?? [], inicio, ahora, veces }),
+      ...aviso('guardia_sin_cubrir', idioma, {
+        fecha: guardia.fecha,
+        horaInicio: guardia.hora_inicio,
+        horaFin: guardia.hora_fin,
+        pacientes: (pacientesPorGuardia.get(guardia.id) ?? []).map((p) => p.nombre),
+        yaEmpezo: inicio.getTime() <= ahora.getTime(),
+        horas: Math.round(Math.abs(inicio.getTime() - ahora.getTime()) / MS_POR_HORA),
+        busqueda: {
+          ofrecida: !!guardia.ofrecida_at,
+          invitados: invitaciones.length,
+          sinContestar: invitaciones.filter((o) => !o.respuesta).length,
+          aceptaron: invitaciones.filter((o) => o.respuesta === 'acepta').length,
+        },
+        veces,
+      }),
     });
 
     const { error: errorUpdate } = await supabase
@@ -112,55 +131,6 @@ async function revisarPrestadora({ prestadora_id: prestadoraId, horas_antes: hor
       console.error(`Error marcando el aviso de guardia sin cubrir (${guardia.id}):`, errorUpdate.message);
     }
   }
-}
-
-function asuntoDelAviso({ inicio, ahora }) {
-  return inicio.getTime() <= ahora.getTime()
-    ? 'Guardia sin cubrir: la hora de inicio ya pasó'
-    : 'Guardia sin cubrir';
-}
-
-// El aviso tiene que servir para actuar, no solo para enterarse. Por eso además de cuándo y
-// de quién dice en qué punto está la búsqueda: si todavía no se ofreció a nadie, si se
-// ofreció y nadie contestó, o si contestaron todos que no. Son tres situaciones con tres
-// acciones distintas, y sin esa línea el Coordinador tiene que entrar al Panel a averiguarlo.
-function textoDelAviso({ guardia, pacientes, inicio, ahora, veces }) {
-  const nombres = pacientes.map((p) => p.nombre).filter(Boolean);
-  // "Elena y Alberto", no "Elena, Alberto": el aviso lo lee una persona apurada, no una
-  // pantalla. Con tres o más, la coma separa y la "y" cierra, como se escribe en castellano.
-  const paciente =
-    nombres.length === 0
-      ? 'Paciente sin nombre cargado'
-      : [nombres.slice(0, -1).join(', '), nombres.at(-1)].filter(Boolean).join(' y ');
-  const horas = Math.round(Math.abs(inicio.getTime() - ahora.getTime()) / MS_POR_HORA);
-  const cuando = inicio.getTime() <= ahora.getTime()
-    ? `Tendría que haber empezado hace ${horas} h.`
-    : `Empieza en ${horas} h.`;
-
-  const lineas = [
-    `Guardia del ${guardia.fecha}, de ${guardia.hora_inicio} a ${guardia.hora_fin}, para ${paciente}.`,
-    cuando,
-    estadoDeLaBusqueda(guardia),
-  ];
-
-  if (veces > 1) lineas.push(`Es el aviso número ${veces} de esta misma guardia.`);
-
-  return lineas.join('\n');
-}
-
-function estadoDeLaBusqueda(guardia) {
-  if (!guardia.ofrecida_at) return 'Todavía no se le ofreció a ningún Asistente.';
-
-  const invitaciones = guardia.ofertas_guardia ?? [];
-  if (invitaciones.length === 0) return 'Está publicada, pero no se invitó a ningún Asistente en particular.';
-
-  const sinContestar = invitaciones.filter((o) => !o.respuesta).length;
-  if (sinContestar > 0) return `Se invitó a ${invitaciones.length} Asistente(s) y ${sinContestar} todavía no contestaron.`;
-
-  const aceptaron = invitaciones.filter((o) => o.respuesta === 'acepta').length;
-  if (aceptaron > 0) return `${aceptaron} Asistente(s) aceptaron pero la guardia sigue sin asignar.`;
-
-  return `Se invitó a ${invitaciones.length} Asistente(s) y todos rechazaron.`;
 }
 
 // La fecha de un momento en el formato en que la guarda la base (`2026-08-07`), en hora

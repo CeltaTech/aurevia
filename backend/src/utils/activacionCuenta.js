@@ -4,6 +4,9 @@ import { ErrorConMotivo } from './errorConMotivo.js';
 import { enviarEmail } from './email.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 import { marcaDeLaPrestadora } from './marcaPrestadora.js';
+import { aviso } from '../i18n/avisos.js';
+import { idiomaDelDestinatario } from '../i18n/idiomas.js';
+import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
 const DIAS_VALIDEZ_TOKEN = 7;
 
@@ -14,44 +17,11 @@ function urlAppPorRol(rol) {
   return process.env.PWA_FAMILIAS_URL;
 }
 
-// Este correo lo recibe una Familia o un Asistente, y para ellos la empresa es
-// la Prestadora: es a quien llamaron, con quien firmaron y de quien esperan un
-// correo. Por eso el nombre que va adelante es el de ella, no el del producto
-// (`CLAUDE.md` §7, regla 1). El producto queda en la línea del pie, que se
-// apaga si la Prestadora tiene contratada esa función.
-//
-// `marca` viene de `marcaPrestadora.js`. Si por lo que sea llegara vacía, se
-// usa el nombre del producto: es preferible un correo que dice Careonys a un
-// correo que dice "Activación de la cuenta en undefined".
-function textosActivacionCuenta(nombre, link, marca) {
-  const empresa = marca?.nombre || IDENTIDAD.nombre;
-  const pie = {
-    'es-AR': marca?.mostrarMarcaProducto ? `\n\n—\nCon la tecnología de ${IDENTIDAD.nombre}` : '',
-    en: marca?.mostrarMarcaProducto ? `\n\n—\nPowered by ${IDENTIDAD.nombre}` : '',
-    'pt-BR': marca?.mostrarMarcaProducto ? `\n\n—\nCom a tecnologia de ${IDENTIDAD.nombre}` : '',
-  };
-
-  return {
-    'es-AR': {
-      asunto: `Activación de la cuenta en ${empresa}`,
-      texto: `Hola ${nombre},\n\nYa está creada la cuenta en ${empresa}. Para poder entrar desde el celular hace falta activarla.\n\nSe activa acá (el link vence en ${DIAS_VALIDEZ_TOKEN} días):\n${link}\n\nSi no esperaba este correo, puede ignorarlo.${pie['es-AR']}`,
-    },
-    en: {
-      asunto: `Activate your ${empresa} account`,
-      texto: `Hi ${nombre},\n\nYou've been invited to activate your ${empresa} account so you can access it from your phone.\n\nActivate your account here (this link expires in ${DIAS_VALIDEZ_TOKEN} days):\n${link}\n\nIf you weren't expecting this email, you can ignore it.${pie.en}`,
-    },
-    'pt-BR': {
-      asunto: `Ativação da conta na ${empresa}`,
-      texto: `Olá ${nombre},\n\nA conta na ${empresa} já está criada. Para acessar pelo celular é preciso ativá-la.\n\nA ativação é feita aqui (o link expira em ${DIAS_VALIDEZ_TOKEN} dias):\n${link}\n\nSe não esperava este email, pode ignorá-lo.${pie['pt-BR']}`,
-    },
-  };
-}
-
 // Punto único de verdad: genera el token de un solo uso y manda el email de activación por
 // el SMTP que ya existe (email.js) — usado por crearCuentaConPerfil cuando la cuenta nueva
 // es de Familia/Asistente/Círculo (pendiente #75, docs/PLAN_HASTA_PRODUCCION.md), nunca para
 // Coordinador/Admin_prestadora/Superadmin (esos siguen con el flujo manual existente).
-export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, prestadoraId = null, idioma = 'es-AR' }) {
+export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, prestadoraId = null, idioma = null }) {
   const appUrl = urlAppPorRol(rol);
   if (!appUrl) {
     // Sin URL configurada (ej. entorno local sin la variable seteada) no se puede armar un
@@ -69,10 +39,23 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
     .insert({ usuario_id: usuarioId, token, expira_en: expiraEn });
   if (error) throw new Error(error.message);
 
+  // Este correo lo recibe una Familia o un Asistente, y para ellos la empresa es la Prestadora: es
+  // a quien llamaron, con quien firmaron y de quien esperan un correo. Por eso el nombre que va
+  // adelante es el de ella, no el del producto. El producto queda en la línea del pie, que se
+  // apaga si la Prestadora no tiene contratada esa función.
+  //
+  // Si la marca llegara vacía se usa el nombre del producto: es preferible un correo que dice
+  // Careonys a uno que dice «Activación de la cuenta en undefined».
   const link = `${appUrl}/activar-cuenta?token=${token}`;
   const marca = await marcaDeLaPrestadora(prestadoraId);
-  const porIdioma = textosActivacionCuenta(nombre, link, marca);
-  const textos = porIdioma[idioma] ?? porIdioma['es-AR'];
+  const textos = aviso('activacion_cuenta', idiomaDelDestinatario(idioma, await idiomaDeLaPrestadora(prestadoraId)), {
+    nombre,
+    link,
+    dias: DIAS_VALIDEZ_TOKEN,
+    empresa: marca?.nombre || IDENTIDAD.nombre,
+    producto: IDENTIDAD.nombre,
+    conMarcaDelProducto: !!marca?.mostrarMarcaProducto,
+  });
   await enviarEmail({ to: email, asunto: textos.asunto, texto: textos.texto });
 }
 

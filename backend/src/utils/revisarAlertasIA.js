@@ -3,6 +3,8 @@ import { analizarAlertaIA } from './alertasIA.js';
 import { notificarCoordinador } from './whatsapp.js';
 import { enviarPushFamilia } from './push.js';
 import { medicacionVigenteDelPaciente } from './medicacionIndicaciones.js';
+import { aviso } from '../i18n/avisos.js';
+import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
 // Lo que vale mientras la Prestadora no haya elegido otra cosa. Son los mismos valores que
 // tienen por defecto las columnas de `configuracion_alertas_ia` en la base: están escritos en
@@ -153,26 +155,28 @@ export async function analizarPaciente(pacienteId, prestadoraId) {
   const avisarCoordinador = esRoja || configuracion.amarilla_avisa_coordinador;
   const avisarFamilia = esRoja ? configuracion.roja_avisa_familia : configuracion.amarilla_avisa_familia;
 
+  // Lo que escribió la revisión sale tal como lo escribió: es el detalle de este Paciente, no
+  // una frase del producto. El catálogo pone el asunto y la frase de reemplazo para cuando la
+  // revisión no dejó ninguna.
+  const idioma = await idiomaDeLaPrestadora(prestadoraId);
+
   if (avisarCoordinador) {
+    const textos = aviso('alerta_ia_coordinador', idioma, { esRoja });
     await notificarCoordinador({
       evento: 'alerta_ia_nivel2',
       prestadoraId,
-      asunto: esRoja ? 'Alerta ROJA de IA — Paciente' : 'Alerta AMARILLA de IA — Paciente',
-      texto: resultado.detalle_coordinador || resultado.descripcion || 'Ver detalle en el Panel.',
+      asunto: textos.asunto,
+      texto: resultado.detalle_coordinador || resultado.descripcion || textos.texto,
     });
   }
 
   if (avisarFamilia && paciente.familia_id) {
+    // El aviso a la Familia se mide según el nivel: la amarilla no es una urgencia y anunciarla
+    // con las palabras de la roja asusta sin motivo.
+    const textos = aviso('alerta_ia_familia', idioma, { esRoja });
     enviarPushFamilia(paciente.familia_id, {
-      // El aviso a la Familia se mide según el nivel: la amarilla no es una urgencia y
-      // anunciarla con las palabras de la roja asusta sin motivo. Antes solo salía la roja,
-      // así que este segundo texto no existía.
-      titulo: esRoja ? 'Alerta sobre el Paciente' : 'Novedad sobre el Paciente',
-      cuerpo:
-        resultado.descripcion
-        || (esRoja
-          ? 'Hay una novedad importante para revisar en la app.'
-          : 'Hay algo para mirar sin apuro en la app.'),
+      titulo: textos.titulo,
+      cuerpo: resultado.descripcion || textos.cuerpo,
       url: `/pacientes/${pacienteId}/alertas`,
     }).catch((err) => console.error('Error enviando push de alerta roja a Familia:', err.message));
   }

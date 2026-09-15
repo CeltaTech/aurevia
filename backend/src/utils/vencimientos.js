@@ -1,6 +1,8 @@
 import { supabase } from '../db/connection.js';
 import { enviarEmailCoordinador } from './email.js';
 import { DIAS_AVISO_POR_DEFECTO, fechaLimiteDeAviso, ventanaDeAviso } from './reglaVencimientos.js';
+import { aviso } from '../i18n/avisos.js';
+import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
 const EVENTO_VENCIMIENTO_DOCUMENTO = 'vencimiento_documento_asistente';
 
@@ -27,6 +29,9 @@ export async function revisarVencimientos() {
     // hacen el Panel y la aplicación del Asistente, en `reglaVencimientos.js` (regla 12).
     const anticipacion = ventanaDeAviso(diasAviso ?? DIAS_AVISO_POR_DEFECTO);
     const limiteISO = fechaLimiteDeAviso(anticipacion);
+    // Una sola vez por Prestadora: los avisos de todos sus tipos de documento los lee la misma
+    // gente. El nombre del tipo de documento viene del catálogo de ella y sale tal cual.
+    const idioma = await idiomaDeLaPrestadora(prestadoraId);
 
     const { data: tipos, error: errorTipos } = await supabase
       .from('tipos_documento_asistente')
@@ -57,16 +62,18 @@ export async function revisarVencimientos() {
       const activos = (documentos ?? []).filter((d) => d.asistentes?.estado === 'activo');
       if (!activos.length) continue;
 
-      const lista = activos
-        .map((d) => `${d.asistentes.nombre}: vence ${d.fecha_vencimiento}`)
-        .join('\n');
-
       try {
         await enviarEmailCoordinador({
           evento: EVENTO_VENCIMIENTO_DOCUMENTO,
           prestadoraId,
-          asunto: `Vencimientos próximos de ${etiqueta} — ${activos.length} Asistente(s)`,
-          texto: `Los siguientes Asistentes tienen ${etiqueta} vencido o por vencer dentro de ${anticipacion} días:\n\n${lista}`,
+          ...aviso('vencimiento_documentos', idioma, {
+            etiqueta,
+            dias: anticipacion,
+            documentos: activos.map((d) => ({
+              nombre: d.asistentes.nombre,
+              fechaVencimiento: d.fecha_vencimiento,
+            })),
+          }),
         });
       } catch (err) {
         console.error(`Error enviando email de vencimiento (${etiqueta}) de ${prestadoraId}:`, err.message);

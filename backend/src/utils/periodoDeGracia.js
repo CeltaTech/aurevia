@@ -38,6 +38,8 @@ import { supabase } from '../db/connection.js';
 import { enviarPushFamilia } from './push.js';
 import { sumarDias } from './fechas.js';
 import { enDia, importeConMoneda } from './comoSeDiceEnUnAviso.js';
+import { aviso } from '../i18n/avisos.js';
+import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
 /** Cuántos días dura la gracia. Lo decide este producto y no la Prestadora: es el resguardo del
  *  §3.2, o sea un piso, no una preferencia de cómo trabaja cada una. Siete días cubren el fin de
@@ -59,7 +61,7 @@ const DIAS_DE_GRACIA = 7;
 export async function abrirElPeriodoDeGracia({ accesoId, avisar = enviarPushFamilia }) {
   const { data: acceso, error } = await supabase
     .from('accesos_marketplace')
-    .select('id, estado, familia_id, paciente_id, importe, moneda, gracia_hasta')
+    .select('id, estado, familia_id, paciente_id, prestadora_id, importe, moneda, gracia_hasta')
     .eq('id', accesoId)
     .maybeSingle();
 
@@ -93,7 +95,8 @@ export async function abrirElPeriodoDeGracia({ accesoId, avisar = enviarPushFami
   if (!guardados?.length) return { abierta: false, gracia_hasta: null };
 
   try {
-    await avisar(acceso.familia_id, textoDelAvisoDeGracia({ ...acceso, gracia_hasta: graciaHasta }));
+    const idioma = await idiomaDeLaPrestadora(acceso.prestadora_id);
+    await avisar(acceso.familia_id, textoDelAvisoDeGracia({ ...acceso, gracia_hasta: graciaHasta }, idioma));
   } catch (falla) {
     // La gracia ya está abierta, que es lo que sostiene el acceso. Que el aviso no haya salido se
     // registra y no deshace nada: deshacerlo suspendería antes de tiempo.
@@ -150,12 +153,12 @@ export async function suspenderLosQueAgotaronLaGracia() {
 /** Qué lee la Familia cuando el cobro no entró. Corto y neutro: qué pasó, hasta cuándo hay tiempo y
  *  qué ocurre si no se resuelve. El enlace lleva a la pantalla del acceso, que es donde se paga.
  *  Se exporta porque el cuerpo del push viaja cifrado: es la única forma de comprobar qué dice. */
-export function textoDelAvisoDeGracia(acceso) {
+export function textoDelAvisoDeGracia(acceso, idioma) {
   return {
-    titulo: 'El cobro no se pudo hacer',
-    cuerpo:
-      `No se pudo cobrar ${importeConMoneda(acceso)}. El acceso sigue funcionando hasta el ` +
-      `${enDia(acceso.gracia_hasta)}; si para entonces el cobro no entró, queda suspendido.`,
+    ...aviso('cobro_no_realizado', idioma, {
+      importe: importeConMoneda(acceso),
+      dia: enDia(acceso.gracia_hasta),
+    }),
     url: acceso.paciente_id ? `/pacientes/${acceso.paciente_id}/acceso` : '/',
   };
 }

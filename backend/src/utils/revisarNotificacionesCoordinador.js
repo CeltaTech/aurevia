@@ -6,7 +6,8 @@ import { necesitaNotificar } from './insistencia.js';
 import { pacientesDeGuardia, pacientesDeGuardias } from './pacientesDeGuardia.js';
 import { intervaloParaPremura } from './umbralesPremura.js';
 import { horasEntre } from './horasDeGuardia.js';
-import { describirFuente } from './textoAlertaTemprana.js';
+import { aviso } from '../i18n/avisos.js';
+import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
 // Insistencia al Coordinador según premura, con coordinador de respaldo si no hay
 // reacción, parametrizado por prestadora
@@ -30,10 +31,13 @@ export async function revisarNotificacionesCoordinador() {
 
   const ahora = new Date();
 
+  // El idioma se pregunta una vez por Prestadora y no una por aviso: todos los que salen en esta
+  // vuelta los lee la misma gente, la del Panel de esa Prestadora.
   for (const config of configuraciones) {
-    await revisarAlertas(config, ahora);
-    await revisarIncidentes(config, ahora);
-    await revisarGuardiasSinCerrar(config, ahora);
+    const idioma = await idiomaDeLaPrestadora(config.prestadora_id);
+    await revisarAlertas(config, ahora, idioma);
+    await revisarIncidentes(config, ahora, idioma);
+    await revisarGuardiasSinCerrar(config, ahora, idioma);
   }
 }
 
@@ -54,7 +58,7 @@ const DIAS_HACIA_ATRAS_SIN_CERRAR = 7;
 const MS_POR_MINUTO = 60 * 1000;
 const MS_POR_HORA = 60 * MS_POR_MINUTO;
 
-async function revisarGuardiasSinCerrar(config, ahora) {
+async function revisarGuardiasSinCerrar(config, ahora, idioma) {
   const {
     prestadora_id: prestadoraId,
     umbrales_premura: umbrales,
@@ -114,14 +118,7 @@ async function revisarGuardiasSinCerrar(config, ahora) {
       await notificarCoordinador({
         evento: 'guardia_sin_cerrar',
         prestadoraId,
-        asunto: 'Guardia terminada y todavía sin cerrar',
-        texto: textoGuardiaSinCerrar({
-          guardia,
-          pacientes: pacientesPorGuardia.get(guardia.id) ?? [],
-          fin,
-          ahora,
-          veces,
-        }),
+        ...aviso('guardia_sin_cerrar', idioma, datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora, veces)),
       });
 
       const { error: errorUpdate } = await supabase
@@ -137,7 +134,13 @@ async function revisarGuardiasSinCerrar(config, ahora) {
       await notificarCoordinadorBackup({
         backupId,
         prestadoraId,
-        texto: `La guardia del ${guardia.fecha}, de ${guardia.hora_inicio} a ${guardia.hora_fin}, sigue sin cerrarse ${Math.round(minutosPremura)} minutos después del plazo.`,
+        idioma,
+        ...aviso('guardia_sin_cerrar_respaldo', idioma, {
+          fecha: guardia.fecha,
+          horaInicio: guardia.hora_inicio,
+          horaFin: guardia.hora_fin,
+          minutosDeAtraso: minutosPremura,
+        }),
       });
       await supabase.from('guardias').update({ aviso_sin_cerrar_backup_at: ahora.toISOString() }).eq('id', guardia.id);
     }
@@ -154,13 +157,7 @@ async function revisarGuardiasSinCerrar(config, ahora) {
       await notificarCoordinador({
         evento: 'guardia_sin_cerrar_grave',
         prestadoraId,
-        asunto: 'Urgente: una guardia lleva horas sin cerrarse',
-        texto: textoGuardiaSinCerrarGrave({
-          guardia,
-          pacientes: pacientesPorGuardia.get(guardia.id) ?? [],
-          fin,
-          ahora,
-        }),
+        ...aviso('guardia_sin_cerrar_grave', idioma, datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora)),
       });
 
       const { error: errorGrave } = await supabase
@@ -185,60 +182,22 @@ function finDeLaGuardia(guardia) {
   return new Date(inicio.getTime() + horasEntre(guardia.hora_inicio, guardia.hora_fin) * MS_POR_HORA);
 }
 
-// El aviso tiene que dejar al Coordinador en condiciones de actuar sin entrar al Panel a
-// averiguar nada. Por eso dice a quién se atendía, a qué hora terminaba, cuánto hace que
-// venció el plazo y —lo que decide qué hacer— si el Asistente marcó su salida: si la marcó,
-// se fue y lo que falta es la confirmación; si no la marcó, puede seguir en el domicilio y
-// eso es otra conversación.
-function textoGuardiaSinCerrar({ guardia, pacientes, fin, ahora, veces }) {
-  const lineas = [
-    `Guardia del ${guardia.fecha}, de ${guardia.hora_inicio} a ${guardia.hora_fin}, para ${nombresDePacientes(pacientes)}.`,
-    `A cargo de ${asistenteDe(guardia)}. Terminaba hace ${atrasoDesde(fin, ahora)} y sigue abierta.`,
-    guardia.checkout_at
-      ? 'El Asistente ya marcó su salida: falta confirmar que quedó todo hecho.'
-      : 'El Asistente todavía no marcó su salida.',
-  ];
-
-  if (veces > 1) lineas.push(`Es el aviso número ${veces} de esta misma guardia.`);
-
-  return lineas.join('\n');
-}
-
-// El aviso que escala. Dice lo mismo que el anterior más las dos cosas que lo vuelven otra
-// conversación: que a esto ya se le avisó al Coordinador y no se resolvió, y qué está en juego
-// si sigue así. Lo segundo no es dramatismo: una guardia abierta durante días es, en los
-// hechos, una Familia que no sabe si a su Paciente lo cuidaron.
-function textoGuardiaSinCerrarGrave({ guardia, pacientes, fin, ahora }) {
-  const lineas = [
-    `Guardia del ${guardia.fecha}, de ${guardia.hora_inicio} a ${guardia.hora_fin}, para ${nombresDePacientes(pacientes)}.`,
-    `A cargo de ${asistenteDe(guardia)}. Terminaba hace ${atrasoDesde(fin, ahora)} y sigue abierta.`,
-    'Ya se avisó al Coordinador y la guardia sigue sin cerrarse. Hace falta que intervenga alguien con autoridad para resolverlo.',
-    guardia.checkout_at
-      ? 'El Asistente marcó su salida, así que se fue del domicilio: lo que falta es confirmar que quedó todo hecho.'
-      : 'El Asistente no marcó su salida, así que no hay constancia de que la guardia haya terminado ni de quién quedó a cargo del Paciente.',
-    'Este aviso sale una sola vez por guardia.',
-  ];
-
-  return lineas.join('\n');
-}
-
-/** Los Pacientes de una guardia, en una frase: «Ana», «Ana y Luis», «Ana, Luis y Marta». */
-function nombresDePacientes(pacientes) {
-  const nombres = pacientes.map((p) => p.nombre).filter(Boolean);
-  if (nombres.length === 0) return 'Paciente sin nombre cargado';
-  return [nombres.slice(0, -1).join(', '), nombres.at(-1)].filter(Boolean).join(' y ');
-}
-
-const asistenteDe = (guardia) => guardia.asistentes?.nombre ?? 'Asistente sin asignar';
-
-/**
- * Cuánto hace que terminaba la guardia, en la unidad que se entiende de un vistazo. Por debajo
- * de dos horas se dice en minutos y por encima en horas: «185 minutos» obliga a hacer la cuenta
- * justo cuando quien lee tiene que decidir rápido.
- */
-function atrasoDesde(fin, ahora) {
-  const minutos = Math.round((ahora.getTime() - fin.getTime()) / MS_POR_MINUTO);
-  return minutos < 120 ? `${minutos} minutos` : `${Math.round(minutos / 60)} horas`;
+// Lo que los dos avisos de guardia sin cerrar —el de rutina y el que escala— necesitan saber
+// para dejar al Coordinador en condiciones de actuar sin entrar al Panel a averiguar nada: a
+// quién se atendía, a qué hora terminaba, cuánto hace que venció el plazo y —lo que decide qué
+// hacer— si el Asistente marcó su salida. Las palabras las pone el catálogo, en el idioma que
+// corresponda; acá van solamente los datos.
+function datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora, veces) {
+  return {
+    fecha: guardia.fecha,
+    horaInicio: guardia.hora_inicio,
+    horaFin: guardia.hora_fin,
+    pacientes: (pacientesPorGuardia.get(guardia.id) ?? []).map((p) => p.nombre),
+    asistente: guardia.asistentes?.nombre ?? '',
+    minutosDeAtraso: (ahora.getTime() - fin.getTime()) / MS_POR_MINUTO,
+    salidaMarcada: !!guardia.checkout_at,
+    veces,
+  };
 }
 
 // La fecha de un momento tal como la guarda la base (`2026-08-22`), en hora local.
@@ -249,7 +208,7 @@ function fechaISO(momento) {
   return corrida.toISOString().slice(0, 10);
 }
 
-async function revisarAlertas(config, ahora) {
+async function revisarAlertas(config, ahora, idioma) {
   const { prestadora_id: prestadoraId, umbrales_premura: umbrales, minutos_antes_backup: minutosAntesBackup, coordinador_backup_id: backupId } = config;
 
   const { data: alertas, error } = await supabase
@@ -271,11 +230,12 @@ async function revisarAlertas(config, ahora) {
       await notificarCoordinador({
         evento: 'alerta_temprana_guardia',
         prestadoraId,
-        asunto: 'Alerta temprana de posible ausencia sin resolver',
-        // El origen va adelante del motivo a propósito: quien lee tiene que poder distinguir de
-        // un vistazo un aviso que dio una persona de una cuenta que sacó el sistema. Sin eso,
-        // las dos cosas llegan con el mismo texto.
-        texto: `Guardia ${alerta.guardia_id}. Origen: ${describirFuente(alerta.fuente)}. Motivo: ${alerta.motivo ?? '—'}. Sin resolver hace ${Math.round(minutosPremura)} minutos.`,
+        ...aviso('alerta_temprana_sin_resolver', idioma, {
+          guardiaId: alerta.guardia_id,
+          origen: aviso('origen_de_alerta', idioma, { fuente: alerta.fuente }).texto,
+          motivo: alerta.motivo,
+          minutos: minutosPremura,
+        }),
       });
 
       await supabase
@@ -285,13 +245,18 @@ async function revisarAlertas(config, ahora) {
     }
 
     if (backupId && !alerta.backup_notificado_at && minutosPremura >= minutosAntesBackup) {
-      await notificarCoordinadorBackup({ backupId, prestadoraId, texto: `Alerta temprana de guardia ${alerta.guardia_id} sigue sin resolver hace ${Math.round(minutosPremura)} minutos.` });
+      await notificarCoordinadorBackup({
+        backupId,
+        prestadoraId,
+        idioma,
+        ...aviso('alerta_temprana_respaldo', idioma, { guardiaId: alerta.guardia_id, minutos: minutosPremura }),
+      });
       await supabase.from('alertas_tempranas_guardia').update({ backup_notificado_at: ahora.toISOString() }).eq('id', alerta.id);
     }
   }
 }
 
-async function revisarIncidentes(config, ahora) {
+async function revisarIncidentes(config, ahora, idioma) {
   const {
     prestadora_id: prestadoraId,
     umbrales_premura: umbrales,
@@ -317,16 +282,24 @@ async function revisarIncidentes(config, ahora) {
     const intervalo = intervaloParaPremura(umbrales, minutosPremura);
 
     if (necesitaNotificar({ ultimaNotificacionAt: incidente.ultima_notificacion_at, intervaloMinutos: intervalo, ahora })) {
-      const texto = `Guardia ${incidente.guardia_entrante_id}, nivel de escalada actual: ${incidente.nivel_actual}. Sin resolver hace ${Math.round(minutosPremura)} minutos.`;
+      const textos = aviso('incidente_relevo_sin_resolver', idioma, {
+        guardiaId: incidente.guardia_entrante_id,
+        nivel: incidente.nivel_actual,
+        minutos: minutosPremura,
+      });
 
       await notificarCoordinador({
         evento: 'incidente_relevo_sin_resolver',
         prestadoraId,
-        asunto: 'Incidente de continuidad de guardia sin resolver',
-        texto,
+        ...textos,
       });
 
-      await notificarFamiliaSiCorresponde({ prestadoraId, guardiaEntranteId: incidente.guardia_entrante_id, texto });
+      await notificarFamiliaSiCorresponde({
+        prestadoraId,
+        guardiaEntranteId: incidente.guardia_entrante_id,
+        texto: textos.texto,
+        idioma,
+      });
 
       await supabase
         .from('incidentes_relevo')
@@ -335,7 +308,12 @@ async function revisarIncidentes(config, ahora) {
     }
 
     if (backupId && !incidente.backup_notificado_at && minutosPremura >= minutosAntesBackup) {
-      await notificarCoordinadorBackup({ backupId, prestadoraId, texto: `Incidente de relevo de guardia ${incidente.guardia_entrante_id} sigue sin resolver hace ${Math.round(minutosPremura)} minutos.` });
+      await notificarCoordinadorBackup({
+        backupId,
+        prestadoraId,
+        idioma,
+        ...aviso('incidente_relevo_respaldo', idioma, { guardiaId: incidente.guardia_entrante_id, minutos: minutosPremura }),
+      });
       await supabase.from('incidentes_relevo').update({ backup_notificado_at: ahora.toISOString() }).eq('id', incidente.id);
     }
 
@@ -352,8 +330,10 @@ async function revisarIncidentes(config, ahora) {
       await notificarCoordinador({
         evento: 'incidente_relevo_sin_resolver',
         prestadoraId,
-        asunto: 'Fase automática de escalada alcanzada (envío automático pendiente de plantilla Meta)',
-        texto: `Guardia ${incidente.guardia_entrante_id} superó el umbral de fase automática (${minutosAntesFaseAutomatica} minutos) sin resolverse. El envío automático a Asistentes todavía no está activo — requiere acción manual.`,
+        ...aviso('incidente_relevo_fase_automatica', idioma, {
+          guardiaId: incidente.guardia_entrante_id,
+          minutosUmbral: minutosAntesFaseAutomatica,
+        }),
       });
       await supabase.from('incidentes_relevo').update({ fase_automatica_notificada_at: ahora.toISOString() }).eq('id', incidente.id);
     }
@@ -366,7 +346,7 @@ async function revisarIncidentes(config, ahora) {
 // Prestadora decide si su política es avisarle a la Familia o no (algunas prefieren no
 // alarmarla si el incidente se resuelve internamente sin que llegue a necesitar su
 // intervención) — CLAUDE.md §2, "configuración sobre programación".
-async function notificarFamiliaSiCorresponde({ prestadoraId, guardiaEntranteId, texto }) {
+async function notificarFamiliaSiCorresponde({ prestadoraId, guardiaEntranteId, texto, idioma }) {
   const config = await configuracionEvento('incidente_relevo_sin_resolver', prestadoraId);
   if (!config?.notificar_familia) return;
 
@@ -395,7 +375,7 @@ async function notificarFamiliaSiCorresponde({ prestadoraId, guardiaEntranteId, 
 
   for (const familiaId of familiaIds) {
     await enviarPushFamilia(familiaId, {
-      titulo: 'Continuidad de guardia',
+      ...aviso('continuidad_de_guardia', idioma),
       cuerpo: texto,
       url: '/',
     });
@@ -410,7 +390,7 @@ async function notificarFamiliaSiCorresponde({ prestadoraId, guardiaEntranteId, 
   }
 }
 
-async function notificarCoordinadorBackup({ backupId, prestadoraId, texto }) {
+async function notificarCoordinadorBackup({ backupId, prestadoraId, texto, idioma }) {
   const { data: usuario } = await supabase
     .from('usuarios')
     .select('telefono, email')
@@ -422,7 +402,7 @@ async function notificarCoordinadorBackup({ backupId, prestadoraId, texto }) {
   await notificarCoordinador({
     evento: 'incidente_relevo_sin_resolver',
     prestadoraId,
-    asunto: 'Escalada a Coordinador de respaldo',
+    ...aviso('escalada_a_respaldo', idioma),
     texto,
     telefono: usuario.telefono,
   });

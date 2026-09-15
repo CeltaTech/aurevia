@@ -2,6 +2,8 @@ import { supabase } from '../db/connection.js';
 import { enviarPushAsistente } from './push.js';
 import { enviarWhatsApp } from './whatsapp.js';
 import { configuracionEvento } from './email.js';
+import { aviso } from '../i18n/avisos.js';
+import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
 // Recorre los 3 eventos de push a Asistentes listados en
 // docs/PRD_04_05_App_Servicio.md:115 ("Nueva guardia asignada, mensajes del coordinador,
@@ -67,8 +69,10 @@ async function revisarGuardiasAsignadas() {
   }
 
   for (const guardia of guardias ?? []) {
-    const titulo = 'Nueva guardia asignada';
-    const cuerpo = `Hay una guardia asignada el ${guardia.fecha} a las ${guardia.hora_inicio}.`;
+    const { titulo, cuerpo } = aviso('guardia_asignada', await idiomaDeLaPrestadora(guardia.prestadora_id), {
+      fecha: guardia.fecha,
+      horaInicio: guardia.hora_inicio,
+    });
 
     const enviadoPorPush = await enviarPushAsistente(guardia.asistente_id, {
       titulo,
@@ -96,7 +100,7 @@ async function revisarMensajesCoordinador() {
   }
 
   for (const mensaje of mensajes ?? []) {
-    const titulo = 'Nuevo mensaje del coordinador';
+    const { titulo } = aviso('mensaje_del_coordinador', await idiomaDeLaPrestadora(mensaje.prestadora_id));
 
     const enviadoPorPush = await enviarPushAsistente(mensaje.asistente_id, {
       titulo,
@@ -145,8 +149,10 @@ async function revisarRecordatoriosGuardiaProxima() {
     const inicio = new Date(`${guardia.fecha}T${guardia.hora_inicio}`);
     if (inicio.getTime() > limite.getTime() || inicio.getTime() < ahora.getTime()) continue;
 
-    const titulo = 'Recordatorio de guardia';
-    const cuerpo = `La guardia del ${guardia.fecha} empieza a las ${guardia.hora_inicio}.`;
+    const { titulo, cuerpo } = aviso('recordatorio_de_guardia', await idiomaDeLaPrestadora(guardia.prestadora_id), {
+      fecha: guardia.fecha,
+      horaInicio: guardia.hora_inicio,
+    });
 
     const enviadoPorPush = await enviarPushAsistente(guardia.asistente_id, {
       titulo,

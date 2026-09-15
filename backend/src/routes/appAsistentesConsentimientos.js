@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
 import { supabase } from '../db/connection.js';
+import { normalizarIdioma } from '../i18n/idiomas.js';
 
 // ============================================================================
 // Pendiente #102 — consentimiento del Asistente para el registro de su ubicación.
@@ -23,13 +24,6 @@ export const appAsistentesConsentimientosRouter = Router();
 // Los temas sobre los que hoy se pide consentimiento. Cuando haya más, se
 // agregan acá y en el catálogo de la base — no se repite la lista en otro lado.
 const CLAVES = ['seguimiento_ubicacion'];
-
-const IDIOMAS_SOPORTADOS = ['es-AR', 'en', 'pt-BR'];
-const IDIOMA_POR_DEFECTO = 'es-AR';
-
-function normalizarIdioma(valor) {
-  return IDIOMAS_SOPORTADOS.includes(valor) ? valor : IDIOMA_POR_DEFECTO;
-}
 
 // asistentes.tipo_vinculo habla de la forma de contratación; el catálogo habla
 // de la modalidad legal. Un solo lugar traduce entre las dos (CLAUDE.md §7.12).

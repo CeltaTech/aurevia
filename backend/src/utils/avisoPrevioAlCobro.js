@@ -30,6 +30,8 @@ import { supabase } from '../db/connection.js';
 import { enviarPushFamilia } from './push.js';
 import { sumarDias } from './fechas.js';
 import { enDia, importeConMoneda } from './comoSeDiceEnUnAviso.js';
+import { aviso } from '../i18n/avisos.js';
+import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
 /** Con cuántos días de anticipación se avisa. Lo decide este producto, no la Prestadora: es el
  *  resguardo del §3.2 y no una preferencia de cómo trabaja cada una. Tres días alcanzan para darse
@@ -56,7 +58,7 @@ export async function avisarElPrimerCobroQueViene({ avisar = enviarPushFamilia }
 
   const { data: accesos, error } = await supabase
     .from('accesos_marketplace')
-    .select('id, familia_id, paciente_id, importe, moneda, gratis_hasta')
+    .select('id, familia_id, paciente_id, prestadora_id, importe, moneda, gratis_hasta')
     .eq('estado', 'vigente')
     .is('cancelada_en', null)
     .is('aviso_previo_en', null)
@@ -73,7 +75,7 @@ export async function avisarElPrimerCobroQueViene({ avisar = enviarPushFamilia }
   for (const acceso of accesos ?? []) {
     let salio = false;
     try {
-      salio = await avisar(acceso.familia_id, textoDelAviso(acceso));
+      salio = await avisar(acceso.familia_id, textoDelAviso(acceso, await idiomaDeLaPrestadora(acceso.prestadora_id)));
     } catch (falla) {
       console.error('No se pudo avisar del primer cobro a una Familia:', falla.message);
       continue;
@@ -102,12 +104,12 @@ export async function avisarElPrimerCobroQueViene({ avisar = enviarPushFamilia }
 /** Qué lee la Familia. Corto y neutro: qué día empieza a cobrarse, cuánto, y que puede darse de
  *  baja antes. El enlace lleva a la pantalla del acceso, que es donde está el botón de la baja.
  *  Se exporta porque el cuerpo del push viaja cifrado: es la única forma de comprobar qué dice. */
-export function textoDelAviso(acceso) {
+export function textoDelAviso(acceso, idioma) {
   return {
-    titulo: 'Termina el período sin cargo',
-    cuerpo:
-      `El ${enDia(acceso.gratis_hasta)} empieza a cobrarse ${importeConMoneda(acceso)}. ` +
-      'Si prefiere no continuar, puede darse de baja antes desde la aplicación.',
+    ...aviso('fin_periodo_sin_cargo', idioma, {
+      dia: enDia(acceso.gratis_hasta),
+      importe: importeConMoneda(acceso),
+    }),
     url: acceso.paciente_id ? `/pacientes/${acceso.paciente_id}/acceso` : '/',
   };
 }

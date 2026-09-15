@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { supabase } from '../db/connection.js';
 import { resolverPrestadoraPublica } from '../middleware/resolverPrestadoraPublica.js';
 import { enviarEmailCoordinador } from '../utils/email.js';
+import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
+import { aviso } from '../i18n/avisos.js';
 
 // `mergeParams` para que llegue el `:prestadora` de la dirección donde se monta este router
 // (server.js) — de ahí sale la Prestadora, no de un encabezado (resolverPrestadoraPublica.js).
@@ -31,11 +33,15 @@ solicitudServicioRouter.post('/', resolverPrestadoraPublica, async (req, res) =>
   }
 
   try {
+    const prestadoraId = req.prestadoraPublica.prestadora_id;
     await enviarEmailCoordinador({
       evento: 'nueva_solicitud_servicio',
-      prestadoraId: req.prestadoraPublica.prestadora_id,
-      asunto: `Nueva solicitud de servicio — ${nombre}`,
-      texto: `Nombre: ${nombre}\nTeléfono: ${telefono}\nEmail: ${email}\nLocalidad: ${localidad}\nServicio: ${tipo_servicio} (${modalidad})\nDías y horario: ${dias_horario}\nDescripción: ${descripcion ?? '—'}`,
+      prestadoraId,
+      ...aviso('nueva_solicitud_servicio', await idiomaDeLaPrestadora(prestadoraId), {
+        nombre, telefono, email, localidad, modalidad, descripcion,
+        tipoServicio: tipo_servicio,
+        diasHorario: dias_horario,
+      }),
     });
   } catch (err) {
     console.error('Error enviando email de solicitud de servicio:', err.message);

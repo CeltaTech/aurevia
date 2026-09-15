@@ -30,8 +30,9 @@ import { puedeRegistrarUbicacion } from '../utils/consentimientoUbicacion.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { MOTIVOS_DEMORA } from '../utils/motivosDemora.js';
 import { FUENTE_AVISO_DEMORA_ASISTENTE } from '../utils/fuentesAlertaTemprana.js';
-import { describirFuente } from '../utils/textoAlertaTemprana.js';
 import { notificarCoordinador } from '../utils/whatsapp.js';
+import { aviso } from '../i18n/avisos.js';
+import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
 export const appAsistentesRouter = Router();
 
@@ -631,11 +632,18 @@ appAsistentesRouter.post('/guardias/:id/aviso-demora', requiereRolAsistente, asy
   // fondo lo reintenta solo. Nunca se le devuelve un error a quien avisó: su acto ya está
   // guardado, que es lo que lo protege.
   try {
+    // Lo lee el Coordinador, así que sale en el idioma de la Prestadora y no en el del teléfono
+    // del Asistente que dio el aviso.
+    const idioma = await idiomaDeLaPrestadora(guardia.prestadora_id);
     await notificarCoordinador({
       evento: 'alerta_temprana_guardia',
       prestadoraId: guardia.prestadora_id,
-      asunto: 'Aviso de demora del Asistente',
-      texto: `Guardia del ${guardia.fecha} a las ${guardia.hora_inicio}. Origen: ${describirFuente(FUENTE_AVISO_DEMORA_ASISTENTE)}. Motivo: ${motivo}.`,
+      ...aviso('aviso_demora_asistente', idioma, {
+        fecha: guardia.fecha,
+        horaInicio: guardia.hora_inicio,
+        origen: aviso('origen_de_alerta', idioma, { fuente: FUENTE_AVISO_DEMORA_ASISTENTE }).texto,
+        motivo,
+      }),
     });
     if (alerta?.id) {
       await supabase

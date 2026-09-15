@@ -2,6 +2,8 @@ import { supabase } from '../db/connection.js';
 import { enviarEmail } from './email.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 import { codigoNuevo, huellaDelCodigo, estaVencido, vencimientoEnMinutos } from './codigoDeUnSoloUso.js';
+import { aviso } from '../i18n/avisos.js';
+import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
 // Pendiente #37 — recuperación de acceso por email cuando se pierde el dispositivo TOTP.
 // Cómo se arma el código de seis dígitos y cómo se guarda su huella está en
@@ -30,10 +32,21 @@ export async function solicitarCodigoRecuperacion(usuarioId) {
   });
   if (errorInsert) throw new Error(errorInsert.message);
 
+  // Quien pide este código es alguien del Panel, y el Panel es de una Prestadora: el correo sale
+  // en el idioma de ella. La cuenta de Superadmin no tiene Prestadora y cae en el de por defecto.
+  const { data: usuario } = await supabase
+    .from('usuarios')
+    .select('prestadora_id')
+    .eq('id', usuarioId)
+    .maybeSingle();
+
   await enviarEmail({
     to: userData.user.email,
-    asunto: `Código de recuperación de acceso — ${IDENTIDAD.nombre}`,
-    texto: `El código de recuperación es ${codigo}. Vence en ${VIGENCIA_MINUTOS} minutos. Si no lo pidió usted, puede ignorar este correo.`,
+    ...aviso('mfa_codigo_recuperacion', await idiomaDeLaPrestadora(usuario?.prestadora_id), {
+      codigo,
+      minutos: VIGENCIA_MINUTOS,
+      producto: IDENTIDAD.nombre,
+    }),
   });
 }
 

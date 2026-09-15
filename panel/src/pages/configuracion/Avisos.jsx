@@ -56,6 +56,7 @@ function TabNotificaciones() {
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [guardandoEvento, setGuardandoEvento] = useState(null);
+  const [plantillas, setPlantillas] = useState([]);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -63,6 +64,12 @@ function TabNotificaciones() {
     try {
       const { notificaciones: filas } = await llamarApi('/notificaciones');
       setNotificaciones(filas);
+      /* Las plantillas aprobadas son las que se pueden elegir. Un aviso que la Prestadora empieza
+         Meta lo entrega solamente con una de ellas, así que ofrecerle las demás sería ofrecerle
+         mensajes que no van a salir. Si la consulta falla, la pantalla igual sirve para todo lo
+         demás y el selector queda vacío. */
+      const { plantillas: todas } = await llamarApi('/whatsapp/plantillas').catch(() => ({ plantillas: [] }));
+      setPlantillas((todas ?? []).filter((p) => p.estado === 'aprobada'));
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -84,7 +91,13 @@ function TabNotificaciones() {
     try {
       await llamarApi(`/notificaciones/${fila.evento}`, {
         method: 'PATCH',
-        body: JSON.stringify({ emails: fila.emails, activo: fila.activo, whatsapp_activo: fila.whatsapp_activo, notificar_familia: fila.notificar_familia }),
+        body: JSON.stringify({
+          emails: fila.emails,
+          activo: fila.activo,
+          whatsapp_activo: fila.whatsapp_activo,
+          notificar_familia: fila.notificar_familia,
+          plantilla_whatsapp_id: fila.plantilla_whatsapp_id || null,
+        }),
       });
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -103,6 +116,7 @@ function TabNotificaciones() {
               <th>{t.configuracion.notificaciones_col_emails}</th>
               <th>{t.configuracion.notificaciones_col_activo}</th>
               <th>{t.configuracion.notificaciones_col_whatsapp_activo}</th>
+              <th>{t.configuracion.notificaciones_col_plantilla_whatsapp}</th>
               <th>{t.configuracion.notificaciones_col_notificar_familia}</th>
               <th></th>
             </tr>
@@ -143,6 +157,30 @@ function TabNotificaciones() {
                         />
                       )
                       : <span className="panel-dato-vacio" title={t.configuracion.notificaciones_canal_no_disponible}>—</span>}
+                  </td>
+                  <td>
+                    {fila.admite_whatsapp
+                      ? (
+                        <select
+                          value={fila.plantilla_whatsapp_id || ''}
+                          onChange={(e) => set(fila.evento, 'plantilla_whatsapp_id', e.target.value || null)}
+                          aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.notificaciones_col_plantilla_whatsapp, nombre: nombreEvento })}
+                        >
+                          <option value="">{t.configuracion.notificaciones_plantilla_sin_elegir}</option>
+                          {plantillas.map((p) => (
+                            <option key={p.id} value={p.id}>{p.nombre_interno}</option>
+                          ))}
+                        </select>
+                      )
+                      : null}
+                    {/* La casilla encendida sin plantilla elegida no manda nada: se dice acá y no
+                        después, cuando el aviso ya salió por correo sin que nadie entienda por qué. */}
+                    {fila.admite_whatsapp && fila.whatsapp_activo && !fila.plantilla_whatsapp_id
+                      ? <div className="panel-explicacion">{t.configuracion.notificaciones_plantilla_falta}</div>
+                      : null}
+                    {!fila.admite_whatsapp
+                      ? <span className="panel-dato-vacio" title={t.configuracion.notificaciones_canal_no_disponible}>—</span>
+                      : null}
                   </td>
                   <td>
                     {fila.admite_familia

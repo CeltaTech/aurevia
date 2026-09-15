@@ -20,7 +20,10 @@
 //                     los que pasan por `notificarCoordinador()` (utils/whatsapp.js) o por el
 //                     respaldo de `revisarRecordatoriosPush.js`; los que llaman directo a
 //                     `enviarEmailCoordinador()` no miran `whatsapp_activo` en ningún lado, así
-//                     que dibujarles la casilla sería ofrecer algo que no ocurre.
+//                     que dibujarles la casilla sería ofrecer algo que no ocurre. Encender la
+//                     casilla no alcanza: el aviso lo empieza la Prestadora, y Meta esos mensajes
+//                     los entrega solamente con una plantilla aprobada, la que la Prestadora le
+//                     elija en `plantilla_whatsapp_id`.
 //   admite_familia  — si el aviso, además de al Coordinador, le puede llegar a la Familia.
 //
 // Dónde se emite cada uno:
@@ -125,6 +128,9 @@ export const VALORES_POR_DEFECTO_AVISO = {
   activo: true,
   whatsapp_activo: false,
   notificar_familia: false,
+  // Sin plantilla elegida el aviso no sale por WhatsApp aunque el canal esté encendido: Meta no
+  // entrega como texto suelto un mensaje que empieza la Prestadora (utils/whatsapp.js).
+  plantilla_whatsapp_id: null,
 };
 
 export function avisoDelCatalogo(evento) {
@@ -153,6 +159,7 @@ export function mezclarAvisosConCatalogo(filasGuardadas) {
       activo: fila?.activo ?? VALORES_POR_DEFECTO_AVISO.activo,
       whatsapp_activo: fila?.whatsapp_activo ?? VALORES_POR_DEFECTO_AVISO.whatsapp_activo,
       notificar_familia: fila?.notificar_familia ?? VALORES_POR_DEFECTO_AVISO.notificar_familia,
+      plantilla_whatsapp_id: fila?.plantilla_whatsapp_id ?? VALORES_POR_DEFECTO_AVISO.plantilla_whatsapp_id,
     };
   });
 }

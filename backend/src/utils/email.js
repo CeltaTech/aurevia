@@ -76,7 +76,7 @@ async function crearTransporterPara(prestadoraId) {
 async function configuracionEvento(evento, prestadoraId) {
   const { data } = await supabase
     .from('configuracion_notificaciones')
-    .select('emails, activo, whatsapp_activo, notificar_familia')
+    .select('emails, activo, whatsapp_activo, notificar_familia, plantilla_whatsapp_id')
     .eq('evento', evento)
     .eq('prestadora_id', prestadoraId)
     .single();

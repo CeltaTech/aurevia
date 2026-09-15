@@ -88,8 +88,9 @@ globalThis.fetch = async (url, opciones) => {
 };
 
 // El import va después de dejar puestas las variables de entorno y el Meta de mentira.
-const { darDeAltaEnMeta, estadoSegunMeta, motivoDeMeta, nombreParaMeta, traerEstadosDeMeta } =
+const { darDeAltaEnMeta, estadoSegunMeta, motivoDeMeta, traerEstadosDeMeta } =
   await import('../plantillasWhatsapp.js');
+const { nombreParaMeta } = await import('../nombresDeMeta.js');
 
 const avisarDeVerdad = console.error;
 console.error = (...partes) => anotados.push(partes.join(' '));

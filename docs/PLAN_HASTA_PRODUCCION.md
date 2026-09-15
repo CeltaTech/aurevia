@@ -39,7 +39,7 @@
 
 ## Que los avisos lleguen
 
-**8.** Enviar por plantilla de verdad. Hoy `backend/src/utils/whatsapp.js:44-49` arma siempre texto suelto.
+**8.** Los dos avisos que siguen saliendo por texto suelto: `backend/src/utils/avisoAutomaticoCese.js:59` y `backend/src/utils/instruccionesCirculo.js:231`. Los empieza la Prestadora, así que Meta no los entrega; y no tienen evento del catálogo, así que hoy no hay dónde elegirles la plantilla.
 
 **9.** Redacción y corrección de plantillas por IA. La columna `motivo_rechazo` existe y no la lee nadie.
 

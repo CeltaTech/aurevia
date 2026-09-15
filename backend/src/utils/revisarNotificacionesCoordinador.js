@@ -1,5 +1,5 @@
 import { supabase } from '../db/connection.js';
-import { notificarCoordinador, enviarWhatsApp } from './whatsapp.js';
+import { notificarCoordinador, avisarPorWhatsapp } from './whatsapp.js';
 import { enviarPushFamilia } from './push.js';
 import { configuracionEvento } from './email.js';
 import { necesitaNotificar } from './insistencia.js';
@@ -373,6 +373,8 @@ async function notificarFamiliaSiCorresponde({ prestadoraId, guardiaEntranteId, 
   const { data: usuarios } = await supabase.from('usuarios').select('id, telefono').in('id', familiaIds);
   const telefonoPorFamilia = new Map((usuarios ?? []).map((u) => [u.id, u.telefono]));
 
+  const { titulo } = aviso('continuidad_de_guardia', idioma);
+
   for (const familiaId of familiaIds) {
     await enviarPushFamilia(familiaId, {
       ...aviso('continuidad_de_guardia', idioma),
@@ -383,7 +385,9 @@ async function notificarFamiliaSiCorresponde({ prestadoraId, guardiaEntranteId, 
     const telefono = telefonoPorFamilia.get(familiaId);
     if (!telefono) continue;
     try {
-      await enviarWhatsApp({ prestadoraId, telefono, texto });
+      // Lo empieza la Prestadora, así que sale por la plantilla del aviso, con los mismos dos
+      // valores que le llegan al Coordinador: el título y el cuerpo.
+      await avisarPorWhatsapp({ config, prestadoraId, telefono, valores: [titulo, texto] });
     } catch (err) {
       console.error(`Error enviando WhatsApp a Familia (incidente_relevo_sin_resolver, guardia ${guardiaEntranteId}):`, err.message);
     }

@@ -1,4 +1,5 @@
 import { credencialesWhatsapp, META_GRAPH_VERSION } from './whatsapp.js';
+import { idiomaParaMeta, nombreParaMeta } from './nombresDeMeta.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 
 /* Dar de alta una plantilla de mensaje en Meta.
@@ -19,16 +20,10 @@ import { ErrorConMotivo } from './errorConMotivo.js';
 
    LO QUE META EXIGE Y ACÁ SE TRADUCE. El nombre sólo admite minúsculas, números y guión bajo, y
    el idioma va con guión bajo y no con guión. Nada de eso se le pide a quien carga la plantilla:
-   el nombre que se ve es el que escribió, y lo que viaja es su forma admitida. Si se le pidiera a
-   la persona, la pantalla estaría enseñando las reglas de un tercero. */
-
-/** Los idiomas del producto, dichos como los nombra Meta. `en` sale como `en_US` porque Meta no
- *  tiene un inglés sin país y ése es el que usa por omisión para el idioma. */
-const IDIOMA_PARA_META = {
-  'es-AR': 'es_AR',
-  en: 'en_US',
-  'pt-BR': 'pt_BR',
-};
+   el nombre que se ve es el que escribió, y lo que viaja es su forma admitida. Esas dos
+   traducciones viven en `utils/nombresDeMeta.js`, porque el envío del mensaje tiene que nombrar la
+   plantilla exactamente igual que el alta. Si se le pidiera a la persona, la pantalla estaría
+   enseñando las reglas de un tercero. */
 
 /** Cómo queda el estado guardado según lo que Meta contesta, en el alta y después. Meta tiene más
  *  situaciones que las cuatro que guarda el producto, así que se agrupan por lo único que importa
@@ -50,18 +45,6 @@ const ESTADO_SEGUN_META = {
  *  una respuesta que no se entiende no se deduce nunca que la plantilla está aprobada. */
 export function estadoSegunMeta(loQueDiceMeta) {
   return ESTADO_SEGUN_META[String(loQueDiceMeta ?? '').toUpperCase()] ?? 'enviada_meta';
-}
-
-/** El nombre con el que la plantilla queda dada de alta en Meta, derivado del que se ve en el
- *  Panel. Lo que no es letra, número o guión bajo pasa a ser guión bajo, y las mayúsculas bajan. */
-export function nombreParaMeta(nombreInterno) {
-  return nombreInterno
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9_]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 512);
 }
 
 /**
@@ -88,7 +71,7 @@ export async function darDeAltaEnMeta(plantilla) {
       },
       body: JSON.stringify({
         name: nombreParaMeta(plantilla.nombre_interno),
-        language: IDIOMA_PARA_META[plantilla.idioma] ?? IDIOMA_PARA_META['es-AR'],
+        language: idiomaParaMeta(plantilla.idioma),
         category: plantilla.categoria.toUpperCase(),
         components: [{ type: 'BODY', text: plantilla.cuerpo_texto }],
       }),

@@ -1,6 +1,6 @@
 import { supabase } from '../db/connection.js';
 import { enviarPushAsistente } from './push.js';
-import { enviarWhatsApp } from './whatsapp.js';
+import { avisarPorWhatsapp } from './whatsapp.js';
 import { configuracionEvento } from './email.js';
 import { aviso } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
@@ -44,7 +44,14 @@ async function respaldoWhatsappSiFalla({ prestadoraId, asistenteId, enviadoPorPu
   if (!asistente?.telefono) return;
 
   try {
-    await enviarWhatsApp({ prestadoraId, telefono: asistente.telefono, texto: `${titulo}\n\n${cuerpo}` });
+    // Lo empieza la Prestadora, así que va por la plantilla que le eligió al aviso. Sin plantilla
+    // aprobada no sale nada: éste es un aviso de rutina y no tiene otro canal atrás.
+    await avisarPorWhatsapp({
+      config,
+      prestadoraId,
+      telefono: asistente.telefono,
+      valores: [titulo, cuerpo],
+    });
   } catch (err) {
     console.error(`Error enviando WhatsApp de respaldo (${EVENTO_AVISO_RUTINA}) a asistente ${asistenteId}:`, err.message);
   }

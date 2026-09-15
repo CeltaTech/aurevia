@@ -163,9 +163,17 @@ mandar las notificaciones si el primero no respondió dentro del plazo configura
 Coordinador 1", "pasar al Coordinador 2" y "entrar en fase automática" **depende de la
 premura de la situación** (cuánto tiempo falta para que el Paciente quede sin cobertura), y
 ese criterio de premura es a su vez **configurable por prestadora** — no un orden fijo igual
-para todas. Detalle de implementación pendiente: cómo se traduce "premura" en un número
-concreto de minutos/umbrales configurables (mismo patrón que el intervalo de reintento
-descripto arriba), a definir junto con el diseño de la tabla de configuración.
+para todas.
+
+**Cómo quedó implementado.** La premura es la cantidad de minutos que lleva el incidente sin
+resolverse, y cada escalón tiene su propio umbral en `configuracion_escalada_coordinador`:
+la insistencia arranca con el incidente y usa los tramos de `umbrales_premura`, el respaldo
+entra en `minutos_antes_backup` y la búsqueda automática en `minutos_antes_fase_automatica`.
+O sea que el orden no se elige de una lista: lo arman esos números, y una Prestadora que quiera
+salir a buscar antes de pasar al respaldo sólo tiene que ponerle menos minutos. El motor no
+recorre ninguna secuencia —cada escalón mira su umbral y marca su propia fecha, en
+`backend/src/utils/revisarNotificacionesCoordinador.js`—, y el Panel muestra el orden
+resultante mientras se configura (`panel/src/lib/ordenDeLaEscalada.js`).
 
 **¿Es útil la IA en esta fase?** Pregunta que hizo el Desarrollador el 2026-07-13 — recomendación
 de Claude Code, no una decisión tomada:

@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion';
 import { DIRECCION_DEL_MOTOR } from '../../lib/apiPanel';
 import { ordenarTramosPremura } from '../../lib/tramosPremura';
+import { ordenDeLaEscalada } from '../../lib/ordenDeLaEscalada';
 import { traducirValor } from '../../i18n/valores';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
@@ -1208,6 +1209,45 @@ const escaladaGraveSinCerrarValida = (valor) => {
   return Number.isInteger(horas) && horas > 0 && horas <= HORAS_DE_TRES_DIAS;
 };
 
+/* Lo que se acaba de configurar, dicho en orden.
+
+   Los tres escalones no se ordenan eligiendo un orden: se ordenan solos, según el minuto que
+   lleve cada uno, que es lo que pedía el PRD —que dependa de la premura y no sea igual para todas
+   las Prestadoras—. El problema es que así quien lo configura carga dos números sueltos y no ve
+   lo que armó. Esto se lo muestra, y se recalcula mientras escribe. */
+function EscaladaEnOrden({ form }) {
+  const { t } = useLocale();
+
+  const pasos = ordenDeLaEscalada({
+    coordinadorBackupId: form.coordinador_backup_id,
+    minutosAntesBackup: form.minutos_antes_backup,
+    faseAutomaticaActiva: form.fase_automatica_activa,
+    minutosAntesFaseAutomatica: form.minutos_antes_fase_automatica,
+  });
+
+  const cuando = (minuto) => {
+    if (minuto === null) return t.configuracion.escalada_orden_sin_minuto;
+    if (minuto <= 0) return t.configuracion.escalada_orden_desde_el_inicio;
+    return con(t.configuracion.escalada_orden_a_los_minutos, { minutos: minuto });
+  };
+
+  return (
+    <div>
+      <h3>{t.configuracion.escalada_orden_titulo}</h3>
+      <p className="panel-explicacion">{t.configuracion.escalada_orden_explicacion}</p>
+      <ol>
+        {pasos.map((paso) => (
+          <li key={paso.clave}>
+            <strong>{cuando(paso.minuto)}</strong>
+            {' — '}
+            {t.configuracion[`escalada_orden_${paso.clave}`]}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 function TabWhatsappEscaladaCoordinador() {
   const { t } = useLocale();
   const [form, setForm] = useState(null);
@@ -1335,6 +1375,7 @@ function TabWhatsappEscaladaCoordinador() {
               value={form.minutos_antes_fase_automatica ?? ''}
               onChange={(e) => set('minutos_antes_fase_automatica', e.target.value)}
             />
+            <EscaladaEnOrden form={form} />
             <FormField
               label={t.configuracion.whatsapp_escalada_minutos_guardia_sin_cerrar}
               name="minutos_gracia_cierre_guardia"

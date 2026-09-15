@@ -16,6 +16,7 @@ import { Layout } from './components/layout/Layout';
 import { Login } from './pages/Login';
 import { Mfa } from './pages/Mfa';
 import { EntrevistaPublica } from './pages/EntrevistaPublica';
+import { ActivarCuenta } from './pages/ActivarCuenta';
 import { Muestra } from './pages/Muestra';
 import { MuestraEstadoActual } from './pages/MuestraEstadoActual';
 import { Dashboard } from './pages/Dashboard';
@@ -88,6 +89,10 @@ function App() {
                       factor, porque quien la abre no tiene ninguna cuenta con la que entrar: trae
                       la llave que le llegó por correo, y esa llave es toda su credencial. */}
                   <Route path="/entrevista/:llave" element={<EntrevistaPublica />} />
+                  {/* Donde el administrador de una Prestadora recién dada de alta elige su
+                      contraseña. Va acá afuera por lo mismo: la llave le llegó por correo y
+                      todavía no tiene ninguna cuenta con la que entrar. */}
+                  <Route path="/activar-cuenta" element={<ActivarCuenta />} />
                   {/* La muestra del sistema de diseño existe SOLO mientras se desarrolla.
                       `import.meta.env.DEV` es falso al compilar para publicar, el
                       compilador borra esta línea y la pantalla no llega al servidor: no es

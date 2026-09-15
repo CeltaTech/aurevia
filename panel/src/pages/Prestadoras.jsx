@@ -32,6 +32,9 @@ const CAMPOS_VACIOS = {
   identificacion_fiscal: '',
   pais: '',
   email_respuestas: '',
+  admin_nombre: '',
+  admin_email: '',
+  admin_telefono: '',
 };
 
 export function Prestadoras() {
@@ -200,6 +203,39 @@ export function Prestadoras() {
             required
             value={campos.email_respuestas}
             onChange={(e) => cambiarCampo('email_respuestas', e.target.value)}
+          />
+
+          {/* Quién va a administrar la Prestadora. Su cuenta se crea junto con ella: es la
+              persona que entra al Panel a completar la configuración, así que sin ella la
+              Prestadora no puede empezar. La contraseña no se elige acá ni se muestra: le llega
+              a esa persona por correo, para que la ponga ella. */}
+          <h3>{t.prestadoras.alta_administrador_titulo}</h3>
+          <p className="panel-explicacion">{t.prestadoras.alta_administrador_explicacion}</p>
+
+          <FormField
+            label={t.prestadoras.campo_admin_nombre}
+            name="admin_nombre"
+            required
+            value={campos.admin_nombre}
+            onChange={(e) => cambiarCampo('admin_nombre', e.target.value)}
+          />
+
+          <FormField
+            label={t.prestadoras.campo_admin_email}
+            ayuda={t.prestadoras.campo_admin_email_ayuda}
+            name="admin_email"
+            type="email"
+            required
+            value={campos.admin_email}
+            onChange={(e) => cambiarCampo('admin_email', e.target.value)}
+          />
+
+          <FormField
+            label={t.prestadoras.campo_admin_telefono}
+            name="admin_telefono"
+            type="tel"
+            value={campos.admin_telefono}
+            onChange={(e) => cambiarCampo('admin_telefono', e.target.value)}
           />
 
           <Button type="submit" disabled={creando}>

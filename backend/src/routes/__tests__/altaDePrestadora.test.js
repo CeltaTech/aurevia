@@ -22,6 +22,7 @@ import { createServer } from 'node:http';
 const PRESTADORA_PROPIA = '11111111-1111-1111-1111-111111111111';
 const USUARIO = '22222222-2222-2222-2222-222222222222';
 const NUEVA = '33333333-3333-3333-3333-333333333333';
+const ADMINISTRADOR = '44444444-4444-4444-4444-444444444444';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
@@ -41,7 +42,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, cuerpo: crudo ? JSON.parse(crudo) : null });
+    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada() : preparada;
@@ -66,6 +67,11 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+// Sin dirección del Panel, el correo de primera contraseña no se arma y se anota en el registro
+// del servidor. Es a propósito: lo que se prueba acá es el alta, y el correo de activación tiene
+// su propio camino. Se borra en vez de darla por ausente, para que la prueba dé lo mismo corra
+// donde corra.
+delete process.env.PANEL_URL;
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma
 // en el momento en que se importa, y con la dirección que haya en ese instante.
@@ -92,6 +98,9 @@ const ALTA_COMPLETA = {
   identificacion_fiscal: '30-11111111-9',
   pais: 'AR',
   email_respuestas: 'respuestas@cuidadosdellitoral.example',
+  admin_nombre: 'Marta Riquelme',
+  admin_email: 'marta.riquelme@cuidadosdellitoral.example',
+  admin_telefono: '11-5555-0000',
 };
 
 async function darDeAlta(cambios = {}) {
@@ -119,6 +128,12 @@ beforeEach(() => {
   ]);
   respuestas.set('PATCH /rest/v1/configuracion_prestadora', () => []);
   respuestas.set('POST /rest/v1/auditoria_soporte_tecnico', () => []);
+  // El acceso del administrador: la cuenta de acceso se crea y su ficha se guarda. El servicio
+  // de acceso devuelve la cuenta suelta, no adentro de una lista.
+  respuestas.set('POST /auth/v1/admin/users', () => ({ id: ADMINISTRADOR }));
+  respuestas.set('POST /rest/v1/usuarios', () => []);
+  // Y lo que se usa sólo cuando el alta se deshace.
+  respuestas.set('DELETE /rest/v1/prestadoras', () => []);
 });
 
 /**
@@ -136,6 +151,17 @@ function filaEscritaEn(clave) {
 function noCreo() {
   const escrituras = llamadas.filter((l) => l.clave === 'POST /rest/v1/prestadoras');
   assert.deepEqual(escrituras, [], 'el motor creó la Prestadora igual, después de decir que no');
+}
+
+/** Que el alta se haya deshecho de verdad: la Prestadora que alcanzó a crearse quedó borrada. */
+function seDeshizo() {
+  const borrado = llamadas.find((l) => l.clave === 'DELETE /rest/v1/prestadoras');
+  assert.ok(borrado, 'quedó creada una Prestadora sin administrador');
+  assert.match(
+    borrado.url,
+    new RegExp(`id=eq\\.${NUEVA}`),
+    'borró por un identificador que no es el de la Prestadora recién creada'
+  );
 }
 
 /**
@@ -185,6 +211,28 @@ describe('lo que falta o viene mal cargado no crea nada', () => {
 
   it('con la casilla de respuestas mal escrita', async () => {
     const { estado, cuerpo } = await darDeAlta({ email_respuestas: 'esto no es una direccion' });
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.motivo, 'correo_invalido');
+    noCreo();
+    noFiltraLaBase(cuerpo);
+  });
+
+  it('sin nombre del administrador', async () => {
+    const { estado, cuerpo } = await darDeAlta({ admin_nombre: '   ' });
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.motivo, 'faltan_datos');
+    noCreo();
+  });
+
+  it('sin correo del administrador', async () => {
+    const { estado, cuerpo } = await darDeAlta({ admin_email: '' });
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.motivo, 'faltan_datos');
+    noCreo();
+  });
+
+  it('con el correo del administrador mal escrito', async () => {
+    const { estado, cuerpo } = await darDeAlta({ admin_email: 'marta arroba ejemplo' });
     assert.equal(estado, 400);
     assert.equal(cuerpo.motivo, 'correo_invalido');
     noCreo();
@@ -273,6 +321,91 @@ describe('el alta que sale bien', () => {
   it('los espacios de más no crean nombres distintos', async () => {
     await darDeAlta({ nombre_fantasia: '  Cuidados del Litoral  ' });
     assert.equal(filaEscritaEn('POST /rest/v1/prestadoras').nombre_fantasia, 'Cuidados del Litoral');
+  });
+});
+
+describe('la Prestadora nace con su administrador', () => {
+  it('le crea el acceso, con su rol y atado a la Prestadora recién creada', async () => {
+    const { estado, cuerpo } = await darDeAlta();
+    assert.equal(estado, 201);
+    assert.equal(cuerpo.administrador.id, ADMINISTRADOR);
+
+    const acceso = filaEscritaEn('POST /auth/v1/admin/users');
+    assert.ok(acceso, 'dio de alta la Prestadora y nadie puede entrar a configurarla');
+    assert.equal(acceso.email, ALTA_COMPLETA.admin_email);
+
+    const ficha = filaEscritaEn('POST /rest/v1/usuarios');
+    assert.ok(ficha, 'creó la cuenta de acceso y no quedó la ficha de la persona');
+    assert.equal(ficha.id, ADMINISTRADOR);
+    assert.equal(ficha.rol, 'admin_prestadora');
+    assert.equal(ficha.prestadora_id, NUEVA, 'la ató a otra Prestadora');
+    assert.equal(ficha.nombre, ALTA_COMPLETA.admin_nombre);
+    assert.equal(ficha.telefono, ALTA_COMPLETA.admin_telefono);
+  });
+
+  it('no devuelve ninguna contraseña', async () => {
+    // La cuenta nace con una clave al azar y la persona elige la suya por correo. Que esa clave
+    // llegue al Panel sería mostrarla en pantalla, y no se muestra ninguna nunca.
+    const { cuerpo } = await darDeAlta();
+    assert.deepEqual(Object.keys(cuerpo.administrador), ['id']);
+    const clave = filaEscritaEn('POST /auth/v1/admin/users').password;
+    assert.ok(clave, 'la cuenta se creó sin clave');
+    assert.doesNotMatch(JSON.stringify(cuerpo), new RegExp(clave.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  });
+
+  it('el teléfono no es obligatorio', async () => {
+    const { estado } = await darDeAlta({ admin_telefono: '' });
+    assert.equal(estado, 201);
+    assert.equal(filaEscritaEn('POST /rest/v1/usuarios').telefono, null);
+  });
+});
+
+describe('sin administrador no queda Prestadora', () => {
+  it('si no se pudo crear el acceso, la Prestadora se borra', async () => {
+    respuestas.set('POST /auth/v1/admin/users', () => falla(500, { message: 'el servicio de acceso no contestó' }));
+    const { estado, cuerpo } = await darDeAlta();
+    assert.equal(estado, 500);
+    seDeshizo();
+    noFiltraLaBase(cuerpo);
+  });
+
+  it('si no se pudo guardar la ficha de la persona, la Prestadora se borra', async () => {
+    respuestas.set('POST /rest/v1/usuarios', () => falla(500, { message: 'la base no contestó' }));
+    const { estado, cuerpo } = await darDeAlta();
+    assert.equal(estado, 500);
+    seDeshizo();
+    noFiltraLaBase(cuerpo);
+  });
+
+  it('el correo que ya tiene cuenta se dice como tal, y tampoco queda Prestadora', async () => {
+    // El caso más probable de todos: quien va a administrar esta Prestadora ya administra otra.
+    // El servicio de acceso avisa en inglés y sin código propio, así que llega tal cual.
+    respuestas.set('POST /auth/v1/admin/users', () =>
+      falla(422, { message: 'A user with this email address has already been registered' })
+    );
+    // Y detrás de ese correo hay alguien de verdad: la cuenta existe y su ficha es de otra
+    // Prestadora, la que la base falsa contesta en `GET /rest/v1/usuarios`.
+    respuestas.set('GET /auth/v1/admin/users', () => ({
+      users: [{ id: ADMINISTRADOR, email: ALTA_COMPLETA.admin_email }],
+    }));
+    const { estado, cuerpo } = await darDeAlta();
+    assert.equal(estado, 409);
+    assert.equal(cuerpo.motivo, 'correo_de_otra_cuenta');
+    seDeshizo();
+    // El detalle lleva el identificador de la cuenta ajena: acá se comprueba que no salió.
+    assert.doesNotMatch(JSON.stringify(cuerpo), new RegExp(ADMINISTRADOR));
+    noFiltraLaBase(cuerpo);
+  });
+
+  it('si el borrado también falla, lo que sale es el problema de verdad', async () => {
+    // Lo que tiene que llegar a la pantalla es por qué no se pudo crear el acceso, no el
+    // tropiezo de la limpieza: si no, quien está dando el alta lee el problema equivocado.
+    respuestas.set('POST /auth/v1/admin/users', () => falla(500, { message: 'el servicio de acceso no contestó' }));
+    respuestas.set('DELETE /rest/v1/prestadoras', () => falla(500, { message: 'la base no contestó' }));
+    const { estado, cuerpo } = await darDeAlta();
+    assert.equal(estado, 500);
+    assert.equal(cuerpo.error, 'falla_del_sistema');
+    noFiltraLaBase(cuerpo);
   });
 });
 

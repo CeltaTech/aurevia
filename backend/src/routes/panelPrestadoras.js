@@ -3,6 +3,7 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
 import { esDireccionDeCorreo } from '../utils/email.js';
+import { crearCuentaConPerfil } from '../utils/cuentasPanel.js';
 
 // Alta y listado de prestadoras licenciatarias — pendiente #30, ítem I.
 // Solo superadmin tiene uso legítimo de esto:
@@ -40,6 +41,22 @@ async function registrarAltaEnAuditoria(adminId, prestadoraId) {
   if (error) console.error('Error registrando el alta de la Prestadora en la auditoría:', error.message);
 }
 
+// Deshace una Prestadora recién creada. Se usa en un solo caso: cuando la Prestadora ya entró
+// pero no se le pudo crear el acceso de su administrador. Una Prestadora sin administrador no
+// le sirve a nadie —no hay quien entre a configurarla— y dejarla creada obliga a quien reintente
+// a cambiarle el nombre, porque dos Prestadoras no pueden llamarse igual.
+//
+// La configuración que sembró la base se va sola con ella: las tablas `configuracion_*` apuntan
+// a `prestadoras` con borrado en cascada
+// (`supabase/migrations/20260819183000_prestadora_nueva_nace_configurada.sql`).
+//
+// Nunca falla: si la limpieza tropieza, lo que tiene que llegar a la pantalla es el problema de
+// verdad —por qué no se pudo crear el acceso— y no el tropiezo de la limpieza.
+async function deshacerPrestadora(prestadoraId) {
+  const { error } = await supabase.from('prestadoras').delete().eq('id', prestadoraId);
+  if (error) console.error('Quedó una Prestadora sin administrador y sin borrar:', prestadoraId, error.message);
+}
+
 panelPrestadorasRouter.get('/', requiereRolPanel, requiereSuperadmin, async (req, res) => {
   const { data, error } = await supabase
     .from('prestadoras')
@@ -66,10 +83,21 @@ panelPrestadorasRouter.get('/paises', requiereRolPanel, requiereSuperadmin, asyn
 // El alta de una Prestadora.
 //
 // Lo que se pide es lo mínimo con lo que la Prestadora puede empezar a existir: cómo se llama
-// para el mundo, cómo se llama ante la ley, en qué país trabaja y a qué casilla quiere que le
-// lleguen las respuestas de los avisos que manda. Todo lo demás —zonas, plazos, formas de
-// cobro— lo configura ella después, y la fila de configuración inicial la siembra sola la base
-// al insertar (disparador `trg_sembrar_configuracion_prestadora`).
+// para el mundo, cómo se llama ante la ley, en qué país trabaja, a qué casilla quiere que le
+// lleguen las respuestas de los avisos que manda, y quién va a ser su administrador. Todo lo
+// demás —zonas, plazos, formas de cobro— lo configura ella después, y la fila de configuración
+// inicial la siembra sola la base al insertar (disparador
+// `trg_sembrar_configuracion_prestadora`).
+//
+// El administrador es parte del alta y no un paso aparte: es la persona que va a entrar al Panel
+// a completar esa configuración, así que sin ella la Prestadora no puede empezar. Hasta acá el
+// primer administrador se creaba abriendo una sesión de soporte técnico y dándolo de alta desde
+// adentro (ver `routes/panelUsuarios.js`), que es entrar a los datos de una Prestadora para algo
+// que no es dar soporte.
+//
+// Su contraseña no se elige ni se muestra: la cuenta nace con una clave al azar y a la persona
+// le llega el correo de primera contraseña, con el que se pone la suya
+// (`utils/activacionCuenta.js`). Ninguna clave aparece en pantalla ni en la respuesta.
 //
 // El estado con el que nace es el que pone la base, `prospecto`: quien da de alta no lo elige,
 // porque certificar una Prestadora es otra cosa y tiene su propio camino.
@@ -79,13 +107,20 @@ panelPrestadorasRouter.post('/', requiereRolPanel, requiereSuperadmin, async (re
   const pais = String(req.body?.pais ?? '').trim().toUpperCase();
   const identificacionFiscal = String(req.body?.identificacion_fiscal ?? '').trim();
   const emailRespuestas = String(req.body?.email_respuestas ?? '').trim();
+  const adminNombre = String(req.body?.admin_nombre ?? '').trim();
+  const adminEmail = String(req.body?.admin_email ?? '').trim();
+  const adminTelefono = String(req.body?.admin_telefono ?? '').trim();
 
-  if (!razonSocial || !nombreFantasia || !pais || !emailRespuestas) {
-    return responderError(res, new ErrorConMotivo('faltan_datos', 'alta de Prestadora sin razón social, nombre, país o casilla de respuestas'));
+  if (!razonSocial || !nombreFantasia || !pais || !emailRespuestas || !adminNombre || !adminEmail) {
+    return responderError(res, new ErrorConMotivo('faltan_datos', 'alta de Prestadora sin razón social, nombre, país, casilla de respuestas o datos del administrador'));
   }
 
   if (!esDireccionDeCorreo(emailRespuestas)) {
     return responderError(res, new ErrorConMotivo('correo_invalido', 'la casilla de respuestas no tiene forma de dirección de correo'));
+  }
+
+  if (!esDireccionDeCorreo(adminEmail)) {
+    return responderError(res, new ErrorConMotivo('correo_invalido', 'el correo del administrador no tiene forma de dirección de correo'));
   }
 
   // El país se comprueba contra el catálogo de monedas antes de insertar. Si no está, el
@@ -136,7 +171,31 @@ panelPrestadorasRouter.post('/', requiereRolPanel, requiereSuperadmin, async (re
     console.error('El alta de la Prestadora quedó sin casilla de respuestas:', errorCasilla.message);
   }
 
+  // El acceso del administrador. A diferencia de la casilla, esto no admite quedar a medias: una
+  // Prestadora sin administrador no tiene quién entre a configurarla, así que si falla se
+  // deshace el alta entera y quien la estaba dando la vuelve a intentar con el mismo nombre.
+  //
+  // El correo ya tomado sale con motivo propio desde `crearCuentaConPerfil`, y la pantalla lo
+  // sabe traducir: es el caso más probable de todos, porque quien administra una Prestadora
+  // puede ya tener cuenta en otra.
+  let administrador;
+  try {
+    const { userId } = await crearCuentaConPerfil({
+      email: adminEmail,
+      nombre: adminNombre,
+      telefono: adminTelefono || null,
+      rol: 'admin_prestadora',
+      zonas: [],
+      prestadoraId: prestadora.id,
+      enviarActivacion: true,
+    });
+    administrador = { id: userId };
+  } catch (errorAdmin) {
+    await deshacerPrestadora(prestadora.id);
+    return responderError(res, errorAdmin);
+  }
+
   await registrarAltaEnAuditoria(req.usuarioPanel.id, prestadora.id);
 
-  res.status(201).json({ prestadora, casilla_respuestas_guardada: !errorCasilla });
+  res.status(201).json({ prestadora, administrador, casilla_respuestas_guardada: !errorCasilla });
 });

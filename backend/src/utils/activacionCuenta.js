@@ -12,15 +12,24 @@ const DIAS_VALIDEZ_TOKEN = 7;
 
 // URL pública de la PWA correspondiente al rol de la cuenta nueva — nunca hardcodeada
 // (CLAUDE.md §7 regla 1), viene de variables de entorno propias por app (backend/.env.example).
+const ROLES_DE_PANEL = ['superadmin', 'admin_prestadora', 'coordinador'];
+
+// A qué pantalla manda el link de activación. Cada rol entra por una puerta distinta, y un link
+// a la puerta equivocada no es un detalle estético: la persona no tiene cuenta ahí y se queda
+// afuera sin entender por qué.
 function urlAppPorRol(rol) {
   if (rol === 'asistente') return process.env.PWA_ASISTENTES_URL;
+  if (ROLES_DE_PANEL.includes(rol)) return process.env.PANEL_URL;
   return process.env.PWA_FAMILIAS_URL;
 }
 
 // Punto único de verdad: genera el token de un solo uso y manda el email de activación por
-// el SMTP que ya existe (email.js) — usado por crearCuentaConPerfil cuando la cuenta nueva
-// es de Familia/Asistente/Círculo (pendiente #75, docs/PLAN_HASTA_PRODUCCION.md), nunca para
-// Coordinador/Admin_prestadora/Superadmin (esos siguen con el flujo manual existente).
+// el SMTP que ya existe (email.js) — usado por crearCuentaConPerfil cuando la cuenta nueva es de
+// Familia/Asistente/Círculo, y también para el administrador que se crea al dar de alta una
+// Prestadora (`routes/panelPrestadoras.js`): esa persona tampoco tiene a quién pedirle su clave,
+// porque quien la dio de alta es de CeltaTech y no puede ver ni elegir la contraseña de nadie.
+// Las demás cuentas de Panel —las que una Prestadora crea para su propio equipo— siguen con el
+// camino de siempre, en el que quien la crea comunica la primera clave.
 export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, prestadoraId = null, idioma = null }) {
   const appUrl = urlAppPorRol(rol);
   if (!appUrl) {

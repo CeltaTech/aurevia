@@ -96,9 +96,19 @@ esa persona lo decide la Prestadora: el producto avisa, no prohíbe (`celtatech/
 **Están afuera de la lista de etapas**, por lo mismo que las dos fotos: las claves de las etapas las
 inventa cada Prestadora y ninguna se puede nombrar desde el código.
 
-**UI del progreso del aspirante:** mostrar estas 5 etapas como checklist con % de
-completitud (ej. "3 de 5 etapas completas — 60%"), no solo como un estado de texto plano —
-le da al aspirante una noción clara de cuánto falta, igual que un onboarding progresivo.
+### El avance del aspirante — cómo quedó construido
+
+La pantalla de verificación muestra, arriba de todo, cuánto lleva hecho el aspirante: una línea
+—«2 de 4 etapas aprobadas — 50%»— y una barra.
+
+- **El total sale del catálogo de etapas de esa Prestadora**, no de las filas guardadas. Una etapa
+  que la Prestadora sacó deja de contar aunque su fila siga ahí, y una que agregó cuenta como
+  pendiente aunque todavía no tenga fila.
+- **Una etapa rechazada no suma avance.** Está resuelta, pero no acerca a nadie a trabajar. Cuántas
+  hay se informa aparte, al lado del porcentaje.
+- **Sin etapas configuradas no se muestra nada.** Un contador de cero sobre cero no dice nada, y lo
+  que hay que resolver ahí es cargar el catálogo, que se hace en Configuración.
+- El cálculo vive en `panel/src/lib/avanceDeIncorporacion.js`, y es lo único que decide qué cuenta.
 
 ## Roles
 

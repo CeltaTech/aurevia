@@ -1350,6 +1350,36 @@ h2 {
   border-radius: 8px;
 }
 
+/* Cuánto lleva hecho el aspirante: una línea de texto y una barra. La barra acompaña al número,
+   no lo reemplaza —quien mira necesita el número exacto, y la barra le da la proporción de un
+   vistazo—, y por eso el texto va primero. */
+.panel-avance-incorporacion {
+  margin: 1rem 0;
+}
+
+.panel-avance-texto {
+  margin: 0 0 0.375rem;
+  font-size: 0.875rem;
+  color: var(--texto-secundario);
+}
+
+.panel-avance-barra {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--superficie-hundida);
+  border: 1px solid var(--borde-card);
+  overflow: hidden;
+}
+
+/* La barra pinta color, no letras, así que va con la variable de marca y no con la versión
+   «para texto» (ver la explicación de los dos juegos en `styles/variables.css`). */
+.panel-avance-barra span {
+  display: block;
+  height: 100%;
+  background: var(--azul-medio);
+  transition: width 0.2s ease;
+}
+
 /* Cada referencia laboral, con su resultado y su nota. Una debajo de la otra y no en columnas:
    son pocas —cinco como mucho— y cada una lleva adentro un campo de texto que necesita el ancho. */
 .panel-referencia-laboral {

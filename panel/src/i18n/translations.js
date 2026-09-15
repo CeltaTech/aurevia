@@ -1073,6 +1073,8 @@ export const T = {
         titulo: 'Proceso de Incorporación de Asistentes',
         explicacion: 'Uso interno del Panel — registra el avance del postulante por las etapas configuradas antes de sumarse activamente al plantel.',
         proceso_completo: 'Todas las etapas están aprobadas. Este Asistente puede pasar a estado Activo desde la pestaña Perfil.',
+        avance: '{{aprobadas}} de {{total}} etapas aprobadas — {{porcentaje}}%',
+        avance_rechazadas: '{{rechazadas}} rechazadas',
         fotos: {
           titulo: 'Verificación de identidad',
           explicacion: 'Las dos fotos se muestran juntas para poder compararlas. Quedan guardadas y sólo las alcanza el equipo de esta Prestadora; la dirección con la que se ven vence al minuto.',
@@ -3353,6 +3355,8 @@ export const T = {
         titulo: 'Onboarding Process',
         explicacion: 'Internal Panel use — tracks the applicant through the configured stages before joining the active roster.',
         proceso_completo: 'All stages are approved. This Assistant can move to Active status from the Profile tab.',
+        avance: '{{aprobadas}} of {{total}} stages approved — {{porcentaje}}%',
+        avance_rechazadas: '{{rechazadas}} rejected',
         fotos: {
           titulo: 'Identity verification',
           explicacion: 'Both photos are shown together so they can be compared. They are stored and reachable only by this Provider’s team; the address they are displayed with expires after a minute.',
@@ -5619,6 +5623,8 @@ export const T = {
         titulo: 'Processo de Incorporação de Assistentes',
         explicacion: 'Uso interno do Painel — acompanha o candidato pelas etapas configuradas antes de entrar ativamente na equipe.',
         proceso_completo: 'Todas as etapas estão aprovadas. Este Assistente pode passar para o status Ativo na aba Perfil.',
+        avance: '{{aprobadas}} de {{total}} etapas aprovadas — {{porcentaje}}%',
+        avance_rechazadas: '{{rechazadas}} recusadas',
         fotos: {
           titulo: 'Verificação de identidade',
           explicacion: 'As duas fotos aparecem juntas para que se possam comparar. Ficam guardadas e somente a equipe desta Prestadora as alcança; o endereço com que são exibidas vence em um minuto.',

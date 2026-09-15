@@ -7,6 +7,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
+import { avanceDeIncorporacion } from '../../lib/avanceDeIncorporacion';
 import { FotosDeIdentidad } from './FotosDeIdentidad';
 import { ReferenciasLaborales } from './ReferenciasLaborales';
 
@@ -61,7 +62,9 @@ export function VerificacionTab({ asistente }) {
     recargar();
   }
 
-  const todasAprobadas = verificaciones.length > 0 && verificaciones.every((v) => v.estado === 'aprobada');
+  // Cuánto lleva hecho, contado contra el catálogo de etapas de esta Prestadora y no contra las
+  // filas guardadas: son ellas las que arman su proceso y lo cambian cuando quieren.
+  const avance = avanceDeIncorporacion(etapas, verificaciones);
   const estadoCombinado = estadoCarga === 'error' || estadoEtapas === 'error'
     ? 'error'
     : (estadoCarga === 'listo' && estadoEtapas === 'listo' ? 'listo' : 'cargando');
@@ -71,7 +74,32 @@ export function VerificacionTab({ asistente }) {
       <h2>{t.asistentes.verificacion.titulo}</h2>
       <p className="panel-explicacion">{t.asistentes.verificacion.explicacion}</p>
       {(error || errorEtapas) && <Alert variant="error">{error || errorEtapas}</Alert>}
-      {todasAprobadas && <Alert variant="info">{t.asistentes.verificacion.proceso_completo}</Alert>}
+      {estadoCombinado === 'listo' && avance.completo && <Alert variant="info">{t.asistentes.verificacion.proceso_completo}</Alert>}
+
+      {/* Cuánto lleva hecho, en una línea y con barra. Sin etapas configuradas no se muestra: un
+          contador de cero sobre cero no dice nada, y lo que hay que resolver ahí es cargar el
+          catálogo, que se hace en Configuración. */}
+      {estadoCombinado === 'listo' && avance.hayEtapas && (
+        <div className="panel-avance-incorporacion">
+          <p className="panel-avance-texto">
+            {t.asistentes.verificacion.avance
+              .replace('{{aprobadas}}', avance.aprobadas)
+              .replace('{{total}}', avance.total)
+              .replace('{{porcentaje}}', avance.porcentaje)}
+            {avance.rechazadas > 0 && ` · ${t.asistentes.verificacion.avance_rechazadas.replace('{{rechazadas}}', avance.rechazadas)}`}
+          </p>
+          <div
+            className="panel-avance-barra"
+            role="progressbar"
+            aria-valuenow={avance.porcentaje}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={t.asistentes.verificacion.titulo}
+          >
+            <span style={{ width: `${avance.porcentaje}%` }} />
+          </div>
+        </div>
+      )}
 
       {/* Antes de las etapas, y afuera de su lista: las dos fotos son de la persona y no de una
           etapa, porque las claves de las etapas las inventa cada Prestadora y ninguna se puede

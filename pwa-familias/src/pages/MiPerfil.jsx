@@ -8,6 +8,7 @@ import { useSeVe } from '../context/PerfilContext';
 import { useCirculo } from '../context/CirculoContext';
 import { pantallaPermitida } from '../lib/interruptorDeCadaPantalla';
 import AvisoInstruccionPendiente from '../components/AvisoInstruccionPendiente';
+import LlavesDeEsteAparato from '../components/LlavesDeEsteAparato';
 
 // Una de las dos listas: qué ve esta persona y qué no. La de «qué no ve» pesa lo mismo que la
 // otra a propósito. Quien está anotado en un círculo familiar tiene que poder saber qué le
@@ -181,6 +182,10 @@ export default function MiPerfil() {
           {notifError && <div className="alert alert-error" role="alert">{notifError}</div>}
         </>
       )}
+
+      {/* Cómo se entra a esta aplicación. Va acá abajo, junto con los avisos al celular: las dos
+          son cosas de este aparato y no del cuidado de nadie. */}
+      <LlavesDeEsteAparato />
     </div>
   );
 }

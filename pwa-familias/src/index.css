@@ -200,6 +200,56 @@ h3 {
   margin-bottom: 1.5rem;
 }
 
+/* Las dos maneras de entrar se separan con una línea que lleva la palabra «o» en el medio: son
+   alternativas, no pasos, y una lista de botones pegados se lee como si fueran pasos. */
+.login-separador {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+  color: var(--texto-secundario);
+  font-size: 0.875rem;
+}
+
+.login-separador::before,
+.login-separador::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--borde-card);
+}
+
+/* ---------- Las llaves guardadas en los aparatos ---------- */
+
+.llaves-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.llave-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--borde-card);
+}
+
+.llave-item:first-child {
+  border-top: none;
+}
+
+.llave-fechas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.875rem;
+}
+
+.llave-fechas span:last-child {
+  color: var(--texto-secundario);
+}
+
 /* ---------- Layout app móvil ---------- */
 
 .app-layout {

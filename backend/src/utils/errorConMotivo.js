@@ -134,6 +134,13 @@ const ESTADO_POR_MOTIVO = {
   entrevista_en_el_pasado: 400,
   entrevista_ya_cerrada: 409,
   entrevista_ya_agendada: 409,
+  // Entrar con la llave que guarda el teléfono. Es 401 —"no se pudo entrar"— y es un solo motivo
+  // para todo: la llave que no existe, la que fue revocada, la que apunta a otra persona, el
+  // desafío vencido y la firma que no cierra salen los cinco iguales. Distinguirlos convertiría a
+  // la pantalla de ingreso en una forma de averiguar quién tiene cuenta, que es exactamente lo que
+  // `celtatech/CLAUDE.md` §6 prohíbe cuando dice que el error de la entrada no debe permitir
+  // distinguir "esa persona no existe" de "la clave está mal". El detalle queda en el registro.
+  llave_no_sirve: 401,
   // Y el postulante que llega a deshora no recibe ningún error: llegar temprano no es equivocarse.
   // La puerta pública le contesta bien, con el cuándo y con en qué momento está, y la pantalla le
   // dice si tiene que volver más tarde o si la entrevista ya pasó.

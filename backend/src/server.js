@@ -33,6 +33,9 @@ import { activarCuentaRouter } from './routes/activarCuenta.js';
 import { panelEntrevistasRouter } from './routes/panelEntrevistas.js';
 import { entrevistaPublicaRouter } from './routes/entrevistaPublica.js';
 import { panelEmergenciasRouter } from './routes/panelEmergencias.js';
+import { llaveDelDispositivoRouter, routerDeLlavesConSesion } from './routes/llaveDelDispositivo.js';
+import { requiereRolAsistente } from './middleware/requiereRolAsistente.js';
+import { requiereRolFamilia } from './middleware/requiereRolFamilia.js';
 import { revisarVencimientos } from './utils/vencimientos.js';
 import { revisarAusenciasAutomaticas } from './utils/ausenciaAutomatica.js';
 import { revisarNotificacionesCoordinador } from './utils/revisarNotificacionesCoordinador.js';
@@ -140,13 +143,21 @@ app.use('/api/activar-cuenta', activarCuentaRouter);
 // Sin sesión, como la activación de cuenta: quien llega trae la llave que le llegó por correo, y
 // no tiene ninguna cuenta con la que entrar. La Prestadora sale de la llave, no de la dirección.
 app.use('/api/entrevista', entrevistaPublicaRouter);
+// Sin sesión también, y por la misma razón: quien entra con la huella todavía no tiene ninguna.
+// Lo que reemplaza a la sesión es un desafío de un solo uso que el motor emitió hace dos minutos
+// y una firma que sólo puede hacer una llave guardada adentro de un teléfono concreto.
+app.use('/api/llave-de-dispositivo', llaveDelDispositivoRouter);
 app.use('/api/app-asistentes', appAsistentesRouter);
 app.use('/api/app-asistentes/medicacion', appAsistentesMedicacionRouter);
 app.use('/api/app-asistentes/consentimientos', appAsistentesConsentimientosRouter);
 app.use('/api/app-asistentes/matricula', appAsistentesMatriculaRouter);
 app.use('/api/app-asistentes/ofertas', appAsistentesOfertasRouter);
+// Agregar, ver y sacar las llaves propias sí pide sesión: son cosas de alguien que ya entró. El
+// mismo juego de rutas se monta dos veces, una por aplicación, cada una detrás del rol que le toca.
+app.use('/api/app-asistentes/llaves', requiereRolAsistente, routerDeLlavesConSesion('asistente'));
 app.use('/api/app-familias', appFamiliasRouter);
 app.use('/api/app-familias/medicacion', appFamiliasMedicacionRouter);
+app.use('/api/app-familias/llaves', requiereRolFamilia, routerDeLlavesConSesion('familia'));
 app.use('/api/panel/medicacion', panelMedicacionRouter);
 app.use('/api/panel/marketplace', panelMarketplaceRouter);
 app.use('/api/panel/whatsapp', panelWhatsappRouter);

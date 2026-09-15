@@ -9,6 +9,7 @@ import { nombreTipo } from '../lib/tipoDeAsistente';
 import Matricula from '../components/Matricula';
 import CarpetaDePapeles from '../components/CarpetaDePapeles';
 import Consentimientos from '../components/Consentimientos';
+import LlavesDeEsteAparato from '../components/LlavesDeEsteAparato';
 
 export default function MiPerfil() {
   const { t } = useLocale();
@@ -188,6 +189,10 @@ export default function MiPerfil() {
           propósito: es algo que la persona tiene que poder volver a mirar
           cuando quiera, no un trámite de una sola vez que después desaparece. */}
       <Consentimientos />
+
+      {/* Cómo se entra a esta aplicación. Va al final, junto con los avisos al celular: las dos
+          son cosas de este aparato y no del trabajo. */}
+      <LlavesDeEsteAparato />
     </div>
   );
 }

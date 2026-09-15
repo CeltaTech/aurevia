@@ -40,6 +40,16 @@ export const GRUPOS = [
     copias: ['panel/src/lib/asuntosEnVivo.js'],
   },
   {
+    que: 'la llave que guarda el teléfono, del lado del navegador',
+    original: 'pwa-asistentes/src/lib/llaveDelDispositivo.js',
+    copias: ['pwa-familias/src/lib/llaveDelDispositivo.js'],
+  },
+  {
+    que: 'la pantalla de las llaves guardadas en los aparatos',
+    original: 'pwa-asistentes/src/components/LlavesDeEsteAparato.jsx',
+    copias: ['pwa-familias/src/components/LlavesDeEsteAparato.jsx'],
+  },
+  {
     que: 'el traductor de mensajes de error',
     original: 'panel/src/lib/errores.js',
     copias: ['pwa-asistentes/src/lib/errores.js', 'pwa-familias/src/lib/errores.js'],

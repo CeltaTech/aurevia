@@ -50,6 +50,7 @@ import { Medicacion } from './pages/Medicacion';
 import { Importacion } from './pages/Importacion';
 import { InformesObraSocial } from './pages/InformesObraSocial';
 import { Auditoria } from './pages/Auditoria';
+import { ContenidoParaFamilias } from './pages/contenidos/ContenidoParaFamilias';
 import { MarketplaceFamilias } from './pages/marketplace/Familias';
 import { FormasDeCobro } from './pages/marketplace/FormasDeCobro';
 import { MarketplaceCalificaciones } from './pages/marketplace/Calificaciones';
@@ -106,6 +107,12 @@ function App() {
                     <Route path="familias" element={<Familias />} />
                     <Route path="familias/:id" element={<FamiliaDetalle />} />
                     <Route path="servicios" element={<Servicios />} />
+                    {/* La biblioteca que la Prestadora escribe para quien cuida en su casa. Sin
+                        candado de modalidad: una Familia de prestación directa cuida en su casa
+                        igual que una de marketplace. Verla la ve cualquiera del Panel —un
+                        borrador hay que poder revisarlo—; escribirla es un permiso, y quien lo
+                        niega de verdad es el motor. */}
+                    <Route path="contenidos" element={<ContenidoParaFamilias />} />
                     <Route path="servicios/:id" element={<ServicioDetalle />} />
                     <Route path="medicacion" element={<Medicacion />} />
                     <Route path="guardias" element={<Guardias />} />

@@ -19,6 +19,7 @@ import AccesoMarketplace from './pages/AccesoMarketplace';
 import Facturas from './pages/Facturas';
 import FacturaDetalle from './pages/FacturaDetalle';
 import Medicacion from './pages/Medicacion';
+import Contenidos from './pages/Contenidos';
 import MiPerfil from './pages/MiPerfil';
 import FirmarInstruccion from './pages/FirmarInstruccion';
 import CodigoParaElAsistente from './pages/CodigoParaElAsistente';
@@ -207,6 +208,10 @@ function Rutas() {
             </SoloConMarketplace>
           }
         />
+        {/* Lo que la Prestadora escribió para quien cuida en su casa. No lleva guardián: no
+            cuelga de un Paciente ni de una modalidad, y no muestra nada de nadie. Lo que no
+            está publicado no sale del motor, así que acá no hay nada que adivinar. */}
+        <Route path="contenidos" element={<Contenidos />} />
         <Route path="codigo" element={<CodigoParaElAsistente />} />
         <Route path="perfil" element={<MiPerfil />} />
         {/* No lleva guardián: quién tiene una instrucción para firmar lo contesta el motor, y

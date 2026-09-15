@@ -397,6 +397,14 @@ export const T = {
     // Lo que se le cobra al círculo familiar, período por período, y de qué está hecho cada
     // importe. Los estados y los medios se guardan como clave en la base y el nombre visible
     // sale de acá, así que las claves llevan el prefijo de lo que nombran.
+    // LO QUE LA PRESTADORA ESCRIBIÓ PARA QUIEN CUIDA EN SU CASA. El texto de cada pieza lo
+    // escribió una persona de la Prestadora y sale tal cual: acá se traduce el marco y nada más.
+    contenidos: {
+      titulo: 'Para cuidar en casa',
+      explicacion: 'Lo que esta Prestadora escribió para quienes cuidan en su casa.',
+      sin_contenidos: 'Esta Prestadora todavía no publicó nada acá.',
+      abrir_enlace: 'Abrir el material',
+    },
     facturas: {
       titulo: 'Mis facturas',
       explicacion: 'Lo facturado en cada período, lo que entró y lo que falta.',
@@ -818,6 +826,14 @@ export const T = {
       baja_hasta: 'Access remains available until {fecha}.',
       baja_cancelada_el: 'Cancelled on {fecha}.',
     },
+    // WHAT THE PROVIDER WROTE FOR WHOEVER IS CARING AT HOME. Each piece was written by someone
+    // at the provider and shows as written: only the frame around it is translated.
+    contenidos: {
+      titulo: 'Caring at home',
+      explicacion: 'What this provider wrote for those caring at home.',
+      sin_contenidos: 'This provider has not published anything here yet.',
+      abrir_enlace: 'Open the material',
+    },
     facturas: {
       titulo: 'My invoices',
       explicacion: 'What was invoiced each period, what came in and what is left.',
@@ -1228,6 +1244,14 @@ export const T = {
       baja_hecha: 'O cancelamento ficou registrado. Não se cobra de novo.',
       baja_hasta: 'O acesso continua disponível até {fecha}.',
       baja_cancelada_el: 'Cancelada em {fecha}.',
+    },
+    // O QUE A PRESTADORA ESCREVEU PARA QUEM CUIDA EM CASA. O texto de cada peça foi escrito por
+    // alguém da Prestadora e aparece como está: aqui se traduz a moldura e nada mais.
+    contenidos: {
+      titulo: 'Para cuidar em casa',
+      explicacion: 'O que esta Prestadora escreveu para quem cuida em casa.',
+      sin_contenidos: 'Esta Prestadora ainda não publicou nada aqui.',
+      abrir_enlace: 'Abrir o material',
     },
     facturas: {
       titulo: 'Minhas faturas',

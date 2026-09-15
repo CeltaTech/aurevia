@@ -119,6 +119,13 @@ const ESTADO_POR_MOTIVO = {
   ia_no_configurada: 409,
   plantilla_sin_rechazo: 409,
   ia_sin_propuesta: 503,
+  // La biblioteca que cada Prestadora escribe para sus Familias. El título repetido es 409 por lo
+  // mismo que el correo ya tomado: el pedido está bien armado y choca con algo que ya existe, y
+  // quien lo escribió puede cambiarlo. Los otros dos son 400 —el dato vino mal cargado—, y ninguno
+  // nombra una columna ni una restricción.
+  titulo_de_contenido_repetido: 409,
+  enlace_invalido: 400,
+  orden_invalido: 400,
 };
 
 // Lo que una ruta contesta cuando algo falló. Se escribe una sola vez para que ninguna ruta

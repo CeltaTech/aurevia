@@ -100,4 +100,7 @@ export const api = {
   // La videollamada de esta Prestadora. Donde no configuró ninguna, el motor contesta que no hay
   // y la pantalla no ofrece el botón.
   abrirVideollamada: (id) => pedido(`/marketplace/conversaciones/${id}/videollamada`, { method: 'POST' }),
+  // Lo que la Prestadora escribió para quien cuida en su casa. Vuelve sólo lo publicado, y no
+  // lleva el Paciente adentro: es material de la Prestadora para todo su círculo familiar.
+  contenidos: () => pedido('/contenidos'),
 };

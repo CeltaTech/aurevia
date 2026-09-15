@@ -1541,3 +1541,24 @@ appFamiliasRouter.post('/marketplace/conversaciones/:id/videollamada', requiereR
     responderError(res, e);
   }
 });
+
+// ============================================================================
+// Contenido y recursos para cuidadores familiares
+// ============================================================================
+
+// Lo que la Prestadora escribió para quien cuida en su casa
+// (`routes/panelContenidos.js`). Sale solamente lo publicado y solamente de la Prestadora de esta
+// Familia: un borrador es un texto a medio escribir y no sale de adentro del Panel.
+//
+// No pide modalidad ni acceso abierto: leer no cuesta nada y no es lo que el Marketplace vende.
+appFamiliasRouter.get('/contenidos', requiereRolFamilia, async (req, res) => {
+  const { data, error } = await supabase
+    .from('contenidos_para_familias')
+    .select('id, titulo, cuerpo, enlace_url, updated_at')
+    .eq('prestadora_id', req.usuarioFamilia.prestadoraId)
+    .eq('publicado', true)
+    .order('orden', { ascending: true })
+    .order('created_at', { ascending: true });
+  if (error) return responderError(res, error);
+  res.json({ contenidos: data });
+});

@@ -127,6 +127,14 @@ export default function MiPerfil() {
         </Link>
       )}
 
+      {/* La biblioteca de la Prestadora se entra desde acá por el mismo motivo que las facturas:
+          la barra de abajo es para lo de todos los días. No se pregunta nada antes de ofrecerla
+          —no cuelga de un Paciente ni de una modalidad, y no muestra nada de nadie—; donde la
+          Prestadora no escribió nada, la pantalla lo dice. */}
+      <Link to="/contenidos" className="btn btn-secondary btn-full" style={{ marginTop: '0.75rem' }}>
+        {t.contenidos.titulo}
+      </Link>
+
       {/* Qué ve esta persona y qué no. Al titular se le dice que ve todo y se termina ahí: lo
           suyo no se configura, no hay instrucción que le pueda quitar nada, ni siquiera una
           propia. A quien está en el círculo se le muestran las dos listas enteras, y de dónde

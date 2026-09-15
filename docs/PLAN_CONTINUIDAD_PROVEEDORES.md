@@ -37,6 +37,18 @@ archivo subía y existía en los dos buckets.
 restaurable, completo, y consistente con la producción. El hueco que dejaba abierto el
 pendiente #4 queda cerrado.
 
+**Y desde entonces el respaldo también trae los archivos.** La prueba de arriba verificó el
+volcado de la base, que era todo lo que se subía: los depósitos de archivos —certificados,
+fotos de los reportes, prescripciones, documentos de cese, las dos fotos de la verificación de
+identidad, las autorizaciones de monitoreo, las instrucciones de acceso y la marca de cada
+Prestadora— se quedaban afuera, así que una base restaurada decía que el certificado estaba
+cargado y el certificado no volvía. Ahora el mismo automatismo los copia a R2 y a B2 bajo
+`archivos/<depósito>/<ruta>`, sube sólo lo que falta o cambió, y la lista de depósitos se la
+pregunta a la base para que uno nuevo no quede afuera por olvido
+(`backend/src/utils/copiaDeDepositos.js`). **La prueba de restauración todavía no cubre esa
+mitad**, y por eso la que queda pendiente en `docs/PLAN_HASTA_PRODUCCION.md` tiene que bajar los
+archivos además del volcado.
+
 **Repetir esta prueba:** no hace falta repetirla en cada sesión. Se recomienda repetirla
 si cambia el esquema de forma significativa (nueva tabla con relaciones complejas, cambio
 de motor de base) o, como mínimo, una vez cada varios meses, para detectar si algún cambio

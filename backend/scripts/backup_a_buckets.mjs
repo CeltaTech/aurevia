@@ -3,8 +3,10 @@ import { createReadStream, createWriteStream } from 'node:fs';
 import { unlink } from 'node:fs/promises';
 import { createGzip } from 'node:zlib';
 import { pipeline } from 'node:stream/promises';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
+import { createClient } from '@supabase/supabase-js';
 import { IDENTIDAD } from '../src/config/identidadProducto.js';
+import { copiarDepositos, depositosDeSupabase } from '../src/utils/copiaDeDepositos.js';
 
 function requireEnv(nombre) {
   const valor = process.env[nombre];
@@ -52,6 +54,50 @@ async function subirA(cliente, bucket, nombreArchivo, rutaLocal) {
   }));
 }
 
+/**
+ * Un destino de la copia de archivos, sobre un depósito compatible con S3.
+ *
+ * `yaEstaIgual` compara tamaño y fecha de modificación contra lo que se guardó al subir. Sin esa
+ * comparación el respaldo volvería a subir todos los archivos todas las noches, y eso crece
+ * hasta que una noche no termina.
+ */
+function destinoS3(cliente, bucket) {
+  return {
+    async yaEstaIgual(clave, archivo) {
+      try {
+        const actual = await cliente.send(new HeadObjectCommand({ Bucket: bucket, Key: clave }));
+        if (archivo.tamano != null && actual.ContentLength !== archivo.tamano) return false;
+        if (archivo.actualizado && actual.Metadata?.actualizado !== archivo.actualizado) return false;
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    async subir(clave, cuerpo, archivo) {
+      await cliente.send(new PutObjectCommand({
+        Bucket: bucket,
+        Key: clave,
+        Body: cuerpo,
+        Metadata: archivo.actualizado ? { actualizado: archivo.actualizado } : undefined,
+      }));
+    },
+  };
+}
+
+async function copiarLosArchivos(destinos) {
+  const supabase = createClient(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'));
+  const cuenta = await copiarDepositos({
+    almacenamiento: depositosDeSupabase(supabase),
+    destinos,
+    avisar: (texto) => console.log(texto),
+  });
+  console.log(
+    `Archivos: ${cuenta.depositos} depósitos, ${cuenta.copiados} copiados, `
+    + `${cuenta.yaEstaban} ya estaban, ${cuenta.fallados} fallados.`,
+  );
+  return cuenta;
+}
+
 async function main() {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   // Se nombra por el código técnico del producto, no por su nombre comercial: si mañana la
@@ -80,7 +126,16 @@ async function main() {
   await subirA(b2, requireEnv('B2_BUCKET'), nombreArchivo, rutaTemporal);
 
   await unlink(rutaTemporal);
-  console.log(`Backup completo: ${nombreArchivo} subido a los dos buckets.`);
+  console.log(`Volcado de la base: ${nombreArchivo} subido a los dos buckets.`);
+
+  // Y ahora los archivos. Van después del volcado a propósito: si esta parte falla, el volcado
+  // de esta noche ya está arriba, que es lo que no se puede perder.
+  console.log('Copiando los archivos de los depósitos...');
+  const cuenta = await copiarLosArchivos([destinoS3(r2, requireEnv('R2_BUCKET')), destinoS3(b2, requireEnv('B2_BUCKET'))]);
+  if (cuenta.fallados > 0) {
+    throw new Error(`${cuenta.fallados} archivos no se pudieron copiar.`);
+  }
+  console.log('Respaldo completo: la base y los archivos.');
 }
 
 main().catch((error) => {

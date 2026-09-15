@@ -66,6 +66,7 @@ publicar, el token de publicar no tiene por qué andar dando vueltas en una comp
 | `BACKUP_DB_HOST`, `BACKUP_DB_PORT`, `BACKUP_DB_NAME`, `BACKUP_DB_USER`, `BACKUP_DB_PASSWORD` | La conexión directa a la base para el volcado diario | `backup-diario.yml` |
 | `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | Subir el volcado al depósito principal | `backup-diario.yml` |
 | `B2_ENDPOINT`, `B2_BUCKET`, `B2_KEY_ID`, `B2_APPLICATION_KEY` | Subir el mismo volcado al espejo de Backblaze | `backup-diario.yml` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Bajar los archivos de los depósitos para copiarlos junto con el volcado. **Es el mismo valor que el del motor**, y por eso rotarlo toca los dos lugares | `backup-diario.yml` |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL`, `VITE_SITE_URL`, `VITE_VAPID_PUBLIC_KEY` | Los valores que se compilan adentro de cada pantalla. **No son secretos** —quedan a la vista de cualquiera que abra la aplicación— y están acá únicamente porque los archivos `.env.production` no se versionan | `publicar-pantallas.yml` |
 
 **La clave anónima de Supabase no es una contraseña.** Es pública por diseño: lo que decide qué
@@ -100,9 +101,10 @@ reemplaza el contenido de la caja en vez de abrir otra.
 
 Sirve el día que pasa, que es el día en que nadie tiene tiempo de leer código.
 
-- **Se filtró la llave de servicio de Supabase** → se rota en el panel de Supabase, se actualiza en
-  Railway **en el mismo acto** y se mira si algún automatismo la usa. Mientras tanto el motor
-  entero está caído: no hay forma de que no lo esté.
+- **Se filtró la llave de servicio de Supabase** → se rota en el panel de Supabase y se actualiza
+  **en el mismo acto** en los dos lugares donde vive: las variables de Railway y el secreto
+  `SUPABASE_SERVICE_ROLE_KEY` del repositorio, que es el que usa el respaldo diario para bajar los
+  archivos. Mientras tanto el motor entero está caído: no hay forma de que no lo esté.
 - **Se filtró un token de publicación** (Railway o Cloudflare) → se rota en su panel y se reemplaza
   el secreto del repositorio. No se cae nada; lo que no anda hasta reemplazarlo es publicar.
 - **Se filtraron las llaves del respaldo** (R2 o B2) → se rotan en su panel y se reemplazan los

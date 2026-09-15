@@ -3,6 +3,9 @@ name: Backup diario a buckets (R2 + B2)
 # Corre pg_dump contra Supabase y sube el resultado comprimido a los dos buckets de backup
 # (Cloudflare R2 como principal, Backblaze B2 como espejo) — ver docs/PLAN_HASTA_PRODUCCION.md y
 # docs/SECURITY.md, sección de backup propio independiente del nativo de Supabase.
+#
+# Y después copia los archivos de los depósitos, que hasta hoy no se respaldaban: una base
+# restaurada sin ellos dice que el certificado está cargado y el certificado no vuelve.
 on:
   schedule:
     - cron: '0 6 * * *' # 03:00 America/Argentina/Buenos_Aires (UTC-3)
@@ -40,6 +43,12 @@ jobs:
           DB_NAME: ${{ secrets.BACKUP_DB_NAME }}
           DB_USER: ${{ secrets.BACKUP_DB_USER }}
           DB_PASSWORD: ${{ secrets.BACKUP_DB_PASSWORD }}
+          # Los archivos no viajan en el volcado: se bajan del almacenamiento, y para eso hace
+          # falta la llave de servicio (docs/SECRETOS.md). La dirección es la misma que usan las
+          # pantallas y no es secreta, así que se reusa la que ya está cargada en vez de pedir
+          # que se cargue el mismo valor dos veces con dos nombres.
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}

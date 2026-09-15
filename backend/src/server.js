@@ -30,6 +30,8 @@ import { panelConfiguracionPlataformaRouter } from './routes/panelConfiguracionP
 import { panelMfaRecuperacionRouter } from './routes/panelMfaRecuperacion.js';
 import { configuracionPublicaRouter } from './routes/configuracionPublica.js';
 import { activarCuentaRouter } from './routes/activarCuenta.js';
+import { panelEntrevistasRouter } from './routes/panelEntrevistas.js';
+import { entrevistaPublicaRouter } from './routes/entrevistaPublica.js';
 import { revisarVencimientos } from './utils/vencimientos.js';
 import { revisarAusenciasAutomaticas } from './utils/ausenciaAutomatica.js';
 import { revisarNotificacionesCoordinador } from './utils/revisarNotificacionesCoordinador.js';
@@ -121,6 +123,7 @@ app.use('/api/panel/prestadoras', panelPrestadorasRouter);
 app.use('/api/panel/ausencias', panelAusenciasRouter);
 app.use('/api/panel/ceses', panelCesesRouter);
 app.use('/api/panel/verificacion-identidad', panelVerificacionIdentidadRouter);
+app.use('/api/panel/entrevistas', panelEntrevistasRouter);
 app.use('/api/panel/referencias-laborales', panelReferenciasLaboralesRouter);
 app.use('/api/panel/configuracion', panelConfiguracionRouter);
 app.use('/api/panel/importacion', panelImportacionRouter);
@@ -132,6 +135,9 @@ app.use('/api/panel/vitales-autorizacion', panelVitalesAutorizacionRouter);
 app.use('/api/panel/configuracion-plataforma', panelConfiguracionPlataformaRouter);
 app.use('/api/panel/mfa-recuperacion', panelMfaRecuperacionRouter);
 app.use('/api/activar-cuenta', activarCuentaRouter);
+// Sin sesión, como la activación de cuenta: quien llega trae la llave que le llegó por correo, y
+// no tiene ninguna cuenta con la que entrar. La Prestadora sale de la llave, no de la dirección.
+app.use('/api/entrevista', entrevistaPublicaRouter);
 app.use('/api/app-asistentes', appAsistentesRouter);
 app.use('/api/app-asistentes/medicacion', appAsistentesMedicacionRouter);
 app.use('/api/app-asistentes/consentimientos', appAsistentesConsentimientosRouter);

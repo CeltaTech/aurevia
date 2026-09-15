@@ -32,12 +32,12 @@ import {
   LADO,
   abrirVideollamada,
   contactoAbierto,
-  direccionDeVideollamada,
   escribirMensaje,
   marcarLeido,
   mensajesDeLaConversacion,
   videollamadaEnCurso,
 } from '../utils/conversacionMarketplace.js';
+import { direccionDeVideollamada } from '../utils/videollamada.js';
 import { puedeRegistrarUbicacion } from '../utils/consentimientoUbicacion.js';
 import { faltaElSustituto, MOTIVO_SIN_SUSTITUTO } from '../utils/guardiaSinSustituto.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';

@@ -222,6 +222,16 @@ h2 {
   width: 100%;
 }
 
+/* El logo de la Prestadora en una pantalla sin sesión. Quien llega acá no conoce el producto:
+   conoce a la Prestadora que lo citó, y es lo primero que tiene que reconocer. Se le pone un tope
+   de alto porque el archivo lo carga cada Prestadora y no hay dos del mismo tamaño. */
+.login-logo {
+  display: block;
+  max-height: 64px;
+  max-width: 100%;
+  margin-bottom: 1rem;
+}
+
 /* ---------- Layout general del panel ---------- */
 
 .panel-layout {
@@ -1417,6 +1427,33 @@ button.panel-kpi-card[aria-pressed='true'] {
 
 .panel-referencia-nueva h4 {
   margin: 0 0 0.25rem;
+}
+
+/* La entrevista con el postulante, adentro del detalle de su postulación. Separada por una línea
+   por el mismo motivo que la referencia cargada a mano: arriba está la postulación, que es lo que
+   la persona contó de sí misma, y acá abajo empieza lo que la Prestadora hace con eso. */
+.panel-entrevista {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--borde-card);
+}
+
+.panel-entrevista h3 {
+  margin: 0 0 0.25rem;
+}
+
+/* Las entrevistas que ya no están vivas. Es la historia, y se lee de un vistazo: que a alguien se
+   le reprogramó dos veces y no se presentó es justamente lo que se quiere ver antes de decidir. */
+.panel-entrevista-historia {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+}
+
+.panel-entrevista-historia li {
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--borde-card);
+  color: var(--texto-secundario);
 }
 
 /* La entrada de archivo que dispara el botón de al lado. Sale del dibujo sin salir de la página:

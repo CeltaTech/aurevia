@@ -97,6 +97,12 @@ export const T = {
         documento_invalido: 'Ese documento no se pudo guardar. Conviene volver a generarlo y probar de nuevo.',
         cese_no_encontrado: 'No se encontró ese cese. Conviene recargar la lista.',
         documento_no_generado: 'Ese documento todavía no se generó, así que no hay ninguna copia guardada.',
+        // La entrevista de una postulación. Las lee quien agenda, nunca el postulante: a él la
+        // puerta pública le contesta bien y la pantalla le dice en qué momento está.
+        fecha_invalida: 'Esa fecha no se entiende. Conviene elegir el día y la hora de nuevo.',
+        entrevista_en_el_pasado: 'Esa fecha ya pasó. Una entrevista se agenda para más adelante.',
+        entrevista_ya_agendada: 'Este postulante ya tiene una entrevista agendada. Para cambiarle el día se la reprograma, no se agenda otra.',
+        entrevista_ya_cerrada: 'Esa entrevista ya está cerrada. Conviene recargar para ver cómo quedó.',
       },
     },
     comun: {
@@ -832,6 +838,50 @@ export const T = {
       situacion_fiscal_labels: {
         monotributo: 'Monotributo',
       },
+      // La entrevista con el postulante, adentro del producto. Haber entrevistado a alguien no es
+      // haberlo aprobado: el estado de la postulación se cambia aparte, y por eso acá no aparece.
+      entrevista: {
+        titulo: 'Entrevista',
+        explicacion: 'Al agendarla, al postulante le llega por correo la fecha y un enlace propio. La dirección de la videollamada no viaja por correo: aparece en ese enlace y sólo a la hora de la cita.',
+        vacio: 'Todavía no se agendó ninguna entrevista con esta persona.',
+        agendar: 'Agendar entrevista',
+        cuando: 'Día y hora',
+        cuando_ayuda: 'En la hora de la Prestadora.',
+        reprogramar: 'Cambiar el día y la hora',
+        reprogramar_confirmar: '¿Confirma mover esta entrevista? Al postulante le va a llegar la fecha nueva por correo, con el mismo enlace.',
+        cancelar: 'Cancelar la entrevista',
+        cancelar_confirmar: '¿Confirma cancelar esta entrevista? Al postulante le va a llegar el aviso por correo y el enlace deja de abrir la sala.',
+        cerrar: 'Cerrar la entrevista',
+        cerrar_explicacion: 'Cerrarla deja constancia de que ya pasó. No cambia el estado de la postulación: eso se decide aparte.',
+        cierre_realizada: 'Se hizo',
+        cierre_no_asistio: 'No se presentó',
+        observaciones: 'Observaciones',
+        observaciones_ayuda: 'Queda adentro del Panel. El postulante no las ve.',
+        sin_videollamada: 'Esta Prestadora no tiene cargada una dirección de videollamada, así que la entrevista se agenda sin sala. Se carga en Configuración > La Prestadora.',
+        enlace_del_postulante: 'Enlace del postulante',
+        enlace_copiar: 'Copiar el enlace',
+        enlace_copiado: 'Enlace copiado.',
+        estado_agendada: 'Agendada',
+        estado_realizada: 'Se hizo',
+        estado_no_asistio: 'No se presentó',
+        estado_cancelada: 'Cancelada',
+      },
+    },
+    // La pantalla que abre el postulante con su enlace. No hay sesión: quien llega no tiene ninguna
+    // cuenta, y el texto no puede mandarlo a ningún lado del Panel ni pedirle que entre.
+    entrevistaPublica: {
+      titulo: 'Su entrevista',
+      con: 'Entrevista con {{prestadora}}',
+      cuando: 'Cuándo',
+      no_encontrada_titulo: 'Este enlace ya no abre nada',
+      no_encontrada_texto: 'Puede que la entrevista se haya cancelado o que el enlace esté incompleto. Si le queda alguna duda, conviene responder el correo con el que se la citó.',
+      todavia_no_titulo: 'Todavía no es la hora',
+      todavia_no_texto: 'La sala se abre unos minutos antes. Conviene volver a entrar por este mismo enlace el día y la hora de la cita.',
+      ya_paso_titulo: 'Esta entrevista ya pasó',
+      ya_paso_texto: 'Si hace falta una fecha nueva, la Prestadora va a avisar por correo.',
+      entrar: 'Entrar a la videollamada',
+      sin_sala_titulo: 'Esta entrevista no es por videollamada',
+      sin_sala_texto: 'La Prestadora se va a comunicar por el medio que le indicó en el correo.',
     },
     servicios: {
       titulo: 'Servicios',
@@ -2406,6 +2456,12 @@ export const T = {
         documento_invalido: 'That document could not be saved. Please generate it again and retry.',
         cese_no_encontrado: 'That termination was not found. Please reload the list.',
         documento_no_generado: 'That document has not been generated yet, so there is no saved copy.',
+        // La entrevista de una postulación. Las lee quien agenda, nunca el postulante: a él la
+        // puerta pública le contesta bien y la pantalla le dice en qué momento está.
+        fecha_invalida: 'That date cannot be read. It is best to pick the day and time again.',
+        entrevista_en_el_pasado: 'That date has already passed. An interview is scheduled for a later time.',
+        entrevista_ya_agendada: 'This applicant already has an interview scheduled. To change the day, reschedule it instead of booking another one.',
+        entrevista_ya_cerrada: 'That interview is already closed. It is best to reload to see how it ended.',
       },
     },
     comun: {
@@ -3131,6 +3187,50 @@ export const T = {
       situacion_fiscal_labels: {
         monotributo: 'Monotributo (self-employed)',
       },
+      // La entrevista con el postulante, adentro del producto. Haber entrevistado a alguien no es
+      // haberlo aprobado: el estado de la postulación se cambia aparte, y por eso acá no aparece.
+      entrevista: {
+        titulo: 'Interview',
+        explicacion: 'Once it is scheduled, the applicant receives the date and a link of their own by email. The video call address never travels by email: it shows up on that link, and only at the time of the appointment.',
+        vacio: 'No interview has been scheduled with this person yet.',
+        agendar: 'Schedule interview',
+        cuando: 'Day and time',
+        cuando_ayuda: "In the Provider's time.",
+        reprogramar: 'Change the day and time',
+        reprogramar_confirmar: 'Move this interview? The applicant will receive the new date by email, with the same link.',
+        cancelar: 'Cancel the interview',
+        cancelar_confirmar: 'Cancel this interview? The applicant will be notified by email and the link will stop opening the room.',
+        cerrar: 'Close the interview',
+        cerrar_explicacion: 'Closing it records that it already took place. It does not change the status of the application: that is decided separately.',
+        cierre_realizada: 'It took place',
+        cierre_no_asistio: 'Did not show up',
+        observaciones: 'Notes',
+        observaciones_ayuda: 'These stay inside the Panel. The applicant does not see them.',
+        sin_videollamada: 'This Provider has no video call address on file, so the interview is scheduled without a room. It is set up under Settings > The Provider.',
+        enlace_del_postulante: "Applicant's link",
+        enlace_copiar: 'Copy the link',
+        enlace_copiado: 'Link copied.',
+        estado_agendada: 'Scheduled',
+        estado_realizada: 'It took place',
+        estado_no_asistio: 'Did not show up',
+        estado_cancelada: 'Cancelled',
+      },
+    },
+    // La pantalla que abre el postulante con su enlace. No hay sesión: quien llega no tiene ninguna
+    // cuenta, y el texto no puede mandarlo a ningún lado del Panel ni pedirle que entre.
+    entrevistaPublica: {
+      titulo: 'Your interview',
+      con: 'Interview with {{prestadora}}',
+      cuando: 'When',
+      no_encontrada_titulo: 'This link no longer opens anything',
+      no_encontrada_texto: 'The interview may have been cancelled, or the link may be incomplete. If any doubt remains, it is best to reply to the email with the invitation.',
+      todavia_no_titulo: 'It is not time yet',
+      todavia_no_texto: 'The room opens a few minutes beforehand. Please come back through this same link on the day and at the time of the appointment.',
+      ya_paso_titulo: 'This interview has already taken place',
+      ya_paso_texto: 'If a new date is needed, the Provider will send word by email.',
+      entrar: 'Join the video call',
+      sin_sala_titulo: 'This interview is not by video call',
+      sin_sala_texto: 'The Provider will get in touch by the means stated in the email.',
     },
     servicios: {
       titulo: 'Services',
@@ -4685,6 +4785,12 @@ export const T = {
         documento_invalido: 'Esse documento não pôde ser guardado. Convém gerá-lo novamente e tentar de novo.',
         cese_no_encontrado: 'Esse desligamento não foi encontrado. Convém recarregar a lista.',
         documento_no_generado: 'Esse documento ainda não foi gerado, então não há nenhuma cópia guardada.',
+        // La entrevista de una postulación. Las lee quien agenda, nunca el postulante: a él la
+        // puerta pública le contesta bien y la pantalla le dice en qué momento está.
+        fecha_invalida: 'Essa data não se entende. Convém escolher o dia e a hora novamente.',
+        entrevista_en_el_pasado: 'Essa data já passou. Uma entrevista se agenda para mais adiante.',
+        entrevista_ya_agendada: 'Este candidato já tem uma entrevista agendada. Para mudar o dia, ela se reagenda, não se agenda outra.',
+        entrevista_ya_cerrada: 'Essa entrevista já está encerrada. Convém recarregar para ver como ficou.',
       },
     },
     comun: {
@@ -5410,6 +5516,50 @@ export const T = {
       situacion_fiscal_labels: {
         monotributo: 'Monotributo (autônomo)',
       },
+      // La entrevista con el postulante, adentro del producto. Haber entrevistado a alguien no es
+      // haberlo aprobado: el estado de la postulación se cambia aparte, y por eso acá no aparece.
+      entrevista: {
+        titulo: 'Entrevista',
+        explicacion: 'Ao agendá-la, o candidato recebe por e-mail a data e um link próprio. O endereço da videochamada não viaja por e-mail: aparece nesse link, e só na hora do encontro.',
+        vacio: 'Ainda não foi agendada nenhuma entrevista com esta pessoa.',
+        agendar: 'Agendar entrevista',
+        cuando: 'Dia e hora',
+        cuando_ayuda: 'No horário da Prestadora.',
+        reprogramar: 'Mudar o dia e a hora',
+        reprogramar_confirmar: 'Confirma mover esta entrevista? O candidato vai receber a nova data por e-mail, com o mesmo link.',
+        cancelar: 'Cancelar a entrevista',
+        cancelar_confirmar: 'Confirma cancelar esta entrevista? O candidato vai receber o aviso por e-mail e o link deixa de abrir a sala.',
+        cerrar: 'Encerrar a entrevista',
+        cerrar_explicacion: 'Encerrá-la deixa registrado que já aconteceu. Não muda a situação da candidatura: isso se decide à parte.',
+        cierre_realizada: 'Aconteceu',
+        cierre_no_asistio: 'Não compareceu',
+        observaciones: 'Observações',
+        observaciones_ayuda: 'Ficam dentro do Painel. O candidato não as vê.',
+        sin_videollamada: 'Esta Prestadora não tem um endereço de videochamada cadastrado, então a entrevista se agenda sem sala. Ele se cadastra em Configuração > A Prestadora.',
+        enlace_del_postulante: 'Link do candidato',
+        enlace_copiar: 'Copiar o link',
+        enlace_copiado: 'Link copiado.',
+        estado_agendada: 'Agendada',
+        estado_realizada: 'Aconteceu',
+        estado_no_asistio: 'Não compareceu',
+        estado_cancelada: 'Cancelada',
+      },
+    },
+    // La pantalla que abre el postulante con su enlace. No hay sesión: quien llega no tiene ninguna
+    // cuenta, y el texto no puede mandarlo a ningún lado del Panel ni pedirle que entre.
+    entrevistaPublica: {
+      titulo: 'Sua entrevista',
+      con: 'Entrevista com {{prestadora}}',
+      cuando: 'Quando',
+      no_encontrada_titulo: 'Este link não abre mais nada',
+      no_encontrada_texto: 'Pode ser que a entrevista tenha sido cancelada ou que o link esteja incompleto. Se restar alguma dúvida, convém responder ao e-mail do convite.',
+      todavia_no_titulo: 'Ainda não é a hora',
+      todavia_no_texto: 'A sala abre alguns minutos antes. Convém entrar novamente por este mesmo link no dia e na hora do encontro.',
+      ya_paso_titulo: 'Esta entrevista já passou',
+      ya_paso_texto: 'Se for preciso uma nova data, a Prestadora vai avisar por e-mail.',
+      entrar: 'Entrar na videochamada',
+      sin_sala_titulo: 'Esta entrevista não é por videochamada',
+      sin_sala_texto: 'A Prestadora vai entrar em contato pelo meio indicado no e-mail.',
     },
     servicios: {
       titulo: 'Serviços',

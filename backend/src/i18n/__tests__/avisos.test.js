@@ -85,6 +85,17 @@ const DATOS = {
   fin_periodo_sin_cargo: { dia: '7/10/2026', importe: '4500.00 ARS' },
   cobro_no_realizado: { importe: '4500.00 ARS', dia: '7/10/2026' },
   cese_de_servicio: {},
+  entrevista_agendada: {
+    prestadora: 'Cuidados del Sur', cuando: 'martes, 7 de octubre de 2026, 10:00',
+    enlace: 'https://ejemplo/entrevista/una-llave', anticipo: 15,
+  },
+  entrevista_reprogramada: {
+    prestadora: 'Cuidados del Sur', cuando: 'jueves, 9 de octubre de 2026, 15:30',
+    enlace: 'https://ejemplo/entrevista/una-llave', anticipo: 15,
+  },
+  entrevista_cancelada: {
+    prestadora: 'Cuidados del Sur', cuando: 'martes, 7 de octubre de 2026, 10:00',
+  },
 };
 
 // Sin esto, un aviso que existe en castellano y no en portugués saldría en castellano sin que

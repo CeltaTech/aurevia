@@ -126,6 +126,17 @@ const ESTADO_POR_MOTIVO = {
   titulo_de_contenido_repetido: 409,
   enlace_invalido: 400,
   orden_invalido: 400,
+  // La entrevista de una postulación. Los dos primeros son 400 porque el dato vino mal cargado, y
+  // los otros dos son 409 porque el pedido está bien armado y choca con el estado de las cosas: la
+  // entrevista ya se cerró, o ya hay una agendada y lo que corresponde es moverla y no agendar una
+  // segunda.
+  fecha_invalida: 400,
+  entrevista_en_el_pasado: 400,
+  entrevista_ya_cerrada: 409,
+  entrevista_ya_agendada: 409,
+  // Y el postulante que llega a deshora no recibe ningún error: llegar temprano no es equivocarse.
+  // La puerta pública le contesta bien, con el cuándo y con en qué momento está, y la pantalla le
+  // dice si tiene que volver más tarde o si la entrevista ya pasó.
 };
 
 // Lo que una ruta contesta cuando algo falló. Se escribe una sola vez para que ninguna ruta

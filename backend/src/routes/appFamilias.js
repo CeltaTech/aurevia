@@ -32,12 +32,12 @@ import {
   abrirVideollamada,
   contactoAbierto,
   conversacionDeLaPareja,
-  direccionDeVideollamada,
   escribirMensaje,
   marcarLeido,
   mensajesDeLaConversacion,
   videollamadaEnCurso,
 } from '../utils/conversacionMarketplace.js';
+import { direccionDeVideollamada } from '../utils/videollamada.js';
 import { abrirElContactoDeUnAsistente, comoEstaElContacto } from '../utils/contactoDelAsistente.js';
 import { MODALIDAD } from '../utils/modalidades.js';
 import { diaISO } from '../utils/reglaVencimientos.js';

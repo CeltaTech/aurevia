@@ -248,6 +248,29 @@ const ES = {
     titulo: 'Finalización de servicio',
     cuerpo: 'Se cerró el servicio en el que participaba. Para más información, puede comunicarse con el coordinador.',
   }),
+
+  /* Los tres avisos de la entrevista salen por correo, porque quien se postuló todavía no tiene
+     ninguna aplicación instalada: lo único que dejó es su correo.
+
+     EL ENLACE NO ES LA SALA. Lleva a una pantalla del producto, que comprueba que sea la hora
+     antes de dejar entrar. Por eso el mismo enlace sigue sirviendo si la entrevista se
+     reprograma, y por eso el aviso dice desde cuándo se puede entrar. */
+  entrevista_agendada: (d) => ({
+    titulo: `Entrevista con ${d.prestadora}`,
+    cuerpo: `Su entrevista quedó agendada para el ${d.cuando}.\n\nEl día de la entrevista, entre por acá:\n${d.enlace}\n\nLa puerta se abre ${d.anticipo} minutos antes de la hora. No hace falta instalar nada ni crear ninguna cuenta.`,
+  }),
+
+  entrevista_reprogramada: (d) => ({
+    titulo: `Se cambió el día de su entrevista con ${d.prestadora}`,
+    cuerpo: `Su entrevista pasó al ${d.cuando}.\n\nEntre por el mismo enlace de siempre:\n${d.enlace}\n\nLa puerta se abre ${d.anticipo} minutos antes de la hora.`,
+  }),
+
+  // No dice por qué se canceló. El motivo es de la Prestadora, y un aviso automático que lo
+  // adelante contesta mal una pregunta que todavía no se hizo.
+  entrevista_cancelada: (d) => ({
+    titulo: `Se canceló su entrevista con ${d.prestadora}`,
+    cuerpo: `La entrevista del ${d.cuando} quedó sin efecto. Su postulación sigue en pie: si se agenda una fecha nueva, va a recibir otro aviso como éste.`,
+  }),
 };
 
 // El aviso tiene que servir para actuar, no solo para enterarse. Por eso dice en qué punto está la
@@ -460,6 +483,21 @@ const EN = {
     titulo: 'Service ended',
     cuerpo: 'The service you were part of has ended. For more information, please get in touch with the coordinator.',
   }),
+
+  entrevista_agendada: (d) => ({
+    titulo: `Interview with ${d.prestadora}`,
+    cuerpo: `Your interview is scheduled for ${d.cuando}.\n\nOn the day, join here:\n${d.enlace}\n\nThe door opens ${d.anticipo} minutes before the start time. Nothing to install, no account to create.`,
+  }),
+
+  entrevista_reprogramada: (d) => ({
+    titulo: `Your interview with ${d.prestadora} has moved`,
+    cuerpo: `Your interview is now set for ${d.cuando}.\n\nJoin through the same link as before:\n${d.enlace}\n\nThe door opens ${d.anticipo} minutes before the start time.`,
+  }),
+
+  entrevista_cancelada: (d) => ({
+    titulo: `Your interview with ${d.prestadora} was cancelled`,
+    cuerpo: `The interview set for ${d.cuando} has been called off. Your application still stands: if a new date is scheduled, you will get another message like this one.`,
+  }),
 };
 
 function estadoDeLaBusquedaEN({ ofrecida, invitados, sinContestar, aceptaron }) {
@@ -668,6 +706,21 @@ const PT = {
   cese_de_servicio: () => ({
     titulo: 'Fim do serviço',
     cuerpo: 'O serviço do qual participava foi encerrado. Para mais informações, pode entrar em contato com o coordenador.',
+  }),
+
+  entrevista_agendada: (d) => ({
+    titulo: `Entrevista com ${d.prestadora}`,
+    cuerpo: `Sua entrevista ficou marcada para ${d.cuando}.\n\nNo dia da entrevista, entre por aqui:\n${d.enlace}\n\nA porta abre ${d.anticipo} minutos antes do horário. Não é preciso instalar nada nem criar nenhuma conta.`,
+  }),
+
+  entrevista_reprogramada: (d) => ({
+    titulo: `Mudou o dia da sua entrevista com ${d.prestadora}`,
+    cuerpo: `Sua entrevista passou para ${d.cuando}.\n\nEntre pelo mesmo link de sempre:\n${d.enlace}\n\nA porta abre ${d.anticipo} minutos antes do horário.`,
+  }),
+
+  entrevista_cancelada: (d) => ({
+    titulo: `Sua entrevista com ${d.prestadora} foi cancelada`,
+    cuerpo: `A entrevista de ${d.cuando} ficou sem efeito. Sua candidatura continua de pé: se for marcada uma nova data, você vai receber outro aviso como este.`,
   }),
 };
 

@@ -306,6 +306,41 @@ Mapa geolocalizado del plantel activo agrupado por municipio — al llegar una s
 familia, filtra automáticamente las Asistentes disponibles más cercanas (mismo componente
 de mapa que `PRD_02_Panel_Admin.md` Módulo 2/3, no duplicar implementación).
 
+### La entrevista al postulante — cómo quedó construida
+
+Desde la ficha de una postulación se agenda la entrevista, se la mueve de horario, se la cancela y
+se la cierra diciendo si la persona se presentó o no
+(`panel/src/components/EntrevistaDePostulacion.jsx`, `backend/src/routes/panelEntrevistas.js`,
+migración `20260916000000_la_entrevista_al_postulante_pasa_adentro_del_producto.sql`). Antes se
+acordaba por fuera —un correo escrito a mano, un teléfono— y de vuelta no quedaba constancia de
+cuándo fue, de si la persona vino ni de quién había quedado en llamarla.
+
+- **El bloque está siempre, sin depender de la situación de la postulación.** Se entrevista
+  justamente para decidir, así que esperar a que la postulación esté aprobada llegaría tarde.
+- **Y cerrar una entrevista no cambia la situación de la postulación.** Haber entrevistado a
+  alguien no es haberlo aprobado: eso se decide arriba, en el selector de estado, y sigue siendo
+  una decisión de una persona.
+- **Hay una sola entrevista viva por vez, y las demás son historia.** Que a alguien se le haya
+  reprogramado dos veces y no se haya presentado es lo que se quiere ver antes de decidir, así que
+  las anteriores se listan con su resultado y su observación en vez de desaparecer.
+- **Al postulante le llega su propio enlace, nunca la dirección de la sala**
+  (`backend/src/routes/entrevistaPublica.js`). Abre sin cuenta y sin clave: la llave que le llegó
+  por correo es toda su credencial, igual que en la activación de cuenta. Por eso reprogramar no
+  obliga a mandarle una llave nueva, y el Panel copia ese enlace y no la sala.
+- **La sala aparece recién a la hora de la cita.** Llegar temprano no es equivocarse: la pantalla
+  del postulante no muestra ningún error, dice en qué momento está —todavía no, entre ahora, ya
+  pasó— y qué corresponde hacer. Del lado del motor eso viaja como un dato de la respuesta, no como
+  una falla.
+- **Sin dirección de videollamada la entrevista se agenda igual.** La dirección base es
+  configuración de cada Prestadora (`prestadoras.videollamada_base_url`), y el producto le agrega
+  un nombre de sala imposible de adivinar. Vacía esa dirección, la pantalla del Panel avisa que va
+  a haber que comunicarse por otro medio y la del postulante también: el producto avisa, no
+  prohíbe (`celtatech/CLAUDE.md` §7).
+- **El día y la hora se convierten en un solo lugar**
+  (`panel/src/lib/momentoDeLaEntrevista.js`), porque el campo del navegador habla en la hora de
+  quien mira y el motor guarda un instante universal. Su prueba hace ir y volver sin fijar ningún
+  huso: escrita con un huso adentro pasaría acá y fallaría en la máquina que publica.
+
 ## Programa de capacitación (Etapa 5 del Proceso de Incorporación de Asistentes)
 
 8 horas online en 4 bloques (2hs c/u): 1) La persona mayor, 2) Cuidados esenciales, 3)

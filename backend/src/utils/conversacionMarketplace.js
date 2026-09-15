@@ -16,15 +16,20 @@
    que es otra cosa: es el filtro que hace que un hilo de una Prestadora no aparezca nunca
    consultando desde otra.
 
-   LA VIDEOLLAMADA NO TRAE PROVEEDOR ESCRITO ACÁ. La dirección base de las salas es de cada
-   Prestadora y vive en la base. Sin esa dirección no hay videollamada y no se ofrece el botón.
-   Cada llamada estrena una sala de nombre imposible de adivinar, y la anterior deja de valer en
-   ese mismo momento: una sala fija sería una dirección que, una vez vista, entra para siempre. */
+   LA VIDEOLLAMADA NO SE ARMA ACÁ. Cómo se hace una sala —de dónde sale la dirección, qué nombre
+   lleva y cuánto vale— es lo mismo en el chat que en la entrevista de reclutamiento, así que vive
+   una sola vez en `videollamada.js`. Acá queda nada más lo propio de un hilo: que la sala se
+   guarda en la conversación y que el aviso de que empezó una se escribe adentro del hilo. */
 
-import { randomUUID } from 'node:crypto';
 import { supabase } from '../db/connection.js';
 import { mensajeHaciaAfuera } from './contactoTapado.js';
 import { enviarPushAsistente, enviarPushFamilia } from './push.js';
+import {
+  direccionDeVideollamada,
+  nombreDeSalaNuevo,
+  salaAbiertaSigueValiendo,
+  urlDeSala,
+} from './videollamada.js';
 
 /** Los dos lados de un hilo. No se deducen del autor: del lado de la Familia puede escribir
  *  cualquiera de su círculo, así que el lado es un dato y no una cuenta. */
@@ -37,10 +42,6 @@ export const AVISO_AUTOMATICO = { VIDEOLLAMADA: 'videollamada_empezo' };
 /** Cuántos mensajes se traen de un hilo. Alcanza para leer una conversación entera de las que
  *  pasan antes de contratar a alguien, y pone un techo a lo que viaja en un pedido. */
 const TOPE_DE_MENSAJES = 200;
-
-/** Cuánto vale una sala de videollamada desde que se abre. Pasado ese rato, quien llega tarde
- *  no entra a una sala que quedó abierta hace días: se abre una nueva. */
-const MINUTOS_QUE_VALE_UNA_SALA = 60;
 
 /**
  * ¿Esta Familia ya abrió el contacto de este Asistente?
@@ -179,27 +180,9 @@ function avisarAlOtroLado({ conversacion, lado }) {
   envio.catch((err) => console.error('Error enviando push de mensaje del Marketplace:', err.message));
 }
 
-/** La dirección base de las salas de esta Prestadora, o null si no configuró ninguna. */
-export async function direccionDeVideollamada(prestadoraId) {
-  const { data, error } = await supabase
-    .from('prestadoras')
-    .select('videollamada_base_url')
-    .eq('id', prestadoraId)
-    .maybeSingle();
-
-  if (error) {
-    console.error('Error consultando la dirección de videollamada:', error.message);
-    return null;
-  }
-  const base = String(data?.videollamada_base_url || '').trim();
-  return base ? base.replace(/\/+$/, '') : null;
-}
-
 function salaVigente(conversacion) {
-  if (!conversacion.sala_videollamada || !conversacion.sala_abierta_at) return null;
-  const abiertaHace = Date.now() - new Date(conversacion.sala_abierta_at).getTime();
-  if (!Number.isFinite(abiertaHace) || abiertaHace > MINUTOS_QUE_VALE_UNA_SALA * 60 * 1000) return null;
-  return conversacion.sala_videollamada;
+  if (!conversacion.sala_videollamada) return null;
+  return salaAbiertaSigueValiendo(conversacion.sala_abierta_at) ? conversacion.sala_videollamada : null;
 }
 
 /**
@@ -215,7 +198,8 @@ export async function videollamadaEnCurso(conversacion) {
   const sala = salaVigente(conversacion);
   if (!sala) return null;
   const base = await direccionDeVideollamada(conversacion.prestadora_id);
-  return base ? { url: `${base}/${sala}` } : null;
+  const url = urlDeSala(base, sala);
+  return url ? { url } : null;
 }
 
 /**
@@ -231,11 +215,9 @@ export async function abrirVideollamada({ conversacion, lado, autorUsuarioId }) 
   if (!base) return null;
 
   const enCurso = salaVigente(conversacion);
-  if (enCurso) return { url: `${base}/${enCurso}` };
+  if (enCurso) return { url: urlDeSala(base, enCurso) };
 
-  // Nombre de sala imposible de adivinar. Quien no recibió la dirección por el hilo no llega a
-  // ella probando.
-  const sala = randomUUID().replace(/-/g, '');
+  const sala = nombreDeSalaNuevo();
   const abiertaAt = new Date().toISOString();
 
   const { error } = await supabase
@@ -257,5 +239,5 @@ export async function abrirVideollamada({ conversacion, lado, autorUsuarioId }) 
     automatico: true,
   });
 
-  return { url: `${base}/${sala}` };
+  return { url: urlDeSala(base, sala) };
 }

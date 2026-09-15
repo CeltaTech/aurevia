@@ -15,6 +15,7 @@ import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
+import { EntrevistaDePostulacion } from '../components/EntrevistaDePostulacion';
 
 const ESTADOS = ['pendiente', 'en_revision', 'aprobado', 'rechazado'];
 const API_URL = import.meta.env.VITE_API_URL;
@@ -155,6 +156,11 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
           value={nota}
           onChange={(e) => setNota(e.target.value)}
         />
+
+        {/* La entrevista va antes del Proceso de Incorporación y no depende del estado: entrevistar
+            es lo que se hace para decidir, así que tiene que estar disponible mientras la
+            postulación todavía se está mirando. */}
+        <EntrevistaDePostulacion postulacionId={postulacion.id} />
 
         {esAdminOSuperior(usuario?.rol) && postulacion.estado === 'aprobado' && (
           postulacion.asistente_id ? (

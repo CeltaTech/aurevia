@@ -7,6 +7,7 @@ import { useSeVe } from '../context/PerfilContext';
 import { useCirculo } from '../context/CirculoContext';
 import { pantallaPermitida } from '../lib/interruptorDeCadaPantalla';
 import { mensajeDeError } from '../lib/errores';
+import EstadoDocumental from '../components/EstadoDocumental';
 
 // Una de las dos listas. La de "qué no hace" pesa lo mismo que la otra a
 // propósito: es la que evita la discusión en la puerta.
@@ -23,37 +24,6 @@ function ListaDeTareas({ titulo, tareas, vacio }) {
           ))}
         </ul>
       )}
-    </>
-  );
-}
-
-// El estado documental del Asistente, tal como se le puede contar a la Familia.
-//
-// Dos cosas que este bloque no hace, y las dos son deliberadas. No nombra ningún papel: el
-// nombre de un tipo de documento puede ser dato de salud, y la Familia contrató un servicio,
-// no la ficha médica de quien lo presta. Y no afirma nada que el producto no haya comprobado:
-// la última línea dice con todas las letras qué no se verifica —identidad, antecedentes,
-// autenticidad—, que es la parte que en este tema termina en juicio cuando falta.
-function Documentacion({ documentacion, t }) {
-  if (!documentacion) return null;
-  const { resumen, matricula, alDia, papelesExigidos } = documentacion;
-  const hayExigencias = resumen !== 'sin_exigencias';
-  return (
-    <>
-      <h2 style={{ marginTop: '1.5rem' }}>{t.asistente.documentacion_titulo}</h2>
-      <p>{t.asistente[`documentacion_${resumen}`]}</p>
-      {hayExigencias && (
-        <p className="guardia-card-detalle">
-          {t.asistente.documentacion_cuenta
-            .replace('{alDia}', alDia)
-            .replace('{total}', papelesExigidos)}
-        </p>
-      )}
-      {matricula !== 'no_corresponde' && (
-        <p>{t.asistente[`documentacion_matricula_${matricula}`]}</p>
-      )}
-      {hayExigencias && <p className="guardia-card-detalle">{t.asistente.documentacion_sin_nombres}</p>}
-      <p className="guardia-card-detalle">{t.asistente.documentacion_que_no_se_verifica}</p>
     </>
   );
 }
@@ -129,7 +99,15 @@ export default function AsistenteAsignado() {
         {certificado ? t.asistente.certificado_vigente : t.asistente.certificado_vencido}
       </p>
 
-      <Documentacion documentacion={documentacion} t={t} />
+      {documentacion && (
+        <EstadoDocumental
+          resumen={documentacion.resumen}
+          matricula={documentacion.matricula}
+          alDia={documentacion.alDia}
+          papelesExigidos={documentacion.papelesExigidos}
+          t={t}
+        />
+      )}
 
       {tipo && (
         <>

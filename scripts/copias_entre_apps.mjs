@@ -50,6 +50,11 @@ export const GRUPOS = [
     copias: ['pwa-asistentes/src/lib/reglaVencimientos.js', 'backend/src/utils/reglaVencimientos.js'],
   },
   {
+    que: 'en qué modalidad de trabajo está cada Asistente',
+    original: 'panel/src/lib/modalidades.js',
+    copias: ['backend/src/utils/modalidades.js'],
+  },
+  {
     que: 'quién tiene que entrar con segundo factor',
     original: 'panel/src/lib/reglaMfaObligatorio.js',
     copias: ['backend/src/utils/reglaMfaObligatorio.js'],

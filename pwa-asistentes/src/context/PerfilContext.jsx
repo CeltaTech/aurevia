@@ -10,6 +10,12 @@
 // escuchó ese nombre. Por eso el encabezado y los avisos llevan el nombre (o el logo) de la
 // Prestadora, y el producto aparece solamente en una línea chica al pie (regla 1).
 //
+// EN QUÉ MODALIDAD TRABAJA LA PRESTADORA. Ofrecer marketplace no es una función que se
+// encienda desde las aplicaciones: es la forma de trabajar que eligió la Prestadora, y vive en
+// `prestadora_modalidades`. Llega en la misma respuesta porque decide pantallas enteras —una
+// Prestadora que no lo ofrece no tiene vidriera— y no un dato adentro de una pantalla. La
+// aplicación cuyo `/perfil` todavía no lo manda recibe `false`, que es la respuesta segura.
+//
 // QUÉ SE VE Y QUÉ NO. Cada Prestadora elige, desde Configuración › Las aplicaciones, qué
 // muestran los teléfonos. El candado de verdad está en el motor, que directamente no manda
 // lo apagado; esto de acá es para que no quede un botón que no lleva a ningún lado ni un
@@ -25,7 +31,7 @@ import { guardarMarca } from '../lib/marcaGuardada';
 import { useAuth } from './AuthContext';
 
 const MARCA_VACIA = { nombre: null, logoUrl: null, mostrarMarcaProducto: true };
-const PERFIL_VACIO = { marca: MARCA_VACIA, visibilidad: null };
+const PERFIL_VACIO = { marca: MARCA_VACIA, visibilidad: null, marketplace: false };
 
 const PerfilContext = createContext(PERFIL_VACIO);
 
@@ -47,6 +53,7 @@ export function PerfilProvider({ children }) {
         setPerfil({
           marca: datos.marca ?? MARCA_VACIA,
           visibilidad: datos.visibilidad ?? null,
+          marketplace: datos.marketplace === true,
         });
         if (datos.marca) guardarMarca(datos.marca);
       })
@@ -81,4 +88,13 @@ export function useMarca() {
 export function useSeVe() {
   const { visibilidad } = useContext(PerfilContext);
   return (clave) => (visibilidad ? visibilidad[clave] !== false : true);
+}
+
+// Si la Prestadora ofrece la modalidad marketplace.
+//
+// Al revés que `useSeVe()`, mientras la respuesta no llegó contesta que no. Acá la respuesta
+// segura es la contraria: lo que cuelga de esto son pantallas enteras, y prometer una vidriera
+// que después desaparece es peor que dibujarla un instante más tarde.
+export function useOfreceMarketplace() {
+  return useContext(PerfilContext).marketplace === true;
 }

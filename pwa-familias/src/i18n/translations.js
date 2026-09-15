@@ -44,6 +44,10 @@ export const T = {
         // nada que apagar.
         acceso_inexistente: 'No se encontró ese acceso. Conviene volver a abrir la pantalla.',
         forma_que_no_se_renueva: 'Ese acceso no se renueva solo, así que no hay nada que dar de baja.',
+        // La vidriera del Marketplace pedida en una Prestadora que no trabaja de esa manera. No
+        // es una función apagada: es que esa Prestadora asigna ella a su gente, y decirlo así
+        // evita que alguien le reclame que le "active" algo que no ofrece.
+        marketplace_no_habilitado: 'Esta Prestadora asigna ella misma a sus Asistentes, así que no hay una lista para elegir.',
         // Los de la activación de la cuenta. Son cinco frases distintas porque son cinco
         // problemas distintos y cada uno se sale de una manera: el enlace equivocado se abre
         // de nuevo desde el correo, el ya usado se saltea entrando derecho, y el vencido
@@ -72,6 +76,8 @@ export const T = {
       // El código para el Asistente que llega. Va en el menú de abajo porque se busca con el
       // timbre sonando: tiene que estar a un toque desde cualquier pantalla.
       codigo: 'Código',
+      // La vidriera del Marketplace. Sólo aparece donde la Prestadora ofrece esa modalidad.
+      buscar: 'Buscar',
       perfil: 'Mi Perfil',
       cerrar_sesion: 'Cerrar sesión',
       // El nombre de la zona de navegación de abajo. Sin él un lector de pantalla anuncia
@@ -239,6 +245,31 @@ export const T = {
       enviando_calificacion: 'Enviando…',
       calificacion_enviada: '¡Gracias! La calificación fue enviada.',
       escanear_boton: 'Escanear Asistente',
+    },
+    // La vidriera del Marketplace: buscar Asistentes y ver su perfil público.
+    //
+    // Dos frases de acá no son de estilo. La del orden, porque quien mira una lista de personas
+    // da por sentado que el de arriba es el mejor, y mientras la Prestadora no encienda esa
+    // función no lo es: el orden se mezcla y cambia todos los días. Y la del contacto, porque
+    // llegar a la persona se pide aparte, y una pantalla que simplemente no lo muestra deja
+    // buscando un botón que no está.
+    vidriera: {
+      titulo: 'Buscar Asistentes',
+      para_que: 'Las personas que esta Prestadora ofrece. Se puede mirar el perfil de cada una antes de decidir.',
+      filtro_zona: 'Zona',
+      filtro_tipo: 'Tipo de Asistente',
+      todas_las_zonas: 'Todas las zonas',
+      todos_los_tipos: 'Todos los tipos',
+      zonas: 'Zonas',
+      antiguedad: 'Hace {meses} meses en esta Prestadora.',
+      sin_resultados: 'No hay Asistentes que coincidan con lo que se buscó.',
+      orden_neutro: 'Esta lista no es un ranking: el orden se mezcla parejo y cambia todos los días. Nadie aparece primero por ser quien es.',
+      orden_por_calificacion: 'Esta lista está ordenada por calificación, de mayor a menor. Quien todavía no tiene ninguna aparece al final.',
+      sin_calificaciones: 'Todavía no tiene calificaciones.',
+      calificacion_cuenta: '{promedio} de 5, sobre {cuantas} calificaciones.',
+      opiniones_titulo: 'Qué dijeron otras Familias',
+      sin_opiniones: 'Todavía no hay comentarios de otras Familias.',
+      contacto_aparte: 'Los datos para comunicarse con la persona no se muestran acá: se piden cuando se decide avanzar.',
     },
     // El código que se le muestra al Asistente que llega (pendiente #113). Reemplaza al cartel
     // impreso del domicilio, que se podía fotografiar una vez y usar desde cualquier lado.
@@ -448,6 +479,7 @@ export const T = {
         no_encontrado: 'That instruction could not be found. Please open the screen again.',
         acceso_inexistente: 'That access could not be found. Please open the screen again.',
         forma_que_no_se_renueva: 'That access does not renew on its own, so there is nothing to cancel.',
+        marketplace_no_habilitado: 'This Provider assigns its own Assistants, so there is no list to choose from.',
         faltan_datos: 'Some information is missing. Please open the link from the email again and enter the password once more.',
         password_debil: 'The password must be at least 8 characters long.',
         token_invalido: 'This activation link is not valid. Try opening it again from the email, or ask for a new invitation.',
@@ -466,6 +498,7 @@ export const T = {
     nav: {
       pacientes: 'My Patients',
       codigo: 'Code',
+      buscar: 'Search',
       perfil: 'My Profile',
       cerrar_sesion: 'Log out',
       menu_principal: 'Main menu',
@@ -614,6 +647,24 @@ export const T = {
       enviando_calificacion: 'Sending…',
       calificacion_enviada: 'Thanks! Your rating was sent.',
       escanear_boton: 'Scan Assistant',
+    },
+    vidriera: {
+      titulo: 'Search Assistants',
+      para_que: 'The people this Provider offers. Each profile can be reviewed before deciding.',
+      filtro_zona: 'Area',
+      filtro_tipo: 'Assistant type',
+      todas_las_zonas: 'All areas',
+      todos_los_tipos: 'All types',
+      zonas: 'Areas',
+      antiguedad: '{meses} months with this Provider.',
+      sin_resultados: 'No Assistants match this search.',
+      orden_neutro: 'This list is not a ranking: the order is shuffled evenly and changes every day. Nobody comes first for being who they are.',
+      orden_por_calificacion: 'This list is sorted by rating, highest first. Anyone without ratings yet appears at the end.',
+      sin_calificaciones: 'No ratings yet.',
+      calificacion_cuenta: '{promedio} out of 5, from {cuantas} ratings.',
+      opiniones_titulo: 'What other Families said',
+      sin_opiniones: 'No comments from other Families yet.',
+      contacto_aparte: 'Contact details are not shown here: they are requested when moving forward.',
     },
     codigo_para_el_asistente: {
       titulo: 'Code for the Assistant',
@@ -802,6 +853,7 @@ export const T = {
         no_encontrado: 'Não foi encontrada essa instrução. Convém abrir a tela de novo.',
         acceso_inexistente: 'Não foi encontrado esse acesso. Convém abrir a tela de novo.',
         forma_que_no_se_renueva: 'Esse acesso não se renova sozinho, portanto não há nada a cancelar.',
+        marketplace_no_habilitado: 'Esta Prestadora designa ela mesma os seus Assistentes, portanto não há uma lista para escolher.',
         faltan_datos: 'Faltam dados para ativar a conta. É preciso abrir novamente o link do email e digitar a senha de novo.',
         password_debil: 'A senha precisa ter pelo menos 8 caracteres.',
         token_invalido: 'Este link de ativação não é válido. Convém abri-lo novamente a partir do email ou pedir que reenviem o convite.',
@@ -820,6 +872,7 @@ export const T = {
     nav: {
       pacientes: 'Meus Pacientes',
       codigo: 'Código',
+      buscar: 'Buscar',
       perfil: 'Meu Perfil',
       cerrar_sesion: 'Sair',
       menu_principal: 'Menu principal',
@@ -968,6 +1021,24 @@ export const T = {
       enviando_calificacion: 'Enviando…',
       calificacion_enviada: 'Obrigado! A avaliação foi enviada.',
       escanear_boton: 'Escanear Assistente',
+    },
+    vidriera: {
+      titulo: 'Buscar Assistentes',
+      para_que: 'As pessoas que esta Prestadora oferece. Dá para ver o perfil de cada uma antes de decidir.',
+      filtro_zona: 'Região',
+      filtro_tipo: 'Tipo de Assistente',
+      todas_las_zonas: 'Todas as regiões',
+      todos_los_tipos: 'Todos os tipos',
+      zonas: 'Regiões',
+      antiguedad: 'Há {meses} meses nesta Prestadora.',
+      sin_resultados: 'Não há Assistentes que correspondam à busca.',
+      orden_neutro: 'Esta lista não é um ranking: a ordem é embaralhada por igual e muda todos os dias. Ninguém aparece primeiro por ser quem é.',
+      orden_por_calificacion: 'Esta lista está ordenada por avaliação, da maior para a menor. Quem ainda não tem nenhuma aparece no final.',
+      sin_calificaciones: 'Ainda não tem avaliações.',
+      calificacion_cuenta: '{promedio} de 5, com base em {cuantas} avaliações.',
+      opiniones_titulo: 'O que outras Famílias disseram',
+      sin_opiniones: 'Ainda não há comentários de outras Famílias.',
+      contacto_aparte: 'Os dados para entrar em contato com a pessoa não aparecem aqui: são solicitados quando se decide avançar.',
     },
     codigo_para_el_asistente: {
       titulo: 'Código para o Assistente',

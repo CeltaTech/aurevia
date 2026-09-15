@@ -18,6 +18,17 @@ import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { llegadaEstimadaDeGuardia } from '../utils/estimarLlegadaDeGuardia.js';
 import { darDeBajaElAcceso } from '../utils/bajaDelAcceso.js';
 import { estadoDocumentalParaLaFamilia } from '../utils/estadoDocumentalParaLaFamilia.js';
+import {
+  COLUMNAS_PERFIL_PUBLICO,
+  FUNCION_QUE_HABILITA_EL_ORDEN,
+  ORDEN,
+  ordenarPool,
+  perfilPublicoDeAsistente,
+  promedioDeCalificaciones,
+} from '../utils/perfilPublicoDeAsistente.js';
+import { funcionDeRiesgoEncendida, ofreceMarketplace } from '../utils/marketplaceDeLaPrestadora.js';
+import { MODALIDAD } from '../utils/modalidades.js';
+import { diaISO } from '../utils/reglaVencimientos.js';
 
 export const appFamiliasRouter = Router();
 
@@ -125,6 +136,13 @@ appFamiliasRouter.get('/perfil', requiereRolFamilia, async (req, res) => {
     ? await instruccionPendiente(req.usuarioFamilia.familiaId)
     : null;
 
+  // Si esta Prestadora ofrece marketplace, la aplicación tiene una pantalla más —la vidriera de
+  // Asistentes— y el menú la dibuja. Va acá por el mismo motivo que la marca y la visibilidad:
+  // el menú se arma apenas la persona entra, que es cuando ya se está pidiendo el perfil. El
+  // candado sigue estando en cada ruta de la vidriera, que no contesta nada sin volver a
+  // preguntarlo.
+  const marketplace = await ofreceMarketplace(req.usuarioFamilia.prestadoraId);
+
   res.json({
     perfil: {
       ...usuario,
@@ -134,6 +152,7 @@ appFamiliasRouter.get('/perfil', requiereRolFamilia, async (req, res) => {
     marca,
     visibilidad,
     accesos,
+    marketplace,
     instruccionPendiente: pendiente,
   });
 });
@@ -1027,6 +1046,229 @@ appFamiliasRouter.get('/codigo-de-presencia', requiereRolFamilia, async (req, re
       sujetoId: req.usuarioFamilia.familiaId,
     });
     res.json({ codigo, segundos, expiraEn });
+  } catch (e) {
+    responderError(res, e);
+  }
+});
+
+// ============================================================================
+// La vidriera del Marketplace: buscar Asistentes y ver su perfil público
+//
+// QUÉ RESUELVE. Hasta acá, en la modalidad marketplace existía todo el andamiaje —la base, los
+// disparadores, los cobros, el consentimiento— y no existía la modalidad: la Familia no podía
+// buscar un Asistente ni verlo. Estas dos direcciones son eso, y nada más que eso.
+//
+// LO QUE NO ESTÁ ACÁ, A PROPÓSITO: el dato de contacto. Llegar a la persona es justamente lo
+// que el Marketplace vende, se descuenta de un paquete y tiene su propio circuito
+// (`contactos_vistos_marketplace`). De estas dos direcciones no sale un teléfono ni un correo
+// por ningún camino: la consulta no pide esas columnas (`perfilPublicoDeAsistente.js`).
+//
+// LA PUERTA ES LA MODALIDAD, Y NO UN INTERRUPTOR NUEVO. La Prestadora que no ofrece
+// marketplace no tiene vidriera, y eso ya está dicho en `prestadora_modalidades`. Un
+// interruptor aparte para lo mismo sería la misma decisión escrita en dos lugares.
+//
+// EL ORDEN LO DECIDE UNA FUNCIÓN DE RIESGO, NO EL GUSTO DE LA PANTALLA. Con
+// `ranking_plataforma` apagada —que es como nace— la lista sale mezclada parejo. El motivo
+// está escrito en `perfilPublicoDeAsistente.js` y es legal, no estético.
+// ============================================================================
+
+/** Cuánta gente entra en una pantalla de la vidriera, y cuántas opiniones se leen de una. */
+const TOPE_DE_LA_VIDRIERA = 60;
+const TOPE_DE_OPINIONES = 30;
+
+/** Quién entra en la vidriera: de esta Prestadora, activo, en marketplace y tomando trabajo. */
+function poolDeLaPrestadora(prestadoraId) {
+  return supabase
+    .from('asistentes')
+    .select(COLUMNAS_PERFIL_PUBLICO)
+    .eq('prestadora_id', prestadoraId)
+    .eq('estado', 'activo')
+    .eq('disponible_para_ofertas', true)
+    .is('deleted_at', null)
+    .contains('canales', [MODALIDAD.MARKETPLACE]);
+}
+
+/** Corta el paso donde la Prestadora no ofrece la modalidad. Mismo motivo en las dos rutas. */
+async function exigeVidriera(req) {
+  if (!(await ofreceMarketplace(req.usuarioFamilia.prestadoraId))) {
+    throw new ErrorConMotivo('marketplace_no_habilitado');
+  }
+}
+
+/**
+ * El estado documental de varios Asistentes de una vez, con las mismas reglas que el de uno
+ * solo. Tres consultas para toda la lista y no tres por persona: con veinte perfiles serían
+ * sesenta viajes a la base para contestar una pantalla.
+ */
+async function documentacionDeVarios(prestadoraId, asistenteIds) {
+  if (!asistenteIds.length) return new Map();
+
+  const [{ data: tiposExigidos }, { data: documentos }, { data: matriculas }, { data: prestadora }] =
+    await Promise.all([
+      supabase
+        .from('tipos_documento_asistente')
+        .select('id, requiere_vencimiento')
+        .eq('prestadora_id', prestadoraId)
+        .eq('activo', true),
+      supabase
+        .from('documentos_asistente')
+        .select('asistente_id, tipo_documento_id, fecha_vencimiento')
+        .eq('prestadora_id', prestadoraId)
+        .in('asistente_id', asistenteIds),
+      supabase
+        .from('estado_matricula_asistente')
+        .select('asistente_id, requiere_matricula, matricula_id, vigente_hasta, verificada_at')
+        .eq('prestadora_id', prestadoraId)
+        .in('asistente_id', asistenteIds),
+      supabase
+        .from('prestadoras')
+        .select('dias_aviso_vencimiento_documentos')
+        .eq('id', prestadoraId)
+        .maybeSingle(),
+    ]);
+
+  const porAsistente = new Map();
+  const matriculaDe = new Map((matriculas || []).map((m) => [m.asistente_id, m]));
+  for (const id of asistenteIds) {
+    porAsistente.set(
+      id,
+      estadoDocumentalParaLaFamilia({
+        tiposExigidos: tiposExigidos || [],
+        documentos: (documentos || []).filter((d) => d.asistente_id === id),
+        matricula: matriculaDe.get(id) || null,
+        diasAviso: prestadora?.dias_aviso_vencimiento_documentos ?? undefined,
+      })
+    );
+  }
+  return porAsistente;
+}
+
+/** Las calificaciones públicas de varios Asistentes, o un mapa vacío si acá no se califica. */
+async function calificacionesDeVarios(prestadoraId, asistenteIds, visibilidad) {
+  if (!visibilidad.familia_califica_al_asistente || !asistenteIds.length) return new Map();
+  const { data } = await supabase
+    .from('calificaciones_asistente')
+    .select('asistente_id, estrellas')
+    .eq('prestadora_id', prestadoraId)
+    .eq('visible_publica', true)
+    .in('asistente_id', asistenteIds);
+
+  const porAsistente = new Map();
+  for (const id of asistenteIds) {
+    porAsistente.set(id, promedioDeCalificaciones((data || []).filter((c) => c.asistente_id === id)));
+  }
+  return porAsistente;
+}
+
+/** Los tipos de Asistente que aparecen en la vidriera, armados para mostrar. */
+async function tiposDeLaVidriera(prestadoraId, tipoIds) {
+  if (!tipoIds.length) return new Map();
+  const { data } = await supabase
+    .from('tipos_asistente')
+    .select('id, clave, nombre, prestadora_id')
+    .in('id', tipoIds)
+    .or(`prestadora_id.is.null,prestadora_id.eq.${prestadoraId}`);
+  return new Map((data || []).map((t) => [t.id, t]));
+}
+
+appFamiliasRouter.get('/marketplace/asistentes', requiereRolFamilia, async (req, res) => {
+  try {
+    await exigeVidriera(req);
+    const prestadoraId = req.usuarioFamilia.prestadoraId;
+    const visibilidad = await visibilidadDelPedido(req);
+
+    // Las opciones de los filtros salen del pool y no de una lista escrita: una zona en la que
+    // no trabaja nadie no se ofrece, porque elegirla devolvería siempre vacío.
+    const { data: todos } = await poolDeLaPrestadora(prestadoraId);
+    const zonasOfrecidas = [...new Set((todos || []).flatMap((a) => a.zonas || []))].sort((a, b) =>
+      a.localeCompare(b)
+    );
+    const tiposOfrecidos = [...new Set((todos || []).map((a) => a.tipo_asistente_id).filter(Boolean))];
+
+    let consulta = poolDeLaPrestadora(prestadoraId).limit(TOPE_DE_LA_VIDRIERA);
+    if (req.query.zona) consulta = consulta.contains('zonas', [String(req.query.zona)]);
+    if (req.query.tipo) consulta = consulta.eq('tipo_asistente_id', String(req.query.tipo));
+
+    const { data: asistentes, error } = await consulta;
+    if (error) return responderError(res, error);
+
+    const ids = (asistentes || []).map((a) => a.id);
+    const [documentacion, calificaciones, tipos] = await Promise.all([
+      documentacionDeVarios(prestadoraId, ids),
+      calificacionesDeVarios(prestadoraId, ids, visibilidad),
+      tiposDeLaVidriera(prestadoraId, tiposOfrecidos),
+    ]);
+
+    const perfiles = (asistentes || []).map((asistente) =>
+      perfilPublicoDeAsistente({
+        asistente,
+        tipo: tipos.get(asistente.tipo_asistente_id) || null,
+        documentacion: documentacion.get(asistente.id) || null,
+        calificacion: calificaciones.get(asistente.id) || null,
+      })
+    );
+
+    const porCalificacion = await funcionDeRiesgoEncendida(prestadoraId, FUNCION_QUE_HABILITA_EL_ORDEN);
+    const orden = porCalificacion ? ORDEN.CALIFICACION : ORDEN.NEUTRO;
+
+    res.json({
+      asistentes: ordenarPool(perfiles, { orden, semilla: diaISO(new Date()) }),
+      // Viaja para que la pantalla pueda decir en qué orden está mirando, y no prometa uno
+      // que no existe.
+      orden,
+      zonas: zonasOfrecidas,
+      tipos: tiposOfrecidos.map((id) => tipos.get(id)).filter(Boolean),
+    });
+  } catch (e) {
+    responderError(res, e);
+  }
+});
+
+appFamiliasRouter.get('/marketplace/asistentes/:id', requiereRolFamilia, async (req, res) => {
+  try {
+    await exigeVidriera(req);
+    const prestadoraId = req.usuarioFamilia.prestadoraId;
+    const visibilidad = await visibilidadDelPedido(req);
+
+    // Se busca adentro del pool y no en la tabla entera: quien no está en la vidriera no tiene
+    // perfil público, aunque alguien pruebe la dirección con su identificador.
+    const { data: asistente } = await poolDeLaPrestadora(prestadoraId)
+      .eq('id', req.params.id)
+      .maybeSingle();
+    // El que no existe y el que está fuera de la vidriera contestan lo mismo: desde afuera se
+    // tienen que ver iguales.
+    if (!asistente) throw new ErrorConMotivo('no_encontrado');
+
+    const [documentacion, calificaciones, tipos] = await Promise.all([
+      documentacionDeVarios(prestadoraId, [asistente.id]),
+      calificacionesDeVarios(prestadoraId, [asistente.id], visibilidad),
+      tiposDeLaVidriera(prestadoraId, asistente.tipo_asistente_id ? [asistente.tipo_asistente_id] : []),
+    ]);
+
+    // Las opiniones escritas, sin quién las escribió: quien calificó es una Familia, y su
+    // nombre no es parte de lo que se publica. Van sólo las que la Prestadora dejó públicas.
+    let opiniones = [];
+    if (visibilidad.familia_califica_al_asistente) {
+      const { data } = await supabase
+        .from('calificaciones_asistente')
+        .select('id, estrellas, comentario, created_at')
+        .eq('prestadora_id', prestadoraId)
+        .eq('asistente_id', asistente.id)
+        .eq('visible_publica', true)
+        .order('created_at', { ascending: false })
+        .limit(TOPE_DE_OPINIONES);
+      opiniones = data || [];
+    }
+
+    res.json({
+      asistente: perfilPublicoDeAsistente({
+        asistente,
+        tipo: tipos.get(asistente.tipo_asistente_id) || null,
+        documentacion: documentacion.get(asistente.id) || null,
+        calificacion: calificaciones.get(asistente.id) || null,
+      }),
+      opiniones,
+    });
   } catch (e) {
     responderError(res, e);
   }

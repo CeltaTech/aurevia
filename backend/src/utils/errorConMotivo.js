@@ -84,6 +84,11 @@ const ESTADO_POR_MOTIVO = {
   // caen en 500, que es lo honesto, porque son fallas de este lado o del proveedor.
   acceso_inexistente: 404,
   forma_que_no_se_renueva: 409,
+  // La vidriera del Marketplace en la aplicación de la Familia. Es 409 y no 404 porque la
+  // dirección existe y el pedido está bien armado: lo que pasa es que esta Prestadora no ofrece
+  // esa modalidad de trabajo, y eso la pantalla lo puede decir con todas las letras en vez de
+  // mostrar una pantalla vacía sin explicación.
+  marketplace_no_habilitado: 409,
   // El tope de pedidos por minuto (pendiente #177). Es el mismo 429 que los intentos agotados,
   // porque para la web es la misma situación —"probó demasiadas veces"—, pero el motivo es otro
   // y la pantalla dice otra cosa: los intentos agotados no se arreglan esperando, y esto sí.

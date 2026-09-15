@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { PerfilProvider, useSeVe } from './context/PerfilContext';
+import { PerfilProvider, useOfreceMarketplace, useSeVe } from './context/PerfilContext';
 import { CirculoProvider, useCirculo } from './context/CirculoContext';
 import { LocaleProvider, useLocale } from './i18n/LocaleContext';
 import { pantallaPermitida } from './lib/interruptorDeCadaPantalla';
@@ -22,6 +22,8 @@ import Medicacion from './pages/Medicacion';
 import MiPerfil from './pages/MiPerfil';
 import FirmarInstruccion from './pages/FirmarInstruccion';
 import CodigoParaElAsistente from './pages/CodigoParaElAsistente';
+import BuscarAsistentes from './pages/BuscarAsistentes';
+import PerfilPublicoAsistente from './pages/PerfilPublicoAsistente';
 
 function RutaPrivada({ children }) {
   const { session, cargando } = useAuth();
@@ -46,6 +48,15 @@ function PantallaPermitida({ pantalla, children }) {
   const { puedeVer } = useCirculo();
 
   if (!pantallaPermitida(pantalla, seVe, puedeVer)) return <Navigate to="/pacientes" replace />;
+  return children;
+}
+
+// La vidriera no cuelga de un interruptor de los que la Prestadora enciende y apaga: cuelga de
+// la modalidad en la que trabaja, que es otra cosa y ya está decidida en otro lado. El candado
+// de verdad está en el motor, que contesta que no ofrece esa modalidad; esto es para que no
+// quede una dirección que lleve a una pantalla de error.
+function SoloConMarketplace({ children }) {
+  if (!useOfreceMarketplace()) return <Navigate to="/pacientes" replace />;
   return children;
 }
 
@@ -156,6 +167,24 @@ function Rutas() {
             <PantallaPermitida pantalla="facturas">
               <FacturaDetalle />
             </PantallaPermitida>
+          }
+        />
+        {/* La vidriera del Marketplace. No cuelga de un Paciente: se busca un Asistente antes
+            de decidir para quién, y la misma búsqueda sirve para todo el círculo familiar. */}
+        <Route
+          path="buscar"
+          element={
+            <SoloConMarketplace>
+              <BuscarAsistentes />
+            </SoloConMarketplace>
+          }
+        />
+        <Route
+          path="buscar/:id"
+          element={
+            <SoloConMarketplace>
+              <PerfilPublicoAsistente />
+            </SoloConMarketplace>
           }
         />
         <Route path="codigo" element={<CodigoParaElAsistente />} />

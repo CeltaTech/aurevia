@@ -417,3 +417,86 @@ describe('el aviso auténtico que no corresponde atender', () => {
     assert.equal(escrituras().length, 0);
   });
 });
+
+/* Por esta misma puerta entra el resultado de la revisión de una plantilla. Hasta que esto
+   existió, «aprobada» y «rechazada» sólo cambiaban si alguien los escribía a mano en el Panel: la
+   plantilla podía estar aprobada hace una semana y el producto seguirla mostrando como esperando,
+   o al revés. */
+describe('el aviso de Meta sobre una plantilla', () => {
+  /** El aviso tal como lo manda Meta cuando termina de revisar. */
+  function avisoDePlantilla(valor) {
+    return Buffer.from(
+      JSON.stringify({
+        entry: [{ changes: [{ field: 'message_template_status_update', value: valor }] }],
+      }),
+      'utf8',
+    );
+  }
+
+  /** Lo que se le escribió a la plantilla, si se le escribió algo. */
+  function guardado() {
+    return escrituras().find((l) => l.clave === 'PATCH /rest/v1/plantillas_whatsapp');
+  }
+
+  beforeEach(() => {
+    respuestas.set('PATCH /rest/v1/plantillas_whatsapp', () => []);
+  });
+
+  it('la aprobación queda guardada, y sobre la plantilla de esa Prestadora', async () => {
+    const { estado } = await avisar({
+      cuerpo: avisoDePlantilla({ event: 'APPROVED', message_template_id: 900000000000009, reason: 'NONE' }),
+    });
+    assert.equal(estado, 200);
+
+    await esperarA(() => Boolean(guardado()));
+    assert.equal(guardado().cuerpo.estado, 'aprobada');
+    assert.equal(guardado().cuerpo.motivo_rechazo, null);
+    // La Prestadora es la de la dirección, y va en el filtro: el identificador que viene adentro
+    // del aviso no puede elegir la fila de otra.
+    assert.ok(guardado().url.includes(`prestadora_id=eq.${PRESTADORA}`), guardado().url);
+    assert.ok(guardado().url.includes('meta_template_id=eq.900000000000009'), guardado().url);
+  });
+
+  it('el rechazo guarda además lo que Meta objetó, que es lo que hay que corregir', async () => {
+    await avisar({
+      cuerpo: avisoDePlantilla({
+        event: 'REJECTED',
+        message_template_id: 900000000000009,
+        reason: 'INVALID_FORMAT',
+      }),
+    });
+
+    await esperarA(() => Boolean(guardado()));
+    assert.equal(guardado().cuerpo.estado, 'rechazada');
+    assert.equal(guardado().cuerpo.motivo_rechazo, 'REJECTED: INVALID_FORMAT');
+  });
+
+  it('una plantilla que Meta pausó no se sigue mostrando como que va a salir', async () => {
+    await avisar({
+      cuerpo: avisoDePlantilla({ event: 'PAUSED', message_template_id: 900000000000009 }),
+    });
+
+    await esperarA(() => Boolean(guardado()));
+    assert.equal(guardado().cuerpo.estado, 'rechazada');
+    assert.equal(guardado().cuerpo.motivo_rechazo, 'PAUSED');
+  });
+
+  it('un aviso sin identificador de plantilla no escribe nada', async () => {
+    const { estado } = await avisar({ cuerpo: avisoDePlantilla({ event: 'APPROVED' }) });
+    assert.equal(estado, 200);
+
+    await dejarTerminar();
+    assert.equal(escrituras().length, 0);
+  });
+
+  it('un aviso de plantilla sin firma se rechaza antes de escribir nada', async () => {
+    const { estado } = await avisar({
+      cuerpo: avisoDePlantilla({ event: 'APPROVED', message_template_id: 900000000000009 }),
+      firma: null,
+    });
+    assert.equal(estado, 401);
+
+    await dejarTerminar();
+    assert.equal(escrituras().length, 0);
+  });
+});

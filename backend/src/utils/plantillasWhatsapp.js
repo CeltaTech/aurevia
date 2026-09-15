@@ -30,14 +30,27 @@ const IDIOMA_PARA_META = {
   'pt-BR': 'pt_BR',
 };
 
-/** Cómo queda el estado guardado según lo que Meta contesta. Meta revisa algunas plantillas en el
- *  momento y otras las deja pendientes; las tres respuestas están previstas para no guardar
- *  «esperando» una que ya se resolvió. */
+/** Cómo queda el estado guardado según lo que Meta contesta, en el alta y después. Meta tiene más
+ *  situaciones que las cuatro que guarda el producto, así que se agrupan por lo único que importa
+ *  del lado de acá: si la plantilla se puede usar para mandar un mensaje o no. Una plantilla
+ *  pausada o dada de baja por Meta no entrega, y quedarse esperando por ella sería decir que va a
+ *  salir cuando no va a salir; por eso cae del mismo lado que la rechazada, y qué pasó en realidad
+ *  queda escrito al lado, en la fila. */
 const ESTADO_SEGUN_META = {
   APPROVED: 'aprobada',
   REJECTED: 'rechazada',
+  DISABLED: 'rechazada',
+  PAUSED: 'rechazada',
   PENDING: 'enviada_meta',
+  IN_APPEAL: 'enviada_meta',
+  PENDING_DELETION: 'enviada_meta',
 };
+
+/** Lo que dice Meta, dicho como lo guarda el producto. Lo que no está previsto queda esperando: de
+ *  una respuesta que no se entiende no se deduce nunca que la plantilla está aprobada. */
+export function estadoSegunMeta(loQueDiceMeta) {
+  return ESTADO_SEGUN_META[String(loQueDiceMeta ?? '').toUpperCase()] ?? 'enviada_meta';
+}
 
 /** El nombre con el que la plantilla queda dada de alta en Meta, derivado del que se ve en el
  *  Panel. Lo que no es letra, número o guión bajo pasa a ser guión bajo, y las mayúsculas bajan. */
@@ -95,6 +108,68 @@ export async function darDeAltaEnMeta(plantilla) {
 
   return {
     metaTemplateId: String(cuerpo.id),
-    estado: ESTADO_SEGUN_META[cuerpo.status] ?? 'enviada_meta',
+    estado: estadoSegunMeta(cuerpo.status),
   };
+}
+
+/**
+ * Le pregunta a Meta cómo quedaron las plantillas de una Prestadora.
+ *
+ * Meta las revisa a su tiempo y el resultado llega por su aviso automático, que la Prestadora
+ * configura en su panel. Esto es la otra puerta: la que se usa cuando ese aviso no está conectado,
+ * cuando se perdió uno, o cuando alguien quiere mirar ahora mismo. Se trae la lista entera en un
+ * pedido y no una plantilla por vez, que serían tantas llamadas como plantillas tenga.
+ *
+ * @param {string} prestadoraId
+ * @returns {Promise<Map<string, {estado: string, motivo: string|null}>>} por identificador de Meta.
+ * @throws {ErrorConMotivo} `whatsapp_sin_cuenta` o `meta_no_acepto`, igual que el alta.
+ */
+export async function traerEstadosDeMeta(prestadoraId) {
+  const credenciales = await credencialesWhatsapp(prestadoraId);
+  if (!credenciales?.wabaId) {
+    throw new ErrorConMotivo('whatsapp_sin_cuenta', 'Falta la cuenta de WhatsApp Business o el token');
+  }
+
+  const estados = new Map();
+  let direccion =
+    `https://graph.facebook.com/${META_GRAPH_VERSION}/${credenciales.wabaId}/message_templates` +
+    '?fields=id,status,rejected_reason&limit=100';
+
+  // Meta entrega la lista de a pedazos y deja la dirección del siguiente adentro de la respuesta.
+  // El tope de vueltas no es desconfianza del servidor: es que un ciclo que depende de lo que
+  // conteste un tercero tiene que terminar aunque el tercero conteste cualquier cosa.
+  for (let vuelta = 0; vuelta < 20 && direccion; vuelta += 1) {
+    const respuesta = await fetch(direccion, {
+      headers: { Authorization: `Bearer ${credenciales.token}` },
+    });
+    const cuerpo = await respuesta.json().catch(() => ({}));
+
+    if (!respuesta.ok || !Array.isArray(cuerpo.data)) {
+      throw new ErrorConMotivo(
+        'meta_no_acepto',
+        `${respuesta.status} ${cuerpo?.error?.message ?? 'sin detalle'}`,
+      );
+    }
+
+    for (const plantilla of cuerpo.data) {
+      if (!plantilla?.id) continue;
+      estados.set(String(plantilla.id), {
+        estado: estadoSegunMeta(plantilla.status),
+        motivo: motivoDeMeta(plantilla.status, plantilla.rejected_reason),
+      });
+    }
+
+    direccion = cuerpo.paging?.next ?? null;
+  }
+
+  return estados;
+}
+
+/** Por qué la plantilla no se puede usar, tal como lo nombra Meta, para que quien la escribió sepa
+ *  qué corregir. `NONE` es lo que Meta contesta cuando no hay nada que decir, y no se guarda. */
+export function motivoDeMeta(loQueDiceMeta, razon) {
+  if (estadoSegunMeta(loQueDiceMeta) !== 'rechazada') return null;
+  const limpia = String(razon ?? '').toUpperCase();
+  const util = limpia && limpia !== 'NONE' ? limpia : null;
+  return util ? `${String(loQueDiceMeta).toUpperCase()}: ${util}` : String(loQueDiceMeta).toUpperCase();
 }

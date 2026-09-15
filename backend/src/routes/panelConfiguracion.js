@@ -9,7 +9,7 @@ import { avisoDelCatalogo, mezclarAvisosConCatalogo, VALORES_POR_DEFECTO_AVISO }
 import { cosaDelCatalogo, mezclarVisibilidadConCatalogo } from '../utils/catalogoVisibilidad.js';
 import { LIMITES_ALERTAS_IA, VALORES_POR_DEFECTO_ALERTAS_IA } from '../utils/revisarAlertasIA.js';
 import { validarUmbralesPremura } from '../utils/umbralesPremura.js';
-import { darDeAltaEnMeta } from '../utils/plantillasWhatsapp.js';
+import { darDeAltaEnMeta, traerEstadosDeMeta } from '../utils/plantillasWhatsapp.js';
 import { LIMITES_AVISO_PREVIO_GUARDIA } from '../utils/revisarRecordatoriosPush.js';
 import { METROS_TOLERANCIA_POR_OMISION, MINUTOS_TOLERANCIA_POR_OMISION } from '../utils/toleranciaCheckin.js';
 import {
@@ -684,6 +684,47 @@ panelConfiguracionRouter.post('/whatsapp/plantillas/:id/enviar-a-meta', async (r
   if (errorGuardado) return responderError(res, errorGuardado);
 
   res.json({ ok: true, estado: resultado.estado });
+});
+
+// Preguntarle a Meta cómo quedaron las plantillas que ya salieron. El camino normal es el aviso
+// automático de Meta, que entra por `whatsappWebhook.js` y no le pide nada a nadie; esto es la
+// otra puerta, para cuando ese aviso no está conectado o se perdió uno. Se pregunta por todas en
+// un solo pedido y se escriben únicamente las que cambiaron.
+panelConfiguracionRouter.post('/whatsapp/plantillas/consultar-a-meta', async (req, res) => {
+  let query = supabase
+    .from('plantillas_whatsapp')
+    .select('id, meta_template_id, estado, motivo_rechazo')
+    .not('meta_template_id', 'is', null);
+  query = acotarAPrestadora(query, req.usuarioPanel);
+  const { data: plantillas, error } = await query;
+  if (error) return responderError(res, error);
+
+  let estados;
+  try {
+    estados = await traerEstadosDeMeta(req.usuarioPanel.prestadoraId);
+  } catch (err) {
+    return responderError(res, err);
+  }
+
+  let cambiadas = 0;
+  for (const plantilla of plantillas ?? []) {
+    const enMeta = estados.get(String(plantilla.meta_template_id));
+    if (!enMeta) continue;
+    if (enMeta.estado === plantilla.estado && (enMeta.motivo ?? null) === (plantilla.motivo_rechazo ?? null)) continue;
+
+    const { error: errorGuardado } = await supabase
+      .from('plantillas_whatsapp')
+      .update({
+        estado: enMeta.estado,
+        motivo_rechazo: enMeta.motivo,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', plantilla.id);
+    if (errorGuardado) return responderError(res, errorGuardado);
+    cambiadas += 1;
+  }
+
+  res.json({ ok: true, cambiadas });
 });
 
 panelConfiguracionRouter.delete('/whatsapp/plantillas/:id', async (req, res) => {

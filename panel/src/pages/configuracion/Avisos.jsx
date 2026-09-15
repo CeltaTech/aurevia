@@ -825,6 +825,7 @@ function TabWhatsappPlantillas() {
   const [error, setError] = useState(null);
   const [creandoNueva, setCreandoNueva] = useState(false);
   const [actualizandoId, setActualizandoId] = useState(null);
+  const [consultando, setConsultando] = useState(false);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -858,6 +859,21 @@ function TabWhatsappPlantillas() {
     }
   }
 
+  // Meta revisa las plantillas a su tiempo y avisa sola cuando termina. Esto es para mirar ahora
+  // mismo, y para cuando ese aviso no llegó: se le pregunta por todas juntas y se recarga.
+  async function consultarAMeta() {
+    setConsultando(true);
+    setError(null);
+    try {
+      await llamarApi('/whatsapp/plantillas/consultar-a-meta', { method: 'POST' });
+      recargar();
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setConsultando(false);
+    }
+  }
+
   async function borrar(fila) {
     if (!(await confirmarDestructivo(t.configuracion.whatsapp_plantillas_confirmar_borrar))) return;
     setActualizandoId(fila.id);
@@ -878,6 +894,9 @@ function TabWhatsappPlantillas() {
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <div className="panel-filtros">
         <Button onClick={() => setCreandoNueva(true)}>{t.configuracion.whatsapp_plantillas_nueva}</Button>
+        <Button variant="secondary" onClick={consultarAMeta} disabled={consultando}>
+          {t.configuracion.whatsapp_plantillas_consultar_meta}
+        </Button>
       </div>
       <EstadoLista
         estado={estado}
@@ -901,7 +920,16 @@ function TabWhatsappPlantillas() {
               <tr key={p.id}>
                 <td>{p.nombre_interno}</td>
                 <td>{traducirValor(t.configuracion, `whatsapp_plantillas_categoria_${p.categoria}`)}</td>
-                <td>{traducirValor(t.configuracion, `whatsapp_plantillas_estado_${p.estado}`)}</td>
+                <td>
+                  {traducirValor(t.configuracion, `whatsapp_plantillas_estado_${p.estado}`)}
+                  {/* Lo que objetó Meta, tal como lo dijo. Sin esto, «rechazada» no dice qué
+                      corregir y la plantilla se vuelve a mandar igual. */}
+                  {p.motivo_rechazo && (
+                    <div className="panel-explicacion">
+                      {t.configuracion.whatsapp_plantillas_motivo_rechazo}: {p.motivo_rechazo}
+                    </div>
+                  )}
+                </td>
                 <td>{p.cuerpo_texto}</td>
                 <td>
                   {p.estado === 'borrador' && (

@@ -34,6 +34,10 @@ import express, { Router } from 'express';
 import { supabase } from '../db/connection.js';
 import { enviarWhatsApp } from '../utils/whatsapp.js';
 import { generarRespuestaIA } from '../utils/iaWhatsapp.js';
+// Cómo se dice del lado de acá lo que Meta contesta sobre una plantilla. Vive junto al alta, y no
+// escrito otra vez acá: es la misma cuenta, y dos copias se despegan el día que Meta agregue una
+// situación nueva.
+import { estadoSegunMeta, motivoDeMeta } from '../utils/plantillasWhatsapp.js';
 // La comparación que no filtra por tiempo y el cálculo del HMAC viven en un solo lugar y se
 // reusan: son los mismos que usan los avisos de cobro de las pasarelas. Escribirlos otra vez
 // acá sería la segunda copia de una cuenta que tiene que dar siempre igual.
@@ -153,7 +157,7 @@ whatsappWebhookRouter.post('/:prestadoraId', async (req, res) => {
   res.status(200).json({ ok: true });
 
   try {
-    await procesarEventoEntrante(cuerpo, {
+    await repartirAviso(cuerpo, {
       prestadoraId,
       phoneNumberIdConfigurado: configuracion.phone_number_id,
     });
@@ -161,6 +165,34 @@ whatsappWebhookRouter.post('/:prestadoraId', async (req, res) => {
     console.error('Error procesando webhook de WhatsApp:', err.message);
   }
 });
+
+// Por esta misma puerta entran dos cosas distintas, y Meta las distingue con el nombre del campo:
+// los mensajes que escribe una persona, y el resultado de la revisión de una plantilla. Lo segundo
+// es lo que hace que «aprobada» y «rechazada» dejen de depender de que alguien las escriba a mano.
+async function repartirAviso(payload, contexto) {
+  const cambio = payload?.entry?.[0]?.changes?.[0];
+  if (cambio?.field === 'message_template_status_update') {
+    return anotarResultadoDePlantilla(cambio.value, contexto.prestadoraId);
+  }
+  return procesarEventoEntrante(payload, contexto);
+}
+
+/** El resultado de la revisión, guardado en la plantilla. La Prestadora es la de la dirección, y
+ *  va en el filtro: el identificador que viene adentro del aviso no elige fila de otra. */
+async function anotarResultadoDePlantilla(valor, prestadoraId) {
+  const metaTemplateId = valor?.message_template_id;
+  if (!metaTemplateId) return;
+
+  await supabase
+    .from('plantillas_whatsapp')
+    .update({
+      estado: estadoSegunMeta(valor.event),
+      motivo_rechazo: motivoDeMeta(valor.event, valor.reason),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('prestadora_id', prestadoraId)
+    .eq('meta_template_id', String(metaTemplateId));
+}
 
 /**
  * @param payload                    el aviso ya comprobado auténtico

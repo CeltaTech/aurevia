@@ -69,7 +69,8 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 const fetchDeVerdad = globalThis.fetch;
 /** Todo lo que se le mandó a Meta, para poder mirarlo y para afirmar que NO se le mandó nada. */
 let pedidosAMeta = [];
-/** Lo que Meta contesta. Cada prueba lo pisa. */
+/** Lo que Meta contesta. Cada prueba lo pisa; si es una función se le pasa la dirección, que es lo
+ *  que hace falta para contestar distinto en cada pedazo de una lista paginada. */
 let respuestaDeMeta = { estado: 200, cuerpo: { id: '900000000000009', status: 'PENDING' } };
 globalThis.fetch = async (url, opciones) => {
   const direccion = String(url);
@@ -79,14 +80,16 @@ globalThis.fetch = async (url, opciones) => {
     encabezados: opciones?.headers ?? {},
     cuerpo: opciones?.body ? JSON.parse(opciones.body) : null,
   });
-  return new Response(JSON.stringify(respuestaDeMeta.cuerpo), {
-    status: respuestaDeMeta.estado,
+  const preparada = typeof respuestaDeMeta === 'function' ? respuestaDeMeta(direccion) : respuestaDeMeta;
+  return new Response(JSON.stringify(preparada.cuerpo), {
+    status: preparada.estado,
     headers: { 'Content-Type': 'application/json' },
   });
 };
 
 // El import va después de dejar puestas las variables de entorno y el Meta de mentira.
-const { darDeAltaEnMeta, nombreParaMeta } = await import('../plantillasWhatsapp.js');
+const { darDeAltaEnMeta, estadoSegunMeta, motivoDeMeta, nombreParaMeta, traerEstadosDeMeta } =
+  await import('../plantillasWhatsapp.js');
 
 const avisarDeVerdad = console.error;
 console.error = (...partes) => anotados.push(partes.join(' '));
@@ -267,5 +270,113 @@ describe('cuando no se puede dar de alta', () => {
     respuestaDeMeta = { estado: 200, cuerpo: { status: 'PENDING' } };
 
     await assert.rejects(darDeAltaEnMeta(plantilla()), (err) => err.motivo === 'meta_no_acepto');
+  });
+});
+
+describe('lo que dice Meta, dicho como lo guarda el producto', () => {
+  it('lo que se puede usar y lo que no', () => {
+    assert.equal(estadoSegunMeta('APPROVED'), 'aprobada');
+    assert.equal(estadoSegunMeta('REJECTED'), 'rechazada');
+    // Una plantilla pausada o dada de baja no entrega: queda del lado de la que no se puede usar,
+    // porque dejarla «esperando» diría que va a salir cuando no va a salir.
+    assert.equal(estadoSegunMeta('PAUSED'), 'rechazada');
+    assert.equal(estadoSegunMeta('DISABLED'), 'rechazada');
+    assert.equal(estadoSegunMeta('PENDING'), 'enviada_meta');
+    assert.equal(estadoSegunMeta('IN_APPEAL'), 'enviada_meta');
+  });
+
+  it('de una respuesta que no se entiende no se deduce que está aprobada', () => {
+    assert.equal(estadoSegunMeta('SOMETHING_NEW'), 'enviada_meta');
+    assert.equal(estadoSegunMeta(undefined), 'enviada_meta');
+    assert.equal(estadoSegunMeta(null), 'enviada_meta');
+  });
+
+  it('la objeción se guarda solamente cuando hay algo que corregir', () => {
+    assert.equal(motivoDeMeta('REJECTED', 'INVALID_FORMAT'), 'REJECTED: INVALID_FORMAT');
+    assert.equal(motivoDeMeta('PAUSED', 'NONE'), 'PAUSED');
+    assert.equal(motivoDeMeta('APPROVED', 'NONE'), null);
+    // Una plantilla que sigue esperando no tiene objeción, y guardarle una de antes la dejaría
+    // mostrando un rechazo que ya no es.
+    assert.equal(motivoDeMeta('PENDING', 'INVALID_FORMAT'), null);
+  });
+});
+
+describe('preguntarle a Meta cómo quedaron las plantillas', () => {
+  it('las pide contra la cuenta y devuelve el estado de cada una', async () => {
+    respuestaDeMeta = {
+      estado: 200,
+      cuerpo: {
+        data: [
+          { id: '1', status: 'APPROVED', rejected_reason: 'NONE' },
+          { id: '2', status: 'REJECTED', rejected_reason: 'INVALID_FORMAT' },
+          { id: '3', status: 'PENDING' },
+        ],
+      },
+    };
+
+    const estados = await traerEstadosDeMeta(PRESTADORA);
+
+    assert.ok(pedidosAMeta[0].direccion.includes(`/${CUENTA}/message_templates`));
+    assert.deepEqual(estados.get('1'), { estado: 'aprobada', motivo: null });
+    assert.deepEqual(estados.get('2'), { estado: 'rechazada', motivo: 'REJECTED: INVALID_FORMAT' });
+    assert.deepEqual(estados.get('3'), { estado: 'enviada_meta', motivo: null });
+  });
+
+  it('las pide todas juntas y no una por una', async () => {
+    respuestaDeMeta = { estado: 200, cuerpo: { data: [{ id: '1', status: 'APPROVED' }] } };
+    await traerEstadosDeMeta(PRESTADORA);
+    assert.equal(pedidosAMeta.length, 1);
+  });
+
+  it('sigue la lista hasta el final cuando Meta la entrega de a pedazos', async () => {
+    respuestaDeMeta = (direccion) =>
+      direccion.includes('pagina=2')
+        ? { estado: 200, cuerpo: { data: [{ id: '2', status: 'REJECTED', rejected_reason: 'NONE' }] } }
+        : {
+            estado: 200,
+            cuerpo: {
+              data: [{ id: '1', status: 'APPROVED' }],
+              paging: { next: 'https://graph.facebook.com/v20.0/algo?pagina=2' },
+            },
+          };
+
+    const estados = await traerEstadosDeMeta(PRESTADORA);
+
+    assert.equal(estados.size, 2);
+    assert.equal(estados.get('2').estado, 'rechazada');
+    assert.equal(estados.get('2').motivo, 'REJECTED');
+  });
+
+  it('una lista que nunca termina no deja el pedido dando vueltas para siempre', async () => {
+    respuestaDeMeta = {
+      estado: 200,
+      cuerpo: {
+        data: [{ id: '1', status: 'PENDING' }],
+        paging: { next: 'https://graph.facebook.com/v20.0/siempre-hay-otra' },
+      },
+    };
+
+    await traerEstadosDeMeta(PRESTADORA);
+
+    assert.ok(pedidosAMeta.length <= 20, `dio ${pedidosAMeta.length} vueltas`);
+  });
+
+  it('sin la cuenta configurada avisa que falta, y no le pregunta nada a Meta', async () => {
+    respuestas.set('GET /rest/v1/configuracion_whatsapp_prestadora', () => [
+      { activo: true, phone_number_id: NUMERO, waba_id: null },
+    ]);
+
+    await assert.rejects(traerEstadosDeMeta(PRESTADORA), (err) => err.motivo === 'whatsapp_sin_cuenta');
+    assert.equal(pedidosAMeta.length, 0);
+  });
+
+  it('cuando Meta no contesta una lista, no se da por sabido que no cambió nada', async () => {
+    respuestaDeMeta = { estado: 400, cuerpo: { error: { message: 'Invalid OAuth access token' } } };
+
+    await assert.rejects(traerEstadosDeMeta(PRESTADORA), (err) => {
+      assert.equal(err.motivo, 'meta_no_acepto');
+      assert.ok(!err.message.includes(TOKEN));
+      return true;
+    });
   });
 });

@@ -13,7 +13,7 @@ import {
   conPacientes,
   textoDePacientes,
 } from '../../lib/pacientesDeGuardia';
-import { SITUACION, situacionDeGuardia, tonoDeGuardia } from '../../lib/semaforoGuardia';
+import { estaActiva, situacionDeGuardia, tonoDeGuardia } from '../../lib/semaforoGuardia';
 import { armarBuscadorDeRangos, tieneSignoFueraDeRango } from '../../lib/signosVitales';
 import { soloSinResolver } from '../../lib/alertaSinResolver';
 
@@ -47,10 +47,6 @@ const TOPE_REPORTES = 30;
    así que están todas juntas acá con este comentario al lado. */
 const COLUMNAS_GUARDIA =
   'id, fecha, hora_inicio, hora_fin, paciente_id, asistentes(nombre), estado, asistente_id, ofrecida_at, oferta_limite_at, checkin_at, checkout_at';
-
-/* "Activa" es la guardia que todavía espera algo. La completada y la cancelada ya no esperan
-   nada; la ausente sí, porque alguien tiene que cubrir ese turno. */
-const CERRADAS = new Set([SITUACION.COMPLETADA, SITUACION.CANCELADA]);
 
 /**
  * Los cuatro estados de una de estas secciones, en un solo lugar.
@@ -116,7 +112,7 @@ export function GuardiasActivasDeLaFamilia({ pacientes }) {
     );
 
     const activas = guardias
-      .filter((g) => !CERRADAS.has(situacionDeGuardia(g)))
+      .filter((g) => estaActiva(g))
       // Los dos caminos de `cargarGuardiasDePacientes` llegan mezclados, así que el orden se
       // rehace acá: primero la más próxima, que es lo que se quiere ver de un vistazo.
       .sort((a, b) => `${a.fecha} ${a.hora_inicio}`.localeCompare(`${b.fecha} ${b.hora_inicio}`))

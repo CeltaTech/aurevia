@@ -156,6 +156,25 @@ export function situacionDeGuardia(guardia, ctx = {}) {
   return SITUACION.PROGRAMADA;
 }
 
+/**
+ * Las dos situaciones en las que una guardia ya no espera nada de nadie.
+ *
+ * La ausente no está acá a propósito: aunque el turno no se cumplió, alguien tiene que cubrirlo,
+ * así que sigue esperando algo.
+ */
+export const SITUACIONES_CERRADAS = new Set([SITUACION.COMPLETADA, SITUACION.CANCELADA]);
+
+/**
+ * ¿Esta guardia todavía espera algo? Es lo que cualquier pantalla quiere decir cuando habla de
+ * "guardias activas": la ficha de una Familia, el conteo del plantel y las que vengan.
+ *
+ * Está acá y no en cada pantalla porque es la misma pregunta: el día que se decida que una
+ * ausente tampoco espera nada, tiene que cambiar en un solo lugar.
+ */
+export function estaActiva(guardia, ctx = {}) {
+  return !SITUACIONES_CERRADAS.has(situacionDeGuardia(guardia, ctx));
+}
+
 /** El tono de la guardia. Es lo que va en `data-tono` del chip. */
 export function tonoDeGuardia(guardia, ctx = {}) {
   return TONO_POR_SITUACION[situacionDeGuardia(guardia, ctx)] ?? TONO.NEUTRO;

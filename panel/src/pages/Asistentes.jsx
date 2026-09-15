@@ -7,9 +7,12 @@ import { esAdminOSuperior } from '../lib/roles';
 import { claseBadge } from '../lib/tonos';
 import { nombreTipo } from '../lib/tiposAsistente';
 import { CAMPOS_RESERVADOS, conDatosAparte } from '../lib/fichaAsistente';
+import { con } from '../lib/textos';
+import { DIAS_DE_HORIZONTE } from '../lib/resumenDelPlantel';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
 import { useFiltros } from '../hooks/useFiltros';
 import { useTiposAsistente } from '../hooks/useTiposAsistente';
+import { usePanoramaDelPlantel } from '../hooks/usePanoramaDelPlantel';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
@@ -35,6 +38,9 @@ export function Asistentes() {
   );
   const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '', estado: '', tipo: '' });
   const { paraElegir: tiposAsistente, porId: tiposPorId } = useTiposAsistente();
+  // Los dos datos que había que entrar a la ficha para ver. Llegan aparte de la lista y no la
+  // demoran: mientras no estén, las tarjetas se muestran sin ellos.
+  const panorama = usePanoramaDelPlantel();
   const [mostrarNuevo, setMostrarNuevo] = useState(false);
   const [mostrarPasarAlCatalogo, setMostrarPasarAlCatalogo] = useState(false);
 
@@ -150,6 +156,28 @@ export function Asistentes() {
               </div>
               <div className="lista-tarjeta-meta">
                 <span><strong>{t.asistentes.col_zonas}:</strong> {(a.zonas || []).join(', ') || '—'}</span>
+                <span><strong>{t.asistentes.col_especialidades}:</strong> {(a.especialidades || []).join(', ') || '—'}</span>
+                {/* Las dos cuentas del panorama. Cuando la consulta no volvió, el renglón no
+                    aparece: un cero diría que esa persona no tiene ninguna guardia, y lo que
+                    pasó es que no se pudo preguntar. */}
+                {panorama.guardias && (
+                  <span>
+                    <strong>{con(t.asistentes.col_guardias_activas, { dias: DIAS_DE_HORIZONTE })}:</strong>{' '}
+                    {panorama.guardias.get(a.id) ?? 0}
+                  </span>
+                )}
+                {panorama.documentacion && (
+                  <span>
+                    <strong>{t.asistentes.col_documentacion}:</strong>{' '}
+                    {panorama.documentacion.has(a.id) ? (
+                      <span className={claseBadge(panorama.documentacion.get(a.id))}>
+                        {t.asistentes[`documentacion_${panorama.documentacion.get(a.id)}`]}
+                      </span>
+                    ) : (
+                      t.asistentes.documentacion_sin_papeles
+                    )}
+                  </span>
+                )}
                 {esAdmin && <span><strong>{t.asistentes.col_vinculo}:</strong> {t.asistentes[`vinculo_${a.tipo_vinculo}`]}</span>}
                 {esAdmin && <span><strong>{t.asistentes.col_score_riesgo}:</strong> {a.score_riesgo_reclasificacion ?? 0}</span>}
               </div>

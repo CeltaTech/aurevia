@@ -8,6 +8,7 @@ import { FormField } from '../components/ui/FormField';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { traducirValor } from '../i18n/valores';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
+import { seAlcanzoElLimite, contraSuLimite } from '../lib/cuentaDeCorreo';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -36,6 +37,68 @@ const CAMPOS_VACIOS = {
   admin_email: '',
   admin_telefono: '',
 };
+
+/* Cuánto correo salió, contra el límite del servicio que lo despacha.
+
+   Va acá porque es la única pantalla de nivel plataforma: el límite es de la cuenta entera,
+   no de una Prestadora, y quien puede hacer algo al respecto es quien administra la
+   plataforma.
+
+   Carga aparte de la lista de Prestadoras, con sus propios cuatro estados: si la cuenta del
+   correo falla, la lista tiene que seguir apareciendo igual. */
+function ContadorDeCorreo() {
+  const { t } = useLocale();
+  const [correos, setCorreos] = useState(null);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+
+  const cargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const { correos: cuenta } = await llamarApi('/configuracion-plataforma/correos');
+      setCorreos(cuenta);
+      setEstado('listo');
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+      setEstado('error');
+    }
+  }, [t]);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  return (
+    <section>
+      <h2>{t.prestadoras.correos_titulo}</h2>
+      <p className="panel-explicacion">{t.prestadoras.correos_explicacion}</p>
+
+      <EstadoLista
+        estado={estado}
+        error={error}
+        recargar={cargar}
+        vacio={estado === 'listo' && correos.del_mes === 0}
+        mensajeVacio={t.prestadoras.correos_vacio}
+        ayudaVacio={t.prestadoras.correos_vacio_ayuda}
+      >
+        {seAlcanzoElLimite(correos) && <Alert variant="error">{t.prestadoras.correos_tope_alcanzado}</Alert>}
+        <table className="panel-tabla">
+          <tbody>
+            <tr>
+              <th>{t.prestadoras.correos_del_dia}</th>
+              <td>{correos && contraSuLimite(correos.del_dia, correos.tope_diario, t.prestadoras)}</td>
+            </tr>
+            <tr>
+              <th>{t.prestadoras.correos_del_mes}</th>
+              <td>{correos && contraSuLimite(correos.del_mes, correos.tope_mensual, t.prestadoras)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </EstadoLista>
+    </section>
+  );
+}
 
 export function Prestadoras() {
   const { t } = useLocale();
@@ -287,6 +350,8 @@ export function Prestadoras() {
           </tbody>
         </table>
       </EstadoLista>
+
+      <ContadorDeCorreo />
     </div>
   );
 }

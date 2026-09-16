@@ -225,18 +225,48 @@ async function remitenteVisible(direccion, prestadoraId) {
   return nombre ? { name: nombre, address: direccion } : direccion;
 }
 
+// Por acá pasan los dos envíos, y por eso el conteo se anota acá y no en cada uno.
+//
+// El despachante tiene un tope —3.000 correos por mes y como mucho 100 por día— y pasado ese
+// tope deja de aceptar envíos. Sin una cuenta propia, el tope se descubre el día que un aviso
+// no sale; con ella, el Panel lo ve venir.
+//
+// Se anota el hecho y nada más: cuándo, de qué Prestadora, y si el despachante lo tomó. Ni el
+// destinatario, ni el asunto, ni una línea del contenido (`celtatech/CLAUDE.md` §6).
+//
+// Y no anotar nunca rompe un envío. Un correo que salió y no se pudo contar sigue siendo un
+// correo que salió; hacer fallar el aviso porque falló su registro sería cambiar un número por
+// una notificación que no llega.
+async function despachar({ transporter, prestadoraId, mensaje }) {
+  let aceptado = false;
+  try {
+    await transporter.sendMail(mensaje);
+    aceptado = true;
+  } finally {
+    try {
+      await supabase.from('envios_de_correo').insert({ prestadora_id: prestadoraId ?? null, aceptado });
+    } catch (error) {
+      console.error('Salió un correo que no se pudo contar:', error.message);
+    }
+  }
+}
+
 export async function enviarEmailCoordinador({ evento, prestadoraId, asunto, texto }) {
   if (!hayMedioDeEnvio()) return;
   const destinatarios = await destinatariosEvento(evento, prestadoraId);
   if (destinatarios.length === 0) return;
 
   const { transporter, from } = await crearTransporterPara(prestadoraId);
-  await transporter.sendMail({
-    from: await remitenteVisible(from, prestadoraId),
-    replyTo: await emailDeContactoDePrestadora(prestadoraId),
-    to: destinatarios.join(', '),
-    subject: asunto,
-    text: texto,
+  await despachar({
+    transporter,
+    prestadoraId,
+    mensaje: {
+      from: await remitenteVisible(from, prestadoraId),
+      replyTo: await emailDeContactoDePrestadora(prestadoraId),
+      to: destinatarios.join(', '),
+      subject: asunto,
+      text: texto,
+    },
   });
 }
 
@@ -245,11 +275,15 @@ export { configuracionEvento };
 export async function enviarEmail({ to, asunto, texto, prestadoraId }) {
   if (!hayMedioDeEnvio()) return;
   const { transporter, from } = await crearTransporterPara(prestadoraId);
-  await transporter.sendMail({
-    from: await remitenteVisible(from, prestadoraId),
-    replyTo: await emailDeContactoDePrestadora(prestadoraId),
-    to,
-    subject: asunto,
-    text: texto,
+  await despachar({
+    transporter,
+    prestadoraId,
+    mensaje: {
+      from: await remitenteVisible(from, prestadoraId),
+      replyTo: await emailDeContactoDePrestadora(prestadoraId),
+      to,
+      subject: asunto,
+      text: texto,
+    },
   });
 }

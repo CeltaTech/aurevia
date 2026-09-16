@@ -41,8 +41,13 @@ let originales;
 let fetchOriginal;
 let pedidos;
 
+// Se anota lo que va al despachante y nada más. El motor además cuenta cada correo que sale, y
+// esa anotación es otro pedido: mezclarla acá haría que esta prueba hablara de dos cosas.
 function contestarComoElDespachante({ estado = 200, cuerpo = {} } = {}) {
   globalThis.fetch = async (url, opciones) => {
+    if (!String(url).includes('api.resend.com')) {
+      return new Response('[]', { status: 201, headers: { 'Content-Type': 'application/json' } });
+    }
     pedidos.push({ url: String(url), opciones });
     return { ok: estado < 400, status: estado, json: async () => cuerpo };
   };

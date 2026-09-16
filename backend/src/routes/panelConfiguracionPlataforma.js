@@ -41,6 +41,50 @@ panelConfiguracionPlataformaRouter.patch('/mfa', requiereSuperadmin, async (req,
   res.json({ ok: true });
 });
 
+// Cuánto correo salió, contra el tope del despachante.
+//
+// El tope no se escribe acá: es del plan contratado y cambia sin tocar una línea de código.
+// Sin las dos variables no hay contra qué comparar, y entonces se devuelve el conteo y ningún
+// tope, en vez de inventar uno.
+function topeDeCorreo(variable) {
+  const valor = Number.parseInt(process.env[variable] ?? '', 10);
+  return Number.isInteger(valor) && valor > 0 ? valor : null;
+}
+
+async function cuantosCorreosDesde(desde) {
+  const { count, error } = await supabase
+    .from('envios_de_correo')
+    .select('id', { count: 'exact', head: true })
+    .gte('created_at', desde.toISOString());
+  if (error) throw error;
+  return count ?? 0;
+}
+
+panelConfiguracionPlataformaRouter.get('/correos', requiereSuperadmin, async (req, res) => {
+  // Los dos períodos son los del despachante: el día corrido y el mes corrido, contados desde
+  // el arranque de cada uno en horario universal, que es como los cuenta él.
+  const ahora = new Date();
+  const arranqueDelDia = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), ahora.getUTCDate()));
+  const arranqueDelMes = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), 1));
+
+  try {
+    const [delDia, delMes] = await Promise.all([
+      cuantosCorreosDesde(arranqueDelDia),
+      cuantosCorreosDesde(arranqueDelMes),
+    ]);
+    res.json({
+      correos: {
+        del_dia: delDia,
+        del_mes: delMes,
+        tope_diario: topeDeCorreo('TOPE_CORREOS_DIARIO'),
+        tope_mensual: topeDeCorreo('TOPE_CORREOS_MENSUAL'),
+      },
+    });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
 // Acá no se cuenta cuántas Prestadoras hay contratadas ni se avisa por un umbral de contrataciones:
 // eso es dato del negocio de CeltaTech y no del producto.
 //

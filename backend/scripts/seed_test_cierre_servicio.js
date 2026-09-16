@@ -5,10 +5,19 @@ dotenv.config();
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const PRESTADORA_ID = '874f54d7-4383-4d54-8b9f-f51d02f0dd11';
 
+// La contraseña de las cuentas de prueba entra por el entorno, como cualquier credencial. Escrita
+// acá queda a la vista de cualquiera que abra el repositorio, y las cuentas que ya nacieron con
+// ella la siguen teniendo. Sin la variable el script no arranca.
+const PASSWORD = process.env.SEED_TEST_PASSWORD;
+if (!PASSWORD) {
+  console.error('Falta la variable SEED_TEST_PASSWORD. Es la contraseña con la que nacen las cuentas de prueba, y no se escribe en el código.');
+  process.exit(1);
+}
+
 async function main() {
   const { data: coordinadorAuth, error: errorCoordAuth } = await supabase.auth.admin.createUser({
     email: 'alas.para.escribir.2026+coordinador.test@gmail.com',
-    password: 'PruebaCierre2026!',
+    password: PASSWORD,
     email_confirm: true,
   });
   if (errorCoordAuth) throw errorCoordAuth;
@@ -23,7 +32,7 @@ async function main() {
 
   const { data: familiaAuth, error: errorFamiliaAuth } = await supabase.auth.admin.createUser({
     email: 'alas.para.escribir.2026+familia.test.cierre@gmail.com',
-    password: 'PruebaCierre2026!',
+    password: PASSWORD,
     email_confirm: true,
   });
   if (errorFamiliaAuth) throw errorFamiliaAuth;
@@ -57,7 +66,7 @@ async function main() {
 
   const { data: asistenteAuth, error: errorAsistenteAuth } = await supabase.auth.admin.createUser({
     email: 'alas.para.escribir.2026+asistente.test.cierre@gmail.com',
-    password: 'PruebaCierre2026!',
+    password: PASSWORD,
     email_confirm: true,
   });
   if (errorAsistenteAuth) throw errorAsistenteAuth;

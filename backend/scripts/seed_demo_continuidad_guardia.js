@@ -5,10 +5,19 @@ dotenv.config();
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const PRESTADORA_ID = '5d727437-a5ff-432f-b9f6-10015e61ffef'; // Sandbox
 
+// La contraseña con la que nacen las cuentas de la demo no vive acá: entra por el entorno, como
+// cualquier credencial. Escrita en el código deja a las cuentas que ya nacieron con una clave que
+// puede leer cualquiera que abra el repositorio. Sin la variable el script no arranca.
+const PASSWORD = process.env.SEED_DEMO_PASSWORD;
+if (!PASSWORD) {
+  console.error('Falta la variable SEED_DEMO_PASSWORD. Es la contraseña con la que nacen las cuentas de la demo, y no se escribe en el código.');
+  process.exit(1);
+}
+
 async function main() {
   const { data: familiaAuth, error: errorFamiliaAuth } = await supabase.auth.admin.createUser({
     email: 'alas.para.escribir.2026+familia.demo.continuidad@gmail.com',
-    password: 'DemoContinuidad2026!',
+    password: PASSWORD,
     email_confirm: true,
   });
   if (errorFamiliaAuth) throw errorFamiliaAuth;
@@ -37,7 +46,7 @@ async function main() {
 
   const { data: martaAuth } = await supabase.auth.admin.createUser({
     email: 'alas.para.escribir.2026+asistente.demo.marta@gmail.com',
-    password: 'DemoContinuidad2026!',
+    password: PASSWORD,
     email_confirm: true,
   });
   await supabase.from('usuarios').insert({
@@ -54,7 +63,7 @@ async function main() {
 
   const { data: luciaAuth } = await supabase.auth.admin.createUser({
     email: 'alas.para.escribir.2026+asistente.demo.lucia@gmail.com',
-    password: 'DemoContinuidad2026!',
+    password: PASSWORD,
     email_confirm: true,
   });
   await supabase.from('usuarios').insert({
@@ -69,16 +78,22 @@ async function main() {
     tipo_vinculo: 'monotributo',
   }).throwOnError();
 
+  // El turno era de Marta y lo va a hacer Lucía. Queda a nombre de Lucía, que es como queda
+  // cualquier turno cubierto: un turno tiene una sola persona, y es la que lo hace. Que Marta
+  // faltó queda en su ausencia, más abajo, y a quién le tocaba queda en la cobertura.
+  //
+  // Por eso tampoco queda en 'ausente': ese estado dice que el turno no se prestó, y éste se va a
+  // prestar. Se siembra programado, que es como lo ve Lucía en su aplicación.
   const { data: guardia } = await supabase.from('guardias')
     .insert({
       prestadora_id: PRESTADORA_ID,
-      asistente_id: martaAuth.user.id,
+      asistente_id: luciaAuth.user.id,
       paciente_id: paciente.id,
       fecha: new Date().toISOString().slice(0, 10),
       hora_inicio: '06:00',
       hora_fin: '14:00',
       modalidad: 'presencial',
-      estado: 'ausente',
+      estado: 'programada',
     })
     .select().single().throwOnError();
 
@@ -98,7 +113,9 @@ async function main() {
       prestadora_id: PRESTADORA_ID,
       guardia_original_id: guardia.id,
       ausencia_id: ausencia.id,
+      asistente_titular_id: martaAuth.user.id,
       asistente_sustituto_id: luciaAuth.user.id,
+      motivo: 'emergencia',
       costo_adicional: 5000,
     })
     .select().single().throwOnError();

@@ -90,8 +90,11 @@ async function checkAislamientoCrossTenant(admin, headers) {
   if (errP) throw errP;
 
   const emailFake = `test.bloque3.${Date.now()}@example.com`;
+  // La cuenta de prueba nace con la misma contraseña que ya pide este script por entorno. Escribir
+  // una acá sería dejar una credencial en el repositorio, y la cuenta que nace con ella queda
+  // teniéndola.
   const { data: authData, error: errAuth } = await admin.auth.admin.createUser({
-    email: emailFake, password: 'TestPassword123!', email_confirm: true,
+    email: emailFake, password: PASSWORD, email_confirm: true,
   });
   if (errAuth) throw errAuth;
   const { error: errPerfil } = await admin.from('usuarios').insert({

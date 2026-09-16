@@ -16,13 +16,20 @@ const anon = createClient(process.env.SUPABASE_URL, anonKey);
 
 const SANDBOX_ID = '5d727437-a5ff-432f-b9f6-10015e61ffef';
 const EMAIL = 'alas.para.escribir.2026+pendiente73.test@gmail.com';
-const PASSWORD = 'Pendiente73Test2026!';
+// La contraseña de las cuentas de prueba entra por el entorno, como cualquier credencial. Escrita
+// acá queda a la vista de cualquiera que abra el repositorio, y si el script se corta antes de
+// borrar lo que creó, las cuentas quedan con ella puesta. Sin la variable no arranca.
+const PASSWORD = process.env.SEED_TEST_PASSWORD;
+if (!PASSWORD) {
+  console.error('Falta la variable SEED_TEST_PASSWORD. Es la contraseña con la que nacen las cuentas de prueba, y no se escribe en el código.');
+  process.exit(1);
+}
 
 const creados = { authUserIds: [], asistenteIds: [], pacienteIds: [], guardiaIds: [] };
 
 async function crearAsistente(nombre) {
   const { data: auth, error } = await admin.auth.admin.createUser({
-    email: `alas.para.escribir.2026+pendiente73.${nombre}@gmail.com`, password: 'AsistenteTest2026!', email_confirm: true,
+    email: `alas.para.escribir.2026+pendiente73.${nombre}@gmail.com`, password: PASSWORD, email_confirm: true,
   });
   if (error) throw error;
   creados.authUserIds.push(auth.user.id);

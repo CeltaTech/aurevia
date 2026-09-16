@@ -14,6 +14,7 @@ import { COBERTURA, claveTextoCobertura, coberturaDeGuardia } from '../../lib/co
 import { estaEnElPlantel } from '../../lib/candidatos';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { DescansosDeLaGuardia } from './DescansosDeLaGuardia';
 
 export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose, onActualizada }) {
   const modal = useModalAccesible(onClose);
@@ -221,6 +222,10 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
   const puedeReasignar = guardia.estado === 'programada' || guardia.estado === 'ausente';
   const puedeOfrecer = !tieneAsistente && guardia.estado === 'programada';
 
+  // El descanso adentro del turno sólo tiene sentido en una guardia que pasa la medianoche: en un
+  // turno de ocho horas nadie duerme en el domicilio, y el bloque sería un formulario de más.
+  const esGuardiaLarga = Number(guardia.dias_hasta_el_fin) > 0;
+
   // Los tres momentos de la guardia, con su hora o diciendo que no quedó registrado.
   //
   // Primero desaparecía el bloque entero cuando el momento ya estaba marcado, y la pantalla no
@@ -420,6 +425,8 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
             </Button>
           </div>
         )}
+
+        {esGuardiaLarga && <DescansosDeLaGuardia guardiaId={guardia.id} />}
 
         {puedeReasignar && (
           <div className="panel-resultado-calculo">

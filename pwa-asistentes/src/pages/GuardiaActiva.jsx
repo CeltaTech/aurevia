@@ -12,6 +12,7 @@ import { useSeVe } from '../context/PerfilContext';
 import AntesDeLlegar from '../components/AntesDeLlegar';
 import DomicilioTemporal from '../components/DomicilioTemporal';
 import EmergenciaEnGuardia from '../components/EmergenciaEnGuardia';
+import DescansoEnGuardia from '../components/DescansoEnGuardia';
 import EnlaceAlMapa from '../components/EnlaceAlMapa';
 import PaseDeGuardia from '../components/PaseDeGuardia';
 import CodigoDePresencia from '../components/CodigoDePresencia';
@@ -227,12 +228,16 @@ export default function GuardiaActiva() {
   // Y el otro lado del mismo pase: cuando el que se va es este Asistente, es él quien tiene que
   // mostrarle el código al relevo que llega.
   const [mostrandoMiCodigo, setMostrandoMiCodigo] = useState(false);
+  // El descanso que quedó abierto, si hay uno. Es lo que hace que la pantalla ofrezca terminarlo
+  // en vez de empezar otro cuando esta persona vuelve a abrir la aplicación al otro día.
+  const [descansoAbierto, setDescansoAbierto] = useState(null);
 
   function cargar() {
     api
       .guardia(id)
-      .then(({ guardia: data, pacientesConReporte, tipo: elTipo, tareas: lasTareas }) => {
+      .then(({ guardia: data, pacientesConReporte, tipo: elTipo, tareas: lasTareas, descansoAbierto: elDescanso }) => {
         setGuardia(data);
+        setDescansoAbierto(elDescanso ?? null);
         setConReporte(pacientesConReporte ?? []);
         setTipo(elTipo ?? null);
         setTareas(lasTareas ?? null);
@@ -605,6 +610,19 @@ export default function GuardiaActiva() {
             guardiaId={id}
             alRegistrar={() => revisarPendientes()}
           />
+
+          {/* El descanso adentro del turno. Se muestra sólo cuando la guardia dura más de un día,
+              que es cuando el descanso adentro existe: en un turno de seis horas este botón sería
+              un renglón más para leer y nadie lo va a apretar nunca. */}
+          {Number(guardia.dias_hasta_el_fin) > 0 && (
+            <DescansoEnGuardia
+              t={t}
+              locale={locale}
+              guardiaId={id}
+              descansoAbierto={descansoAbierto}
+              alCambiar={() => revisarPendientes()}
+            />
+          )}
         </>
       )}
 

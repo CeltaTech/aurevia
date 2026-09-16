@@ -194,3 +194,89 @@ panelGuardiasRouter.post('/motivo-del-aviso', requiereRolPanel, exigirOrganizaci
 
   res.json({ motivo });
 });
+
+/* EL DESCANSO ADENTRO DE LA GUARDIA, MIRADO DESDE EL PANEL.
+
+   En una guardia de 24, 48 o 72 horas la Asistente descansa adentro del turno, y ese rato queda
+   anotado. Descansar disponible no se descuenta de lo que se le paga, no interrumpe el turno y no
+   la saca de la guardia: la constancia existe para saber qué pasó, no para restar nada.
+
+   POR QUÉ ESTAS DOS RUTAS. La que estuvo cuarenta y ocho horas adentro puede haberse olvidado de
+   marcarlo, y ese rato igual existió: la Coordinadora lo anota después. No puede hacerlo contra la
+   base desde el navegador porque la migración que crea la tabla sólo le dio permiso de lectura a
+   quien tiene sesión — escribir es del motor.
+
+   ACÁ SE ANOTA UN DESCANSO YA TERMINADO, con su principio y su fin. Empezar uno abierto es de la
+   Asistente, que es la que está adentro; la Coordinadora registra lo que ya pasó.
+
+   La Prestadora la pone el motor, nunca el pedido: la guardia se busca acotada a la Organización
+   activa de quien llama, y si no aparece, no aparece.
+
+   Anotar un descanso es trabajo operativo, así que también es del Coordinador. */
+async function guardiaDelPanel(req) {
+  let query = supabase
+    .from('guardias')
+    .select('id, prestadora_id')
+    .eq('id', req.params.id);
+  query = acotarAPrestadora(query, req.usuarioPanel);
+  return query.maybeSingle();
+}
+
+panelGuardiasRouter.get('/:id/descansos', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
+  const { data: guardia, error } = await guardiaDelPanel(req);
+  if (error) return responderError(res, error);
+  if (!guardia) return res.status(404).json({ error: 'No se encontró esa guardia' });
+
+  const { data, error: errorDescansos } = await supabase
+    .from('descansos_guardia')
+    .select('id, inicio_at, fin_at, nota, registrado_por')
+    .eq('guardia_id', guardia.id)
+    .eq('prestadora_id', guardia.prestadora_id)
+    .order('inicio_at', { ascending: false });
+
+  if (errorDescansos) return responderError(res, errorDescansos);
+
+  res.json({ descansos: data ?? [] });
+});
+
+panelGuardiasRouter.post('/:id/descansos', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
+  const { inicio_at: inicioAt, fin_at: finAt, nota = null } = req.body ?? {};
+
+  if (!inicioAt || !finAt) return res.status(400).json({ error: 'Falta el principio o el fin del descanso' });
+
+  const inicio = new Date(inicioAt);
+  const fin = new Date(finAt);
+  if (Number.isNaN(inicio.getTime()) || Number.isNaN(fin.getTime())) {
+    return res.status(400).json({ error: 'El principio o el fin del descanso no es una fecha válida' });
+  }
+  // La misma comprobación que hace la base. Acá está para que el motivo llegue entendible: el
+  // texto crudo de una restricción nombra tablas y columnas, y eso no sale a la pantalla.
+  if (fin <= inicio) {
+    return res.status(400).json({ error: 'El descanso no puede terminar antes de empezar' });
+  }
+  // Un descanso que todavía no pasó no se anota: esto registra lo que ya ocurrió.
+  if (fin > new Date()) {
+    return res.status(400).json({ error: 'El descanso no puede terminar en el futuro' });
+  }
+
+  const { data: guardia, error } = await guardiaDelPanel(req);
+  if (error) return responderError(res, error);
+  if (!guardia) return res.status(404).json({ error: 'No se encontró esa guardia' });
+
+  const { data, error: errorAlta } = await supabase
+    .from('descansos_guardia')
+    .insert({
+      prestadora_id: guardia.prestadora_id,
+      guardia_id: guardia.id,
+      inicio_at: inicio.toISOString(),
+      fin_at: fin.toISOString(),
+      registrado_por: req.usuarioPanel.id,
+      nota: typeof nota === 'string' && nota.trim() ? nota.trim() : null,
+    })
+    .select('id, inicio_at, fin_at, nota, registrado_por')
+    .single();
+
+  if (errorAlta) return responderError(res, errorAlta);
+
+  res.status(201).json({ descanso: data });
+});

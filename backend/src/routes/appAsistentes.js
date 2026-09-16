@@ -438,10 +438,20 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
   const reportes = await reportesDeLaGuardia(data.id);
   const conReporte = reportes.map((r) => r.paciente_id);
 
+  // Si quedó un descanso abierto, la pantalla tiene que ofrecer terminarlo y no empezar otro. Es
+  // una sola fila como máximo: la base no admite dos abiertos en la misma guardia.
+  const { data: descansoAbierto } = await supabase
+    .from('descansos_guardia')
+    .select('id, inicio_at')
+    .eq('guardia_id', data.id)
+    .is('fin_at', null)
+    .maybeSingle();
+
   res.json({
     guardia,
     tipo,
     tareas,
+    descansoAbierto: descansoAbierto ?? null,
     pacientesConReporte: conReporte,
     // Se sigue mandando para las versiones de la aplicación que todavía no saben de la lista:
     // significa "ya está todo el trabajo del turno", que es lo que preguntaban.
@@ -859,6 +869,89 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
   }
 
   res.json({ ok: true, reportadoAt });
+});
+
+/* El descanso adentro de la guardia.
+   --------------------------------------------------------------------------
+   En una guardia de 24, 48 o 72 horas la Asistente descansa en el domicilio, generalmente de
+   noche, cuando el Paciente duerme, SIN DEJAR DE ESTAR DISPONIBLE. Estas dos rutas son las que
+   dejan constancia de ese rato.
+
+   LO QUE ESTO NO HACE, Y NO ES UN OLVIDO. No descuenta horas —la guardia se paga por lo que dura
+   y ninguna cuenta mira esta tabla—, no cierra ni interrumpe la guardia, y no marca ninguna
+   ausencia. Quien está disponible está trabajando.
+
+   NO SE LE AVISA A NADIE. Descansar de noche en un turno largo es lo normal, no un incidente. Un
+   aviso al Coordinador por cada descanso convertiría lo corriente en algo que hay que justificar.
+
+   NO HAY TOPE NI HORARIO PERMITIDO. Cuánto y cuándo sale de cómo viene el servicio ese día, no de
+   un número fijado de antemano (decisión del Desarrollador). */
+appAsistentesRouter.post('/guardias/:id/descanso/empezar', requiereRolAsistente, async (req, res) => {
+  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  if (!guardia) {
+    return res.status(404).json({ error: 'Guardia no encontrada' });
+  }
+
+  // Mismo criterio que el aviso de emergencia: se acepta el momento del teléfono, sólo hacia
+  // atrás. Una hora futura es un reloj mal puesto.
+  const delTelefono = Date.parse(req.body?.ocurrido_at ?? '');
+  const ahora = Date.now();
+  const inicioAt = new Date(Number.isNaN(delTelefono) || delTelefono > ahora ? ahora : delTelefono).toISOString();
+
+  const { data: descanso, error } = await supabase
+    .from('descansos_guardia')
+    .insert({
+      prestadora_id: guardia.prestadora_id,
+      guardia_id: guardia.id,
+      registrado_por: req.usuarioAsistente.id,
+      inicio_at: inicioAt,
+      nota: typeof req.body?.nota === 'string' ? req.body.nota.trim().slice(0, 2000) || null : null,
+    })
+    .select('id, inicio_at')
+    .maybeSingle();
+
+  if (error) {
+    return responderError(res, error);
+  }
+
+  res.json({ ok: true, descanso });
+});
+
+appAsistentesRouter.post('/guardias/:id/descanso/terminar', requiereRolAsistente, async (req, res) => {
+  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  if (!guardia) {
+    return res.status(404).json({ error: 'Guardia no encontrada' });
+  }
+
+  const delTelefono = Date.parse(req.body?.ocurrido_at ?? '');
+  const ahora = Date.now();
+  const finAt = new Date(Number.isNaN(delTelefono) || delTelefono > ahora ? ahora : delTelefono).toISOString();
+
+  const { data: abierto } = await supabase
+    .from('descansos_guardia')
+    .select('id, inicio_at')
+    .eq('guardia_id', guardia.id)
+    .is('fin_at', null)
+    .maybeSingle();
+
+  if (!abierto) {
+    return res.status(404).json({ error: 'No hay un descanso abierto' });
+  }
+
+  // Un momento del teléfono anterior al inicio dejaría la fila fuera de la restricción de la base
+  // y el error saldría como falla del sistema. Ante un reloj que no cierra, vale el de acá.
+  const fin = finAt > abierto.inicio_at ? finAt : new Date(ahora).toISOString();
+
+  const { error } = await supabase
+    .from('descansos_guardia')
+    .update({ fin_at: fin })
+    .eq('id', abierto.id);
+
+  if (error) {
+    return responderError(res, error);
+  }
+
+  res.json({ ok: true, finAt: fin });
 });
 
 // ============================================================================

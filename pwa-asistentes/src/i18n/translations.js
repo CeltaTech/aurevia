@@ -308,6 +308,15 @@ export const T = {
       reportada: 'Aviso enviado a las {hora}. La Prestadora ya lo tiene.',
       sin_conexion: 'Sin conexión: el aviso quedó guardado en el teléfono y todavía no lo recibió nadie. Se envía solo cuando vuelva la señal. Mientras tanto, avise por otro medio.',
     },
+    // El descanso adentro de una guardia larga. El texto dice con todas las letras que esto no es
+    // una falta: sin esa frase, nadie aprieta el botón y el dato no existe.
+    descanso: {
+      boton_empezar: 'Empezar un descanso',
+      boton_terminar: 'Terminé el descanso',
+      explicacion: 'En un turno largo se descansa en el domicilio, sin dejar de estar disponible. No se descuenta de lo que se le paga, no interrumpe el turno y no lo saca de la guardia.',
+      en_curso: 'Descansando desde las {hora}. Sigue disponible.',
+      terminado: 'Descanso terminado a las {hora}.',
+    },
     // El pase de guardia, al marcar la llegada y al cerrar (pendiente #113). Nunca traba: si no
     // hay nadie que muestre el código se le pide a la Prestadora, y si tampoco así, se entra
     // igual eligiendo un motivo. Los cinco motivos son un código técnico fijo, en el mismo
@@ -805,6 +814,13 @@ export const T = {
       reportada: 'Notice sent at {hora}. The Provider already has it.',
       sin_conexion: 'No connection: the notice is saved on the phone and nobody has received it yet. It will be sent on its own once the signal is back. In the meantime, report it by another means.',
     },
+    descanso: {
+      boton_empezar: 'Start a rest period',
+      boton_terminar: 'Rest period finished',
+      explicacion: 'On a long shift you rest at the home without ceasing to be available. It is not deducted from your pay, it does not interrupt the shift and it does not take you off duty.',
+      en_curso: 'Resting since {hora}. Still available.',
+      terminado: 'Rest period finished at {hora}.',
+    },
     pase_de_guardia: {
       titulo_checkin: 'Shift handover',
       titulo_checkout: 'Shift handover to close',
@@ -1269,6 +1285,13 @@ export const T = {
       enviando: 'Enviando o aviso…',
       reportada: 'Aviso enviado às {hora}. A Prestadora já o tem.',
       sin_conexion: 'Sem conexão: o aviso ficou salvo no telefone e ninguém o recebeu ainda. É enviado sozinho quando o sinal voltar. Enquanto isso, avise por outro meio.',
+    },
+    descanso: {
+      boton_empezar: 'Começar um descanso',
+      boton_terminar: 'Terminei o descanso',
+      explicacion: 'Em um plantão longo descansa-se no domicílio, sem deixar de estar disponível. Não é descontado do que se paga, não interrompe o plantão e não o tira do plantão.',
+      en_curso: 'Descansando desde as {hora}. Continua disponível.',
+      terminado: 'Descanso terminado às {hora}.',
     },
     pase_de_guardia: {
       titulo_checkin: 'Passagem de plantão',

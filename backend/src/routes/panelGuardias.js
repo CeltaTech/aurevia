@@ -3,6 +3,7 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { supabase } from '../db/connection.js';
 import { marcarAusenteYCrearIncidente } from '../utils/marcarAusente.js';
+import { cubrirGuardiaConSustituto } from '../utils/cubrirGuardia.js';
 import { avisarCambioDeAsistente } from '../utils/avisoCambioDeAsistente.js';
 import { sugerirMotivoDelAviso } from '../utils/motivoSugeridoDelAviso.js';
 import { responderError } from '../utils/errorConMotivo.js';
@@ -53,7 +54,72 @@ panelGuardiasRouter.post('/:id/ausente', requiereRolPanel, exigirOrganizacionAct
   res.json({ ok: true });
 });
 
-/* La segunda excepción, y por el mismo motivo que la primera: el Panel cambia el Asistente de una
+/* La segunda excepción, y por el mismo motivo: cubrir una ausencia con un sustituto tampoco es un
+   cambio de estado. Son dos escrituras que valen juntas o no valen —la constancia de a quién le
+   tocaba ese turno y por qué lo hace otro, y la guardia que pasa a nombre de quien lo hace— y el
+   orden entre ellas importa. Está escrito una sola vez en `utils/cubrirGuardia.js`, con el porqué
+   de cada paso.
+
+   La Prestadora la pone el motor, nunca el pedido: la guardia se busca acotada a la Organización
+   activa de quien llama, y si no aparece, no aparece. Y el sustituto se comprueba contra esa misma
+   Prestadora antes de escribir nada: un identificador de otra Organización no puede terminar
+   haciendo una guardia acá.
+
+   Cubrir una ausencia es trabajo operativo, así que también es del Coordinador. */
+panelGuardiasRouter.post('/:id/cubrir', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
+  const {
+    asistente_sustituto_id: asistenteSustitutoId,
+    ausencia_id: ausenciaId = null,
+    motivo = null,
+    motivo_detalle: motivoDetalle = null,
+    costo_adicional: costoAdicional = null,
+  } = req.body ?? {};
+
+  if (!asistenteSustitutoId) return res.status(400).json({ error: 'Falta el Asistente que cubre' });
+
+  let query = supabase
+    .from('guardias')
+    .select('id, prestadora_id, asistente_id, estado')
+    .eq('id', req.params.id);
+  query = acotarAPrestadora(query, req.usuarioPanel);
+  const { data: guardia, error } = await query.maybeSingle();
+
+  if (error) return responderError(res, error);
+  if (!guardia) return res.status(404).json({ error: 'No se encontró esa guardia' });
+
+  // Sin Asistente asignado nadie faltó: esa guardia está sin cubrir, y asignarla es otra cosa.
+  if (!guardia.asistente_id) {
+    return res.status(400).json({ error: 'La guardia no tiene Asistente asignado' });
+  }
+  if (guardia.estado !== 'programada') {
+    return res.status(400).json({ error: 'Solo una guardia programada puede cubrirse con un sustituto' });
+  }
+  if (guardia.asistente_id === asistenteSustitutoId) {
+    return res.status(400).json({ error: 'El sustituto no puede ser el mismo Asistente de la guardia' });
+  }
+
+  const { data: sustituto } = await supabase
+    .from('asistentes')
+    .select('id')
+    .eq('id', asistenteSustitutoId)
+    .eq('prestadora_id', guardia.prestadora_id)
+    .maybeSingle();
+  if (!sustituto) return res.status(404).json({ error: 'No se encontró ese Asistente' });
+
+  const resultado = await cubrirGuardiaConSustituto({
+    guardia,
+    asistenteSustitutoId,
+    ausenciaId,
+    motivo,
+    motivoDetalle,
+    costoAdicional,
+  });
+  if (!resultado.ok) return res.status(500).json({ error: resultado.motivo });
+
+  res.json({ ok: true });
+});
+
+/* La tercera excepción, y por el mismo motivo que la primera: el Panel cambia el Asistente de una
    guardia contra la base, pero avisarlo no lo puede hacer él. El aviso sale por WhatsApp, por
    correo y por el celular de la Familia, y ninguno de los tres pasa por el navegador.
 
@@ -61,8 +127,8 @@ panelGuardiasRouter.post('/:id/ausente', requiereRolPanel, exigirOrganizacionAct
    falla un canal queda registrado adentro de `avisarCambioDeAsistente` y la respuesta sigue
    siendo buena, porque lo que la pantalla informa es la reasignación, que salió bien.
 
-   El Asistente nuevo viaja en el pedido y no se deduce de la guardia: la cobertura de una
-   ausencia deja `guardias.asistente_id` como estaba, así que leerla nombraría al que faltó. La
+   El Asistente nuevo viaja en el pedido y no se deduce de la guardia, porque este aviso también
+   lo usa la reasignación, donde la guardia todavía puede estar contando al anterior. La
    Prestadora, en cambio, nunca viaja: sale de las guardias, que se buscan acotadas a la
    Organización activa de quien llama. */
 panelGuardiasRouter.post('/aviso-cambio-asistente', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {

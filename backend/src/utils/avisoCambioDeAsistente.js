@@ -13,9 +13,10 @@ import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 // mandar este aviso por su cuenta —habla con la base directo y no tiene push, ni WhatsApp, ni
 // correo—, así que llama a `routes/panelGuardias.js` y ahí se entra por acá.
 //
-// **El Asistente nuevo llega explícito y no se lee de `guardias.asistente_id`.** La cobertura de
-// una ausencia inserta al sustituto en `guardias_cobertura` sin tocar esa columna: si el aviso la
-// mirara, nombraría justamente al Asistente que faltó.
+// **El Asistente nuevo llega explícito y no se lee de `guardias.asistente_id`.** Quien llama puede
+// pedir el aviso con las guardias tal como estaban antes de moverlas, y ahí esa columna todavía
+// nombra al Asistente anterior: si el aviso la mirara, anunciaría el cambio nombrando justamente a
+// quien deja de tenerlas.
 //
 // **Un solo aviso para todas las guardias, y no uno por guardia.** Una ausencia puede dejar diez
 // turnos descubiertos, y diez avisos por una sola decisión serían diez correos al Coordinador por

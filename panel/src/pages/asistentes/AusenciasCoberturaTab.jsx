@@ -14,6 +14,9 @@ import { diasComputados } from '../../lib/diasDeAusencia';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { con } from '../../lib/textos';
 import { avisarCambioDeAsistente } from '../../lib/avisarCambioDeAsistente';
+import { llamarApiPanel } from '../../lib/apiPanel';
+import { useMotivosSustitucionGuardia } from '../../hooks/useMotivosSustitucionGuardia';
+import { nombreMotivoSustitucion, valorGuardado } from '../../lib/motivoDeSustitucion';
 
 const TIPOS = ['enfermedad_inculpable', 'accidente_inculpable', 'otra_licencia', 'ausencia_no_justificada'];
 const API_URL = import.meta.env.VITE_API_URL;
@@ -47,6 +50,20 @@ export function AusenciasCoberturaTab({ asistente }) {
   const [cierreForm, setCierreForm] = useState({});
   const [subiendoCertificado, setSubiendoCertificado] = useState(null);
   const [errorCertificado, setErrorCertificado] = useState(null);
+  const {
+    filas: motivosSustitucion,
+    estado: estadoMotivos,
+    error: errorMotivos,
+  } = useMotivosSustitucionGuardia(prestadoraId);
+
+  // La fila del catálogo que está elegida en el formulario de una ausencia. Se busca por lo que se
+  // guarda —la clave o el nombre—, que es lo mismo que viaja al motor, y sirve para saber si esa
+  // causa obliga a explicar.
+  function motivoElegido(ausenciaId) {
+    const valor = coberturaForm[ausenciaId]?.motivo;
+    if (!valor) return null;
+    return motivosSustitucion.find((m) => valorGuardado(m) === valor) ?? null;
+  }
 
   async function recargar() {
     setEstado('cargando');
@@ -232,32 +249,31 @@ export function AusenciasCoberturaTab({ asistente }) {
     }
   }
 
-  // Una fila por cada guardia que quedó sin Asistente, no una por ausencia.
+  // Un turno cubierto por vez, y cada uno se lo pide al motor.
   //
   // Hasta hoy se guardaba una sola fila, con `guardia_original_id` vacía: decía que alguien iba a
   // cubrir la ausencia, y no qué turno iba a tomar. Con eso ninguna pantalla podía contestar quién
   // va mañana a lo de un Paciente, ni si quedaron turnos sin nadie. El costo adicional es el de
-  // cada guardia cubierta, y por eso va igual en todas las filas.
+  // cada guardia cubierta, y por eso va igual en todos los turnos.
   //
-  // Se asignan solamente las que todavía no tienen sustituto: apretar dos veces no duplica la
-  // cobertura de un mismo turno.
+  // Y tampoco se escribe más contra la base desde acá. Cubrir un turno es dejar escrito a quién le
+  // tocaba y por qué lo hace otro, y pasar la guardia a nombre de quien la hace, para que pueda
+  // verla y ficharla. Son dos escrituras que valen juntas, y viven una sola vez en el motor
+  // (`backend/src/utils/cubrirGuardia.js`).
+  //
+  // Se cubren solamente los turnos que todavía no tienen sustituto: apretar dos veces no duplica
+  // la cobertura de un mismo turno.
   async function asignarCobertura(ausencia) {
-    const sustitutoId = coberturaForm[ausencia.id]?.asistente_sustituto_id;
+    const formulario = coberturaForm[ausencia.id] ?? {};
+    const sustitutoId = formulario.asistente_sustituto_id;
     if (!sustitutoId) return;
     setGuardando(true);
     setError(null);
 
-    let filas;
+    let sinCubrir;
     try {
       const afectadas = await afectadasDe(ausencia);
-      const sinCubrir = guardiasSinCubrir(afectadas, coberturas[ausencia.id]);
-      filas = sinCubrir.map((guardiaId) => ({
-        prestadora_id: prestadoraId,
-        ausencia_id: ausencia.id,
-        guardia_original_id: guardiaId,
-        asistente_sustituto_id: sustitutoId,
-        costo_adicional: coberturaForm[ausencia.id]?.costo_adicional || null,
-      }));
+      sinCubrir = guardiasSinCubrir(afectadas, coberturas[ausencia.id]);
     } catch {
       setGuardando(false);
       setError(t.comun.error_generico);
@@ -267,22 +283,36 @@ export function AusenciasCoberturaTab({ asistente }) {
     // Sin turnos descubiertos no hay cobertura que cargar. Guardar una fila suelta volvería a
     // dejar una cobertura que no cubre nada en particular, que es justo lo que esto viene a
     // terminar.
-    if (filas.length === 0) {
+    if (sinCubrir.length === 0) {
       setGuardando(false);
       return;
     }
 
-    const { error: errorInsert } = await supabase.from('guardias_cobertura').insert(filas);
-    setGuardando(false);
-    if (errorInsert) {
-      setError(t.comun.error_generico);
+    try {
+      for (const guardiaId of sinCubrir) {
+        await llamarApiPanel(`/guardias/${guardiaId}/cubrir`, {
+          method: 'POST',
+          body: JSON.stringify({
+            asistente_sustituto_id: sustitutoId,
+            ausencia_id: ausencia.id,
+            motivo: formulario.motivo || null,
+            motivo_detalle: formulario.motivo_detalle || null,
+            costo_adicional: formulario.costo_adicional || null,
+          }),
+        });
+      }
+    } catch (err) {
+      setGuardando(false);
+      setError(mensajeDeError(err, t));
       return;
     }
-    // Quien va a la casa del Paciente ya no es el de siempre, así que se avisa. El Asistente nuevo
-    // viaja explícito porque la cobertura no toca `guardias.asistente_id`: ahí sigue figurando el
-    // que faltó. Un aviso para todos los turnos y no uno por turno.
+    setGuardando(false);
+
+    // Quien va a la casa del Paciente ya no es el de siempre, así que se avisa. Quién es viaja
+    // explícito, porque el aviso nunca lo deduce de la guardia. Un aviso para todos los turnos y no
+    // uno por turno.
     await avisarCambioDeAsistente({
-      guardiaIds: filas.map((fila) => fila.guardia_original_id),
+      guardiaIds: sinCubrir,
       asistenteNuevoId: sustitutoId,
       asistenteAnteriorId: asistente?.id ?? null,
     });
@@ -394,6 +424,37 @@ export function AusenciasCoberturaTab({ asistente }) {
                     <option key={o.id} value={o.id}>{o.nombre}</option>
                   ))}
                 </FormField>
+                {/* Por qué la hace otro. La lista sale del catálogo de la Prestadora: si se quedó
+                    sin ninguna encendida no hay nada que elegir, y se lo dice, porque un
+                    desplegable vacío no explica nada. */}
+                {estadoMotivos === 'listo' && motivosSustitucion.length === 0 && (
+                  <Alert variant="info">{t.asistentes.ausencias.sustitucion_sin_motivos}</Alert>
+                )}
+                {errorMotivos && <Alert variant="error">{errorMotivos}</Alert>}
+                <FormField
+                  label={t.asistentes.ausencias.sustitucion_motivo}
+                  name={`motivo-sustitucion-${a.id}`}
+                  type="select"
+                  value={coberturaForm[a.id]?.motivo || ''}
+                  onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], motivo: e.target.value } }))}
+                  disabled={estadoMotivos !== 'listo' || motivosSustitucion.length === 0}
+                >
+                  <option value="">{t.guardias.nueva_guardia.elegir}</option>
+                  {motivosSustitucion.map((m) => (
+                    <option key={m.id} value={valorGuardado(m)}>
+                      {nombreMotivoSustitucion(m, t)}
+                    </option>
+                  ))}
+                </FormField>
+                {motivoElegido(a.id)?.pide_detalle && (
+                  <FormField
+                    label={t.asistentes.ausencias.sustitucion_motivo_detalle}
+                    name={`motivo-detalle-${a.id}`}
+                    type="textarea"
+                    value={coberturaForm[a.id]?.motivo_detalle || ''}
+                    onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], motivo_detalle: e.target.value } }))}
+                  />
+                )}
                 <FormField
                   label={t.asistentes.ausencias.costo_adicional}
                   name={`costo-${a.id}`}

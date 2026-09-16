@@ -67,10 +67,13 @@ en `programada` para siempre. Un turno que llega a **veinticuatro horas** de emp
 asignado abre un expediente grave, y el recordatorio le llega —y le vuelve a llegar— a la
 Coordinadora de ese Paciente, con los candidatos ya propuestos para que pueda taparlo ahí mismo.
 
-**8.** La alarma que no se detiene. Hoy insiste sobre el mismo Coordinador para siempre y nunca
-sube. Primero, quien coordina a ese Paciente; si no la toma en los minutos que fije la Prestadora,
-se suman los demás coordinadores; después, la administración. **No se detiene hasta que alguien
-aprieta «la tomo yo»**, y queda registrado quién la tomó y a qué hora.
+**8.** La alarma que no se detiene. El primer escalón ya existe: `configuracion_escalada_coordinador`
+tiene **un** Coordinador de respaldo y los minutos para sumarlo (de fábrica, 15), y
+`revisarNotificacionesCoordinador.js` lo usa. Lo que falta son los escalones siguientes —los demás
+coordinadores, y después la administración— y, sobre todo, el **«la tomo yo»**: hoy la alarma
+repite según los umbrales de premura pero nadie puede hacerse cargo de ella, así que no hay cómo
+saber si alguien la está atendiendo ni cuándo detenerla. Queda registrado quién la tomó y a qué
+hora.
 
 **9.** La extensión de turno. La Asistente que está adentro sigue a cargo: el sistema se lo
 informa, le muestra cómo va la búsqueda del relevo, y le abre una extensión con la hora desde la

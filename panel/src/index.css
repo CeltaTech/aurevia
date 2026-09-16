@@ -354,6 +354,40 @@ h2 {
   color: var(--rojo-peligro);
 }
 
+/* Lo que a la Prestadora le falta cargar, reclamado arriba de cualquier pantalla.
+   Va debajo del banner de sesión de soporte y no usa el mismo fondo naranja lleno a propósito:
+   dos franjas macizas seguidas compiten, y ésta es un pendiente, no una alarma. Entonces
+   superficie común y el naranja sólo en el canto izquierdo, que es el que llama la atención.
+   No lleva `position: sticky` porque el banner de arriba ya se queda fijo y dos elementos
+   pegados al mismo borde se tapan entre sí. */
+.franja-puesta-en-marcha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 1.5rem;
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borde-card);
+  border-left: 4px solid var(--naranja-alerta);
+  color: var(--texto-principal);
+  font-size: 0.9rem;
+}
+
+.franja-puesta-en-marcha strong {
+  color: var(--texto-titulo);
+}
+
+.franja-puesta-en-marcha-accion {
+  background: var(--azul-medio);
+  color: var(--texto-sobre-color);
+  border-radius: 999px;
+  padding: 0.35rem 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .panel-header {
   display: flex;
   align-items: center;
@@ -526,6 +560,16 @@ h2 {
 .onboarding-paso-explicacion {
   color: var(--texto-secundario);
   font-size: 0.85rem;
+}
+
+/* Qué deja de funcionar mientras ese paso falte. Sólo aparece en los pendientes, y se distingue
+   de la explicación de arriba por el canto naranja: la de arriba dice qué hacer, ésta por qué. */
+.onboarding-paso-consecuencia {
+  color: var(--texto-secundario);
+  font-size: 0.85rem;
+  border-left: 3px solid var(--naranja-alerta);
+  padding-left: 0.5rem;
+  margin-top: 0.25rem;
 }
 
 /* Arrancar la configuración inicial desde una planilla que la Prestadora ya tiene. Cuelga

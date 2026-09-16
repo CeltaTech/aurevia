@@ -10,6 +10,7 @@ import { usePedidosDeCodigo } from '../../context/PedidosDeCodigoContext';
 import { esAdminOSuperior } from '../../lib/roles';
 import { MODALIDAD } from '../../lib/modalidades';
 import { SelectoresPreferencias } from './SelectoresPreferencias';
+import { FranjaPuestaEnMarcha } from './FranjaPuestaEnMarcha';
 
 const AVISO_MINUTOS_RESTANTES = 10; // aviso "a los 50 minutos" de una sesión de 60
 
@@ -260,6 +261,10 @@ export function Layout() {
       </aside>
       <div className="panel-main">
         <BannerSesionTenant />
+        {/* Debajo de la sesión de soporte y encima de todo lo demás: mientras la Prestadora no
+            termine de cargar lo suyo, el reclamo la acompaña a la pantalla que abra. Se apaga
+            solo cuando no falta nada (ver `FranjaPuestaEnMarcha.jsx`). */}
+        <FranjaPuestaEnMarcha />
         <header className="panel-header">
           <span className="panel-usuario">{usuario?.nombre}</span>
           {/* Idioma, tema y densidad. Están en su propio archivo porque la pantalla de

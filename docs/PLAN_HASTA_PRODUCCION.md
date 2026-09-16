@@ -185,7 +185,7 @@ De las especialidades de esta pantalla no queda nada por hacer: `asistentes.espe
 
 **57.** Que la pantalla de ingreso muestre la marca de la Prestadora y no la del producto.
 
-**58.** Que la conversación quede guardada adentro del producto.
+**58.** Que la conversación quede guardada adentro del producto, según lo que se conteste sobre el botón de contacto de «Asistente Asignado», más arriba en esta misma lista. Hasta que el Panel no tenga un hilo de dos puntas, lo que se hablan la Familia y el Asistente en prestación directa se va a WhatsApp y no queda adentro de ningún lado. El chat interno ya está construido entero —hilos, mensajes, tapado del contacto, pantallas en las dos aplicaciones, aviso al celular y videollamada—, pero **sólo funciona donde la Prestadora ofrece vidriera**: exige una Familia y un Asistente que se hayan encontrado ahí. En prestación directa no hay hilo, y hacia la Prestadora tampoco: el único canal con el Panel va en un solo sentido, del Panel al Asistente, y no hay dónde guardar lo que contesta.
 
 **59.** Dominio propio, si va.
 

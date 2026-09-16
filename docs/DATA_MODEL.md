@@ -736,8 +736,15 @@ CREATE TABLE guardias_cobertura (
   prestadora_id UUID NOT NULL REFERENCES prestadoras(id),
   guardia_original_id UUID NOT NULL REFERENCES guardias(id),
   ausencia_id UUID REFERENCES ausencias(id),
+  asistente_titular_id UUID REFERENCES asistentes(id),  -- a quién le tocaba el turno: la guardia
+                                  -- pasa a nombre del sustituto, así que sin esto se perdería.
+                                  -- Vacío en las coberturas anteriores a esta columna
   asistente_sustituto_id UUID NOT NULL REFERENCES asistentes(id),
-  costo_adicional NUMERIC(12,2),  -- costo del reemplazo, además de lo que se sigue pagando al titular
+  motivo TEXT,                    -- clave o nombre de una fila de motivos_sustitucion_guardia,
+  motivo_detalle TEXT,            -- que arma cada Prestadora. Vacío en las coberturas viejas
+  costo_adicional NUMERIC(12,2),  -- lo que la sustitución le cuesta de más a la Prestadora. Lo que
+                                  -- cobra el sustituto no va acá: la guardia quedó a su nombre y se
+                                  -- liquida con su propio valor, y al titular ese turno no le suma
   moneda moneda_iso NOT NULL,     -- la completa fn_completar_moneda al insertar
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

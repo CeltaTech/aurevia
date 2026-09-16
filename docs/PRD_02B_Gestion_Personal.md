@@ -155,10 +155,13 @@ Flujo (8 pasos, resumido):
 1. Se registra una ausencia (`ausencias`, tipo enfermedad/accidente/licencia/no justificada).
 2. Si hay certificado médico, se sube a Storage (`certificado_url`).
 3. Sistema identifica guardias afectadas por el rango de fechas (`guardias_afectadas`).
-4. Coordinador asigna un Asistente sustituto por guardia afectada → fila en
-   `guardias_cobertura` con `costo_adicional`.
-5. El Asistente titular sigue devengando su `sueldo_basico`/`valor_hora` según corresponda a
-   la licencia (paga o no, según `dias_computados` y el tope legal de `escalas_legales`).
+4. Coordinador asigna un Asistente sustituto por guardia afectada. El turno sigue teniendo una
+   sola persona —la que lo hace—, así que la guardia pasa a nombre del sustituto y queda escrito
+   en `guardias_cobertura` a quién le tocaba, con qué causa y con qué `costo_adicional`.
+5. Esas guardias las cobra quien las hizo, con su propio valor, que puede no ser el del titular.
+   El titular sigue devengando su `sueldo_basico`/`valor_hora` según corresponda a la licencia
+   (paga o no, según `dias_computados` y el tope legal de `escalas_legales`), y esos turnos no le
+   suman nada.
 6. Al cerrar la ausencia (`fecha_fin`), se recalculan `dias_computados`.
 7. Se notifica a Coordinador y Familia del cambio de Asistente asignado.
 8. El Simulador de Vínculo puede incluir el costo de cobertura en sus proyecciones.

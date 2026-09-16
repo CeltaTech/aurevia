@@ -4,7 +4,15 @@ dotenv.config();
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const PRESTADORA_ID = '4e84b0e7-1729-4d07-9e70-56fdbd54cd89'; // Prestadora Demo
-const PASSWORD = 'DemoPrestadora2026!';
+// La contraseña con la que nacen las cuentas de la demo no vive acá: entra por el entorno, como
+// cualquier credencial. Estaba escrita en este renglón, y eso deja a treinta y ocho cuentas de la
+// nube con una clave que cualquiera que abra el repositorio puede leer. Sin la variable el script
+// no arranca: es preferible que no siembre nada a que siembre cuentas con una clave conocida.
+const PASSWORD = process.env.SEED_DEMO_PASSWORD;
+if (!PASSWORD) {
+  console.error('Falta la variable SEED_DEMO_PASSWORD. Es la contraseña con la que nacen las cuentas de la demo, y no se escribe en el código.');
+  process.exit(1);
+}
 
 // Qué es cada Asistente de la demo. Son las claves de los tipos generales que
 // trae el producto; el identificador real se busca en la base al arrancar,

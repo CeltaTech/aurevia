@@ -7,6 +7,7 @@ import { Alert } from '../../components/ui/Alert';
 import { ESTADO_ACTIVO } from '../../lib/candidatos';
 import { serviciosParaFamilias } from '../../lib/serviciosDelPaciente';
 import { mensajeDeError } from '../../lib/errores';
+import { horasDeGuardia } from '../../lib/horarios';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 
@@ -38,11 +39,28 @@ export function NuevaGuardiaModal({ onClose, onCreada, inicial = {} }) {
   const [modalidad, setModalidad] = useState('');
   const [horaInicio, setHoraInicio] = useState('');
   const [horaFin, setHoraFin] = useState('');
+  // Cuántos días después de la fecha termina el turno: 0 el mismo día, 1 al siguiente, y así. Es
+  // lo que permite las guardias de 24, 48 y 72 horas que cubre una sola Asistente. De fábrica
+  // arranca en 0, que es el turno corriente.
+  const [diasHastaElFin, setDiasHastaElFin] = useState('0');
   const [fecha, setFecha] = useState('');
   const [diasSemana, setDiasSemana] = useState([]);
   const [vigenteDesde, setVigenteDesde] = useState('');
   const [vigenteHasta, setVigenteHasta] = useState('');
   const [guardando, setGuardando] = useState(false);
+
+  // Cuánto dura el turno con lo que hay elegido hasta ahora. La cuenta la hace `horarios.js`, que
+  // es donde vive para todo el producto: escrita acá sería una copia que se despega.
+  const duracionEnHoras = useMemo(() => {
+    if (!horaInicio || !horaFin) return null;
+    const horas = horasDeGuardia({
+      fecha: '2000-01-01', // un día cualquiera: cuánto dura no depende de qué día sea
+      hora_inicio: horaInicio,
+      hora_fin: horaFin,
+      dias_hasta_el_fin: Number(diasHastaElFin),
+    });
+    return Number.isFinite(horas) && horas > 0 ? Math.round(horas * 100) / 100 : null;
+  }, [horaInicio, horaFin, diasHastaElFin]);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -172,6 +190,7 @@ export function NuevaGuardiaModal({ onClose, onCreada, inicial = {} }) {
           fecha,
           hora_inicio: horaInicio,
           hora_fin: horaFin,
+          dias_hasta_el_fin: Number(diasHastaElFin),
           modalidad,
         })
         .select('id')
@@ -213,6 +232,7 @@ export function NuevaGuardiaModal({ onClose, onCreada, inicial = {} }) {
         dias_semana: diasSemana,
         hora_inicio: horaInicio,
         hora_fin: horaFin,
+        dias_hasta_el_fin: Number(diasHastaElFin),
         modalidad,
         vigente_desde: vigenteDesde,
         vigente_hasta: vigenteHasta || null,
@@ -254,6 +274,7 @@ export function NuevaGuardiaModal({ onClose, onCreada, inicial = {} }) {
       fecha: f,
       hora_inicio: horaInicio,
       hora_fin: horaFin,
+      dias_hasta_el_fin: Number(diasHastaElFin),
       modalidad,
     }));
 
@@ -401,6 +422,30 @@ export function NuevaGuardiaModal({ onClose, onCreada, inicial = {} }) {
             value={horaFin}
             onChange={(e) => setHoraFin(e.target.value)}
           />
+
+          {/* Hasta cuándo va el turno se elige, no se deduce. La guardia de fin de semana —entra
+              el sábado a la mañana y entrega el lunes a la mañana, cubriendo los francos de
+              quienes trabajan de lunes a viernes— es de las más comunes del rubro, y comparando
+              dos horas de reloj no hay forma de distinguirla de una de veinticuatro horas. */}
+          <FormField
+            label={t.guardias.nueva_guardia.termina}
+            name="dias_hasta_el_fin"
+            type="select"
+            value={diasHastaElFin}
+            onChange={(e) => setDiasHastaElFin(e.target.value)}
+          >
+            <option value="0">{t.guardias.nueva_guardia.termina_mismo_dia}</option>
+            <option value="1">{t.guardias.nueva_guardia.termina_dia_siguiente}</option>
+            <option value="2">{t.guardias.nueva_guardia.termina_dos_dias}</option>
+            <option value="3">{t.guardias.nueva_guardia.termina_tres_dias}</option>
+          </FormField>
+          {/* Cuánto dura, dicho en horas, al lado de donde se elige: es el único lugar donde un
+              error de carga se ve antes de guardarlo. */}
+          {duracionEnHoras !== null && (
+            <p className="panel-explicacion">
+              {t.guardias.nueva_guardia.duracion.replace('{horas}', duracionEnHoras)}
+            </p>
+          )}
 
           {!esSerie && (
             <FormField

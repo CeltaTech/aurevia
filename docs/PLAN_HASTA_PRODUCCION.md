@@ -9,9 +9,13 @@
 
 ---
 
-## El correo (hoy no llega ninguno)
+## El correo
 
-*Esto ya está decidido y no se vuelve a discutir.* Railway no deja salir tráfico por los puertos de correo: se probaron los tres (25, 465 y 587) desde el propio servidor y los tres cortaron a los 260 milisegundos, que es la firma de un bloqueo y no de una demora. Mientras no haya nada más, **no se entrega ningún correo** — ni ausencias, ni vencimientos, ni invitaciones de cuenta, ni recuperación de doble factor. El envío ya sale por un despachante que habla por el puerto 443, Resend, elegido por costo: con `careonys.com` autorizado una sola vez cuelgan todas las direcciones sin pagar por Prestadora (`backend/src/utils/email.js`). **Cada Prestadora manda desde `[prestadora]@careonys.com`, esa dirección sólo manda, y las respuestas se reenvían a la casilla que ella declare** (`docs/MARCA.md`, sección 0). La pantalla que lo explica y pide esa casilla ya está (`panel/src/pages/configuracion/Avisos.jsx`). La cuenta del despachante, el dominio autorizado, el reenvío de la casilla de la empresa y las variables del servidor —clave de envío, remitente, los dos topes y la dirección del Panel— y el token con el que el motor abre el reenvío de cada Prestadora ya están hechos y comprobados. Lo único que falta del correo es comprobar que un correo sale de verdad y llega.
+*Esto ya está decidido y no se vuelve a discutir.* Railway no deja salir tráfico por los puertos de correo: se probaron los tres (25, 465 y 587) desde el propio servidor y los tres cortaron a los 260 milisegundos, que es la firma de un bloqueo y no de una demora. Por eso el envío sale por un despachante que habla por el puerto 443, Resend, elegido por costo: con `careonys.com` autorizado una sola vez cuelgan todas las direcciones sin pagar por Prestadora (`backend/src/utils/email.js`). **Cada Prestadora manda desde `[prestadora]@careonys.com`, esa dirección sólo manda, y las respuestas se reenvían a la casilla que ella declare** (`docs/MARCA.md`, sección 0), por Cloudflare Email Routing, que no cuesta nada.
+
+**El correo sale y llega.** Está comprobado de punta a punta: `careonys.com` verificado en el despachante, un correo mandado por `enviarEmail()` —el camino real del motor, no una llamada aparte— entregado en la bandeja de entrada, y anotado en `envios_de_correo` sin error. Las ocho variables están cargadas en el servidor y confirmadas: la clave de envío, el remitente, los dos topes, los dos identificadores de Cloudflare, el token del reenvío y la dirección del Panel.
+
+Lo que queda abajo ya no es infraestructura de correo: es qué se manda y cuándo.
 
 **1. Usted** — Usted dijo que una Prestadora se considera dada de alta recién cuando completó toda la información mínimamente requerida. Eso hoy no se puede anotar en ningún lado: una Prestadora está en uno de cinco estados —prospecto, en certificación, certificada, suspendida, dada de baja— y ninguno de los cinco dice «ya completó lo mínimo». Faltan tres respuestas.
 

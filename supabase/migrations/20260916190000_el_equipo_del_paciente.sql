@@ -143,7 +143,7 @@ CREATE POLICY coordinacion_corrige_el_equipo_del_paciente ON public.equipo_pacie
           SELECT 1 FROM public.usuarios u
            WHERE u.id = auth.uid() AND u.rol = 'coordinador'
         )
-        AND public.tiene_permiso('corregir_equipo_del_paciente')
+        AND interno.tiene_permiso('corregir_equipo_del_paciente')
       )
     )
   )
@@ -159,7 +159,7 @@ CREATE POLICY coordinacion_corrige_el_equipo_del_paciente ON public.equipo_pacie
           SELECT 1 FROM public.usuarios u
            WHERE u.id = auth.uid() AND u.rol = 'coordinador'
         )
-        AND public.tiene_permiso('corregir_equipo_del_paciente')
+        AND interno.tiene_permiso('corregir_equipo_del_paciente')
       )
     )
   );

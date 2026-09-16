@@ -5,6 +5,11 @@ import { errorDeLaRespuesta, mensajeDeError } from '../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+// Los tres motivos que contesta el motor son definitivos: con ese mismo enlace, reintentar no
+// sirve nunca. Cuando llega uno, el formulario se retira en vez de quedar invitando a un intento
+// que ya se sabe que va a fallar.
+const MOTIVOS_SIN_REINTENTO = ['token_invalido', 'token_ya_usado', 'token_vencido'];
+
 export default function ActivarCuenta() {
   const { t } = useLocale();
   const [searchParams] = useSearchParams();
@@ -13,6 +18,7 @@ export default function ActivarCuenta() {
   const [confirmacion, setConfirmacion] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
+  const [motivoSinReintento, setMotivoSinReintento] = useState('');
   // Cuál de los dos campos es el que está mal. Los dos errores que revisa esta pantalla son
   // de un campo concreto —la contraseña corta y la repetición que no coincide—, así que el
   // motivo queda atado a ese campo y se escucha al pararse ahí, no solo arriba del todo.
@@ -49,6 +55,7 @@ export default function ActivarCuenta() {
       setActivada(true);
     } catch (err) {
       setError(mensajeDeError(err, t, 'activar la cuenta'));
+      if (MOTIVOS_SIN_REINTENTO.includes(err?.motivo)) setMotivoSinReintento(err.motivo);
     } finally {
       setEnviando(false);
     }
@@ -72,6 +79,20 @@ export default function ActivarCuenta() {
           <h1>{t.auth.activar_titulo}</h1>
           <div className="alert alert-info" role="status">{t.auth.activar_exito}</div>
           <Link to="/login" className="btn btn-primary btn-full">{t.auth.ingresar}</Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (motivoSinReintento) {
+    return (
+      <div className="login-pantalla">
+        <div className="login-card">
+          <h1>{t.auth.activar_titulo}</h1>
+          <div className="alert alert-error" role="alert">{error}</div>
+          {motivoSinReintento === 'token_ya_usado' && (
+            <Link to="/login" className="btn btn-primary btn-full">{t.auth.ingresar}</Link>
+          )}
         </div>
       </div>
     );

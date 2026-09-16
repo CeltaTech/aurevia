@@ -8,6 +8,11 @@ import { errorDeLaRespuesta, mensajeDeError } from '../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+// Los tres motivos que contesta el motor son definitivos: con ese mismo enlace, reintentar no
+// sirve nunca. Cuando llega uno, el formulario se retira en vez de quedar invitando a un intento
+// que ya se sabe que va a fallar.
+const MOTIVOS_SIN_REINTENTO = ['token_invalido', 'token_ya_usado', 'token_vencido'];
+
 // Donde el administrador de una Prestadora nueva elige su contraseña.
 //
 // Va afuera del Panel, al lado de la entrada y del segundo factor, porque quien llega acá
@@ -25,6 +30,7 @@ export function ActivarCuenta() {
   const [confirmacion, setConfirmacion] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
+  const [motivoSinReintento, setMotivoSinReintento] = useState('');
   // Los dos problemas de acá son de un campo concreto —la contraseña corta, la repetida que no
   // coincide—, así que el aviso se cuelga de ese campo y no de todo el formulario. Arriba queda
   // el cartel general sólo para lo que contesta el motor, que no es de ningún campo.
@@ -61,6 +67,7 @@ export function ActivarCuenta() {
       setActivada(true);
     } catch (err) {
       setError(mensajeDeError(err, t));
+      if (MOTIVOS_SIN_REINTENTO.includes(err?.motivo)) setMotivoSinReintento(err.motivo);
     } finally {
       setEnviando(false);
     }
@@ -84,6 +91,20 @@ export function ActivarCuenta() {
           <h1>{t.auth.activar_titulo}</h1>
           <Alert variant="success">{t.auth.activar_exito}</Alert>
           <Link to="/login">{t.auth.activar_ingresar}</Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (motivoSinReintento) {
+    return (
+      <div className="login-pantalla">
+        <div className="login-card">
+          <h1>{t.auth.activar_titulo}</h1>
+          <Alert variant="error">{error}</Alert>
+          {motivoSinReintento === 'token_ya_usado' && (
+            <Link to="/login">{t.auth.activar_ingresar}</Link>
+          )}
         </div>
       </div>
     );

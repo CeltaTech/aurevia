@@ -79,8 +79,9 @@ export function SimuladorVinculoTab({ asistente }) {
   }
 
   // Lo que ya costó cubrir las ausencias de esta persona. Sale de la base con el pase de quien
-  // mira, como el resto del Panel; las coberturas se alcanzan por la ausencia que las originó,
-  // porque la cobertura nombra al sustituto y no al titular.
+  // mira, como el resto del Panel; las coberturas se alcanzan por la ausencia que las originó, y
+  // no por el titular que la cobertura nombra, porque las anotadas antes de que existiera esa
+  // columna lo tienen vacío y quedarían afuera de la cuenta.
   const { desde: desdeCobertura, meses: mesesCobertura } = ventanaDeCobertura(hoy, asistente.fecha_alta);
   const [coberturas, setCoberturas] = useState([]);
   const [estadoCobertura, setEstadoCobertura] = useState('cargando');

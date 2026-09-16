@@ -14,7 +14,7 @@
 //   1. npx supabase start
 //   2. arrancar el backend apuntado a la base local, por ejemplo:
 //        cd backend && DOTENV_CONFIG_PATH=.env.local node -r dotenv/config src/server.js
-//   3. cd backend && SUPABASE_URL=http://127.0.0.1:54421 \
+//   3. cd backend && SUPABASE_URL=http://127.0.0.1:54621 \
 //        SUPABASE_SERVICE_ROLE_KEY=... SUPABASE_ANON_KEY=... \
 //        node scripts/test_etapa2_sesion_soporte.mjs
 //

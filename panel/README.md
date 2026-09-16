@@ -31,9 +31,9 @@ Al terminar imprime las direcciones locales. Las que importan:
 
 | Para qué | Dirección |
 |---|---|
-| La base y su API | `http://127.0.0.1:54421` |
-| Studio, para mirar las tablas con el mouse | `http://127.0.0.1:54423` |
-| Los correos que manda el sistema (no salen a internet) | `http://127.0.0.1:54424` |
+| La base y su API | `http://127.0.0.1:54621` |
+| Studio, para mirar las tablas con el mouse | `http://127.0.0.1:54623` |
+| Los correos que manda el sistema (no salen a internet) | `http://127.0.0.1:54624` |
 
 ### 3. Cargar los datos de prueba
 
@@ -106,7 +106,7 @@ Ese archivo **no se sube al repositorio** (los `.env` nunca se suben), así que 
 copia recién clonada hay que crearlo. Este es el contenido completo, tal cual:
 
 ```
-VITE_SUPABASE_URL=http://127.0.0.1:54421
+VITE_SUPABASE_URL=http://127.0.0.1:54621
 VITE_SUPABASE_ANON_KEY=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
 VITE_API_URL=http://localhost:4000
 ```

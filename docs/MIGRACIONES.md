@@ -150,9 +150,18 @@ volver a cero y aplicar todo de nuevo:
 supabase db reset
 ```
 
-Los puertos locales de Careonys son los `544xx` (API en 54421, base en 54422, Studio en 54423),
+Los puertos locales de Careonys son los `546xx` (API en 54621, base en 54622, Studio en 54623),
 distintos a propósito de los del panel de CeltaTech, para que los dos puedan estar levantados al
 mismo tiempo sin pisarse. Están fijados en `supabase/config.toml`.
+
+**Por qué `546xx` y no `544xx`, que es lo que decía antes.** Windows se reserva para sí el tramo
+que va del 54345 al 54544, y ahí adentro caían todos los puertos viejos: la base local no levantaba
+y el mensaje culpaba a otra cosa. Liberar ese tramo pide permisos de administrador. Antes de elegir
+un tramo nuevo conviene mirar cuáles están tomados:
+
+```bash
+netsh interface ipv4 show excludedportrange protocol=tcp
+```
 
 **Contra producción.** Desde la misma carpeta:
 

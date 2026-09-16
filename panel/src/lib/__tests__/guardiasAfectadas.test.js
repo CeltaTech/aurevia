@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { guardiasAfectadas, guardiasSinCubrir } from '../guardiasAfectadas';
+import { guardiasAfectadas, guardiasSinCubrir, sumarLasYaCubiertas } from '../guardiasAfectadas';
 
 // Una licencia de una semana.
 const AUSENCIA = { fecha_inicio: '2026-08-10', fecha_fin: '2026-08-16' };
@@ -62,6 +62,41 @@ describe('guardiasAfectadas', () => {
     expect(guardiasAfectadas(undefined, AUSENCIA)).toEqual([]);
     expect(guardiasAfectadas([{ ...PROGRAMADA, fecha: null }], AUSENCIA)).toEqual([]);
     expect(guardiasAfectadas([null, undefined], AUSENCIA)).toEqual([]);
+  });
+});
+
+describe('sumarLasYaCubiertas', () => {
+  it('suma el turno que ya cubrió un sustituto, que la consulta por el titular no encuentra', () => {
+    // El turno del 12 quedó a nombre de quien lo hizo, así que la consulta por las guardias de
+    // quien faltó devuelve sólo el otro. Sin esto, cerrar la ausencia lo borraría de la cuenta.
+    const coberturas = [{ guardia_original_id: 'el_que_cubrio_otro' }];
+    expect(sumarLasYaCubiertas(['el_que_sigue_sin_cubrir'], coberturas))
+      .toEqual(['el_que_sigue_sin_cubrir', 'el_que_cubrio_otro']);
+  });
+
+  it('con todas cubiertas la lista sigue nombrando a todas', () => {
+    const coberturas = [{ guardia_original_id: 'a' }, { guardia_original_id: 'b' }];
+    expect(sumarLasYaCubiertas([], coberturas)).toEqual(['a', 'b']);
+  });
+
+  it('no repite la que ya estaba en la lista', () => {
+    expect(sumarLasYaCubiertas(['a', 'b'], [{ guardia_original_id: 'a' }])).toEqual(['a', 'b']);
+  });
+
+  it('una cobertura vieja, sin guardia, no suma ninguna', () => {
+    expect(sumarLasYaCubiertas(['a'], [{ guardia_original_id: null }])).toEqual(['a']);
+    expect(sumarLasYaCubiertas(['a'], [{}])).toEqual(['a']);
+  });
+
+  it('sin coberturas la lista queda como estaba', () => {
+    expect(sumarLasYaCubiertas(['a', 'b'], [])).toEqual(['a', 'b']);
+    expect(sumarLasYaCubiertas(['a', 'b'], null)).toEqual(['a', 'b']);
+    expect(sumarLasYaCubiertas(['a', 'b'], undefined)).toEqual(['a', 'b']);
+  });
+
+  it('no se rompe sin lista de afectadas', () => {
+    expect(sumarLasYaCubiertas(null, [{ guardia_original_id: 'a' }])).toEqual(['a']);
+    expect(sumarLasYaCubiertas(undefined, null)).toEqual([]);
   });
 });
 

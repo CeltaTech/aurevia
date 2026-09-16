@@ -9,7 +9,7 @@ import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { generarConstanciaAusencia, descargarPDF } from '../../lib/generarDocumentoCese';
 import { ESTADO_ACTIVO } from '../../lib/candidatos';
-import { guardiasAfectadas, guardiasSinCubrir } from '../../lib/guardiasAfectadas';
+import { guardiasAfectadas, guardiasSinCubrir, sumarLasYaCubiertas } from '../../lib/guardiasAfectadas';
 import { diasComputados } from '../../lib/diasDeAusencia';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { con } from '../../lib/textos';
@@ -117,6 +117,10 @@ export function AusenciasCoberturaTab({ asistente }) {
   //
   // Las guardias de la ausencia abierta se piden igual: sin fecha de fin la lista alcanza todo lo
   // que ya esté armado hacia adelante, y se vuelve a calcular el día que se le cargue el cierre.
+  //
+  // Y lo ya cubierto se suma aparte, porque la consulta no lo encuentra: un turno cubierto pasó a
+  // nombre de quien lo hace, así que dejó de ser de esta persona. Por qué eso importa lo explica
+  // `sumarLasYaCubiertas`, que es donde vive la regla.
   async function guardiasDeLaAusencia(ausencia) {
     const consulta = supabase
       .from('guardias')
@@ -127,7 +131,8 @@ export function AusenciasCoberturaTab({ asistente }) {
       ? await consulta.lte('fecha', ausencia.fecha_fin)
       : await consulta;
     if (errorGuardias) throw errorGuardias;
-    return guardiasAfectadas(data ?? [], ausencia);
+
+    return sumarLasYaCubiertas(guardiasAfectadas(data ?? [], ausencia), coberturas[ausencia.id]);
   }
 
   // Las guardias que esta ausencia dejó descubiertas. Las cargadas antes de que esto se escribiera

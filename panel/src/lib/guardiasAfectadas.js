@@ -43,6 +43,22 @@ export function guardiasAfectadas(guardias, ausencia) {
 }
 
 /**
+ * La lista de afectadas, más los turnos que esa misma ausencia ya hizo cubrir.
+ *
+ * Un turno cubierto pasa a nombre de quien lo hace, así que deja de aparecer entre las guardias de
+ * quien faltó: preguntando sólo por las de esa persona, lo cubierto se pierde. Y esta lista se
+ * vuelve a calcular el día que se cierra la ausencia, de modo que sin esto el cierre borraría
+ * justamente los turnos que sí se resolvieron, que son la constancia de lo que tapó la licencia.
+ *
+ * Una cobertura vieja puede no decir de qué turno es: esa no suma ninguna guardia, porque no hay
+ * ninguna que nombrar.
+ */
+export function sumarLasYaCubiertas(afectadas, coberturas) {
+  const cubiertas = (coberturas ?? []).map((c) => c?.guardia_original_id).filter(Boolean);
+  return [...new Set([...(afectadas ?? []), ...cubiertas])];
+}
+
+/**
  * De las guardias que una ausencia dejó descubiertas, las que todavía no tienen sustituto.
  *
  * `coberturas` son las filas ya cargadas para esa ausencia, cada una con `guardia_original_id`.

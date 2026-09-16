@@ -63,7 +63,7 @@ async function revisarPrestadora({ prestadora_id: prestadoraId, horas_antes: hor
   // decide después contra la hora de inicio, que la base guarda en otra columna.
   const { data: guardias, error } = await supabase
     .from('guardias')
-    .select('id, paciente_id, fecha, hora_inicio, hora_fin, ofrecida_at, aviso_sin_cubrir_at, aviso_sin_cubrir_veces, ofertas_guardia(respuesta)')
+    .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, ofrecida_at, aviso_sin_cubrir_at, aviso_sin_cubrir_veces, ofertas_guardia(respuesta)')
     .eq('prestadora_id', prestadoraId)
     .is('asistente_id', null)
     .eq('estado', 'programada')

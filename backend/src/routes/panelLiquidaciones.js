@@ -120,7 +120,7 @@ export function acumularGuardias(guardias) {
     if (g.estado !== ESTADO_HECHA) continue;
     const acumulado = porAsistente.get(g.asistente_id) || { guardias: 0, horas: 0 };
     acumulado.guardias += 1;
-    acumulado.horas += horasEntre(g.hora_inicio, g.hora_fin);
+    acumulado.horas += horasEntre(g.hora_inicio, g.hora_fin, g.dias_hasta_el_fin);
     porAsistente.set(g.asistente_id, acumulado);
   }
   return porAsistente;
@@ -336,7 +336,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
   const guardias = await traerPaginado(() =>
     supabase
       .from('guardias')
-      .select('id, estado, hora_inicio, hora_fin, asistente_id')
+      .select('id, estado, hora_inicio, hora_fin, dias_hasta_el_fin, asistente_id')
       .eq('prestadora_id', prestadoraId)
       .gte('fecha', desde)
       .lte('fecha', hasta)

@@ -89,7 +89,7 @@ async function buscarGuardiaSaliente({ guardia, prestadoraId }) {
 
   const { data: candidatas, error } = await supabase
     .from('guardia_pacientes')
-    .select('guardias!inner(id, fecha, hora_inicio, hora_fin)')
+    .select('guardias!inner(id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin)')
     .in('paciente_id', pacienteIds)
     .eq('prestadora_id', prestadoraId)
     .in('guardias.fecha', [sumarDias(guardia.fecha, -1), guardia.fecha])

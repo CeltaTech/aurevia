@@ -40,9 +40,18 @@ const UN_DIA_CUALQUIERA = '2000-01-01';
  * `panel/src/lib/horarios.js`, donde la regla de la medianoche vive una sola vez para todo el
  * producto—, y lo único propio de acá es que estas dos horas no vienen con fecha: se les presta
  * un día cualquiera, porque cuánto dura un turno no depende de qué día sea.
+ *
+ * `diasHastaElFin` es lo que hace que una guardia de 48 o de 72 horas se pague por lo que dura.
+ * Sin ese dato la cuenta no puede pasar de veinticuatro horas, y el turno largo se liquidaba como
+ * uno de un día: quien consulta tiene que traer la columna.
  */
-export function horasEntre(horaInicio, horaFin) {
-  return horasDeGuardia({ fecha: UN_DIA_CUALQUIERA, hora_inicio: horaInicio, hora_fin: horaFin });
+export function horasEntre(horaInicio, horaFin, diasHastaElFin) {
+  return horasDeGuardia({
+    fecha: UN_DIA_CUALQUIERA,
+    hora_inicio: horaInicio,
+    hora_fin: horaFin,
+    dias_hasta_el_fin: diasHastaElFin,
+  });
 }
 
 /**

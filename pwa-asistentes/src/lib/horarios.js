@@ -20,12 +20,23 @@ export function inicioDeGuardia(guardia) {
 /**
  * Momento en que la guardia termina.
  *
- * Si la hora de fin es menor o igual a la de inicio, la guardia cruza la medianoche y
- * termina al día siguiente. Es la regla que hace que la guardia de noche cuente bien.
+ * Manda `dias_hasta_el_fin`, que dice cuántos días después de `fecha` termina el turno: 0 el
+ * mismo día, 1 al siguiente, 2 dos días después. Es lo que hace posibles las guardias de 24, 48
+ * y 72 horas que cubre una sola Asistente.
+ *
+ * Cuando ese dato no viene se cae en la regla anterior: si la hora de fin es menor o igual a la
+ * de inicio, la guardia cruza la medianoche y termina al día siguiente. Esa regla cubre la
+ * guardia de noche y no sabe de nada más largo, así que es sólo la red para los turnos cargados
+ * antes de que la duración se escribiera.
  */
 export function finDeGuardia(guardia) {
   const inicio = inicioDeGuardia(guardia);
   const fin = new Date(`${guardia.fecha}T${guardia.hora_fin}`);
+  const dias = Number(guardia?.dias_hasta_el_fin);
+  if (Number.isFinite(dias) && dias >= 0) {
+    fin.setDate(fin.getDate() + dias);
+    return fin;
+  }
   if (fin <= inicio) fin.setDate(fin.getDate() + 1);
   return fin;
 }

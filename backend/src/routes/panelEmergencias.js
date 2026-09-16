@@ -32,7 +32,7 @@ async function conNombres(emergencias, usuarioPanel) {
   if (guardiaIds.length === 0) return [];
 
   const { data: guardias } = await acotarAPrestadora(
-    supabase.from('guardias').select('id, fecha, hora_inicio, hora_fin, asistente_id, paciente_id').in('id', guardiaIds),
+    supabase.from('guardias').select('id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, asistente_id, paciente_id').in('id', guardiaIds),
     usuarioPanel,
   );
 

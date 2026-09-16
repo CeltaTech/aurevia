@@ -102,7 +102,7 @@ export function Continuidad() {
 
       const [{ data: guardiasData }, { data: nivelesData }, pacientesPorGuardia] = await Promise.all([
         idsGuardias.length
-          ? supabase.from('guardias').select('id, paciente_id, asistente_id, fecha, hora_inicio, hora_fin').in('id', idsGuardias)
+          ? supabase.from('guardias').select('id, paciente_id, asistente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin').in('id', idsGuardias)
           : Promise.resolve({ data: [] }),
         supabase.from('configuracion_escalada_relevo').select('*').order('nivel'),
         cargarPacientesDeGuardias(idsGuardias),

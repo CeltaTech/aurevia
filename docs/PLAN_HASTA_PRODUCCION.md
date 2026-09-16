@@ -19,11 +19,24 @@ ahí —cuánto duró, si se pisa con otra, cuánto lleva en la semana, cuánto 
 24. Hay que poder decir hasta cuándo va un turno, y que todo lo que hoy suma una sola noche sume
 lo que realmente dura.
 
-**2.** El descanso adentro de la guardia. En las guardias de 24, 48 y 72 horas la Asistente
-descansa **dentro** del turno, y cuánto descansa sale de cómo viene el servicio ese día, no de un
-número fijado de antemano. Hoy el sistema sólo sabe medir el descanso **entre** dos guardias
-(`panel/src/lib/candidatos.js:370`), así que del descanso de una guardia larga no queda ninguna
-constancia. Falta poder registrarlo, sin exigir que coincida con nada preestablecido.
+El caso más común es el fin de semana: la Asistente toma la guardia el sábado a la mañana y la
+entrega el lunes a la mañana, cubriendo los francos de quienes trabajan de lunes a viernes. Es la
+misma persona que suele cubrir las emergencias entre semana, y por eso conviene: llega alguien que
+el Paciente ya conoce. Es, exactamente, la franquera.
+
+**2.** El descanso adentro de la guardia. Nadie puede estar cuarenta y ocho horas sin dormir: en
+el domicilio la Asistente tiene dónde descansar, y lo hace generalmente de noche, cuando el
+Paciente duerme, **sin dejar de estar disponible**. Cuánto descansa sale de cómo viene el servicio
+ese día, no de un número fijado de antemano.
+
+De ahí salen tres cosas que no son opcionales, porque descansar disponible no es lo mismo que
+irse: **ese rato no se le descuenta de lo que se le paga**, **no interrumpe el turno** —no abre un
+hueco que haya que cubrir ni deja al Paciente sin nadie— y **no la saca de la guardia**: si pasa
+algo, está.
+
+Hoy el sistema sólo sabe medir el descanso **entre** dos guardias
+(`panel/src/lib/candidatos.js:370`), así que de esto no queda ninguna constancia. Falta poder
+registrarlo, sin exigir que coincida con nada preestablecido y sin que se parezca a una ausencia.
 
 **3.** Los pesos del cálculo de candidatos (`panel/src/lib/candidatos.js:88`) y los topes de horas
 y descanso son reglas operativas escritas en el código, y tienen que ser decisión de cada

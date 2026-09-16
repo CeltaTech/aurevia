@@ -60,7 +60,7 @@ export function ServicioDetalle() {
         .order('created_at', { ascending: false }),
       supabase
         .from('guardias')
-        .select('id, fecha, hora_inicio, hora_fin, estado, paciente_id, asistente_id')
+        .select('id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado, paciente_id, asistente_id')
         .eq('servicio_id', id)
         .order('fecha', { ascending: false })
         .limit(GUARDIAS_A_MOSTRAR),

@@ -43,7 +43,7 @@ export async function extenderSeriesGuardiaAbiertas() {
 
     const { data: series, error: errorSeries } = await supabase
       .from('series_guardias')
-      .select('id, asistente_id, paciente_id, dias_semana, hora_inicio, hora_fin, modalidad')
+      .select('id, asistente_id, paciente_id, dias_semana, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad')
       .eq('prestadora_id', prestadoraId)
       .eq('estado', 'activa')
       .is('vigente_hasta', null);
@@ -97,6 +97,10 @@ export async function extenderSeriesGuardiaAbiertas() {
         fecha,
         hora_inicio: serie.hora_inicio,
         hora_fin: serie.hora_fin,
+        // Cuánto dura cada turno es parte de la serie: una serie de guardias de 24 horas tiene
+        // que seguir generando turnos de 24 horas, y no de las que salgan de comparar dos horas
+        // de reloj.
+        dias_hasta_el_fin: serie.dias_hasta_el_fin ?? 0,
         modalidad: serie.modalidad,
       }));
 

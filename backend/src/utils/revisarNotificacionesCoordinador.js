@@ -77,7 +77,7 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma) {
   // después contra la hora de fin, que la base guarda en otra columna.
   const { data: guardias, error } = await supabase
     .from('guardias')
-    .select('id, fecha, hora_inicio, hora_fin, paciente_id, checkout_at, aviso_sin_cerrar_at, aviso_sin_cerrar_veces, aviso_sin_cerrar_backup_at, aviso_sin_cerrar_grave_at, asistentes(nombre)')
+    .select('id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, paciente_id, checkout_at, aviso_sin_cerrar_at, aviso_sin_cerrar_veces, aviso_sin_cerrar_backup_at, aviso_sin_cerrar_grave_at, asistentes(nombre)')
     .eq('prestadora_id', prestadoraId)
     .eq('estado', 'activa')
     .is('cerrada_at', null)
@@ -180,7 +180,7 @@ function finDeLaGuardia(guardia) {
   if (!guardia.fecha || !guardia.hora_inicio || !guardia.hora_fin) return null;
   const inicio = new Date(`${guardia.fecha}T${guardia.hora_inicio}`);
   if (Number.isNaN(inicio.getTime())) return null;
-  return new Date(inicio.getTime() + horasEntre(guardia.hora_inicio, guardia.hora_fin) * MS_POR_HORA);
+  return new Date(inicio.getTime() + horasEntre(guardia.hora_inicio, guardia.hora_fin, guardia.dias_hasta_el_fin) * MS_POR_HORA);
 }
 
 // Lo que los dos avisos de guardia sin cerrar —el de rutina y el que escala— necesitan saber

@@ -62,7 +62,7 @@ function camposDePacienteEnLaOferta(visibilidad) {
 
 // Los datos de la guardia que necesita quien está decidiendo si la toma.
 const CAMPOS_DE_GUARDIA =
-  'id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, asistente_id, ofrecida_at, ofrecida_por, oferta_limite_at';
+  'id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, asistente_id, ofrecida_at, ofrecida_por, oferta_limite_at';
 
 /**
  * Traduce el rechazo de un disparador de la base a un motivo que la pantalla sepa explicar.

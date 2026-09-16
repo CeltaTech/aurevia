@@ -90,7 +90,7 @@ function manejarErrorMulter(err, req, res, next) {
 async function guardiaDelAsistente(guardiaId, usuarioAsistente) {
   const { data } = await supabase
     .from('guardias')
-    .select('id, prestadora_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
+    .select('id, prestadora_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
     .eq('id', guardiaId)
     .eq('asistente_id', usuarioAsistente.id)
     .eq('prestadora_id', usuarioAsistente.prestadoraId)
@@ -355,7 +355,7 @@ appAsistentesRouter.patch('/perfil/disponibilidad', requiereRolAsistente, async 
 appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
   const { data, error } = await supabase
     .from('guardias')
-    .select('id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
+    .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
     .eq('asistente_id', req.usuarioAsistente.id)
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .order('fecha', { ascending: false })
@@ -378,7 +378,7 @@ appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
 appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) => {
   const { data, error } = await supabase
     .from('guardias')
-    .select('id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
+    .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
     .eq('id', req.params.id)
     .eq('asistente_id', req.usuarioAsistente.id)
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)

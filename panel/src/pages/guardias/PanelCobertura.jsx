@@ -94,7 +94,7 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
     const [gs, hs, ds, os, em, au] = await Promise.all([
       supabase
         .from('guardias')
-        .select('id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, estado')
+        .select('id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado')
         .gte('fecha', iso(desde))
         .lte('fecha', iso(hasta)),
       supabase.from('matriculas_asistente').select('*'),

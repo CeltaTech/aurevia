@@ -143,7 +143,7 @@ panelGuardiasRouter.post('/aviso-cambio-asistente', requiereRolPanel, exigirOrga
 
   let query = supabase
     .from('guardias')
-    .select('id, prestadora_id, paciente_id, fecha, hora_inicio, hora_fin')
+    .select('id, prestadora_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin')
     .in('id', guardiaIds);
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data: guardias, error } = await query;

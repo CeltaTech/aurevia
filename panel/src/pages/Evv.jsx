@@ -85,7 +85,7 @@ export function Evv() {
     ] = await Promise.all([
       supabase
         .from('guardias')
-        .select('id, fecha, hora_inicio, hora_fin, estado, asistente_id, paciente_id, checkin_at, checkin_lat, checkin_lng, checkout_at, checkout_lat, checkout_lng')
+        .select('id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado, asistente_id, paciente_id, checkin_at, checkin_lat, checkin_lng, checkout_at, checkout_lat, checkout_lng')
         .gte('fecha', f.desde)
         .lte('fecha', f.hasta)
         .in('estado', ['activa', 'completada'])

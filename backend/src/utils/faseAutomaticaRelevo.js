@@ -111,7 +111,7 @@ async function suplentesDisponibles(prestadoraId, guardia) {
 
   const { data: guardiasDelDia, error: errorGuardias } = await supabase
     .from('guardias')
-    .select('id, asistente_id, fecha, hora_inicio, hora_fin')
+    .select('id, asistente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin')
     .eq('prestadora_id', prestadoraId)
     .neq('estado', 'cancelada')
     .not('asistente_id', 'is', null)
@@ -167,7 +167,7 @@ export async function correrFaseAutomatica({ incidente, prestadoraId, idioma }) 
 
   const { data: guardia } = await supabase
     .from('guardias')
-    .select('id, asistente_id, fecha, hora_inicio, hora_fin')
+    .select('id, asistente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin')
     .eq('id', incidente.guardia_entrante_id)
     .single();
 

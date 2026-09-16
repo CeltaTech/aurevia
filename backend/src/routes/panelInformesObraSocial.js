@@ -63,7 +63,7 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
   if (idsDeSusGuardias.length > 0) {
     const { data, error: errorGuardias } = await supabase
       .from('guardias')
-      .select('id, fecha, hora_inicio, hora_fin, modalidad, estado, asistente_id')
+      .select('id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, asistente_id')
       .eq('prestadora_id', prestadoraId)
       .in('id', idsDeSusGuardias)
       .gte('fecha', periodoDesde)
@@ -100,7 +100,7 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
       estado: g.estado,
       asistente_nombre: nombresAsistente[g.asistente_id] || null,
       pacientes_en_el_turno: cuantos,
-      horas_imputadas: horasImputadasAlPaciente(horasEntre(g.hora_inicio, g.hora_fin), cuantos),
+      horas_imputadas: horasImputadasAlPaciente(horasEntre(g.hora_inicio, g.hora_fin, g.dias_hasta_el_fin), cuantos),
     };
   });
 

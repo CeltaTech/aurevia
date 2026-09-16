@@ -60,6 +60,11 @@ export const GRUPOS = [
     copias: ['pwa-asistentes/src/lib/reglaVencimientos.js', 'backend/src/utils/reglaVencimientos.js'],
   },
   {
+    que: 'cuánto pesa cada cosa al ordenar candidatos, y las tres formas armadas',
+    original: 'panel/src/lib/perfilesDeCandidatos.js',
+    copias: ['backend/src/utils/perfilesDeCandidatos.js'],
+  },
+  {
     que: 'en qué modalidad de trabajo está cada Asistente',
     original: 'panel/src/lib/modalidades.js',
     copias: ['backend/src/utils/modalidades.js'],

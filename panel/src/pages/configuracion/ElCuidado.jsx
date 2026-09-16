@@ -14,6 +14,7 @@ import { esMotivoDeFabrica, nombreMotivo } from '../../lib/motivoDeCierre';
 import { con } from '../../lib/textos';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
+import { ElCalculoDeCandidatos } from './ElCalculoDeCandidatos';
 
 /* Las reglas del cuidado en sí: cómo se arman los Servicios y sus guardias, qué
    signos vitales se toman, y qué matrícula hace falta para cada vía de medicación. */
@@ -21,6 +22,7 @@ export function ConfiguracionCuidado() {
   return (
     <>
       <TabServicios />
+      <ElCalculoDeCandidatos />
       <TabVitales />
       <TabMatriculaMedicacion />
     </>

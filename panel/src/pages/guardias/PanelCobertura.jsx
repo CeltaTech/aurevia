@@ -6,6 +6,7 @@ import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
 import { con } from '../../lib/textos';
 import { candidatosParaGuardia } from '../../lib/candidatos';
+import { pesosYTopesDe } from '../../lib/perfilesDeCandidatos';
 import { avisosDeAsignacion } from '../../lib/avisosAsignacion';
 import { COLUMNAS_ESTADO_MATRICULA, mensajeDeBloqueo } from '../../lib/matricula';
 import { mensajeDeModalidad } from '../../lib/modalidades';
@@ -165,7 +166,18 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
       pacientes = data ?? [];
     }
 
+    // Cómo ordena esta Prestadora la lista. Es una fila —el perfil que eligió y lo que corrió
+    // respecto de él— y puede no existir: una Prestadora que nunca entró a esa pantalla trabaja
+    // con los valores de fábrica, que es exactamente lo que devuelve `pesosYTopesDe` con la mano
+    // vacía. Que falle tampoco puede dejar sin pantalla a quien está tapando un hueco: se sigue
+    // con los de fábrica.
+    const { data: filaCalculo } = await supabase
+      .from('configuracion_calculo_candidatos')
+      .select('perfil, pesos, topes')
+      .maybeSingle();
+
     setDatos({
+      calculo: pesosYTopesDe(filaCalculo),
       asistentes: asistentes ?? [],
       guardias: (gs.data ?? []).map((g) => ({ ...g, paciente_ids: pacientesDeGuardia(g, pacientesPorGuardia) })),
       ausencias: au.data ?? [],
@@ -201,7 +213,7 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
 
   const candidatos = useMemo(() => {
     if (!datos || !guardia) return [];
-    return candidatosParaGuardia(guardia, datos);
+    return candidatosParaGuardia(guardia, datos, datos.calculo);
   }, [datos, guardia]);
 
   const ofertas = datos?.ofertas ?? [];
@@ -220,7 +232,7 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
      un hueco con el reloj en contra. Si hay algo, se muestra y se pregunta. El aviso nunca
      impide asignar: la Coordinadora sabe cosas que la base no sabe. */
   function pedirAsignar(asistenteId) {
-    const avisos = avisosDeAsignacion(guardia, asistenteId, datos ?? {});
+    const avisos = avisosDeAsignacion(guardia, asistenteId, datos ?? {}, datos?.calculo);
     if (avisos.length === 0) {
       asignarDirecto(asistenteId);
       return;

@@ -9,6 +9,12 @@ import { avisoDelCatalogo, mezclarAvisosConCatalogo, sePuedeApagar, VALORES_POR_
 import { cosaDelCatalogo, mezclarVisibilidadConCatalogo } from '../utils/catalogoVisibilidad.js';
 import { LIMITES_ALERTAS_IA, VALORES_POR_DEFECTO_ALERTAS_IA } from '../utils/revisarAlertasIA.js';
 import { validarUmbralesPremura } from '../utils/umbralesPremura.js';
+import {
+  PERFIL_POR_DEFECTO,
+  pesosYTopesDe,
+  revisarCambios,
+  soloLoQueCorreDelPerfil,
+} from '../utils/perfilesDeCandidatos.js';
 import { darDeAltaEnMeta, traerEstadosDeMeta } from '../utils/plantillasWhatsapp.js';
 import { redactarPlantillaWhatsapp, corregirPlantillaWhatsapp } from '../utils/iaPlantillasWhatsapp.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
@@ -463,6 +469,61 @@ panelConfiguracionRouter.patch('/visibilidad-app/:clave', async (req, res) => {
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'prestadora_id,clave' }
+  );
+  if (error) return responderError(res, error);
+  res.json({ ok: true });
+});
+
+// --- Cómo se ordena la lista de candidatos para un hueco. Tres formas armadas y, para quien
+//     quiera, el detalle abierto número por número. Las tres formas, los valores de fábrica y el
+//     borde de cada número están en utils/perfilesDeCandidatos.js, que es copia del original del
+//     Panel: así el motor comprueba contra la misma lista con la que el Panel dibuja la pantalla.
+//
+//     Se guarda solamente lo que corre respecto del perfil elegido, nunca la tabla entera:
+//     guardar los cuarenta números congelaría los valores de fábrica apenas alguien abriera la
+//     pantalla y le diera a guardar sin tocar nada. ---
+panelConfiguracionRouter.get('/calculo-candidatos', async (req, res) => {
+  const { data, error } = await supabase
+    .from('configuracion_calculo_candidatos')
+    .select('perfil, pesos, topes')
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .maybeSingle();
+  if (error) return responderError(res, error);
+
+  // La fila puede no existir —una Prestadora que nunca entró acá—, y eso no es un error: es la
+  // configuración de fábrica. La pantalla necesita las tres capas para poder mostrar cada número
+  // con su valor efectivo y saber cuáles fueron corridos a mano.
+  const guardado = data ?? { perfil: PERFIL_POR_DEFECTO, pesos: {}, topes: {} };
+  const efectivo = pesosYTopesDe(guardado);
+  res.json({
+    configuracion: {
+      perfil: efectivo.perfil,
+      pesos: efectivo.pesos,
+      topes: efectivo.topes,
+      corridos: { pesos: guardado.pesos ?? {}, topes: guardado.topes ?? {} },
+    },
+  });
+});
+
+panelConfiguracionRouter.put('/calculo-candidatos', async (req, res) => {
+  const { perfil, pesos, topes } = req.body || {};
+
+  // Llega la tabla completa desde la pantalla; acá se queda solamente lo que difiere del perfil.
+  const corridos = soloLoQueCorreDelPerfil(perfil, pesos, topes);
+  const revision = revisarCambios(perfil, corridos.pesos, corridos.topes);
+  if (!revision.ok) {
+    return res.status(400).json({ error: `El valor de «${revision.clave}» está fuera de lo permitido` });
+  }
+
+  const { error } = await supabase.from('configuracion_calculo_candidatos').upsert(
+    {
+      prestadora_id: req.usuarioPanel.prestadoraId,
+      perfil: perfil ?? PERFIL_POR_DEFECTO,
+      pesos: corridos.pesos,
+      topes: corridos.topes,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'prestadora_id' }
   );
   if (error) return responderError(res, error);
   res.json({ ok: true });

@@ -1,10 +1,10 @@
 # PLAN_CONTINUIDAD_PROVEEDORES.md — Resguardos ante caída o salida de un proveedor
 
-> Origen: pendiente #15 de `docs/PLAN_HASTA_PRODUCCION.md` (inventario de dependencia de un solo
-> proveedor — Supabase/Railway/Cloudflare Pages/Resend/GitHub). Este documento cubre los puntos 1 a 4
-> del roadmap acordado con el Desarrollador el 2026-07-13 (de lo simple/prioritario a lo
-> complejo/no prioritario). El punto 5 (mirror en caliente de Supabase Auth) queda fuera de
-> este documento — se discute aparte, por separado, y no está recomendado (ver cierre).
+> Origen: la sección «Respaldo, continuidad y secretos» de `docs/PLAN_HASTA_PRODUCCION.md`
+> (inventario de dependencia de un solo proveedor — Supabase/Railway/Cloudflare Pages/Resend/GitHub).
+> Este documento cubre los cuatro primeros puntos de ese recorrido, de lo simple y prioritario a lo
+> complejo y no prioritario. El quinto —copia en caliente del servicio de identidad— queda afuera:
+> se discute aparte y no está recomendado (ver cierre).
 
 ## Punto 2 — Prueba real de restauración de backup (hecha y verificada 2026-07-13)
 

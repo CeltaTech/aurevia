@@ -87,12 +87,11 @@ referencia de una caja de `vault`, y adentro de esa caja está el texto cifrado.
 |---|---|---|
 | `pasarela_<proveedor>_<prestadora>` | La credencial con la que esa Prestadora cobra por esa pasarela | `guardar_credencial_pasarela_pago` / `leer_credencial_pasarela_pago` |
 | `pasarela_firma_<proveedor>_<prestadora>` | El secreto con el que esa pasarela firma sus avisos de cobro | `guardar_secreto_firma_pasarela_pago` / `leer_secreto_firma_pasarela_pago` |
-| `smtp_credencial_<prestadora>` | La contraseña de la casilla propia de la Prestadora | Las de `20260819160000_foto_de_la_base.sql` |
-| `whatsapp_token_<prestadora>` | El token con el que manda mensajes por WhatsApp | ídem |
+| `whatsapp_token_<prestadora>` | El token con el que manda mensajes por WhatsApp | `guardar_token_whatsapp` / `leer_token_whatsapp` |
 | `whatsapp_app_secret_<prestadora>` | Con qué se comprueba la firma de lo que llega de Meta | `guardar_app_secret_whatsapp` / `leer_app_secret_whatsapp` |
 | `whatsapp_verify_token_<prestadora>` | Con qué se contesta el saludo de enganche de Meta | `guardar_verify_token_whatsapp` / `leer_verify_token_whatsapp` |
 
-**Las doce funciones son `SECURITY DEFINER` y sólo las alcanza `service_role`**, o sea el motor.
+**Las diez funciones son `SECURITY DEFINER` y sólo las alcanza `service_role`**, o sea el motor.
 Ni el Superadmin ni el Admin de la propia Prestadora llegan al texto. Rotar uno de estos secretos
 no es trabajo de CeltaTech: la Prestadora lo vuelve a cargar desde Configuración, y el cambio
 reemplaza el contenido de la caja en vez de abrir otra.

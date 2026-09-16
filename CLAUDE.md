@@ -71,9 +71,10 @@ IndexedDB, prefijo de respaldo, clave de entitlement— usa `IDENTIDAD.codigo`. 
 cinco veces, una por unidad desplegable, y `scripts/verificar_identidad.mjs` corta el push si las
 cinco no coinciden o si el nombre está escrito a mano.
 
-**El `codigo: 'aurevia'` no se renombra.** Es identificador guardado, no marca. Está adentro de
-datos que ya existen y de las claves de entitlement que se arman con él
-(`aurevia.pacientes.activos_max`). Ver la excepción del glosario, §4.
+**El `codigo: 'aurevia'` no se toca por ahora.** Es identificador guardado, no marca: con él se
+arman las claves de entitlement (`aurevia.pacientes.activos_max`), la base local del teléfono y el
+prefijo de los respaldos. **Cambiarlo se evalúa en el momento de la fusión con el Marketplace**, y
+hasta entonces queda como está. Ver la excepción del glosario, §4.
 
 **Dónde vive la marca de la Prestadora.** En las dos aplicaciones, `src/context/PerfilContext.jsx`
 la pide una vez a `/perfil` y la entrega con `useMarca()` (`nombre`, `logoUrl`,

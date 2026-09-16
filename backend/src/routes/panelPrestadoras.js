@@ -6,7 +6,7 @@ import { esDireccionDeCorreo, direccionDeEnvioDe } from '../utils/email.js';
 import { crearCuentaConPerfil } from '../utils/cuentasPanel.js';
 import { elegirCasillaDeEnvio } from '../utils/casillaDeEnvio.js';
 import {
-  abrirReenvioDeRespuestas,
+  apuntarReenvioDeRespuestas,
   cortarReenvioDeRespuestas,
   respuestasConfirmadas,
 } from '../utils/reenvioDeRespuestas.js';
@@ -223,23 +223,11 @@ panelPrestadorasRouter.post('/', requiereRolPanel, requiereSuperadmin, async (re
   // Si no se pudo abrir, la Prestadora entra igual: manda sus avisos y lo único que falta es que
   // las respuestas vuelvan. Eso se avisa en el Panel, nunca por correo.
   const direccionEnvio = await direccionDeEnvioDe(prestadora.id);
-  const regla = await abrirReenvioDeRespuestas({
+  const regla = await apuntarReenvioDeRespuestas({
+    prestadoraId: prestadora.id,
     direccionDeEnvio: direccionEnvio,
     emailRespuestas,
   });
-
-  if (regla) {
-    const { error: errorRegla } = await supabase
-      .from('prestadoras')
-      .update({ regla_reenvio: regla })
-      .eq('id', prestadora.id);
-
-    // El reenvío quedó abierto y el motor no sabe con qué cortarlo. Se avisa acá y no se deshace
-    // nada: las respuestas están llegando, que es lo que la Prestadora necesita.
-    if (errorRegla) {
-      console.error('Quedó un reenvío abierto sin anotar en la Prestadora:', errorRegla.message);
-    }
-  }
 
   // El acceso del administrador. A diferencia de la casilla, esto no admite quedar a medias: una
   // Prestadora sin administrador no tiene quién entre a configurarla, así que si falla se

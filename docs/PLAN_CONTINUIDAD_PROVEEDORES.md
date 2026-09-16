@@ -184,9 +184,9 @@ mientras el motor corra en Railway.**
    credencial del despachante, `crearTransporterPara` arma un transporte de Nodemailer contra
    `smtp.gmail.com` con `SMTP_USER` y `SMTP_PASSWORD`, resolviendo a mano una IPv4 porque la
    salida IPv6 de Railway da `ENETUNREACH` y Nodemailer elige entre las dos familias al azar.
-   Ahí adentro también quedó la vía por casilla propia de cada Prestadora
-   (`configuracion_email_prestadora`, `leer_credencial_smtp_prestadora`), que no usa ninguna:
-   sale por SMTP, así que está igual de bloqueada.
+   **Y no hay un tercer camino.** Cada Prestadora tuvo alguna vez su propio servidor de correo
+   con su contraseña; se retiró junto con la pantalla que lo pedía, porque sale por SMTP y esos
+   puertos están bloqueados: no podía andar en producción para ninguna.
 3. **Alternativas equivalentes:** cualquier despachante que hable por el puerto 443 —Amazon
    SES, Postmark, Cloudflare Email Service, la API de Gmail—. **Amazon SES es la salida
    pensada para cuando el plan gratuito quede chico**, porque cobra por correo mandado y no

@@ -12,6 +12,12 @@ import { validarUmbralesPremura } from '../utils/umbralesPremura.js';
 import { darDeAltaEnMeta, traerEstadosDeMeta } from '../utils/plantillasWhatsapp.js';
 import { redactarPlantillaWhatsapp, corregirPlantillaWhatsapp } from '../utils/iaPlantillasWhatsapp.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
+import { direccionDeEnvioDe, esDireccionDeCorreo } from '../utils/email.js';
+import {
+  apuntarReenvioDeRespuestas,
+  hayReenvioConfigurado,
+  respuestasConfirmadas,
+} from '../utils/reenvioDeRespuestas.js';
 import { LIMITES_AVISO_PREVIO_GUARDIA } from '../utils/revisarRecordatoriosPush.js';
 import { METROS_TOLERANCIA_POR_OMISION, MINUTOS_TOLERANCIA_POR_OMISION } from '../utils/toleranciaCheckin.js';
 import {
@@ -562,59 +568,94 @@ panelConfiguracionRouter.patch('/whatsapp', soloAdminDePrestadora, async (req, r
   res.json({ ok: true });
 });
 
-// --- Email: remitente SMTP propio por Prestadora (pendiente #18 candidato 8, Supabase
-//     Vault, mismo patrón que /whatsapp — la contraseña nunca vuelve a mostrarse en el
-//     Panel una vez guardada) ---
+// --- El correo de esta Prestadora: desde dónde sale y adónde vuelven las respuestas ---
 //
-// Y por ser el mismo patrón que WhatsApp, lleva el mismo candado angosto: la contraseña del
-// correo saliente es la clave con la que la Prestadora habla con su proveedor de correo, así
-// que Superadmin queda afuera de leerla y de reemplazarla. El texto del error es propio, porque
-// quien recibe la negativa tiene que entender qué le negaron.
-const soloAdminDePrestadoraCorreo = exigirAdminDePrestadora(
-  'La contraseña del correo saliente es de la Prestadora: solo Admin puede verla y cambiarla'
-);
+// Acá no se pide ningún servidor de correo ni ninguna contraseña, y no es un olvido. Cada
+// Prestadora manda desde una dirección propia bajo el dominio del producto, que le fija el alta
+// (`utils/casillaDeEnvio.js`) y que despacha el mismo servicio para todas. Lo único que la
+// Prestadora elige es **adónde quiere que le lleguen las respuestas**, porque esa dirección sólo
+// manda: quien le conteste un aviso le estaría escribiendo a un buzón que no existe
+// (`utils/reenvioDeRespuestas.js`).
+//
+// Y por eso tampoco lleva el candado angosto que llevaba la contraseña: la casilla de respuestas
+// no es un secreto, es el mismo `configuracion_prestadora.email` que ya se edita desde la
+// pantalla de datos de la empresa. Dos puertas sobre el mismo dato con cerraduras distintas es
+// una sola puerta mal cerrada.
 
-panelConfiguracionRouter.get('/email-remitente', soloAdminDePrestadoraCorreo, async (req, res) => {
-  const prestadoraId = req.usuarioPanel.prestadoraId;
-  const { data, error } = await supabase
-    .from('configuracion_email_prestadora')
-    .select('prestadora_id, activo, direccion_remitente, usuario_smtp, host, puerto, verificado_at, updated_at, credencial_secret_id')
+// Lo que la pantalla necesita saber para explicar en qué estado está el correo de esta
+// Prestadora. Son cuatro cosas distintas y ninguna se deduce de otra, así que se arman juntas y
+// las devuelven tanto la lectura como el guardado.
+async function estadoDelCorreoDe(prestadoraId) {
+  const { data } = await supabase
+    .from('configuracion_prestadora')
+    .select('email')
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
-  if (error) return responderError(res, error);
-  res.json({
-    emailRemitente: data
-      ? { ...data, credencial_cargada: !!data.credencial_secret_id, credencial_secret_id: undefined }
-      : { prestadora_id: prestadoraId, activo: false, direccion_remitente: null, usuario_smtp: null, host: 'smtp.gmail.com', puerto: 465, verificado_at: null, credencial_cargada: false },
-  });
+
+  const { data: prestadora } = await supabase
+    .from('prestadoras')
+    .select('regla_reenvio')
+    .eq('id', prestadoraId)
+    .maybeSingle();
+
+  const emailRespuestas = data?.email ?? null;
+
+  return {
+    // Nula significa que esta Prestadora no tiene dirección propia y manda desde la común del
+    // producto. Pasa con las que se dieron de alta antes de que existiera la casilla propia.
+    direccion_envio: await direccionDeEnvioDe(prestadoraId),
+    email_respuestas: emailRespuestas,
+    reenvio_abierto: Boolean(prestadora?.regla_reenvio),
+    // Se pregunta en el momento: el clic con el que se confirma la casilla lo da una persona
+    // cuando quiere, así que un valor guardado diría «sin confirmar» para siempre.
+    respuestas_confirmadas: await respuestasConfirmadas(emailRespuestas),
+    // Sin el servicio configurado no hay reenvío posible, y la pantalla lo dice en vez de
+    // mostrar un reenvío cerrado como si fuera una falla de esta Prestadora.
+    servicio_configurado: hayReenvioConfigurado(),
+  };
+}
+
+panelConfiguracionRouter.get('/correo', async (req, res) => {
+  try {
+    res.json({ correo: await estadoDelCorreoDe(req.usuarioPanel.prestadoraId) });
+  } catch (error) {
+    responderError(res, error);
+  }
 });
 
-panelConfiguracionRouter.patch('/email-remitente', soloAdminDePrestadoraCorreo, async (req, res) => {
-  const { activo, direccion_remitente, usuario_smtp, host, puerto, password } = req.body;
+panelConfiguracionRouter.patch('/correo', async (req, res) => {
+  const { email_respuestas: emailRespuestas } = req.body;
   const prestadoraId = req.usuarioPanel.prestadoraId;
 
-  const { error } = await supabase
-    .from('configuracion_email_prestadora')
-    .upsert({
-      prestadora_id: prestadoraId,
-      activo,
-      direccion_remitente,
-      usuario_smtp,
-      host: host || 'smtp.gmail.com',
-      puerto: puerto || 465,
-      updated_at: new Date().toISOString(),
-    });
-  if (error) return responderError(res, error);
-
-  if (password) {
-    const { error: errorPassword } = await supabase.rpc('guardar_credencial_smtp_prestadora', {
-      p_prestadora_id: prestadoraId,
-      p_password: password,
-    });
-    if (errorPassword) return responderError(res, errorPassword);
+  if (!esDireccionDeCorreo(emailRespuestas)) {
+    // Mismo motivo que la casilla mal escrita en el alta: es el mismo dato y se arregla igual.
+    return responderError(res, new ErrorConMotivo('correo_invalido'));
   }
 
-  res.json({ ok: true });
+  const { data, error } = await supabase
+    .from('configuracion_prestadora')
+    .update({ email: emailRespuestas, updated_at: new Date().toISOString() })
+    .eq('prestadora_id', prestadoraId)
+    .select('prestadora_id');
+  if (error) return responderError(res, error);
+  if (!data?.length) return res.status(404).json({ error: 'Esta Prestadora todavía no tiene configuración cargada' });
+
+  // El reenvío tiene que seguir a la casilla. Si se guardara la casilla nueva sin mover el
+  // reenvío, las respuestas seguirían yendo a la vieja y nadie se enteraría.
+  const { data: prestadora } = await supabase
+    .from('prestadoras')
+    .select('regla_reenvio')
+    .eq('id', prestadoraId)
+    .maybeSingle();
+
+  await apuntarReenvioDeRespuestas({
+    prestadoraId,
+    direccionDeEnvio: await direccionDeEnvioDe(prestadoraId),
+    emailRespuestas,
+    reglaAnterior: prestadora?.regla_reenvio ?? null,
+  });
+
+  res.json({ correo: await estadoDelCorreoDe(prestadoraId) });
 });
 
 // --- WhatsApp: plantillas de mensaje (requieren aprobación de Meta antes de poder

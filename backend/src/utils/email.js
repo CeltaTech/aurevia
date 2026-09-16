@@ -148,48 +148,24 @@ export async function direccionDeEnvioDe(prestadoraId) {
   return data?.casilla_envio ? `${data.casilla_envio}@${dominio}` : null;
 }
 
-// Pendiente #18 (docs/PLAN_HASTA_PRODUCCION.md), candidato 8 — cada Prestadora puede configurar sus
-// propias credenciales SMTP (configuracion_email_prestadora, backend/src/db/
-// schema_email_remitente_prestadora_01.sql), en vez de mandar siempre "desde" la cuenta
-// compartida de CeltaTech. Si la Prestadora no configuró remitente propio (o no está activo),
-// se sigue usando el transporter compartido — sin romper nada para las que no lo configuren.
+// Por dónde sale el correo de una Prestadora.
+//
+// Hay un solo camino de verdad: el despachante, que habla por el puerto 443 —el único que el
+// servidor deja salir— y despacha para todas. Lo propio de cada Prestadora no es el servidor
+// sino la **dirección**: la suya, bajo el dominio del producto, que le fija el alta
+// (`utils/casillaDeEnvio.js`). Si no tiene ninguna, manda desde la dirección común.
+//
+// El otro camino es la salida por SMTP de la máquina de desarrollo, que existe para poder
+// probar sin despachante y en ningún otro lado funciona.
+//
+// Y no hay un tercero. Cada Prestadora tuvo alguna vez su propio servidor de correo con su
+// contraseña; se retiró junto con la pantalla que lo pedía, porque sale por SMTP y en el
+// servidor esos puertos están bloqueados: no podía andar en producción para ninguna.
 async function crearTransporterPara(prestadoraId) {
   const clave = credencialDelDespachante();
   if (clave && direccionRemitente()) {
-    // La casilla SMTP propia por Prestadora no se consulta en este camino, y es a propósito:
-    // sale por SMTP, así que está tan bloqueada como cualquier otra. Lo que sí se usa es la
-    // dirección propia de esa Prestadora bajo el dominio del producto, que despacha el mismo
-    // despachante. Si no tiene ninguna, manda desde la dirección común.
     const propia = await direccionDeEnvioDe(prestadoraId);
     return { transporter: transporteDelDespachante(clave), from: propia || direccionRemitente() };
-  }
-
-  if (prestadoraId) {
-    const { data } = await supabase
-      .from('configuracion_email_prestadora')
-      .select('activo, usuario_smtp, direccion_remitente, host, puerto, credencial_secret_id')
-      .eq('prestadora_id', prestadoraId)
-      .maybeSingle();
-
-    if (data?.activo && data.credencial_secret_id) {
-      const { data: password } = await supabase.rpc('leer_credencial_smtp_prestadora', {
-        p_prestadora_id: prestadoraId,
-      });
-      if (password) {
-        return {
-          transporter: nodemailer.createTransport({
-            host: data.host,
-            port: data.puerto,
-            secure: data.puerto === 465,
-            auth: {
-              user: data.usuario_smtp || data.direccion_remitente,
-              pass: password,
-            },
-          }),
-          from: data.direccion_remitente || data.usuario_smtp,
-        };
-      }
-    }
   }
 
   return { transporter: await crearTransporterCompartido(), from: process.env.SMTP_USER };

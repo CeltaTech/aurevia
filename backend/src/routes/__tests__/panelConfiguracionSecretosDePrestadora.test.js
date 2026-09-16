@@ -6,14 +6,14 @@
  * POR QUÉ EXISTE ESTA PRUEBA. Las rutas de Configuración estaban detrás del candado de la
  * administración, que deja pasar a Admin_prestadora **y a Superadmin**. Para casi toda la
  * configuración está bien: Superadmin es quien da soporte. Para un puñado no: son las claves con
- * las que esta Prestadora habla con un tercero —Meta, en WhatsApp; su proveedor de correo, en el
- * remitente saliente—, y Superadmin es un rol técnico de CeltaTech, no de la Prestadora. La
- * sesión de soporte técnico tampoco lo habilita — existe para mirar los datos de una Organización
- * por vez y queda auditada, no para alcanzar sus credenciales.
+ * las que esta Prestadora habla con un tercero —hoy Meta, en WhatsApp—, y Superadmin es un rol
+ * técnico de CeltaTech, no de la Prestadora. La sesión de soporte técnico tampoco lo habilita —
+ * existe para mirar los datos de una Organización por vez y queda auditada, no para alcanzar sus
+ * credenciales.
  *
- * Los dos casos se prueban juntos y con la misma lista porque son la misma regla: donde hay un
- * secreto de la Prestadora, Superadmin queda afuera. Partirlos en dos archivos haría que el
- * siguiente secreto que aparezca se agregue en uno solo.
+ * Todos los secretos se prueban juntos y con la misma lista porque son la misma regla: donde hay
+ * un secreto de la Prestadora, Superadmin queda afuera. Partirlos en un archivo por secreto haría
+ * que el siguiente que aparezca se agregue en uno solo.
  *
  * Lo que se prueba no es la función del candado —eso sería probar una comparación—, sino el
  * camino entero: se levanta el motor de verdad contra una base de mentira, se entra con cada rol
@@ -134,8 +134,6 @@ const RASTROS_DE_LOS_SECRETOS = [
   'rpc/guardar_app_secret_whatsapp',
   'rpc/guardar_verify_token_whatsapp',
   'rpc/leer_token_whatsapp',
-  'configuracion_email_prestadora',
-  'rpc/guardar_credencial_smtp_prestadora',
 ];
 
 function noTocoLosSecretos() {
@@ -164,22 +162,6 @@ function prepararLosSecretos() {
   respuestas.set('POST /rest/v1/rpc/guardar_token_whatsapp', () => null);
   respuestas.set('POST /rest/v1/rpc/guardar_app_secret_whatsapp', () => null);
   respuestas.set('POST /rest/v1/rpc/guardar_verify_token_whatsapp', () => null);
-
-  respuestas.set('GET /rest/v1/configuracion_email_prestadora', () => [
-    {
-      prestadora_id: PRESTADORA,
-      activo: true,
-      direccion_remitente: 'avisos@dominio-de-mentira.test',
-      usuario_smtp: 'avisos@dominio-de-mentira.test',
-      host: 'smtp.gmail.com',
-      puerto: 465,
-      verificado_at: null,
-      updated_at: new Date().toISOString(),
-      credencial_secret_id: 'eeeeeeee-0000-4000-8000-000000000000',
-    },
-  ]);
-  respuestas.set('POST /rest/v1/configuracion_email_prestadora', () => []);
-  respuestas.set('POST /rest/v1/rpc/guardar_credencial_smtp_prestadora', () => null);
 }
 
 const CAMBIO_WHATSAPP = {
@@ -192,15 +174,6 @@ const CAMBIO_WHATSAPP = {
   verify_token: 'un-token-de-saludo-de-mentira',
 };
 
-const CAMBIO_EMAIL = {
-  activo: true,
-  direccion_remitente: 'avisos@dominio-de-mentira.test',
-  usuario_smtp: 'avisos@dominio-de-mentira.test',
-  host: 'smtp.gmail.com',
-  puerto: 465,
-  password: 'una-contrasena-de-mentira',
-};
-
 /**
  * Las rutas que tocan un secreto de la Prestadora, cada una con qué tiene que decir su negativa.
  * Cuando aparezca el próximo secreto, se agrega acá y queda cubierto por todo lo de abajo.
@@ -208,8 +181,6 @@ const CAMBIO_EMAIL = {
 const RUTAS_DE_LOS_SECRETOS = [
   ['GET', '/whatsapp', undefined, /credenciales de WhatsApp/i],
   ['PATCH', '/whatsapp', CAMBIO_WHATSAPP, /credenciales de WhatsApp/i],
-  ['GET', '/email-remitente', undefined, /correo saliente/i],
-  ['PATCH', '/email-remitente', CAMBIO_EMAIL, /correo saliente/i],
 ];
 
 // ---------------------------------------------------------------------------------------
@@ -230,7 +201,7 @@ describe('Superadmin no llega a los secretos de una Prestadora', () => {
       assert.match(respuesta.error, mensajeEsperado);
       assert.doesNotMatch(
         respuesta.error,
-        /configuracion_whatsapp|configuracion_email|select|column|relation|vault/i
+        /configuracion_whatsapp|select|column|relation|vault/i
       );
       noTocoLosSecretos();
     });
@@ -245,17 +216,6 @@ describe('Superadmin no llega a los secretos de una Prestadora', () => {
     const { cuerpo } = await pedir('GET', '/whatsapp');
     assert.deepEqual(Object.keys(cuerpo), ['error']);
     assert.equal(cuerpo.whatsapp, undefined);
-  });
-
-  it('ni de si hay contraseña de correo cargada', async () => {
-    rolDelUsuario = 'superadmin';
-    prestadoraDelUsuario = null;
-    sesionDeSoporteAbierta = true;
-    prepararLosSecretos();
-
-    const { cuerpo } = await pedir('GET', '/email-remitente');
-    assert.deepEqual(Object.keys(cuerpo), ['error']);
-    assert.equal(cuerpo.emailRemitente, undefined);
   });
 
   it('y el resto de la configuración le sigue quedando abierto', async () => {
@@ -319,33 +279,5 @@ describe('Admin_prestadora sí llega a los secretos de su Prestadora', () => {
       assert.ok(guardado, `no se llamó a ${funcion}`);
       assert.equal(guardado.cuerpo.p_prestadora_id, PRESTADORA);
     }
-  });
-
-  it('lee el remitente de correo, y la contraseña no viaja: sólo si está cargada', async () => {
-    prepararLosSecretos();
-
-    const { estado, cuerpo } = await pedir('GET', '/email-remitente');
-    assert.equal(estado, 200);
-    assert.equal(cuerpo.emailRemitente.credencial_cargada, true);
-    assert.equal(cuerpo.emailRemitente.credencial_secret_id, undefined);
-    assert.equal(JSON.stringify(cuerpo).includes('eeeeeeee-0000-4000-8000-000000000000'), false);
-  });
-
-  it('la lectura del remitente también va acotada a su propia Prestadora', async () => {
-    prepararLosSecretos();
-    await pedir('GET', '/email-remitente');
-    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/configuracion_email_prestadora');
-    assert.ok(busqueda.url.includes(`prestadora_id=eq.${PRESTADORA}`));
-  });
-
-  it('guarda la contraseña del correo en la caja fuerte, por su función', async () => {
-    prepararLosSecretos();
-
-    const { estado } = await pedir('PATCH', '/email-remitente', CAMBIO_EMAIL);
-    assert.equal(estado, 200);
-
-    const guardado = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/guardar_credencial_smtp_prestadora');
-    assert.ok(guardado, 'no se llamó a guardar_credencial_smtp_prestadora');
-    assert.equal(guardado.cuerpo.p_prestadora_id, PRESTADORA);
   });
 });

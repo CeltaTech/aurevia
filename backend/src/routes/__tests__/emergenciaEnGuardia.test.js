@@ -276,23 +276,25 @@ describe('avisar una emergencia desde la guardia', () => {
     // El acto de quien reportó ya está hecho: devolverle un error lo dejaría creyendo que no avisó,
     // y además cortaría la cola sin conexión entera, que es peor todavía.
     //
-    // Se rompe el envío de verdad, no un paso de adorno: la Prestadora tiene servidor de correo
-    // propio configurado y ese servidor no contesta. La dirección es local y el puerto está
-    // cerrado, así que la conexión se rechaza en el momento y la prueba no sale a la red.
-    process.env.SMTP_USER = 'avisos@ejemplo.test';
+    // Se rompe el envío de verdad, no un paso de adorno: el correo sale por el despachante, que
+    // es el camino que usa el servidor, y el despachante no contesta. Se corta acá mismo, así
+    // que la prueba no sale a la red.
+    process.env.RESEND_API_KEY = 'clave-de-mentira';
+    process.env.REMITENTE_AVISOS = 'avisos@ejemplo.test';
+    const fetchDeVerdad = globalThis.fetch;
+    globalThis.fetch = async (direccion, opciones) => {
+      if (String(direccion).startsWith('https://api.resend.com/')) {
+        throw new Error('el despachante no contesta');
+      }
+      return fetchDeVerdad(direccion, opciones);
+    };
     respuestas.set('GET /rest/v1/configuracion_notificaciones', () => [
       { emails: ['coordinacion@ejemplo.test'], activo: true, whatsapp_activo: false },
     ]);
-    respuestas.set('GET /rest/v1/configuracion_email_prestadora', () => [
-      {
-        activo: true,
-        credencial_secret_id: 'una-referencia',
-        host: '127.0.0.1',
-        puerto: 1,
-        direccion_remitente: 'avisos@ejemplo.test',
-      },
+    respuestas.set('GET /rest/v1/prestadoras', () => [
+      { casilla_envio: null, nombre_fantasia: null, logo_url: null },
     ]);
-    respuestas.set('POST /rest/v1/rpc/leer_credencial_smtp_prestadora', () => 'clave-de-mentira');
+    respuestas.set('GET /rest/v1/configuracion_prestadora', () => [{ email: 'contacto@ejemplo.test' }]);
 
     try {
       const { estado, cuerpo } = await desdeElTelefono(GUARDIA, { detalle: DETALLE });
@@ -302,7 +304,9 @@ describe('avisar una emergencia desde la guardia', () => {
       // Y queda sin marca de notificada, que es lo que la deja al alcance de un reintento.
       assert.equal(llamadas.filter((l) => l.clave === 'PATCH /rest/v1/emergencias_guardia').length, 0);
     } finally {
-      delete process.env.SMTP_USER;
+      globalThis.fetch = fetchDeVerdad;
+      delete process.env.RESEND_API_KEY;
+      delete process.env.REMITENTE_AVISOS;
     }
   });
 

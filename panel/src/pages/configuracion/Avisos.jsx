@@ -216,7 +216,7 @@ function TabNotificaciones() {
       <TabAvisoCese />
       <TabAvisoGuardiaSinCubrir />
       <TabAvisoPrevioGuardia />
-      <TabEmailRemitente />
+      <TabCorreoDeLaPrestadora />
     </>
   );
 }
@@ -406,36 +406,26 @@ function TabAlertasIA() {
   );
 }
 
-/* La casilla desde la que sale el correo de esta Prestadora, y su contraseña.
+/* Desde dónde manda esta Prestadora, y adónde vuelven las respuestas.
    ==========================================================================
 
-   Mismo criterio que las credenciales de WhatsApp, y por el mismo motivo: la contraseña del
-   correo saliente es la clave con la que esta Prestadora habla con su proveedor de correo, y
-   Superadmin es un rol técnico de CeltaTech. La sesión de soporte técnico tampoco lo habilita.
+   Acá no se pide ningún servidor de correo ni ninguna contraseña. Los avisos de todas las
+   Prestadoras salen por el mismo despachante, y lo propio de cada una es la dirección: la suya,
+   que le queda fijada cuando se la da de alta.
 
-   Quien decide de verdad es el motor (`backend/src/routes/panelConfiguracion.js`, las dos rutas
-   `/email-remitente`): escribiendo la dirección a mano se llega igual, y ahí se niega. Esto de
-   acá es para que no se le muestre a Superadmin un formulario que no va a poder guardar, y para
-   que entienda por qué no lo ve. */
-function TabEmailRemitente() {
+   Esa dirección **sólo manda**. Quien conteste un aviso le estaría escribiendo a un buzón que no
+   existe, así que lo que entra ahí se reenvía a la casilla que se elige en este formulario, y es
+   lo único que hay para elegir.
+
+   Las dos cosas que pueden haber salido mal se dicen acá y nunca por correo, porque lo que falló
+   es justamente el correo: que esta Prestadora no tenga dirección propia —y entonces manda desde
+   la común—, y que el reenvío no esté abierto —y entonces las respuestas se pierden—. Hay una
+   tercera que no es una falla y se parece: que la casilla exista y todavía le falte el clic con
+   el que su dueño confirma que acepta recibir ahí. */
+function TabCorreoDeLaPrestadora() {
   const { t } = useLocale();
-  const { usuario } = useAuth();
-
-  if (!esAdminDePrestadora(usuario?.rol)) {
-    return (
-      <div>
-        <h2>{t.configuracion.email_remitente_titulo}</h2>
-        <Alert variant="info">{t.configuracion.email_remitente_solo_admin}</Alert>
-      </div>
-    );
-  }
-  return <TabEmailRemitenteCredenciales />;
-}
-
-function TabEmailRemitenteCredenciales() {
-  const { t } = useLocale();
-  const [form, setForm] = useState(null);
-  const [password, setPassword] = useState('');
+  const [correo, setCorreo] = useState(null);
+  const [casilla, setCasilla] = useState('');
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
@@ -445,8 +435,9 @@ function TabEmailRemitenteCredenciales() {
     setEstado('cargando');
     setError(null);
     try {
-      const { emailRemitente } = await llamarApi('/email-remitente');
-      setForm(emailRemitente);
+      const { correo: leido } = await llamarApi('/correo');
+      setCorreo(leido);
+      setCasilla(leido?.email_respuestas || '');
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -458,29 +449,20 @@ function TabEmailRemitenteCredenciales() {
     recargar();
   }, [recargar]);
 
-  function set(campo, valor) {
-    setForm((f) => ({ ...f, [campo]: valor }));
-    setGuardado(false);
-  }
-
+  // El motor contesta el estado nuevo, así que no hace falta volver a preguntárselo: guardar la
+  // casilla mueve el reenvío, y lo que hay que mostrar después es cómo quedó ese movimiento.
   async function guardar() {
     setGuardando(true);
     setError(null);
+    setGuardado(false);
     try {
-      await llamarApi('/email-remitente', {
+      const { correo: comoQuedo } = await llamarApi('/correo', {
         method: 'PATCH',
-        body: JSON.stringify({
-          activo: form.activo,
-          direccion_remitente: form.direccion_remitente,
-          usuario_smtp: form.usuario_smtp,
-          host: form.host,
-          puerto: form.puerto,
-          password: password || undefined,
-        }),
+        body: JSON.stringify({ email_respuestas: casilla.trim() }),
       });
-      setPassword('');
+      setCorreo(comoQuedo);
+      setCasilla(comoQuedo?.email_respuestas || '');
       setGuardado(true);
-      recargar();
     } catch (err) {
       setError(mensajeDeError(err, t));
     } finally {
@@ -490,32 +472,50 @@ function TabEmailRemitenteCredenciales() {
 
   return (
     <div>
-      <h2>{t.configuracion.email_remitente_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.email_remitente_explicacion}</p>
+      <h2>{t.configuracion.correo_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.correo_explicacion}</p>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
-        {form && (
+        {correo && (
           <div>
             {error && <Alert variant="error">{error}</Alert>}
-            {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
+
+            <p>
+              <strong>{t.configuracion.correo_salen_desde}</strong>{' '}
+              {correo.direccion_envio || t.configuracion.correo_direccion_comun}
+            </p>
+            {!correo.direccion_envio && (
+              <Alert variant="warning">{t.configuracion.correo_sin_direccion_propia}</Alert>
+            )}
+
             <FormField
-              label={t.configuracion.email_remitente_activo}
-              name="activo"
-              type="checkbox"
-              checked={form.activo || false}
-              onChange={(e) => set('activo', e.target.checked)}
+              label={t.configuracion.correo_respuestas}
+              name="email_respuestas"
+              type="email"
+              value={casilla}
+              ayuda={t.configuracion.correo_respuestas_ayuda}
+              onChange={(e) => {
+                setCasilla(e.target.value);
+                setGuardado(false);
+              }}
             />
-            <FormField label={t.configuracion.email_remitente_direccion} name="direccion_remitente" value={form.direccion_remitente || ''} onChange={(e) => set('direccion_remitente', e.target.value)} />
-            <FormField label={t.configuracion.email_remitente_usuario_smtp} name="usuario_smtp" value={form.usuario_smtp || ''} onChange={(e) => set('usuario_smtp', e.target.value)} />
-            <FormField label={t.configuracion.email_remitente_host} name="host" value={form.host || ''} onChange={(e) => set('host', e.target.value)} />
-            <FormField label={t.configuracion.email_remitente_puerto} name="puerto" type="number" value={form.puerto || ''} onChange={(e) => set('puerto', Number(e.target.value))} />
-            <FormField
-              label={form.credencial_cargada ? t.configuracion.email_remitente_password_reemplazar : t.configuracion.email_remitente_password_cargar}
-              name="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+
+            {!correo.servicio_configurado && (
+              <Alert variant="warning">{t.configuracion.correo_servicio_sin_configurar}</Alert>
+            )}
+            {correo.servicio_configurado && !correo.reenvio_abierto && (
+              <Alert variant="error">{t.configuracion.correo_reenvio_cerrado}</Alert>
+            )}
+            {correo.servicio_configurado && correo.reenvio_abierto && !correo.respuestas_confirmadas && (
+              <Alert variant="warning">{t.configuracion.correo_falta_confirmar}</Alert>
+            )}
+            {correo.servicio_configurado && correo.reenvio_abierto && correo.respuestas_confirmadas && (
+              <Alert variant="info">{t.configuracion.correo_respuestas_llegan}</Alert>
+            )}
+
+            {guardado && <Alert variant="info">{t.configuracion.correo_guardado}</Alert>}
+            <Button onClick={guardar} disabled={guardando || !casilla.trim()}>
+              {guardando ? t.comun.guardando : t.comun.guardar}
+            </Button>
           </div>
         )}
       </EstadoLista>

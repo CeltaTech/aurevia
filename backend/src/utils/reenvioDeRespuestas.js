@@ -18,6 +18,8 @@
 // Prestadora se da de alta igual. Lo que pasa entonces es que las respuestas se pierden, y eso
 // se avisa en el Panel.
 
+import { supabase } from '../db/connection.js';
+
 // La dirección del servicio. Se puede apuntar a otro servidor para probar, igual que la de
 // geocodificación: vacía significa la de verdad.
 function api() {
@@ -119,6 +121,42 @@ export async function abrirReenvioDeRespuestas({ direccionDeEnvio, emailRespuest
     console.error('No se pudo abrir el reenvío de las respuestas:', error.message);
     return null;
   }
+}
+
+// Deja el reenvío de una Prestadora apuntando a la casilla que declaró, y lo anota en su fila,
+// que es con lo que después se lo corta. Pasa en dos momentos —cuando se la da de alta, y cuando
+// cambia su casilla desde el Panel— y por eso está escrito una sola vez.
+//
+// Cambiar de casilla no es agregar una: el reenvío anterior sigue mandando a la vieja si nadie
+// lo corta, así que primero se corta y después se abre el nuevo.
+//
+// Nunca falla hacia afuera. Devuelve el identificador de la regla nueva, o `null` si no se pudo
+// abrir; con `null` la Prestadora manda igual y lo único que se pierde son las respuestas, cosa
+// que se avisa en el Panel.
+export async function apuntarReenvioDeRespuestas({
+  prestadoraId,
+  direccionDeEnvio,
+  emailRespuestas,
+  reglaAnterior = null,
+}) {
+  if (reglaAnterior) await cortarReenvioDeRespuestas(reglaAnterior);
+
+  const regla = await abrirReenvioDeRespuestas({ direccionDeEnvio, emailRespuestas });
+
+  // Sin regla nueva y sin regla vieja no hay nada que anotar: escribir `null` sobre `null` sería
+  // un pedido a la base que no cambia nada.
+  if (prestadoraId && (regla || reglaAnterior)) {
+    const { error } = await supabase
+      .from('prestadoras')
+      .update({ regla_reenvio: regla ?? null })
+      .eq('id', prestadoraId);
+
+    // El reenvío quedó como tenía que quedar y el motor no sabe con qué cortarlo. Se avisa acá y
+    // no se deshace nada: las respuestas están llegando, que es lo que la Prestadora necesita.
+    if (error) console.error('Quedó un reenvío sin anotar en la Prestadora:', error.message);
+  }
+
+  return regla;
 }
 
 // Corta el reenvío. Se llama cuando la Prestadora se va, y también cuando un alta se deshace a

@@ -15,6 +15,11 @@ import {
   revisarCambios,
   soloLoQueCorreDelPerfil,
 } from '../utils/perfilesDeCandidatos.js';
+import {
+  reglaDeEquipoDe,
+  revisarRegla,
+  soloLoQueCorreDeLaRegla,
+} from '../utils/equipoDelPaciente.js';
 import { darDeAltaEnMeta, traerEstadosDeMeta } from '../utils/plantillasWhatsapp.js';
 import { redactarPlantillaWhatsapp, corregirPlantillaWhatsapp } from '../utils/iaPlantillasWhatsapp.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
@@ -521,6 +526,44 @@ panelConfiguracionRouter.put('/calculo-candidatos', async (req, res) => {
       perfil: perfil ?? PERFIL_POR_DEFECTO,
       pesos: corridos.pesos,
       topes: corridos.topes,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'prestadora_id' }
+  );
+  if (error) return responderError(res, error);
+  res.json({ ok: true });
+});
+
+// --- Con cuántos turnos se entra solo al equipo de un Paciente ---
+//
+// El equipo se arma solo y lo corrige la Coordinadora. Acá se guarda nada más que con cuántos
+// turnos, y en qué ventana de días, alguien entra sin que nadie la ponga.
+
+panelConfiguracionRouter.get('/equipo-paciente', async (req, res) => {
+  const { data, error } = await supabase
+    .from('configuracion_equipo_paciente')
+    .select('regla')
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .maybeSingle();
+  if (error) return responderError(res, error);
+
+  // Que la fila no exista no es un error: es la configuración de fábrica.
+  const corrido = data?.regla ?? {};
+  res.json({ configuracion: { regla: reglaDeEquipoDe(corrido), corridos: corrido } });
+});
+
+panelConfiguracionRouter.put('/equipo-paciente', async (req, res) => {
+  // Llega la regla completa desde la pantalla; acá se queda solamente lo que difiere de fábrica.
+  const corridos = soloLoQueCorreDeLaRegla(req.body?.regla);
+  const revision = revisarRegla(corridos);
+  if (!revision.ok) {
+    return res.status(400).json({ error: `El valor de «${revision.clave}» está fuera de lo permitido` });
+  }
+
+  const { error } = await supabase.from('configuracion_equipo_paciente').upsert(
+    {
+      prestadora_id: req.usuarioPanel.prestadoraId,
+      regla: corridos,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'prestadora_id' }

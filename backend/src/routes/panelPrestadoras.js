@@ -5,6 +5,11 @@ import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
 import { esDireccionDeCorreo, direccionDeEnvioDe } from '../utils/email.js';
 import { crearCuentaConPerfil } from '../utils/cuentasPanel.js';
 import { elegirCasillaDeEnvio } from '../utils/casillaDeEnvio.js';
+import {
+  abrirReenvioDeRespuestas,
+  cortarReenvioDeRespuestas,
+  respuestasConfirmadas,
+} from '../utils/reenvioDeRespuestas.js';
 
 // Alta y listado de prestadoras licenciatarias — pendiente #30, ítem I.
 // Solo superadmin tiene uso legítimo de esto:
@@ -42,17 +47,6 @@ async function registrarAltaEnAuditoria(adminId, prestadoraId) {
   if (error) console.error('Error registrando el alta de la Prestadora en la auditoría:', error.message);
 }
 
-// Deshace una Prestadora recién creada. Se usa en un solo caso: cuando la Prestadora ya entró
-// pero no se le pudo crear el acceso de su administrador. Una Prestadora sin administrador no
-// le sirve a nadie —no hay quien entre a configurarla— y dejarla creada obliga a quien reintente
-// a cambiarle el nombre, porque dos Prestadoras no pueden llamarse igual.
-//
-// La configuración que sembró la base se va sola con ella: las tablas `configuracion_*` apuntan
-// a `prestadoras` con borrado en cascada
-// (`supabase/migrations/20260819183000_prestadora_nueva_nace_configurada.sql`).
-//
-// Nunca falla: si la limpieza tropieza, lo que tiene que llegar a la pantalla es el problema de
-// verdad —por qué no se pudo crear el acceso— y no el tropiezo de la limpieza.
 function insertarPrestadora({ razonSocial, nombreFantasia, pais, identificacionFiscal, casillaEnvio }) {
   return supabase
     .from('prestadoras')
@@ -75,7 +69,21 @@ function esChoqueDeCasilla(error) {
   return error?.code === '23505' && String(error.message ?? '').includes('casilla_envio');
 }
 
-async function deshacerPrestadora(prestadoraId) {
+// Deshace una Prestadora recién creada. Se usa en un solo caso: cuando la Prestadora ya entró
+// pero no se le pudo crear el acceso de su administrador. Una Prestadora sin administrador no
+// le sirve a nadie —no hay quien entre a configurarla— y dejarla creada obliga a quien reintente
+// a cambiarle el nombre, porque dos Prestadoras no pueden llamarse igual.
+//
+// La configuración que sembró la base se va sola con ella: las tablas `configuracion_*` apuntan
+// a `prestadoras` con borrado en cascada
+// (`supabase/migrations/20260819183000_prestadora_nueva_nace_configurada.sql`). El reenvío de las
+// respuestas no, porque vive afuera: se corta acá o queda mandando correo a una casilla que ya
+// no espera nada.
+//
+// Nunca falla: si la limpieza tropieza, lo que tiene que llegar a la pantalla es el problema de
+// verdad —por qué no se pudo crear el acceso— y no el tropiezo de la limpieza.
+async function deshacerPrestadora(prestadoraId, regla) {
+  await cortarReenvioDeRespuestas(regla);
   const { error } = await supabase.from('prestadoras').delete().eq('id', prestadoraId);
   if (error) console.error('Quedó una Prestadora sin administrador y sin borrar:', prestadoraId, error.message);
 }
@@ -208,6 +216,31 @@ panelPrestadorasRouter.post('/', requiereRolPanel, requiereSuperadmin, async (re
     console.error('El alta de la Prestadora quedó sin casilla de respuestas:', errorCasilla.message);
   }
 
+  // Y el camino de vuelta: lo que entre a su dirección de envío se reenvía a esa casilla
+  // (`utils/reenvioDeRespuestas.js`). Se abre acá, con el alta, porque la dirección de envío ya
+  // quedó fijada y desde este momento puede recibir una respuesta.
+  //
+  // Si no se pudo abrir, la Prestadora entra igual: manda sus avisos y lo único que falta es que
+  // las respuestas vuelvan. Eso se avisa en el Panel, nunca por correo.
+  const direccionEnvio = await direccionDeEnvioDe(prestadora.id);
+  const regla = await abrirReenvioDeRespuestas({
+    direccionDeEnvio: direccionEnvio,
+    emailRespuestas,
+  });
+
+  if (regla) {
+    const { error: errorRegla } = await supabase
+      .from('prestadoras')
+      .update({ regla_reenvio: regla })
+      .eq('id', prestadora.id);
+
+    // El reenvío quedó abierto y el motor no sabe con qué cortarlo. Se avisa acá y no se deshace
+    // nada: las respuestas están llegando, que es lo que la Prestadora necesita.
+    if (errorRegla) {
+      console.error('Quedó un reenvío abierto sin anotar en la Prestadora:', errorRegla.message);
+    }
+  }
+
   // El acceso del administrador. A diferencia de la casilla, esto no admite quedar a medias: una
   // Prestadora sin administrador no tiene quién entre a configurarla, así que si falla se
   // deshace el alta entera y quien la estaba dando la vuelve a intentar con el mismo nombre.
@@ -228,7 +261,7 @@ panelPrestadorasRouter.post('/', requiereRolPanel, requiereSuperadmin, async (re
     });
     administrador = { id: userId };
   } catch (errorAdmin) {
-    await deshacerPrestadora(prestadora.id);
+    await deshacerPrestadora(prestadora.id, regla);
     return responderError(res, errorAdmin);
   }
 
@@ -240,6 +273,11 @@ panelPrestadorasRouter.post('/', requiereRolPanel, requiereSuperadmin, async (re
     casilla_respuestas_guardada: !errorCasilla,
     // La dirección desde la que va a mandar. Sale nula cuando no se le pudo fijar una propia, y
     // entonces esta Prestadora manda desde la dirección común del producto.
-    direccion_envio: await direccionDeEnvioDe(prestadora.id),
+    direccion_envio: direccionEnvio,
+    // Si las respuestas vuelven, y si el dueño de la casilla ya confirmó que quiere recibirlas.
+    // Son dos cosas distintas: el reenvío puede estar abierto y las respuestas no llegar todavía,
+    // porque falta ese clic, que lo da una persona y no el sistema.
+    reenvio_abierto: Boolean(regla),
+    respuestas_confirmadas: await respuestasConfirmadas(emailRespuestas),
   });
 });

@@ -29,10 +29,17 @@ const DOMINIO_GRATUITO = 'correo-gratis.example';
 /** Las casillas de envío que ya están tomadas. Cada prueba carga las que le interesan. */
 let casillasTomadas = [];
 
+/** El identificador que el servicio de correo le da al reenvío recién abierto. */
+const REGLA = 'regla-de-mentira';
+
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
 /** Todo lo que el motor le pidió a la base, para poder afirmar que NO pidió algo. */
 let llamadas = [];
+/** Lo mismo, del lado del servicio de correo que abre y corta los reenvíos. */
+let pedidosDeCorreo = [];
+/** Qué contesta ese servicio. Una prueba lo cambia para hacerlo fallar. */
+let correoContesta;
 
 /** Para que una prueba pueda hacer fallar a la base con el error que quiera. */
 function falla(estado, cuerpo) {
@@ -71,6 +78,28 @@ const baseFalsa = createServer((req, res) => {
   });
 });
 
+// El servicio que abre y corta los reenvíos, de mentira. Contesta como Cloudflare: lo que
+// devuelve viene adentro de `result`.
+const correoFalso = createServer((req, res) => {
+  let crudo = '';
+  req.on('data', (parte) => {
+    crudo += parte;
+  });
+  req.on('end', () => {
+    const ruta = new URL(req.url, 'http://interno').pathname;
+    pedidosDeCorreo.push({ metodo: req.method, ruta, cuerpo: crudo ? JSON.parse(crudo) : null });
+    const { estado, resultado } = correoContesta({ metodo: req.method, ruta });
+    res.writeHead(estado, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: estado === 200, result: resultado ?? null }));
+  });
+});
+
+await new Promise((listo) => correoFalso.listen(0, '127.0.0.1', listo));
+process.env.CLOUDFLARE_API_BASE = `http://127.0.0.1:${correoFalso.address().port}`;
+process.env.CLOUDFLARE_EMAIL_ROUTING_TOKEN = 'token-de-mentira';
+process.env.CLOUDFLARE_ACCOUNT_ID = 'cuenta-de-mentira';
+process.env.CLOUDFLARE_ZONE_ID = 'zona-de-mentira';
+
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
@@ -100,7 +129,27 @@ const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/panel/prestadora
 after(() => {
   motor.close();
   baseFalsa.close();
+  correoFalso.close();
 });
+
+/**
+ * Lo que contesta el servicio de correo cuando todo sale bien: el reenvío se abre y la casilla de
+ * destino todavía no está confirmada, que es como queda recién dada de alta.
+ */
+function correoNormal({ metodo, ruta }) {
+  if (metodo === 'POST' && ruta.endsWith('/email/routing/rules')) {
+    return { estado: 200, resultado: { tag: REGLA } };
+  }
+  if (metodo === 'GET' && ruta.endsWith('/email/routing/addresses')) {
+    return { estado: 200, resultado: [{ email: ALTA_COMPLETA.email_respuestas, verified: null }] };
+  }
+  return { estado: 200, resultado: {} };
+}
+
+/** Lo que el motor le pidió al servicio de correo, si se lo pidió. */
+function pedidoDeCorreo(metodo, final) {
+  return pedidosDeCorreo.find((p) => p.metodo === metodo && p.ruta.includes(final));
+}
 
 /** Un alta con todo bien cargado. Cada prueba cambia lo que le interesa romper. */
 const ALTA_COMPLETA = {
@@ -125,6 +174,8 @@ async function darDeAlta(cambios = {}) {
 
 beforeEach(() => {
   llamadas = [];
+  pedidosDeCorreo = [];
+  correoContesta = correoNormal;
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'superadmin', prestadora_id: PRESTADORA_PROPIA }]);
@@ -138,6 +189,8 @@ beforeEach(() => {
     { id: NUEVA, nombre_fantasia: ALTA_COMPLETA.nombre_fantasia, estado: 'prospecto' },
   ]);
   respuestas.set('PATCH /rest/v1/configuracion_prestadora', () => []);
+  // Donde queda anotado el reenvío recién abierto, para poder cortarlo después.
+  respuestas.set('PATCH /rest/v1/prestadoras', () => []);
   respuestas.set('POST /rest/v1/auditoria_soporte_tecnico', () => []);
   // El acceso del administrador: la cuenta de acceso se crea y su ficha se guarda. El servicio
   // de acceso devuelve la cuenta suelta, no adentro de una lista.
@@ -409,6 +462,92 @@ describe('la Prestadora nace con su dirección de envío', () => {
     assert.equal(estado, 201);
     assert.equal(intentos, 2, 'no volvió a intentar con otra casilla');
     assert.equal(cuerpo.direccion_envio, 'cuidadosdellitoral-2@producto.example');
+  });
+});
+
+describe('las respuestas vuelven a la casilla que declaró', () => {
+  it('abre el reenvío desde su dirección de envío hacia esa casilla', async () => {
+    const { estado, cuerpo } = await darDeAlta();
+    assert.equal(estado, 201);
+    assert.equal(cuerpo.reenvio_abierto, true);
+
+    const abierto = pedidoDeCorreo('POST', '/email/routing/rules');
+    assert.ok(abierto, 'la Prestadora manda desde una dirección a la que nadie puede contestarle');
+    assert.equal(abierto.cuerpo.matchers[0].value, 'cuidadosdellitoral@producto.example');
+    assert.deepEqual(abierto.cuerpo.actions[0].value, [ALTA_COMPLETA.email_respuestas]);
+    assert.equal(abierto.cuerpo.enabled, true);
+  });
+
+  it('anota el reenvío en la Prestadora, que es con lo que después se corta', async () => {
+    await darDeAlta();
+    const anotado = filaEscritaEn('PATCH /rest/v1/prestadoras');
+    assert.ok(anotado, 'el reenvío quedó abierto y no hay con qué cortarlo');
+    assert.equal(anotado.regla_reenvio, REGLA);
+  });
+
+  it('da de alta la casilla de destino, que es lo que dispara el correo de confirmación', async () => {
+    await darDeAlta();
+    const destino = pedidoDeCorreo('POST', '/email/routing/addresses');
+    assert.ok(destino, 'nadie le pidió a esa casilla que confirme, así que no va a llegarle nada');
+    assert.equal(destino.cuerpo.email, ALTA_COMPLETA.email_respuestas);
+  });
+
+  it('dice que todavía no está confirmada mientras nadie haya hecho el clic', async () => {
+    const { cuerpo } = await darDeAlta();
+    assert.equal(cuerpo.respuestas_confirmadas, false);
+  });
+
+  it('y dice que sí cuando ya se hizo', async () => {
+    correoContesta = ({ metodo, ruta }) => {
+      if (metodo === 'GET' && ruta.endsWith('/email/routing/addresses')) {
+        return {
+          estado: 200,
+          resultado: [{ email: ALTA_COMPLETA.email_respuestas, verified: '2026-09-16T10:00:00Z' }],
+        };
+      }
+      return correoNormal({ metodo, ruta });
+    };
+    const { cuerpo } = await darDeAlta();
+    assert.equal(cuerpo.respuestas_confirmadas, true);
+  });
+
+  it('si el reenvío no se pudo abrir, la Prestadora entra igual y se avisa', async () => {
+    // Lo que falló es el correo, así que avisarlo por correo no serviría de nada: sale en la
+    // respuesta, que es lo que el Panel muestra.
+    correoContesta = () => ({ estado: 500 });
+    const { estado, cuerpo } = await darDeAlta();
+    assert.equal(estado, 201);
+    assert.equal(cuerpo.prestadora.id, NUEVA);
+    assert.equal(cuerpo.reenvio_abierto, false);
+    assert.equal(cuerpo.respuestas_confirmadas, false);
+    assert.equal(filaEscritaEn('PATCH /rest/v1/prestadoras'), null);
+    noFiltraLaBase(cuerpo);
+  });
+
+  it('si el alta se deshace, el reenvío se corta', async () => {
+    // El reenvío vive afuera y no se va con el borrado de la Prestadora: si queda abierto, sigue
+    // mandando correo a la casilla de alguien que nunca llegó a ser cliente.
+    respuestas.set('POST /auth/v1/admin/users', () => falla(500, { message: 'el servicio de acceso no contestó' }));
+    await darDeAlta();
+    seDeshizo();
+    const cortado = pedidoDeCorreo('DELETE', '/email/routing/rules/');
+    assert.ok(cortado, 'quedó abierto el reenvío de una Prestadora que no existe');
+    assert.ok(cortado.ruta.endsWith(`/${REGLA}`), 'cortó un reenvío que no es el que había abierto');
+  });
+
+  it('sin el servicio configurado no se intenta nada y el alta sale igual', async () => {
+    // Es el estado en el que está el producto hasta que se cargue la credencial. Hasta entonces
+    // la Prestadora se da de alta, manda sus avisos, y las respuestas se pierden.
+    const token = process.env.CLOUDFLARE_EMAIL_ROUTING_TOKEN;
+    delete process.env.CLOUDFLARE_EMAIL_ROUTING_TOKEN;
+    try {
+      const { estado, cuerpo } = await darDeAlta();
+      assert.equal(estado, 201);
+      assert.equal(cuerpo.reenvio_abierto, false);
+      assert.deepEqual(pedidosDeCorreo, [], 'habló con un servicio que no está configurado');
+    } finally {
+      process.env.CLOUDFLARE_EMAIL_ROUTING_TOKEN = token;
+    }
   });
 });
 

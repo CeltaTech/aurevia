@@ -67,6 +67,8 @@ Existe el andamiaje —base, disparadores, cobros, consentimiento—, la Familia
 
 **19. Usted** — Las dos observaciones de apariencia que quedan, porque las dos son decisiones de diseño: ¿con qué pantalla abre la aplicación de Familia cuando hay más de un Paciente — hoy abre en la lista, y con uno solo ya se saltea al detalle? ¿Y cuál es la identidad visual de las dos aplicaciones, que nunca pasaron por su etapa de diseño?
 
+El Desarrollador está preparando una maqueta orientativa de cómo tienen que verse y cómo se recorren. **Hasta que llegue no se toca nada de apariencia ni de recorrido en las dos aplicaciones**, porque cualquier arreglo suelto de hoy es trabajo que la maqueta va a pisar. Lo que sí se corrige mientras tanto es lo que deja a alguien sin poder hacer su trabajo.
+
 **20. Usted** — Rotación y retención de Asistentes: ¿cuál es la fórmula y cuál el umbral?
 
 **21.** Ponerlo en el tablero. Se calcula desde `ceses` y `asistentes`, sin tabla nueva.

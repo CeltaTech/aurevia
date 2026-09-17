@@ -159,6 +159,40 @@ divergen siempre.
 cambiar el nombre o el domicilio de su cliente y eso no se puede impedir desde afuera. Lo que
 corresponde es que la Prestadora vea que se despegaron, no que el producto intente imponer nada.
 
+**Una contratación tiene tres roles, y siempre son tres.** Quien contrata el Servicio es el
+Cliente Contratante; para quién se contrata es el Paciente; y quien asume la obligación de pagar es
+el Pagador. Los tres pueden ser la misma persona, y eso es lo corriente, pero **se anotan aparte
+igual**: coincidir hoy no es coincidir siempre. Cada uno de los tres lleva todos sus datos —nombre,
+apellido, datos fiscales, domicilio, teléfono—, y esos datos están en la base de la Prestadora, no
+en un papel.
+
+**El Pagador firma su consentimiento a la obligación de pagar, y sin esa firma no hay Pagador
+definido.** Se establece al contratar, con todos sus datos y con la documentación que ese
+financiador exija, completa y firmada. Eso tiene que estar listo el día que se firma con la
+Familia; de ahí en más el cobro es asunto de créditos y cobranzas, que **sólo le informa a Careonys
+en qué situación están los pagos** —al día, vencido hace tantos días— y nada más.
+
+**La persona se guarda una sola vez, y los roles la citan.** El rol es una anotación que apunta a
+una ficha de persona, nunca una copia de sus datos ni una ficha nueva. Si la misma persona
+contrata, recibe el cuidado y paga, hay una ficha y tres anotaciones.
+
+**Rol nunca significa permisos.** Un rol dice qué papel cumple alguien en una contratación. Quién
+puede ver o hacer qué cosa es otra cosa, se llama de otra manera y se guarda en otro lado.
+
+**Un casillero que nombra algo que existe en otro lado es una lista, y nunca texto libre.** Si lo
+que se escribe ahí es el nombre de una persona, de una obra social o de una localidad que ya tiene
+ficha, el casillero ofrece esas fichas y se elige una. **Un nombre tecleado crea una entidad que no
+existe**: se parece a la de al lado, no es la misma para el sistema, y nadie se entera. La lista
+puede tener buscador y puede permitir dar de alta una ficha nueva desde ahí mismo, pero lo que
+queda guardado es cuál, no cómo se llama.
+
+**El nombre visible de la Familia se calcula al mostrarlo, y no se guarda.** Se arma con el
+apellido y los nombres del Paciente; cuando hay más de uno, **queda el más antiguo al que se le
+esté brindando servicio**. Si aparece otra Familia con ese mismo apellido y nombres, se le agrega
+la localidad o el barrio. Si aun así siguen siendo dos, se le antepone el número de cliente. **El
+número de cliente es otra cosa**: es único, no se reasigna nunca a nadie más, y es lo que usan el
+sistema y los documentos. El nombre visible es para la pantalla.
+
 **Las funciones internas de la base no viven en un esquema publicado.** Las que usan las políticas
 de RLS están en el esquema `interno`, que queda afuera de la lista `schemas` de
 `supabase/config.toml` a propósito: así no son direcciones web. Las políticas las siguen

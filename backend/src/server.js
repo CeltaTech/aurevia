@@ -43,6 +43,7 @@ import { extenderSeriesGuardiaAbiertas } from './utils/generacionSeriesGuardia.j
 import { revisarRecordatoriosPush } from './utils/revisarRecordatoriosPush.js';
 import { revisarGuardiasSinCubrir } from './utils/revisarGuardiasSinCubrir.js';
 import { revisarAusenciasAvisadas } from './utils/revisarAusenciasAvisadas.js';
+import { revisarIncidentesTurnoSinCubrir } from './utils/revisarIncidentesTurnoSinCubrir.js';
 import { revisarLlegadasDemoradas } from './utils/revisarLlegadasDemoradas.js';
 import { armarCobrosDelPeriodo } from './utils/cobrosMarketplace.js';
 import { cortarLosAccesosDadosDeBaja } from './utils/corteDelAcceso.js';
@@ -235,6 +236,15 @@ setInterval(() => {
 revisarAusenciasAvisadas().catch((err) => console.error('Error en revisión inicial de ausencias avisadas:', err.message));
 setInterval(() => {
   revisarAusenciasAvisadas().catch((err) => console.error('Error en revisión de ausencias avisadas:', err.message));
+}, CINCO_MINUTOS_MS);
+
+// El turno que llega sin nadie abre un incidente que queda abierto hasta que una persona diga cómo
+// terminó. El aviso de arriba mira los mismos turnos, pero avisa y se termina; éste deja constancia
+// y le insiste a quien coordina a ese Paciente. Se mira seguido porque la insistencia se cuenta en
+// horas y el turno que se acerca cambia de estado solo.
+revisarIncidentesTurnoSinCubrir().catch((err) => console.error('Error en revisión inicial de incidentes de turno sin cubrir:', err.message));
+setInterval(() => {
+  revisarIncidentesTurnoSinCubrir().catch((err) => console.error('Error en revisión de incidentes de turno sin cubrir:', err.message));
 }, CINCO_MINUTOS_MS);
 
 // Alertas de llegada demorada que nadie avisó (pendiente #101, docs/PLAN_HASTA_PRODUCCION.md). Sólo detecta

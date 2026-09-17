@@ -66,6 +66,11 @@ const DATOS = {
     busqueda: { ofrecida: true, invitados: 3, sinContestar: 1, aceptaron: 0 },
     veces: 1,
   },
+  incidente_turno_sin_cubrir: {
+    fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
+    yaEmpezo: false, horas: 12, veces: 2,
+    cubrenFrancos: ['Rita Solano'], candidatos: ['Rita Solano', 'Marta Ruiz'],
+  },
   // El aviso no lleva el detalle a propósito: lo que escribió el Asistente es información sensible
   // y se lee entrando al Panel (`celtatech/CLAUDE.md` §6).
   emergencia_en_guardia: { fecha: '2026-10-07', horaInicio: '08:00' },

@@ -28,6 +28,11 @@ import {
   revisarRegla as revisarReglaDeAviso,
   soloLoQueCorreDeLaRegla as soloLoQueCorreDelAviso,
 } from '../utils/avisoDeAusencia.js';
+import {
+  reglaDelIncidenteDe,
+  revisarRegla as revisarReglaDelIncidente,
+  soloLoQueCorreDeLaRegla as soloLoQueCorreDelIncidente,
+} from '../utils/incidenteTurnoSinCubrir.js';
 import { darDeAltaEnMeta, traerEstadosDeMeta } from '../utils/plantillasWhatsapp.js';
 import { redactarPlantillaWhatsapp, corregirPlantillaWhatsapp } from '../utils/iaPlantillasWhatsapp.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
@@ -607,6 +612,44 @@ panelConfiguracionRouter.put('/ausencias', async (req, res) => {
   }
 
   const { error } = await supabase.from('configuracion_ausencias').upsert(
+    {
+      prestadora_id: req.usuarioPanel.prestadoraId,
+      regla: corridos,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'prestadora_id' }
+  );
+  if (error) return responderError(res, error);
+  res.json({ ok: true });
+});
+
+// --- A cuántas horas un turno sin nadie se vuelve un incidente grave ---
+//
+// Los dos números con los que el motor abre el incidente y le insiste a quien coordina. Lo que no
+// se configura acá es el destino ni si el recordatorio se manda: un defecto grave no se apaga, y
+// el destinatario es quien coordina a ese Paciente, no una dirección elegible.
+
+panelConfiguracionRouter.get('/incidentes-turno-sin-cubrir', async (req, res) => {
+  const { data, error } = await supabase
+    .from('configuracion_incidentes_turno_sin_cubrir')
+    .select('regla')
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .maybeSingle();
+  if (error) return responderError(res, error);
+
+  // Que la fila no exista no es un error: es la configuración de fábrica.
+  const corrido = data?.regla ?? {};
+  res.json({ configuracion: { regla: reglaDelIncidenteDe(corrido), corridos: corrido } });
+});
+
+panelConfiguracionRouter.put('/incidentes-turno-sin-cubrir', async (req, res) => {
+  const corridos = soloLoQueCorreDelIncidente(req.body?.regla);
+  const revision = revisarReglaDelIncidente(corridos);
+  if (!revision.ok) {
+    return res.status(400).json({ error: `El valor de «${revision.clave}» está fuera de lo permitido` });
+  }
+
+  const { error } = await supabase.from('configuracion_incidentes_turno_sin_cubrir').upsert(
     {
       prestadora_id: req.usuarioPanel.prestadoraId,
       regla: corridos,

@@ -16,6 +16,7 @@ import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
+import { TurnosSinCubrirAbiertos } from '../components/continuidad/TurnosSinCubrirAbiertos';
 
 const TIPOS_RESOLUCION = ['suplente', 'franquero', 'emergencia', 'familiar'];
 
@@ -386,6 +387,11 @@ export function Continuidad() {
           </div>
         ))}
       </EstadoLista>
+
+      {/* Trae y recarga sus propios datos: no comparte ninguno con lo de arriba —mira los turnos
+          sin nadie asignado, no las ausencias de quien sí lo estaba— y meterlo en la misma
+          recarga ataría dos listas que no se enteran una de la otra. */}
+      <TurnosSinCubrirAbiertos />
 
       <h2>{t.continuidad.excepciones_titulo}</h2>
       <p className="panel-explicacion">{t.continuidad.excepciones_explicacion}</p>

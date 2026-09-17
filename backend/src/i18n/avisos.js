@@ -190,6 +190,24 @@ const ES = {
     ].filter(Boolean).join('\n'),
   }),
 
+
+  incidente_turno_sin_cubrir: (d) => ({
+    asunto: d.yaEmpezo
+      ? 'Turno sin nadie: ya empezó y sigue abierto'
+      : 'Turno sin nadie: queda poco para que empiece',
+    texto: [
+      `Guardia del ${d.fecha}, de ${d.horaInicio} a ${d.horaFin}, para ${unirNombres(d.pacientes, 'y', 'Paciente sin nombre cargado')}.`,
+      d.yaEmpezo ? `Tendría que haber empezado hace ${d.horas} h.` : `Empieza en ${d.horas} h.`,
+      d.cubrenFrancos?.length
+        ? `Cubre francos de este Paciente: ${unirNombres(d.cubrenFrancos, 'y', '')}.`
+        : null,
+      d.candidatos?.length
+        ? `Equipo del Paciente: ${unirNombres(d.candidatos, 'y', '')}.`
+        : 'Este Paciente todavía no tiene equipo armado.',
+      d.veces > 1 ? `Es el recordatorio número ${d.veces} de este mismo turno.` : null,
+      'Queda abierto hasta que se cierre desde el Panel diciendo cómo terminó.',
+    ].filter(Boolean).join('\n'),
+  }),
   alerta_ia_coordinador: (d) => ({
     asunto: d.esRoja ? 'Alerta ROJA de IA — Paciente' : 'Alerta AMARILLA de IA — Paciente',
     texto: 'Ver detalle en el Panel.',
@@ -453,6 +471,24 @@ const EN = {
     ].filter(Boolean).join('\n'),
   }),
 
+
+  incidente_turno_sin_cubrir: (d) => ({
+    asunto: d.yaEmpezo
+      ? 'Shift with nobody: it already started and is still open'
+      : 'Shift with nobody: little time left before it starts',
+    texto: [
+      `Shift on ${d.fecha}, from ${d.horaInicio} to ${d.horaFin}, for ${unirNombres(d.pacientes, 'and', 'patient with no name on file')}.`,
+      d.yaEmpezo ? `It should have started ${d.horas} h ago.` : `It starts in ${d.horas} h.`,
+      d.cubrenFrancos?.length
+        ? `Covers this patient's days off: ${unirNombres(d.cubrenFrancos, 'and', '')}.`
+        : null,
+      d.candidatos?.length
+        ? `Patient's team: ${unirNombres(d.candidatos, 'and', '')}.`
+        : 'This patient has no team set up yet.',
+      d.veces > 1 ? `This is reminder number ${d.veces} for this same shift.` : null,
+      'It stays open until it is closed from the panel, stating how it ended.',
+    ].filter(Boolean).join('\n'),
+  }),
   alerta_ia_coordinador: (d) => ({
     asunto: d.esRoja ? 'RED AI alert — patient' : 'YELLOW AI alert — patient',
     texto: 'See the details in the panel.',
@@ -702,6 +738,24 @@ const PT = {
     ].filter(Boolean).join('\n'),
   }),
 
+
+  incidente_turno_sin_cubrir: (d) => ({
+    asunto: d.yaEmpezo
+      ? 'Plantão sem ninguém: já começou e continua aberto'
+      : 'Plantão sem ninguém: falta pouco para começar',
+    texto: [
+      `Plantão de ${d.fecha}, das ${d.horaInicio} às ${d.horaFin}, para ${unirNombres(d.pacientes, 'e', 'Paciente sem nome cadastrado')}.`,
+      d.yaEmpezo ? `Deveria ter começado há ${d.horas} h.` : `Começa em ${d.horas} h.`,
+      d.cubrenFrancos?.length
+        ? `Cobre as folgas deste Paciente: ${unirNombres(d.cubrenFrancos, 'e', '')}.`
+        : null,
+      d.candidatos?.length
+        ? `Equipe do Paciente: ${unirNombres(d.candidatos, 'e', '')}.`
+        : 'Este Paciente ainda não tem equipe montada.',
+      d.veces > 1 ? `É o lembrete número ${d.veces} deste mesmo plantão.` : null,
+      'Fica aberto até ser fechado no Painel, dizendo como terminou.',
+    ].filter(Boolean).join('\n'),
+  }),
   alerta_ia_coordinador: (d) => ({
     asunto: d.esRoja ? 'Alerta VERMELHO de IA — Paciente' : 'Alerta AMARELO de IA — Paciente',
     texto: 'Ver o detalhe no Painel.',

@@ -119,6 +119,11 @@ export const GRUPOS = [
     copias: ['backend/src/utils/avisoDeAusencia.js'],
   },
   {
+    que: 'cuándo un turno vacío se vuelve un incidente grave y cómo puede cerrarse',
+    original: 'panel/src/lib/incidenteTurnoSinCubrir.js',
+    copias: ['backend/src/utils/incidenteTurnoSinCubrir.js'],
+  },
+  {
     que: 'cómo se llama y dónde se guarda cada documento generado del legajo',
     original: 'panel/src/lib/documentosDeCese.js',
     copias: ['backend/src/utils/documentosDeCese.js'],

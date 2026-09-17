@@ -288,6 +288,23 @@ En la misma migración se eliminó `familia_ve_asistente_asignado`, que le daba 
 ficha completa del Asistente asignado. La aplicación de Familias nunca consulta `asistentes`
 —pide todo por el motor—, así que era una puerta abierta sin uso.
 
+**El estado de cuenta de la Familia lo ve la administración.** Cuánto debe cada Familia y si está
+atrasada se veía con el solo hecho de tener un rol de Panel, o sea también desde la coordinación
+de turnos, que arma las guardias y no interviene en el trato económico. Desde
+`20260920100000_el_estado_de_cuenta_de_la_familia_lo_ve_la_administracion.sql` eso entra por la
+acción `ver_estado_de_cuenta_familia` del catálogo `catalogo_acciones_permisos`, que nace
+reservada a la administración y que cada Prestadora abre o cierra desde su Panel.
+
+Donde manda es en el motor, porque entra a la base con la llave de servicio: el middleware
+`requierePermiso('ver_estado_de_cuenta_familia')` cierra en `backend/src/routes/panelCobros.js`
+las seis rutas que entregan o mueven el estado de cuenta —los saldos, el que llegó de afuera, el
+detalle de una factura, anotar un cobro, anularlo y la entrada de lotes—. Lo que sirve para
+facturar no lo lleva, y el aviso de que una Familia quedó restringida tampoco: no dice cuánto
+debe, y quien coordina necesita verlo para trabajar. La política de lectura de
+`estados_de_cuenta_externos` pide además esa acción, como segunda red para el día en que esa
+tabla se lea con el pase de una persona. `saldos_familia` no se tocó: su política alcanza también
+a quien manda a facturar, que sí es trabajo de la coordinación.
+
 **Lo reservado de la ficha también vive aparte (2026-08-19).** El mismo agujero seguía abierto
 en otras cinco columnas de `asistentes`: `causal_baja`, `score_riesgo_reclasificacion`,
 `indicadores_riesgo`, `motivo_exclusion_directo` y `motivo_exclusion_marketplace` — por qué se

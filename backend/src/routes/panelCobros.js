@@ -24,6 +24,7 @@ import {
 import { anotarLoFacturado, facturaParaAnotar } from '../utils/anotarLoFacturado.js';
 import { armarLosRenglonesDeLaFactura } from '../utils/facturaDelPeriodo.js';
 import { responderError } from '../utils/errorConMotivo.js';
+import { requierePermiso } from '../utils/permisos.js';
 
 /* Lo que la Familia pagó, anotado; y el saldo, que es una resta.
    ==========================================================================
@@ -61,14 +62,17 @@ import { responderError } from '../utils/errorConMotivo.js';
    de país en país y el producto no conoce ninguno. Y una factura que salió mal no se toca: se anota
    la corrección que emitió ese mismo software, con su monto y para qué lado va.
 
-   QUIÉN PUEDE. En el catálogo `catalogo_acciones_permisos` no hay ninguna acción que hable de
-   facturación ni de cobranzas, así que no se inventa una: se usa exactamente el mismo criterio
-   con el que hoy se entra a la pantalla de facturación, que es el de la política
-   `panel_gestiona_facturas_familia` de la base —ser de la Prestadora y tener rol de Panel—, y
-   ese criterio vive en la función SQL `gestiona_la_facturacion()`. `requiereRolPanel` ya deja
-   afuera a cualquiera que no sea admin_prestadora, coordinador o superadmin, que es la misma
-   lista. Un criterio distinto acá que en la base sería la misma decisión escrita dos veces y
-   con dos respuestas posibles.
+   QUIÉN PUEDE, Y ACÁ HAY DOS PUERTAS DISTINTAS. Mandar a facturar es trabajo de la Prestadora y
+   entra por el mismo criterio con el que se abre la pantalla: ser de la Prestadora y tener rol de
+   Panel, que es la política `panel_gestiona_facturas_familia` de la base y la función SQL
+   `gestiona_la_facturacion()`, y que `requiereRolPanel` refleja. Pero **cuánto debe cada Familia
+   y si está atrasada no es información de quien coordina turnos**: eso pasa por la acción
+   `ver_estado_de_cuenta_familia` del catálogo `catalogo_acciones_permisos`, que nace reservada a
+   la administración y que cada Prestadora abre o cierra desde su Panel. Lleva ese portero todo lo
+   que entrega o mueve el estado de cuenta —los saldos, el estado de cuenta que llegó de afuera, el
+   detalle de una factura, anotar un cobro, anularlo y la entrada de lotes—; no lo lleva lo que
+   sirve para facturar. El aviso de que una Familia quedó restringida tampoco: eso no dice cuánto
+   debe, y quien coordina necesita saberlo para trabajar.
 
    NADA DE PLATA EN LOS REGISTROS NI EN LA DIRECCIÓN. Los importes y los datos de las Familias
    son dato sensible (CLAUDE.md §6): no se loguean y no viajan por la URL. Por la URL viaja el
@@ -165,6 +169,15 @@ async function laCobranzaLaLlevaOtroSoftware(prestadoraId) {
   return !sigueLaCobranza(data?.regla);
 }
 
+/**
+ * El portero del estado de cuenta.
+ *
+ * Cuánto debe una Familia y si está atrasada es del trato económico entre la Prestadora y esa
+ * Familia, no del armado de las guardias. La acción nace reservada a la administración y cada
+ * Prestadora decide si se la abre a quien coordina, como con cualquier otra del catálogo.
+ */
+const veElEstadoDeCuenta = requierePermiso('ver_estado_de_cuenta_familia');
+
 /** Lo que se contesta cuando se pide un número que este sistema ya no calcula. */
 function noSeCalculaAca(res) {
   return res.status(409).json({ error: 'La cobranza de esta Prestadora la lleva otro software' });
@@ -228,7 +241,7 @@ panelCobrosRouter.get('/restricciones', requiereRolPanel, async (req, res) => {
 // `estado_de_cuenta_externo_vigente`. Los anteriores quedan guardados.
 // ---------------------------------------------------------------------------------------
 
-panelCobrosRouter.get('/estados-de-cuenta', requiereRolPanel, async (req, res) => {
+panelCobrosRouter.get('/estados-de-cuenta', requiereRolPanel, veElEstadoDeCuenta, async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
 
   const { data, error } = await supabase
@@ -256,7 +269,7 @@ panelCobrosRouter.get('/estados-de-cuenta', requiereRolPanel, async (req, res) =
  * Los saldos de un período: lo facturado, lo cobrado, lo que falta, de dónde salió el dato y
  * de cuándo es.
  */
-panelCobrosRouter.get('/saldos', requiereRolPanel, async (req, res) => {
+panelCobrosRouter.get('/saldos', requiereRolPanel, veElEstadoDeCuenta, async (req, res) => {
   const periodo = primerDiaDelPeriodo(req.query.periodo);
   if (!periodo) return res.status(400).json({ error: 'Falta el período, en formato AAAA-MM' });
 
@@ -285,7 +298,7 @@ panelCobrosRouter.get('/saldos', requiereRolPanel, async (req, res) => {
 });
 
 /** El detalle de una factura: su saldo y todos los cobros que la fueron bajando. */
-panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, async (req, res) => {
+panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, veElEstadoDeCuenta, async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
 
   let saldo;
@@ -745,7 +758,7 @@ panelCobrosRouter.post('/facturas/:facturaId/correcciones', requiereRolPanel, as
  * Anotar un cobro cargado en el Panel. Puede ser parcial: nada obliga a que cubra el total, y
  * varios cobros contra la misma factura es exactamente cómo se representa el pago en partes.
  */
-panelCobrosRouter.post('/facturas/:facturaId/cobros', requiereRolPanel, async (req, res) => {
+panelCobrosRouter.post('/facturas/:facturaId/cobros', requiereRolPanel, veElEstadoDeCuenta, async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
   const cuerpo = req.body || {};
 
@@ -792,7 +805,7 @@ panelCobrosRouter.post('/facturas/:facturaId/cobros', requiereRolPanel, async (r
  * contar para el saldo. Una plata que desaparece sin rastro es indistinguible de una que nunca
  * existió, y con plata de un tercero eso es justo lo que no puede pasar.
  */
-panelCobrosRouter.post('/cobros/:id/anular', requiereRolPanel, async (req, res) => {
+panelCobrosRouter.post('/cobros/:id/anular', requiereRolPanel, veElEstadoDeCuenta, async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
   const motivo = String(req.body?.motivo ?? '').trim();
   if (!motivo) return res.status(400).json({ error: 'Hace falta decir por qué se anula el cobro' });
@@ -878,7 +891,7 @@ async function ubicarFactura(prestadoraId, cobro) {
  * envíos llegan a la vez, uno de los dos choca contra el índice y también se contesta
  * "duplicado".
  */
-panelCobrosRouter.post('/entrada', requiereRolPanel, async (req, res) => {
+panelCobrosRouter.post('/entrada', requiereRolPanel, veElEstadoDeCuenta, async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
   const { origen, cobros } = req.body || {};
 

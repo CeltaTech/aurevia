@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
 import { useConfirmarDestructivo } from '../context/TenantSessionContext';
+import { usePermisos } from '../context/PermisosContext';
 import { llamarApiCobros } from '../lib/apiCobros';
 import { claseBadge } from '../lib/tonos';
 import { formatearImporte } from '../lib/dinero';
@@ -40,6 +41,13 @@ import { useModalAccesible } from '../hooks/useModalAccesible';
    que él avisó —cuánto, en qué moneda, si está atrasada y desde cuándo—, tal como llegó, y lo que
    no informó queda vacío. No se completa con lo que este sistema tenga anotado y no se muestra al
    lado ningún número calculado acá, porque serían dos verdades para lo mismo.
+
+   Y QUIÉN VE CUÁNTO DEBE CADA FAMILIA. Solamente quien tenga habilitada la acción
+   `ver_estado_de_cuenta_familia`, que de fábrica es la administración de la Prestadora. Sin ella
+   esta pantalla no muestra saldos ni estados de cuenta ni el detalle de una factura, y tampoco
+   los pide: lo que queda a la vista es mandar a facturar, que sí es trabajo de la coordinación.
+   Esconder una tabla no protege nada por sí solo —el motor controla lo mismo en cada ruta—, pero
+   mostrar un número que después el motor rechaza es peor todavía.
 
    POR QUÉ EL ESTADO YA NO SE MARCA A MANO. El botón de "marcar como cobrado" desapareció, y no
    por prolijidad: el estado ahora se deduce de la resta y de la fecha de vencimiento, y la base
@@ -129,6 +137,12 @@ function bajarComoArchivo(nombre, texto) {
 export function Facturacion() {
   const { t, locale } = useLocale();
   const confirmarDestructivo = useConfirmarDestructivo();
+  // Cuánto debe cada Familia y si está atrasada lo ve solamente quien tenga habilitada esa
+  // acción, que de fábrica es la administración. Quien no la tiene sigue pudiendo mandar a
+  // facturar, que es lo otro que se hace en esta pantalla. El motor controla lo mismo: esconder
+  // una tabla no protege nada por sí solo.
+  const { puede, cargado: permisosCargados } = usePermisos();
+  const veElEstadoDeCuenta = puede('ver_estado_de_cuenta_familia');
 
   const [mes, setMes] = useState(mesActual());
   const [vencimiento, setVencimiento] = useState('');
@@ -161,26 +175,28 @@ export function Facturacion() {
     try {
       const { sigue_la_cobranza: sigueLaCobranza } = await llamarApiCobros('/configuracion');
       setSigue(sigueLaCobranza !== false);
+      // Lo que no se va a mostrar tampoco se pide: pedirlo devolvería el rechazo del motor y la
+      // pantalla mostraría un error donde en realidad no hay ninguno.
       if (sigueLaCobranza === false) {
-        const [avisadas, cuentas] = await Promise.all([
-          llamarApiCobros('/restricciones'),
-          llamarApiCobros('/estados-de-cuenta'),
-        ]);
+        const avisadas = await llamarApiCobros('/restricciones');
         setRestricciones(avisadas);
-        setEstadosDeCuenta(cuentas);
+        setEstadosDeCuenta(veElEstadoDeCuenta ? await llamarApiCobros('/estados-de-cuenta') : []);
       } else {
-        setSaldos(await llamarApiCobros(`/saldos?periodo=${mes}`));
+        setSaldos(veElEstadoDeCuenta ? await llamarApiCobros(`/saldos?periodo=${mes}`) : []);
       }
       setEstado('listo');
     } catch (e) {
       setError(mensajeDeError(e, t, 'saldos de familias'));
       setEstado('error');
     }
-  }, [mes, t]);
+  }, [mes, t, veElEstadoDeCuenta]);
 
+  // Se espera a saber qué tiene habilitado quien está mirando. Sin eso, la primera carga pediría
+  // lo que todavía no sabe si puede ver.
   useEffect(() => {
+    if (!permisosCargados) return;
     recargar();
-  }, [recargar]);
+  }, [recargar, permisosCargados]);
 
   // Un saldo sin fecha de vencimiento no se puede reclamar ni mostrar como vencido, y esa fecha
   // no la decide el sistema: sale del plazo acordado con cada Familia, o se escribe acá para
@@ -304,6 +320,12 @@ export function Facturacion() {
             <strong>{t.facturacion.cobranza_externa_titulo}.</strong> {t.facturacion.cobranza_externa_texto}
           </Alert>
 
+          {!veElEstadoDeCuenta && (
+            <p className="panel-explicacion">{t.facturacion.estado_de_cuenta_reservado}</p>
+          )}
+
+          {veElEstadoDeCuenta && (
+            <>
           <h2>{t.facturacion.estados_de_cuenta_titulo}</h2>
           <p className="panel-explicacion">{t.facturacion.estados_de_cuenta_ayuda}</p>
           <EstadoLista
@@ -341,6 +363,8 @@ export function Facturacion() {
               </tbody>
             </table>
           </EstadoLista>
+            </>
+          )}
 
           <h2>{t.facturacion.restricciones_titulo}</h2>
           <EstadoLista
@@ -422,6 +446,11 @@ export function Facturacion() {
         </Alert>
       )}
 
+      {!veElEstadoDeCuenta && (
+        <p className="panel-explicacion">{t.facturacion.estado_de_cuenta_reservado}</p>
+      )}
+
+      {veElEstadoDeCuenta && (
       <EstadoLista
         estado={estado}
         error={error}
@@ -472,6 +501,7 @@ export function Facturacion() {
           </tbody>
         </table>
       </EstadoLista>
+      )}
         </>
       )}
 

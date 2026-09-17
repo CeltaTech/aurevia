@@ -260,6 +260,16 @@ avisado se muestra y no decide nada**: quien decide es una persona. La puerta es
 `scripts/probar_aviso_de_cobranza.mjs`. El interruptor también se consulta desde la pantalla de
 saldos con `GET /api/panel/cobros/configuracion`, que devuelve el interruptor y nunca el secreto.
 
+**El estado de cuenta lo ve solamente la administración de la Prestadora.** Cuánto debe cada
+Familia y si está atrasada no es información de quien coordina turnos: entra por la acción
+`ver_estado_de_cuenta_familia` del catálogo de permisos, que nace reservada a la administración y
+que cada Prestadora abre o cierra desde su Panel, con el mismo molde que `ver_pagos_asistente`.
+Lleva ese portero todo lo que entrega o mueve el estado de cuenta —los saldos, el que llegó de
+afuera, el detalle de una factura, anotar un cobro, anularlo y la entrada de lotes—; no lo lleva
+lo que sirve para facturar, ni el aviso de que una Familia quedó restringida, que no dice cuánto
+debe y que quien coordina necesita ver para trabajar. Sin la acción, la pantalla de Facturación no
+muestra saldos ni estados de cuenta y tampoco los pide. El detalle está en `docs/SECURITY.md`.
+
 **El ida y vuelta con el software de facturación se puede hacer de tres maneras, y las tres mueven
 los mismos datos.** A mano, factura por factura, que es lo que había. Por archivo: desde la
 pantalla de Facturación se baja uno con todo lo que falta facturar del período —`GET

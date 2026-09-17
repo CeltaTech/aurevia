@@ -330,6 +330,79 @@ describe('el estado de cuenta que llegó de afuera', () => {
   });
 });
 
+// ---------------------------------------------------------------------------------------
+// Quién ve cuánto debe cada Familia
+// ---------------------------------------------------------------------------------------
+
+/** Deja a quien mira sin la acción habilitada, que es como nace para quien coordina turnos. */
+function sinElPermisoDelEstadoDeCuenta() {
+  respuestas.set('POST /rest/v1/rpc/tiene_permiso_de', () => false);
+}
+
+describe('el estado de cuenta lo ve solamente quien tiene la acción habilitada', () => {
+  it('sin la acción, los saldos no se entregan y la vista ni se consulta', async () => {
+    sinElPermisoDelEstadoDeCuenta();
+    respuestas.set('GET /rest/v1/saldos_familia', () => [saldoConCobrado(40000)]);
+
+    const { estado } = await pedir('GET', '/saldos?periodo=2026-08');
+    assert.equal(estado, 403);
+    assert.ok(!llamadas.some((l) => l.clave === 'GET /rest/v1/saldos_familia'));
+  });
+
+  it('sin la acción, tampoco se entrega el que llegó de afuera', async () => {
+    sinElPermisoDelEstadoDeCuenta();
+    respuestas.set('GET /rest/v1/estado_de_cuenta_externo_vigente', () => [{ familia_id: FAMILIA }]);
+
+    const { estado } = await pedir('GET', '/estados-de-cuenta');
+    assert.equal(estado, 403);
+    assert.ok(!llamadas.some((l) => l.clave === 'GET /rest/v1/estado_de_cuenta_externo_vigente'));
+  });
+
+  it('sin la acción, el detalle de una factura no se abre', async () => {
+    sinElPermisoDelEstadoDeCuenta();
+    respuestas.set('GET /rest/v1/saldos_familia', () => [saldoConCobrado(40000)]);
+
+    const { estado } = await pedir('GET', `/facturas/${FACTURA}`);
+    assert.equal(estado, 403);
+    assert.ok(!llamadas.some((l) => l.clave === 'GET /rest/v1/saldos_familia'));
+  });
+
+  it('sin la acción, tampoco se anota ni se anula un cobro', async () => {
+    sinElPermisoDelEstadoDeCuenta();
+
+    const anotado = await pedir('POST', `/facturas/${FACTURA}/cobros`, {
+      monto: 1000,
+      fecha_cobro: '2026-08-10',
+      medio: MEDIOS[0],
+    });
+    assert.equal(anotado.estado, 403);
+
+    const anulado = await pedir('POST', '/cobros/55555555-5555-5555-5555-555555555555/anular', {
+      motivo: 'se cargó dos veces',
+    });
+    assert.equal(anulado.estado, 403);
+
+    assert.ok(!llamadas.some((l) => l.clave.includes('cobros_familia')));
+  });
+
+  it('lo que sirve para facturar no lleva ese portero: se sigue pudiendo sin la acción', async () => {
+    sinElPermisoDelEstadoDeCuenta();
+    respuestas.set('GET /rest/v1/restricciones_de_cobranza', () => []);
+
+    const { estado } = await pedir('GET', '/restricciones');
+    assert.equal(estado, 200);
+  });
+
+  it('con la acción habilitada, se entrega como siempre', async () => {
+    respuestas.set('GET /rest/v1/saldos_familia', () => [saldoConCobrado(40000)]);
+    respuestas.set('GET /rest/v1/familias', () => [{ id: FAMILIA, solicitudes: { nombre: 'Familia de prueba' } }]);
+
+    const { estado, cuerpo } = await pedir('GET', '/saldos?periodo=2026-08');
+    assert.equal(estado, 200);
+    assert.equal(cuerpo[0].saldo, '60000.00');
+  });
+});
+
 describe('la lista de saldos', () => {
   it('sin período no se contesta: un saldo siempre es de un mes', async () => {
     const { estado } = await pedir('GET', '/saldos');

@@ -35,6 +35,12 @@ import { useModalAccesible } from '../hooks/useModalAccesible';
    CLAUDE.md §7). El navegador la pide y la muestra; no la rehace, porque dos cuentas que pueden
    dar distinto es peor que una sola.
 
+   Y SI LA COBRANZA LA LLEVA OTRO SOFTWARE, NO HAY NINGUNA RESTA QUE PEDIR. Con esa configuración
+   el que sabe cuánto debe cada Familia es ese software: esta pantalla muestra el estado de cuenta
+   que él avisó —cuánto, en qué moneda, si está atrasada y desde cuándo—, tal como llegó, y lo que
+   no informó queda vacío. No se completa con lo que este sistema tenga anotado y no se muestra al
+   lado ningún número calculado acá, porque serían dos verdades para lo mismo.
+
    POR QUÉ EL ESTADO YA NO SE MARCA A MANO. El botón de "marcar como cobrado" desapareció, y no
    por prolijidad: el estado ahora se deduce de la resta y de la fecha de vencimiento, y la base
    lo recalcula sola cada vez que entra o se anula un cobro. Un botón que escribiera el estado
@@ -132,6 +138,9 @@ export function Facturacion() {
   // encendido porque es lo que hace la mayoría, y la respuesta lo corrige enseguida.
   const [sigue, setSigue] = useState(true);
   const [restricciones, setRestricciones] = useState([]);
+  // Cómo está la cuenta de cada Familia según el software que lleva la cobranza. Llega hecho y se
+  // muestra tal cual: acá no se resta nada.
+  const [estadosDeCuenta, setEstadosDeCuenta] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [generando, setGenerando] = useState(false);
@@ -153,7 +162,12 @@ export function Facturacion() {
       const { sigue_la_cobranza: sigueLaCobranza } = await llamarApiCobros('/configuracion');
       setSigue(sigueLaCobranza !== false);
       if (sigueLaCobranza === false) {
-        setRestricciones(await llamarApiCobros('/restricciones'));
+        const [avisadas, cuentas] = await Promise.all([
+          llamarApiCobros('/restricciones'),
+          llamarApiCobros('/estados-de-cuenta'),
+        ]);
+        setRestricciones(avisadas);
+        setEstadosDeCuenta(cuentas);
       } else {
         setSaldos(await llamarApiCobros(`/saldos?periodo=${mes}`));
       }
@@ -289,6 +303,44 @@ export function Facturacion() {
           <Alert variant="info">
             <strong>{t.facturacion.cobranza_externa_titulo}.</strong> {t.facturacion.cobranza_externa_texto}
           </Alert>
+
+          <h2>{t.facturacion.estados_de_cuenta_titulo}</h2>
+          <p className="panel-explicacion">{t.facturacion.estados_de_cuenta_ayuda}</p>
+          <EstadoLista
+            estado={estado}
+            error={error}
+            vacio={estado === 'listo' && estadosDeCuenta.length === 0}
+            mensajeVacio={t.facturacion.estados_de_cuenta_vacio}
+            recargar={recargar}
+          >
+            <table className="panel-tabla">
+              <thead>
+                <tr>
+                  <th>{t.facturacion.col_familia}</th>
+                  <th>{t.facturacion.col_saldo}</th>
+                  <th>{t.facturacion.col_atrasado}</th>
+                  <th>{t.facturacion.col_dias_de_atraso}</th>
+                  <th>{t.facturacion.col_vencimiento_mas_antiguo}</th>
+                  <th>{t.facturacion.col_fecha_del_estado}</th>
+                  <th>{t.facturacion.col_informado}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {estadosDeCuenta.map((e) => (
+                  <tr key={e.familia_id}>
+                    <td>{e.familia_nombre || '—'}</td>
+                    <td>{formatearImporte(e.saldo, e.moneda, locale)}</td>
+                    <td>{e.atrasado ? t.facturacion.atrasado_si : t.facturacion.atrasado_no}</td>
+                    {/* Lo que no se informó queda vacío: no se deduce de ninguna otra fecha. */}
+                    <td>{e.dias_de_atraso ?? '—'}</td>
+                    <td>{e.vencimiento_mas_antiguo || '—'}</td>
+                    <td>{e.fecha_del_estado || '—'}</td>
+                    <td>{soloLaFecha(e.informado_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </EstadoLista>
 
           <h2>{t.facturacion.restricciones_titulo}</h2>
           <EstadoLista

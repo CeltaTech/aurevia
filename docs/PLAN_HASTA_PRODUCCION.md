@@ -11,23 +11,18 @@
 
 ## El dinero
 
-**1.** Que con un software de afuera conectado, Careonys **deje de calcular** el estado de cuenta y
-muestre el que recibe, tal como lo recibe. Hoy lo calcula siempre de lo que él mismo registra, así
-que conectar un software de cobranzas dejaría dos números distintos para lo mismo. Sin nada
-conectado no cambia nada: sigue mostrando el suyo.
-
-**2.** Que el estado de cuenta lo vea solamente la administración de la Prestadora, y no quien
+**1.** Que el estado de cuenta lo vea solamente la administración de la Prestadora, y no quien
 coordina turnos. Entra como acción nueva del catálogo de permisos, reservada a administración de
 fábrica, con el mismo molde que `ver_pagos_asistente`. Alcanza a la pantalla y a la ruta del motor,
 no sólo a la pantalla.
 
-**3.** Que cada Familia quede apareada con el cliente que el software de facturación tiene cargado
+**2.** Que cada Familia quede apareada con el cliente que el software de facturación tiene cargado
 del otro lado. Es una referencia por Familia y por conexión, no una copia: no entra el número
 fiscal ni la condición frente al organismo, que son del otro lado. Es lo único que la conexión
 directa necesita y hoy no existe, y hace falta también para el apareo inicial de una Prestadora que
 ya tenía sus clientes cargados antes de empezar.
 
-**4.** Escribir la conexión de ida con el software de facturación de la primera Prestadora, cuando
+**3.** Escribir la conexión de ida con el software de facturación de la primera Prestadora, cuando
 haya una y ella lo elija. **No se escribe antes**: se miraron los cinco que más se usan en
 Argentina y se conectan todos parecido pero con datos distintos, así que escribir uno a ciegas es
 acertar con suerte. Lo investigado está en `docs/FACTURADORES_Y_COMO_SE_CONECTAN.md`. **Cada
@@ -35,10 +30,16 @@ software es una pieza aparte** y agregar la segunda no puede obligar a tocar la 
 dos maneras ya están hechas y alcanzan para salir a producción: se anota factura por factura a
 mano, o se baja un archivo con todo lo que falta facturar y se sube el que el software devuelve.
 
-**5.** Que la Prestadora pueda cargar en Configuración la conexión con su software de facturación
+**4.** Que la Prestadora pueda cargar en Configuración la conexión con su software de facturación
 y con el de créditos y cobranzas —cuál es, con qué credencial se entra— sin que ninguna alcance
 los datos de otra Prestadora. La credencial se guarda como secreto y no se vuelve a mostrar, igual
 que el secreto de la firma.
+
+**5.** Que la pantalla de la Familia tampoco muestre un saldo calculado acá cuando la cobranza la
+lleva otro software. En el Panel ya está resuelto; en la aplicación de la Familia sigue mostrando
+la resta de lo que el propio sistema registra, que es el segundo número para lo mismo. **Espera la
+maqueta**, porque cambia lo que la Familia ve y las dos aplicaciones de teléfono no se tocan hasta
+que llegue.
 
 **6. Usted** — ¿Se agrega una tercera vía de pago, con un intermediario que reciba en bloque y redistribuya? Si es sí, antes hay que resolver si eso cambia quién ejerce el control (art. 23 LCT).
 

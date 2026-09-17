@@ -37,6 +37,13 @@ import { responderError } from '../utils/errorConMotivo.js';
    cobrado, en la vista `saldos_familia`, que es el único lugar donde vive esa resta (regla 12
    de CLAUDE.md §7). Este archivo no rehace esa cuenta ni una sola vez: la lee.
 
+   Y CON UN SOFTWARE DE COBRANZAS CONECTADO, NI SIQUIERA LA LEE. Si la Prestadora eligió que el
+   seguimiento de la cobranza es de otro software, el que sabe cuánto debe cada Familia es él, y
+   este sistema deja de calcular: las rutas que entregan la resta contestan que acá no se calcula,
+   y lo que se muestra sale de `/estados-de-cuenta`, que devuelve lo que ese software avisó tal
+   como llegó. Un número que viene de afuera y otro calculado acá son dos verdades para lo mismo,
+   y eso es peor que no tener ninguna. Sin nada conectado no cambia nada.
+
    LA PUERTA DE ENTRADA ABIERTA. La plata puede entrar por donde sea: cargada acá, importada de
    un archivo, empujada por el sistema contable de la Prestadora, avisada por una pasarela. La
    ruta `/entrada` acepta un lote de cobros de cualquiera de esos orígenes y contesta uno por
@@ -142,6 +149,28 @@ async function saldoDeLaFactura(prestadoraId, facturaId) {
 // ---------------------------------------------------------------------------------------
 
 /**
+ * Si el seguimiento de la cobranza lo lleva otro software.
+ *
+ * Se pregunta antes de entregar cualquier número calculado. Con un software de cobranzas
+ * conectado, el que sabe cuánto debe cada Familia es él, y este sistema deja de calcular: entregar
+ * igual la resta de acá daría dos números distintos para la misma pregunta.
+ */
+async function laCobranzaLaLlevaOtroSoftware(prestadoraId) {
+  const { data, error } = await supabase
+    .from('configuracion_facturacion_familias')
+    .select('regla')
+    .eq('prestadora_id', prestadoraId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return !sigueLaCobranza(data?.regla);
+}
+
+/** Lo que se contesta cuando se pide un número que este sistema ya no calcula. */
+function noSeCalculaAca(res) {
+  return res.status(409).json({ error: 'La cobranza de esta Prestadora la lleva otro software' });
+}
+
+/**
  * Si el seguimiento de la cobranza es de este sistema o de otro software.
  *
  * Vive acá y no sólo en Configuración porque la pantalla de saldos lo necesita para saber qué
@@ -188,6 +217,38 @@ panelCobrosRouter.get('/restricciones', requiereRolPanel, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------------------
+// El estado de cuenta que avisó el software de créditos y cobranzas
+//
+// ACÁ NO SE CALCULA NADA. Cuánto debe cada Familia, en qué moneda, si está atrasada y desde
+// cuándo llegó de afuera y se entrega tal como llegó. No se completa lo que no vino, no se suma
+// ningún cobro anotado de este lado y no se compara contra la resta de `saldos_familia`: son dos
+// respuestas posibles para la misma pregunta, y con un software conectado la que vale es la de él.
+//
+// De cada Familia rige el aviso más nuevo, y esa elección la hace la vista
+// `estado_de_cuenta_externo_vigente`. Los anteriores quedan guardados.
+// ---------------------------------------------------------------------------------------
+
+panelCobrosRouter.get('/estados-de-cuenta', requiereRolPanel, async (req, res) => {
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+
+  const { data, error } = await supabase
+    .from('estado_de_cuenta_externo_vigente')
+    .select('familia_id, saldo, moneda, atrasado, dias_de_atraso, vencimiento_mas_antiguo, fecha_del_estado, informado_at')
+    .eq('prestadora_id', prestadoraId)
+    .order('informado_at', { ascending: false });
+  if (error) return responderError(res, error);
+
+  let nombres;
+  try {
+    nombres = await nombresDeFamilias(prestadoraId, (data || []).map((e) => e.familia_id));
+  } catch (e) {
+    return responderError(res, e);
+  }
+
+  res.json((data || []).map((e) => ({ ...e, familia_nombre: nombres.get(e.familia_id) ?? null })));
+});
+
+// ---------------------------------------------------------------------------------------
 // Los saldos
 // ---------------------------------------------------------------------------------------
 
@@ -198,6 +259,12 @@ panelCobrosRouter.get('/restricciones', requiereRolPanel, async (req, res) => {
 panelCobrosRouter.get('/saldos', requiereRolPanel, async (req, res) => {
   const periodo = primerDiaDelPeriodo(req.query.periodo);
   if (!periodo) return res.status(400).json({ error: 'Falta el período, en formato AAAA-MM' });
+
+  try {
+    if (await laCobranzaLaLlevaOtroSoftware(req.usuarioPanel.prestadoraId)) return noSeCalculaAca(res);
+  } catch (e) {
+    return responderError(res, e);
+  }
 
   const { data, error } = await supabase
     .from('saldos_familia')
@@ -223,6 +290,7 @@ panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, async (req, res)
 
   let saldo;
   try {
+    if (await laCobranzaLaLlevaOtroSoftware(prestadoraId)) return noSeCalculaAca(res);
     saldo = await saldoDeLaFactura(prestadoraId, req.params.facturaId);
   } catch (e) {
     return responderError(res, e);

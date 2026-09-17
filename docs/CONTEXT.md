@@ -244,16 +244,21 @@ acordó nada y cero, que paga el mismo día.
 **Que el sistema siga la cobranza lo decide cada Prestadora**, con un interruptor en Configuración
 → Facturación a Familias (`configuracion_facturacion_familias`, campo `sigue_la_cobranza`).
 Encendido —que es lo de fábrica— la pantalla de Facturación muestra los saldos, genera los
-reclamos y anota los pagos. Apagado, no muestra ni reclama nada: de eso se ocupa el software de
-créditos y cobranzas de la Prestadora, y lo único que Careonys necesita saber es si a alguna
-Familia hay que ponerle una restricción por falta de pago. Ese otro software lo avisa por una
+reclamos y anota los pagos. **Apagado, Careonys deja de calcular**: de la cobranza se ocupa el
+software de créditos y cobranzas de la Prestadora, y lo que se muestra es lo que ese software
+avisa —cómo está la cuenta de cada Familia, en `estados_de_cuenta_externos`, y a cuáles les
+pusieron una restricción—, tal como llegó y sin completar lo que no vino. Las rutas que entregan
+la resta de este sistema contestan `409` con esa configuración, para que nunca haya dos números
+para lo mismo en la misma pantalla; el que se muestra sale de `GET
+/api/panel/cobros/estados-de-cuenta`, que lee la vista `estado_de_cuenta_externo_vigente` —el
+aviso más nuevo de cada Familia—. Ese otro software avisa por una
 puerta propia, `POST /api/avisos-de-cobranza/:prestadoraId`, firmada con un secreto que la
 Prestadora carga una sola vez y que se guarda en la caja fuerte de la base, nunca a la vista. El
 aviso repetido no suma nada, una Prestadora no puede escribir sobre la Familia de otra, y **lo
 avisado se muestra y no decide nada**: quien decide es una persona. La puerta está en
 `backend/src/routes/avisoDeCobranzaExterna.js` y la prueba en
 `scripts/probar_aviso_de_cobranza.mjs`. El interruptor también se consulta desde la pantalla de
-saldos con `GET /api/cobros/configuracion`, que devuelve el interruptor y nunca el secreto.
+saldos con `GET /api/panel/cobros/configuracion`, que devuelve el interruptor y nunca el secreto.
 
 **El ida y vuelta con el software de facturación se puede hacer de tres maneras, y las tres mueven
 los mismos datos.** A mano, factura por factura, que es lo que había. Por archivo: desde la

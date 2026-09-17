@@ -152,7 +152,17 @@ beforeEach(() => {
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: PRESTADORA }]);
   respuestas.set('POST /rest/v1/rpc/tiene_permiso_de', () => true);
+  // De fábrica la cobranza la sigue este sistema, que es lo que hace la mayoría. Las pruebas del
+  // caso conectado pisan esta respuesta.
+  respuestas.set('GET /rest/v1/configuracion_facturacion_familias', () => [{ regla: {} }]);
 });
+
+/** Deja a la Prestadora con la cobranza en manos de otro software. */
+function laCobranzaEsDeAfuera() {
+  respuestas.set('GET /rest/v1/configuracion_facturacion_familias', () => [
+    { regla: { sigue_la_cobranza: false } },
+  ]);
+}
 
 /** Todas las consultas a la base que llevaron —o no— el filtro de Prestadora escrito. */
 function consultasDeDatos() {
@@ -211,6 +221,114 @@ describe('los centavos', () => {
 // ---------------------------------------------------------------------------------------
 // Los saldos
 // ---------------------------------------------------------------------------------------
+
+describe('con un software de cobranzas conectado, acá no se calcula', () => {
+  it('la lista de saldos no se entrega, y la resta ni siquiera se consulta', async () => {
+    laCobranzaEsDeAfuera();
+
+    const { estado } = await pedir('GET', '/saldos?periodo=2026-08');
+    assert.equal(estado, 409);
+    assert.ok(!llamadas.some((l) => l.clave === 'GET /rest/v1/saldos_familia'));
+  });
+
+  it('el detalle de una factura tampoco', async () => {
+    laCobranzaEsDeAfuera();
+
+    const { estado } = await pedir('GET', `/facturas/${FACTURA}`);
+    assert.equal(estado, 409);
+    assert.ok(!llamadas.some((l) => l.clave === 'GET /rest/v1/saldos_familia'));
+  });
+
+  it('sin nada conectado no cambia nada: el saldo calculado sigue saliendo', async () => {
+    respuestas.set('GET /rest/v1/saldos_familia', () => [saldoConCobrado(40000)]);
+    respuestas.set('GET /rest/v1/familias', () => [{ id: FAMILIA, solicitudes: { nombre: 'Familia de prueba' } }]);
+
+    const { estado, cuerpo } = await pedir('GET', '/saldos?periodo=2026-08');
+    assert.equal(estado, 200);
+    assert.equal(cuerpo[0].saldo, '60000.00');
+  });
+});
+
+describe('el estado de cuenta que llegó de afuera', () => {
+  const ESTADO_QUE_LLEGO = {
+    familia_id: FAMILIA,
+    saldo: '48500.50',
+    moneda: 'ARS',
+    atrasado: true,
+    dias_de_atraso: 12,
+    vencimiento_mas_antiguo: '2026-08-10',
+    fecha_del_estado: '2026-09-17',
+    informado_at: '2026-09-17T10:00:00Z',
+  };
+
+  it('se entrega tal como llegó, con el nombre de la Familia al lado', async () => {
+    respuestas.set('GET /rest/v1/estado_de_cuenta_externo_vigente', () => [ESTADO_QUE_LLEGO]);
+    respuestas.set('GET /rest/v1/familias', () => [{ id: FAMILIA, solicitudes: { nombre: 'Familia de prueba' } }]);
+
+    const { estado, cuerpo } = await pedir('GET', '/estados-de-cuenta');
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.length, 1);
+    assert.equal(cuerpo[0].saldo, '48500.50');
+    assert.equal(cuerpo[0].moneda, 'ARS');
+    assert.equal(cuerpo[0].atrasado, true);
+    assert.equal(cuerpo[0].dias_de_atraso, 12);
+    assert.equal(cuerpo[0].familia_nombre, 'Familia de prueba');
+  });
+
+  it('no se mezcla con la resta de este sistema: esa vista no se consulta', async () => {
+    respuestas.set('GET /rest/v1/estado_de_cuenta_externo_vigente', () => [ESTADO_QUE_LLEGO]);
+    respuestas.set('GET /rest/v1/familias', () => [{ id: FAMILIA, solicitudes: { nombre: 'Familia de prueba' } }]);
+
+    await pedir('GET', '/estados-de-cuenta');
+
+    assert.ok(!llamadas.some((l) => l.clave === 'GET /rest/v1/saldos_familia'));
+    assert.ok(!llamadas.some((l) => l.clave === 'GET /rest/v1/cobros_familia'));
+  });
+
+  it('lo que no se informó queda vacío, y no se completa con nada', async () => {
+    respuestas.set('GET /rest/v1/estado_de_cuenta_externo_vigente', () => [
+      {
+        familia_id: FAMILIA,
+        saldo: '-1200.00',
+        moneda: 'USD',
+        atrasado: false,
+        dias_de_atraso: null,
+        vencimiento_mas_antiguo: null,
+        fecha_del_estado: null,
+        informado_at: '2026-09-17T10:00:00Z',
+      },
+    ]);
+    respuestas.set('GET /rest/v1/familias', () => [{ id: FAMILIA, solicitudes: { nombre: 'Familia de prueba' } }]);
+
+    const { cuerpo } = await pedir('GET', '/estados-de-cuenta');
+    assert.equal(cuerpo[0].dias_de_atraso, null);
+    assert.equal(cuerpo[0].vencimiento_mas_antiguo, null);
+    assert.equal(cuerpo[0].fecha_del_estado, null);
+    // Un saldo a favor llega negativo y se entrega negativo.
+    assert.equal(cuerpo[0].saldo, '-1200.00');
+  });
+
+  it('toda consulta lleva el filtro de Prestadora escrito', async () => {
+    respuestas.set('GET /rest/v1/estado_de_cuenta_externo_vigente', () => [ESTADO_QUE_LLEGO]);
+    respuestas.set('GET /rest/v1/familias', () => [{ id: FAMILIA, solicitudes: { nombre: 'Familia de prueba' } }]);
+
+    await pedir('GET', '/estados-de-cuenta');
+
+    const consultas = consultasDeDatos();
+    assert.ok(consultas.length > 0);
+    for (const consulta of consultas) {
+      assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`), consulta.clave);
+    }
+  });
+
+  it('sin ningún aviso todavía, la lista viene vacía y no se inventa nada', async () => {
+    respuestas.set('GET /rest/v1/estado_de_cuenta_externo_vigente', () => []);
+
+    const { estado, cuerpo } = await pedir('GET', '/estados-de-cuenta');
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo, []);
+  });
+});
 
 describe('la lista de saldos', () => {
   it('sin período no se contesta: un saldo siempre es de un mes', async () => {

@@ -161,7 +161,7 @@ async function limpiarCuentaSobrante(email, prestadoraId) {
 // Familia/Asistente/Círculo (panelCuentas.js), la persona nunca ve `passwordTemporal`: con
 // `enviarActivacion: true` se dispara automáticamente el email de "primera contraseña"
 // (activacionCuenta.js) con un link de token propio, en vez de depender de un canal manual.
-export async function crearCuentaConPerfil({ email, nombre, telefono, rol, zonas, prestadoraId, enviarActivacion = false }) {
+export async function crearCuentaConPerfil({ email, nombre, telefono, rol, prestadoraId, enviarActivacion = false }) {
   const passwordTemporal = crypto.randomBytes(24).toString('base64url');
 
   let { data: authData, error: errorAuth } = await supabase.auth.admin.createUser({
@@ -189,7 +189,7 @@ export async function crearCuentaConPerfil({ email, nombre, telefono, rol, zonas
 
   const { error: errorPerfil } = await supabase
     .from('usuarios')
-    .insert({ id: userId, rol, nombre, telefono, zonas, prestadora_id: prestadoraId });
+    .insert({ id: userId, rol, nombre, telefono, prestadora_id: prestadoraId });
 
   if (errorPerfil) {
     await supabase.auth.admin.deleteUser(userId);
@@ -342,15 +342,13 @@ const FILAS_DE_UN_MIEMBRO_CIRCULO = [
 // manual de la Fase 1, en vez de duplicar la lógica (ver alcance de la Fase 3 en el plan
 // aprobado: "no se construye un camino de creación de datos paralelo y distinto").
 export async function crearAsistenteDirecto({
-  nombre, telefono, email, dni, domicilio, domicilioPartido, tipo_asistente_id, tipo_asistente, zonas, lugares, estado,
+  nombre, telefono, email, dni, domicilio, domicilioPartido, tipo_asistente_id, tipo_asistente, lugares, estado,
   tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales, modalidades,
   prestadoraId, usuarioPanelId, importacionId,
 }) {
   if (!nombre || !email) {
     throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombre, email)');
   }
-
-  const zonasArray = Array.isArray(zonas) ? zonas : [];
 
   // En qué modalidad de trabajo va a estar esta persona. Si el alta no lo dice —una planilla
   // importada, por ejemplo—, no se manda nada y la base lo completa con las modalidades que la
@@ -385,7 +383,7 @@ export async function crearAsistenteDirecto({
   let asistenteId;
   try {
     ({ userId: asistenteId } = await crearCuentaConPerfil({
-      email, nombre, telefono, rol: 'asistente', zonas: zonasArray, prestadoraId, enviarActivacion: true,
+      email, nombre, telefono, rol: 'asistente', prestadoraId, enviarActivacion: true,
     }));
 
     const { error: errorAsistente } = await supabase.from('asistentes').insert({
@@ -398,7 +396,6 @@ export async function crearAsistenteDirecto({
       ...partes,
       ...ubicacion,
       tipo_asistente_id: tipoAsistenteId,
-      zonas: zonasArray,
       estado: estado || 'activo',
       tipo_vinculo: tipo_vinculo || 'monotributo',
       horas_semanales: horas_semanales || null,

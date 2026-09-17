@@ -13,11 +13,14 @@ const escalas = resolverEscalasVigentes(UMBRALES, HOY);
 const sinUmbrales = resolverEscalasVigentes([], HOY);
 
 // Datos inventados: una persona que entró hace justo dos años, hace jornada completa y trabaja
-// en una sola zona. Los tres indicios, plenos.
+// en un solo lugar. Los tres indicios, plenos.
+//
+// Lo que se cuenta son los lugares que tiene puestos, no las palabras que alguien tecleó: dos
+// localidades pueden llamarse igual, y contar nombres daría una sola donde hay dos.
 const ASISTENTE = {
   fecha_alta: '2024-09-15',
   horas_semanales: '40',
-  zonas: ['Zona Norte'],
+  lugares: ['a1000000-0000-4000-8000-000000000001'],
 };
 
 describe('deducirIndicadores', () => {
@@ -51,15 +54,31 @@ describe('deducirIndicadores', () => {
     expect(valores.horas_semanales_promedio.umbral).toBe(30);
   });
 
-  it('una sola zona asignada es el indicio; varias, no', () => {
-    const una = deducirIndicadores(ASISTENTE, escalas, HOY);
-    expect(una.valores.exclusividad_zona.valor).toBe(1);
-    const varias = deducirIndicadores({ ...ASISTENTE, zonas: ['Norte', 'Sur'] }, escalas, HOY);
-    expect(varias.valores.exclusividad_zona.valor).toBe(0);
+  it('un solo lugar puesto es el indicio; varios, no', () => {
+    const uno = deducirIndicadores(ASISTENTE, escalas, HOY);
+    expect(uno.valores.exclusividad_zona.valor).toBe(1);
+    const varios = deducirIndicadores(
+      { ...ASISTENTE, lugares: ['a1000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000005'] },
+      escalas,
+      HOY,
+    );
+    expect(varios.valores.exclusividad_zona.valor).toBe(0);
+  });
+
+  it('dos lugares que se llaman igual son dos, no uno', () => {
+    // Hay un Belgrano en la Ciudad y otro en San Isidro. Mientras esto eran palabras tecleadas,
+    // las dos eran la misma y la persona figuraba como exclusiva de una sola zona.
+    const { valores } = deducirIndicadores(
+      { ...ASISTENTE, lugares: ['a1000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000004'] },
+      escalas,
+      HOY,
+    );
+    expect(valores.exclusividad_zona.valor).toBe(0);
+    expect(valores.exclusividad_zona.dato).toBe(2);
   });
 
   it('sin el dato en la ficha el indicador no se deduce: se avisa', () => {
-    const { valores, sinDeducir } = deducirIndicadores({ fecha_alta: null, horas_semanales: null, zonas: [] }, escalas, HOY);
+    const { valores, sinDeducir } = deducirIndicadores({ fecha_alta: null, horas_semanales: null, lugares: [] }, escalas, HOY);
     expect(valores).toEqual({});
     expect(sinDeducir.map((s) => s.motivo)).toEqual(['sin_dato', 'sin_dato', 'sin_dato']);
   });
@@ -69,14 +88,18 @@ describe('deducirIndicadores', () => {
     expect(valores.antiguedad_vinculo).toBeUndefined();
     expect(valores.horas_semanales_promedio).toBeUndefined();
     expect(sinDeducir.map((s) => s.motivo)).toEqual(['sin_umbral', 'sin_umbral']);
-    // La zona no lleva umbral, así que se sigue deduciendo igual.
+    // La exclusividad no lleva umbral, así que se sigue deduciendo igual.
     expect(valores.exclusividad_zona.valor).toBe(1);
   });
 });
 
 describe('indicadoresParaElPuntaje', () => {
   it('lo deducido pisa lo tildado a mano, porque la ficha es la verdad', () => {
-    const { valores } = deducirIndicadores({ ...ASISTENTE, zonas: ['Norte', 'Sur'] }, escalas, HOY);
+    const { valores } = deducirIndicadores(
+      { ...ASISTENTE, lugares: ['a1000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000005'] },
+      escalas,
+      HOY,
+    );
     const listos = indicadoresParaElPuntaje({ exclusividad_zona: 1, supervision_directa: 1 }, valores);
     expect(listos.exclusividad_zona).toBe(0);
   });

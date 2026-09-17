@@ -34,7 +34,7 @@ function rolesGestionables(rolSolicitante) {
 panelUsuariosRouter.get('/', requiereRolPanel, soloAdministracion, async (req, res) => {
   let query = supabase
     .from('usuarios')
-    .select('id, rol, nombre, telefono, zonas, created_at')
+    .select('id, rol, nombre, telefono, created_at')
     .in('rol', ROLES_PANEL)
     .order('created_at', { ascending: false });
 
@@ -65,7 +65,7 @@ panelUsuariosRouter.get('/', requiereRolPanel, soloAdministracion, async (req, r
 });
 
 panelUsuariosRouter.post('/', requiereRolPanel, soloAdministracion, async (req, res) => {
-  const { email, nombre, telefono, zonas, lugares, rol } = req.body;
+  const { email, nombre, telefono, lugares, rol } = req.body;
   if (!email || !nombre) {
     return res.status(400).json({ error: 'Faltan email o nombre' });
   }
@@ -101,7 +101,7 @@ panelUsuariosRouter.post('/', requiereRolPanel, soloAdministracion, async (req, 
 
   try {
     const { userId, passwordTemporal } = await crearCuentaConPerfil({
-      email, nombre, telefono, rol: rolNuevo, zonas,
+      email, nombre, telefono, rol: rolNuevo,
       prestadoraId: prestadoraDestino,
     });
 
@@ -125,10 +125,10 @@ panelUsuariosRouter.post('/', requiereRolPanel, soloAdministracion, async (req, 
 });
 
 panelUsuariosRouter.patch('/:id', requiereRolPanel, soloAdministracion, async (req, res) => {
-  const { nombre, telefono, zonas } = req.body;
+  const { nombre, telefono } = req.body;
   let query = supabase
     .from('usuarios')
-    .update({ nombre, telefono, zonas })
+    .update({ nombre, telefono })
     .eq('id', req.params.id)
     .in('rol', rolesGestionables(req.usuarioPanel.rol));
 

@@ -57,6 +57,34 @@ export async function nombreDelLugar(lugarId, prestadoraId) {
   return String(data?.nombre ?? '');
 }
 
+/** Cómo se llaman esos lugares, ordenados por nombre.
+ *
+ *  Es lo que ven las pantallas de teléfono donde antes había palabras tecleadas: la lista que sale
+ *  hacia afuera sigue siendo de nombres, pero ahora los nombres salen de las fichas de los lugares
+ *  y no de lo que alguien escribió a mano en cada ficha de Asistente.
+ *
+ *  Filtrado por Prestadora, por el mismo motivo que `nombreDelLugar`. */
+export async function nombresDeLugares(lugarIds, prestadoraId) {
+  return (await lugaresPorNombre(lugarIds, prestadoraId)).map((lugar) => lugar.nombre);
+}
+
+/** Esos mismos lugares con su identificador, para las pantallas que además filtran por uno.
+ *
+ *  Lo que se elige es cuál lugar, no cómo se llama: dos localidades de provincias distintas se
+ *  llaman igual, y un filtro por nombre las traería a las dos. */
+export async function lugaresPorNombre(lugarIds, prestadoraId) {
+  const buscados = [...new Set((lugarIds ?? []).filter(Boolean))];
+  if (!buscados.length) return [];
+  const { data, error } = await supabase
+    .from('lugares')
+    .select('id, nombre')
+    .eq('prestadora_id', prestadoraId)
+    .in('id', buscados)
+    .order('nombre');
+  if (error) throw error;
+  return data ?? [];
+}
+
 /** Las zonas de cobertura de esa Organización con los lugares que abarca cada una. */
 export async function zonasConSusLugares(prestadoraId) {
   const [{ data: zonas, error: errorZonas }, { data: cruces, error: errorCruces }] = await Promise.all([

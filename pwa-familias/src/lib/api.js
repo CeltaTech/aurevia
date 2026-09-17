@@ -68,7 +68,9 @@ export const api = {
   factura: (facturaId) => pedido(`/facturas/${facturaId}`),
   // La vidriera del Marketplace. Los filtros van vacíos cuando no se eligió ninguno, y las
   // opciones para elegir vuelven en la misma respuesta: las arma el motor con quien está
-  // realmente en la vidriera, así que una zona sin nadie no se ofrece.
+  // realmente en la vidriera, así que un lugar sin nadie no se ofrece. Lo que viaja es cuál lugar
+  // y no cómo se llama: dos localidades de provincias distintas pueden llamarse igual, y filtrar
+  // por el nombre traería las dos.
   asistentesDelMarketplace: ({ zona, tipo } = {}) => {
     const filtros = new URLSearchParams();
     if (zona) filtros.set('zona', zona);

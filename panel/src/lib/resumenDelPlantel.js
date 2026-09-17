@@ -110,17 +110,18 @@ export function documentacionPorAsistente(
 /**
  * Las opciones de un filtro, sacadas de lo que el plantel tiene cargado.
  *
- * Las zonas y las especialidades las escribió a mano quien cargó cada ficha, así que la misma
- * zona aparece escrita de varias maneras —`San Isidro`, `san isidro`, `SAN ISIDRO`—. Se agrupan
- * con `comparable` (`textoComparable.js`), que es el mismo criterio con el que la sugerencia de
- * la Solicitud acerca las dos puntas, y se muestra la primera forma que apareció.
+ * Las especialidades las escribió a mano quien cargó cada ficha, así que la misma aparece escrita
+ * de varias maneras. Se agrupan con `comparable` (`textoComparable.js`), que es el mismo criterio
+ * con el que la sugerencia de la Solicitud acerca las dos puntas, y se muestra la primera forma
+ * que apareció.
  *
- * **Las opciones salen del plantel y no de un catálogo** a propósito: un filtro armado con el
- * catálogo de la Prestadora ofrecería zonas donde no hay nadie y —peor— dejaría afuera lo que
+ * **Las opciones salen del plantel y no de un catálogo** a propósito: dejaría afuera lo que
  * alguien escribió sin que estuviera en la lista, que es justo lo que hay que poder encontrar.
+ * Dónde trabaja cada persona ya no entra por acá: eso sale del catálogo de lugares, donde no hay
+ * nada escrito a mano que acercar.
  *
  * @param filas   el plantel.
- * @param campo   `'zonas'` o `'especialidades'`.
+ * @param campo   `'especialidades'`.
  * @returns array de textos, ordenado alfabéticamente, sin repetidos.
  */
 export function opcionesDelPlantel(filas, campo) {

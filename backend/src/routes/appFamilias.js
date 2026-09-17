@@ -27,6 +27,8 @@ import {
   perfilPublicoDeAsistente,
   promedioDeCalificaciones,
 } from '../utils/perfilPublicoDeAsistente.js';
+import { lugaresDe, lugaresDeVarias } from '../utils/lugaresDeCadaPersona.js';
+import { nombresDeLugares, lugaresPorNombre } from '../utils/catalogoDeLugares.js';
 import { funcionDeRiesgoEncendida, ofreceMarketplace } from '../utils/marketplaceDeLaPrestadora.js';
 import {
   LADO,
@@ -1205,31 +1207,45 @@ appFamiliasRouter.get('/marketplace/asistentes', requiereRolFamilia, async (req,
     const prestadoraId = req.usuarioFamilia.prestadoraId;
     const visibilidad = await visibilidadDelPedido(req);
 
-    // Las opciones de los filtros salen del pool y no de una lista escrita: una zona en la que
-    // no trabaja nadie no se ofrece, porque elegirla devolvería siempre vacío.
+    // Las opciones de los filtros salen del pool y no de una lista escrita: un lugar en el que
+    // no trabaja nadie no se ofrece, porque elegirlo devolvería siempre vacío.
     const { data: todos } = await poolDeLaPrestadora(prestadoraId);
-    const zonasOfrecidas = [...new Set((todos || []).flatMap((a) => a.zonas || []))].sort((a, b) =>
-      a.localeCompare(b)
-    );
     const tiposOfrecidos = [...new Set((todos || []).map((a) => a.tipo_asistente_id).filter(Boolean))];
 
+    // Dónde trabaja cada uno. Está en la tabla que cruza a la persona con cada lugar, así que el
+    // filtro se resuelve acá y no en la consulta de fichas: se piden los lugares de todo el pool
+    // una sola vez, y con eso se arma tanto la lista de opciones como el recorte.
+    const lugaresPorAsistente = await lugaresDeVarias(
+      'asistente_lugares', 'asistente_id', (todos || []).map((a) => a.id), prestadoraId
+    );
+    const lugaresOfrecidos = await lugaresPorNombre(
+      [...new Set([...lugaresPorAsistente.values()].flat())], prestadoraId
+    );
+
+    const lugarElegido = req.query.zona ? String(req.query.zona) : null;
+    const delLugar = (id) => !lugarElegido || (lugaresPorAsistente.get(id) || []).includes(lugarElegido);
+
     let consulta = poolDeLaPrestadora(prestadoraId).limit(TOPE_DE_LA_VIDRIERA);
-    if (req.query.zona) consulta = consulta.contains('zonas', [String(req.query.zona)]);
     if (req.query.tipo) consulta = consulta.eq('tipo_asistente_id', String(req.query.tipo));
 
-    const { data: asistentes, error } = await consulta;
+    const { data: todasLasFichas, error } = await consulta;
     if (error) return responderError(res, error);
+    const asistentes = (todasLasFichas || []).filter((a) => delLugar(a.id));
 
-    const ids = (asistentes || []).map((a) => a.id);
+    const ids = asistentes.map((a) => a.id);
     const [documentacion, calificaciones, tipos] = await Promise.all([
       documentacionDeVarios(prestadoraId, ids),
       calificacionesDeVarios(prestadoraId, ids, visibilidad),
       tiposDeLaVidriera(prestadoraId, tiposOfrecidos),
     ]);
 
-    const perfiles = (asistentes || []).map((asistente) =>
+    const nombreDe = new Map(lugaresOfrecidos.map((l) => [l.id, l.nombre]));
+    const perfiles = asistentes.map((asistente) =>
       perfilPublicoDeAsistente({
-        asistente,
+        asistente: {
+          ...asistente,
+          zonas: (lugaresPorAsistente.get(asistente.id) || []).map((id) => nombreDe.get(id)).filter(Boolean),
+        },
         tipo: tipos.get(asistente.tipo_asistente_id) || null,
         documentacion: documentacion.get(asistente.id) || null,
         calificacion: calificaciones.get(asistente.id) || null,
@@ -1244,7 +1260,7 @@ appFamiliasRouter.get('/marketplace/asistentes', requiereRolFamilia, async (req,
       // Viaja para que la pantalla pueda decir en qué orden está mirando, y no prometa uno
       // que no existe.
       orden,
-      zonas: zonasOfrecidas,
+      zonas: lugaresOfrecidos,
       tipos: tiposOfrecidos.map((id) => tipos.get(id)).filter(Boolean),
     });
   } catch (e) {
@@ -1288,9 +1304,14 @@ appFamiliasRouter.get('/marketplace/asistentes/:id', requiereRolFamilia, async (
       opiniones = data || [];
     }
 
+    const dondeTrabaja = await nombresDeLugares(
+      await lugaresDe('asistente_lugares', 'asistente_id', asistente.id, prestadoraId),
+      prestadoraId
+    );
+
     res.json({
       asistente: perfilPublicoDeAsistente({
-        asistente,
+        asistente: { ...asistente, zonas: dondeTrabaja },
         tipo: tipos.get(asistente.tipo_asistente_id) || null,
         documentacion: documentacion.get(asistente.id) || null,
         calificacion: calificaciones.get(asistente.id) || null,

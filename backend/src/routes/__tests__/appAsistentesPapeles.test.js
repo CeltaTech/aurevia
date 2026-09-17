@@ -209,10 +209,13 @@ describe('el Certificado que viaja con el perfil', () => {
   beforeEach(() => {
     respuestas.set('GET /rest/v1/asistentes', () => [
       { id: USUARIO, nombre: 'Nombre Inventado', telefono: null, email: 'inventado@ejemplo.test',
-        foto_url: null, tipo_asistente_id: null, zonas: [], estado: 'activo',
+        foto_url: null, tipo_asistente_id: null, estado: 'activo',
         tipo_vinculo: 'monotributo', qr_token: 'x', canales: [],
         disponible_para_ofertas: true, disponibilidad_cambiada_en: null, tipos_asistente: null },
     ]);
+    // Dónde acepta trabajar sale de sus lugares y del catálogo, no de un renglón de la ficha.
+    respuestas.set('GET /rest/v1/asistente_lugares', () => []);
+    respuestas.set('GET /rest/v1/lugares', () => []);
   });
 
   it('la consulta del Certificado va filtrada por la Prestadora de la sesión', async () => {

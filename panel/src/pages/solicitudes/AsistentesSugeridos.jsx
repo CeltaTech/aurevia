@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { asistentesParaSolicitud } from '../../lib/asistentesParaSolicitud';
+import { useLugaresDelPlantel } from '../../hooks/useLugaresDelPlantel';
 
 /* A quién proponerle esta Solicitud, adentro de la misma ventana donde se la está leyendo.
    Hasta ahora, para pasar de una Solicitud a una guardia había que memorizar la localidad y el
@@ -40,7 +41,7 @@ export function AsistentesSugeridos({ solicitud, onAsignar }) {
       await Promise.all([
         supabase
           .from('asistentes')
-          .select('id, nombre, estado, zonas, especialidades, disponible_para_ofertas')
+          .select('id, nombre, estado, especialidades, disponible_para_ofertas')
           .is('deleted_at', null),
         solicitud.familia_id
           ? supabase
@@ -65,9 +66,17 @@ export function AsistentesSugeridos({ solicitud, onAsignar }) {
     cargar();
   }, [cargar]);
 
+  // Dónde acepta trabajar cada una vive en su propia tabla, así que llega aparte y se le adjunta
+  // a la ficha con los nombres del catálogo. La ficha guarda cuál lugar; el nombre se busca al
+  // mostrarlo, que es lo que después se compara contra la localidad que trae la Solicitud.
+  const lugaresDelPlantel = useLugaresDelPlantel(plantel.map((a) => a.id));
+
   const sugeridos = useMemo(
-    () => asistentesParaSolicitud(solicitud, plantel),
-    [solicitud, plantel],
+    () => asistentesParaSolicitud(
+      solicitud,
+      plantel.map((a) => ({ ...a, zonas: lugaresDelPlantel.nombresDe(a.id) })),
+    ),
+    [solicitud, plantel, lugaresDelPlantel],
   );
 
   const visibles = todos ? sugeridos : sugeridos.slice(0, CUANTOS_PRIMERO);

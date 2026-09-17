@@ -82,13 +82,17 @@ export function deducirIndicadores(asistente, escalasResueltas, hoy) {
     valores.horas_semanales_promedio = { valor: proporcion(horas, umbralHoras), dato: horas, umbral: umbralHoras };
   }
 
-  // Exclusividad de zona. No lleva umbral: trabajar en una sola zona asignada es el indicio, y
-  // eso no depende de ningún número. Con varias zonas el indicio no está, y eso es un dato.
-  const zonas = Array.isArray(asistente?.zonas) ? asistente.zonas : null;
-  if (!zonas || zonas.length === 0) {
+  // Exclusividad de zona. No lleva umbral: aceptar trabajo en un solo lugar es el indicio, y eso
+  // no depende de ningún número. Con varios lugares el indicio no está, y eso es un dato.
+  //
+  // Se cuentan los lugares guardados de la ficha, que es lo que la pantalla le adjunta. Una ficha
+  // que todavía no los trajo no cuenta cero: cuenta sin dato, porque cero diría que esa persona
+  // no acepta trabajar en ninguna parte.
+  const lugares = Array.isArray(asistente?.lugares) ? asistente.lugares : null;
+  if (!lugares || lugares.length === 0) {
     sinDeducir.push({ indicador: 'exclusividad_zona', motivo: 'sin_dato' });
   } else {
-    valores.exclusividad_zona = { valor: zonas.length === 1 ? 1 : 0, dato: zonas.length, umbral: null };
+    valores.exclusividad_zona = { valor: lugares.length === 1 ? 1 : 0, dato: lugares.length, umbral: null };
   }
 
   return { valores, sinDeducir };

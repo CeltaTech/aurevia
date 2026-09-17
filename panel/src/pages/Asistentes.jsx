@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
@@ -21,6 +21,7 @@ import { useEscalasLegales } from '../hooks/useEscalasLegales';
 import { useFiltros } from '../hooks/useFiltros';
 import { useTiposAsistente } from '../hooks/useTiposAsistente';
 import { usePanoramaDelPlantel } from '../hooks/usePanoramaDelPlantel';
+import { useLugaresDelPlantel } from '../hooks/useLugaresDelPlantel';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
@@ -55,6 +56,9 @@ export function Asistentes() {
   // Los dos datos que había que entrar a la ficha para ver. Llegan aparte de la lista y no la
   // demoran: mientras no estén, las tarjetas se muestran sin ellos.
   const panorama = usePanoramaDelPlantel();
+  // Dónde acepta trabajar cada una. Vive en su propia tabla y no en un renglón de la ficha, así
+  // que llega aparte, como el panorama.
+  const lugaresDelPlantel = useLugaresDelPlantel(filas.map((a) => a.id));
   // El puntaje de riesgo se muestra recalculado, no como quedó guardado la última vez que
   // alguien entró a la ficha: tres de sus siete indicadores salen de datos del Asistente que
   // cambian solos —cuándo entró, cuántas horas hace, en cuántas zonas trabaja—. Las escalas se
@@ -78,8 +82,19 @@ export function Asistentes() {
   const [mostrarNuevo, setMostrarNuevo] = useState(false);
   const [mostrarPasarAlCatalogo, setMostrarPasarAlCatalogo] = useState(false);
 
+  // La ficha con lo que llega aparte: el panorama, y los lugares donde acepta trabajar. Lo
+  // guardado en la ficha es cuál lugar; el nombre se busca en el catálogo al mostrarlo.
+  const conLugares = useCallback(
+    (a) => ({
+      ...conDatosAparte(a),
+      lugares: lugaresDelPlantel.lugaresDe(a.id),
+      zonas: lugaresDelPlantel.nombresDe(a.id),
+    }),
+    [lugaresDelPlantel],
+  );
+
   const filasFiltradas = useMemo(() => {
-    return filas.map(conDatosAparte).filter((a) => {
+    return filas.map(conLugares).filter((a) => {
       const coincideBusqueda =
         !f.busqueda ||
         a.nombre?.toLowerCase().includes(f.busqueda.toLowerCase()) ||
@@ -90,15 +105,21 @@ export function Asistentes() {
         coincideBusqueda &&
         coincideEstado &&
         coincideTipo &&
-        coincideConElFiltro(a, 'zonas', f.zona) &&
+        (!f.zona || a.lugares.includes(f.zona)) &&
         coincideConElFiltro(a, 'especialidades', f.especialidad)
       );
     });
-  }, [filas, f]);
+  }, [filas, f, conLugares]);
 
-  // Las dos listas salen de lo que el plantel tiene cargado, no de un catálogo: así el filtro
-  // nunca ofrece una zona donde no hay nadie ni deja afuera una que alguien escribió a mano.
-  const zonas = useMemo(() => opcionesDelPlantel(filas, 'zonas'), [filas]);
+  // El filtro de lugar ofrece los lugares que el plantel tiene cargados, no el catálogo entero:
+  // uno donde no trabaja nadie es una opción que siempre contesta vacío. Se elige cuál lugar y no
+  // cómo se llama, porque dos localidades de provincias distintas pueden llamarse igual.
+  const lugares = useMemo(() => {
+    const puestos = new Set(filas.flatMap((a) => lugaresDelPlantel.lugaresDe(a.id)));
+    return lugaresDelPlantel.catalogo
+      .filter((lugar) => puestos.has(lugar.id))
+      .map((lugar) => ({ id: lugar.id, nombre: lugar.nombre }));
+  }, [filas, lugaresDelPlantel]);
   const especialidades = useMemo(() => opcionesDelPlantel(filas, 'especialidades'), [filas]);
 
   // Todos los que todavía no tienen tipo del catálogo. Son de dos orígenes: los que
@@ -140,11 +161,11 @@ export function Asistentes() {
         </select>
         {/* Los dos filtros aparecen sólo si hay algo que filtrar: una lista desplegable con una
             sola opción, o con ninguna, es una pregunta que no se puede contestar. */}
-        {zonas.length > 1 && (
+        {lugares.length > 1 && (
           <select value={f.zona} onChange={(e) => set('zona', e.target.value)} aria-label={t.asistentes.col_zonas}>
             <option value="">{t.asistentes.filtro_zona_todas}</option>
-            {zonas.map((zona) => (
-              <option key={zona} value={zona}>{zona}</option>
+            {lugares.map((lugar) => (
+              <option key={lugar.id} value={lugar.id}>{lugar.nombre}</option>
             ))}
           </select>
         )}
@@ -222,7 +243,7 @@ export function Asistentes() {
                 </span>
               </div>
               <div className="lista-tarjeta-meta">
-                <span><strong>{t.asistentes.col_zonas}:</strong> {(a.zonas || []).join(', ') || '—'}</span>
+                <span><strong>{t.asistentes.col_zonas}:</strong> {a.zonas.join(', ') || '—'}</span>
                 <span><strong>{t.asistentes.col_especialidades}:</strong> {(a.especialidades || []).join(', ') || '—'}</span>
                 {/* Las dos cuentas del panorama. Cuando la consulta no volvió, el renglón no
                     aparece: un cero diría que esa persona no tiene ninguna guardia, y lo que

@@ -13,8 +13,8 @@ import { mensajeDeError } from '../lib/errores';
 // el orden no premie a nadie es una exigencia legal —ordenar a quién se le ofrece trabajo
 // primero es un indicio de dirección del trabajo—, así que tampoco puede quedar sin decir.
 //
-// LOS FILTROS SALEN DE QUIEN ESTÁ EN LA VIDRIERA. Las zonas y los tipos vienen en la misma
-// respuesta, armados con el pool real: una zona donde no trabaja nadie no se ofrece, porque
+// LOS FILTROS SALEN DE QUIEN ESTÁ EN LA VIDRIERA. Los lugares y los tipos vienen en la misma
+// respuesta, armados con el pool real: un lugar donde no trabaja nadie no se ofrece, porque
 // elegirla devolvería siempre vacío.
 //
 // EL DATO DE CONTACTO NO ESTÁ ACÁ, Y SE DICE. Llegar a la persona es lo que el Marketplace
@@ -79,7 +79,7 @@ export default function BuscarAsistentes() {
           <select id="filtro-zona" value={zona} onChange={(e) => setZona(e.target.value)}>
             <option value="">{t.vidriera.todas_las_zonas}</option>
             {zonas.map((z) => (
-              <option key={z} value={z}>{z}</option>
+              <option key={z.id} value={z.id}>{z.nombre}</option>
             ))}
           </select>
         </div>

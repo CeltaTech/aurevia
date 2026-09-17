@@ -16,6 +16,7 @@ import { con } from '../../lib/textos';
 import { hoyISO } from '../../lib/horarios';
 import { situacion } from '../../lib/vigenciaPrestacion';
 import { servicioSirveParaFamilia } from '../../lib/serviciosDelPaciente';
+import { lugaresDe, lugaresDeVarias } from '../../lib/lugaresDeCadaPersona';
 
 function calcularPrecioFinal(precioLista, tipoDescuento, valorDescuento) {
   const base = Number(precioLista) || 0;
@@ -320,7 +321,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       return;
     }
 
-    // La consulta de Asistentes y zonas involucrados corre recién acá, después de insertar el
+    // La consulta de los Asistentes involucrados corre recién acá, después de insertar el
     // cierre: la política "coordinador_cierra_servicio_*" que le da visibilidad a un Coordinador
     // fuera de zona depende de que ese registro ya exista, y desde
     // 20260910220000_el_precio_el_calendario_y_el_cierre_cuelgan_del_servicio.sql pregunta por el
@@ -331,25 +332,28 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     const [seriesActivasResp, guardiasProgramadasResp] = await Promise.all([
       supabase
         .from('series_guardias')
-        .select('asistente_id, asistentes(zonas)')
+        .select('asistente_id')
         .eq('paciente_id', paciente.id)
         .eq('servicio_id', servicioCierreId)
         .eq('estado', 'activa'),
       supabase
         .from('guardias')
-        .select('asistente_id, asistentes(zonas)')
+        .select('asistente_id')
         .eq('paciente_id', paciente.id)
         .eq('servicio_id', servicioCierreId)
         .eq('estado', 'programada'),
     ]);
 
-    const asistentesInvolucrados = new Map();
-    for (const fila of [...(seriesActivasResp.data ?? []), ...(guardiasProgramadasResp.data ?? [])]) {
-      if (fila.asistente_id) asistentesInvolucrados.set(fila.asistente_id, fila.asistentes?.zonas ?? []);
-    }
+    const asistentesInvolucrados = [
+      ...new Set(
+        [...(seriesActivasResp.data ?? []), ...(guardiasProgramadasResp.data ?? [])]
+          .map((fila) => fila.asistente_id)
+          .filter(Boolean),
+      ),
+    ];
 
     const ahora = new Date().toISOString();
-    const asistentesAInsertar = [...asistentesInvolucrados.keys()].map((asistenteId) => ({
+    const asistentesAInsertar = asistentesInvolucrados.map((asistenteId) => ({
       prestadora_id: prestadoraId,
       cierre_id: cierreInsertado.id,
       asistente_id: asistenteId,
@@ -390,13 +394,22 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     }
 
     if (usuario.rol === 'coordinador') {
-      const zonasCoordinador = usuario.zonas ?? [];
-      const asistentesFueraDeZona = [...asistentesInvolucrados.entries()].filter(
-        ([, zonasAsistente]) => !zonasCoordinador.some((z) => (zonasAsistente ?? []).includes(z))
+      // Quién quedó fuera del alcance de quien cierra se resuelve cruzando lugares con lugares.
+      // Las dos puntas son el mismo identificador, así que una coincidencia es una coincidencia
+      // de verdad y no dos maneras de escribir la misma localidad.
+      const [lugaresDeQuienCierra, lugaresPorAsistente] = await Promise.all([
+        lugaresDe('usuario_lugares', 'usuario_id', usuario.id),
+        lugaresDeVarias('asistente_lugares', 'asistente_id', asistentesInvolucrados),
+      ]);
+      const asistentesFueraDeZona = asistentesInvolucrados.filter(
+        (asistenteId) =>
+          !(lugaresPorAsistente.get(asistenteId) ?? []).some((lugar) =>
+            lugaresDeQuienCierra.includes(lugar)
+          )
       );
       if (asistentesFueraDeZona.length > 0) {
         await supabase.from('notificaciones_cierre_servicio').insert(
-          asistentesFueraDeZona.map(([asistenteId]) => ({
+          asistentesFueraDeZona.map((asistenteId) => ({
             prestadora_id: prestadoraId,
             cierre_id: cierreInsertado.id,
             paciente_id: paciente.id,

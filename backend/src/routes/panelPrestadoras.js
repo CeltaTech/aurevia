@@ -243,7 +243,6 @@ panelPrestadorasRouter.post('/', requiereRolPanel, requiereSuperadmin, async (re
       nombre: adminNombre,
       telefono: adminTelefono || null,
       rol: 'admin_prestadora',
-      zonas: [],
       prestadoraId: prestadora.id,
       enviarActivacion: true,
     });

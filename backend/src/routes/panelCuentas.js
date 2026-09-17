@@ -224,7 +224,6 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
       nombre: postulacion.nombre,
       telefono: postulacion.telefono,
       rol: 'asistente',
-      zonas: postulacion.zonas.split(',').map((z) => z.trim()).filter(Boolean),
       prestadoraId,
       enviarActivacion: true,
     }));
@@ -236,7 +235,9 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
       telefono: postulacion.telefono,
       email: postulacion.email,
       tipo_asistente_id: tipoAsistenteId,
-      zonas: postulacion.zonas.split(',').map((z) => z.trim()).filter(Boolean),
+      // Dónde acepta trabajar no se copia de la postulación. Ahí la persona escribió sus zonas a
+      // mano, y lo escrito a mano no es ninguno de los lugares de la Prestadora: casarlos por
+      // parecido crearía una coincidencia que nadie decidió. Se eligen en su ficha, de la lista.
       estado: 'inactivo',
       prestadora_id: prestadoraId,
     });
@@ -296,10 +297,10 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
 // (equivalente al default 'omitir' del pendiente #18 — política de verificación por
 // prestadora; la Fase 2 de este trabajo suma la configuración para cambiar este comportamiento).
 panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('alta_manual_asistente'), async (req, res) => {
-  const { nombre, telefono, email, dni, domicilio, domicilioPartido, tipo_asistente_id, zonas, lugares, estado, tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales, modalidades } = req.body;
+  const { nombre, telefono, email, dni, domicilio, domicilioPartido, tipo_asistente_id, lugares, estado, tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales, modalidades } = req.body;
   try {
     const { asistenteId } = await crearAsistenteDirecto({
-      nombre, telefono, email, dni, domicilio, domicilioPartido, tipo_asistente_id, zonas, lugares, estado,
+      nombre, telefono, email, dni, domicilio, domicilioPartido, tipo_asistente_id, lugares, estado,
       tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales, modalidades,
       prestadoraId: req.usuarioPanel.prestadoraId,
       usuarioPanelId: req.usuarioPanel.id,

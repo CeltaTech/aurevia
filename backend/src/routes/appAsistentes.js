@@ -28,6 +28,8 @@ import {
   registrarComprobacion,
 } from '../utils/comprobacionDePresencia.js';
 import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
+import { lugaresDe } from '../utils/lugaresDeCadaPersona.js';
+import { nombresDeLugares } from '../utils/catalogoDeLugares.js';
 import { ofreceMarketplace } from '../utils/marketplaceDeLaPrestadora.js';
 import { MODALIDAD } from '../utils/modalidades.js';
 import {
@@ -209,7 +211,7 @@ async function pacientesSinReporte(guardia) {
 appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   const { data: perfil, error } = await supabase
     .from('asistentes')
-    .select('id, nombre, telefono, email, foto_url, tipo_asistente_id, zonas, estado, tipo_vinculo, qr_token, canales, disponible_para_ofertas, disponibilidad_cambiada_en, tipos_asistente(id, clave, nombre, prestadora_id)')
+    .select('id, nombre, telefono, email, foto_url, tipo_asistente_id, estado, tipo_vinculo, qr_token, canales, disponible_para_ofertas, disponibilidad_cambiada_en, tipos_asistente(id, clave, nombre, prestadora_id)')
     .eq('id', req.usuarioAsistente.id)
     .single();
   if (error || !perfil) {
@@ -252,7 +254,13 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
     (perfil.canales || []).includes(MODALIDAD.MARKETPLACE) &&
     (await ofreceMarketplace(req.usuarioAsistente.prestadoraId));
 
-  res.json({ perfil, certificado: certificado || null, marca, visibilidad, marketplace });
+  // Dónde acepta trabajar, con los nombres puestos. Está guardado en la tabla que la cruza con cada
+  // lugar, no en su ficha: una persona puede cubrir dos localidades de una zona y una de otra, y la
+  // zona diría de más. La pantalla recibe una lista de nombres, igual que siempre.
+  const lugares = await lugaresDe('asistente_lugares', 'asistente_id', perfil.id, req.usuarioAsistente.prestadoraId);
+  const zonas = await nombresDeLugares(lugares, req.usuarioAsistente.prestadoraId);
+
+  res.json({ perfil: { ...perfil, zonas }, certificado: certificado || null, marca, visibilidad, marketplace });
 });
 
 // Su carpeta de papeles, y su Certificado de Aptitud.

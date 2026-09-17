@@ -24,11 +24,12 @@
 // cosas que no están en ninguna columna. Por eso todo lo de acá suma o resta puntos y nada
 // bloquea.
 //
-// LOS TEXTOS SE COMPARAN, NO SE RESUELVEN
-// La localidad la escribió quien llenó el formulario y las zonas las escribió quien cargó la
-// ficha, sin ninguna lista en común. `nombranLoMismo` acerca las dos puntas lo que se puede
-// (`textoComparable.js`); lo que no coincida por escribirse distinto va a quedar al fondo, y por
-// eso queda al fondo y no afuera.
+// UNA PUNTA ES DEL CATÁLOGO Y LA OTRA NO
+// Dónde acepta trabajar cada Asistente sale de los lugares de la Prestadora: eso ya no lo escribe
+// nadie a mano. La localidad de la Solicitud sí, porque la escribió quien llenó el formulario
+// público, que no tiene ninguna lista de la cual elegir. `nombranLoMismo` acerca las dos puntas lo
+// que se puede (`textoComparable.js`); lo que no coincida por escribirse distinto queda al fondo,
+// y por eso queda al fondo y no afuera.
 // ---------------------------------------------------------------------------
 
 import { estaDisponibleParaOfertas, estaEnElPlantel } from './candidatos';
@@ -93,9 +94,10 @@ function evaluar(asistente, solicitud, pesos) {
   const enContra = [];
   let puntaje = 0;
 
-  // La zona. Una ficha sin zonas cargadas no es una ficha que trabaje en cualquier lado: es una
-  // ficha a la que le falta el dato, y eso se dice con esas palabras en vez de contarlo como que
-  // no cubre la zona, que sería afirmar algo que nadie cargó.
+  // Dónde trabaja. Llegan los nombres de sus lugares, que la pantalla arma con el catálogo. Una
+  // ficha sin ninguno no es una ficha que trabaje en cualquier lado: es una ficha a la que le
+  // falta el dato, y eso se dice con esas palabras en vez de contarlo como que no cubre la zona,
+  // que sería afirmar algo que nadie cargó.
   const zonas = lista(asistente?.zonas);
   if (solicitud.localidad) {
     if (!zonas.length) {

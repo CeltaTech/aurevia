@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { lugaresDeVarias, personasEnLosLugares } from '../../lib/lugaresDeCadaPersona';
 
 // Quiénes son el equipo de este Paciente.
 //
@@ -80,7 +81,8 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
       const pacientesPorGuardia = new Map(guardias.map((g) => [g.id, [paciente.id]]));
 
       // Se arma dos veces a propósito, y es barato: la primera dice quiénes son las Asistentes,
-      // de ahí salen las zonas, y recién con las zonas se sabe quién coordina a este Paciente.
+      // de ahí salen los lugares donde trabajan, y recién con esos lugares se sabe quién coordina
+      // a este Paciente.
       const armar = (coordinadoresQueAlcanzan) =>
         equipoDelPaciente({
           pacienteId: paciente.id,
@@ -93,13 +95,14 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
         });
       const armado = armar([]);
 
-      // Los nombres, y las zonas del equipo, que son las que dicen quién lo coordina.
+      // Los nombres. Los lugares del equipo —que son los que dicen quién lo coordina— se piden
+      // aparte, porque viven en su propia tabla y no en un renglón de la ficha.
       const idsAsistentes = [
         ...new Set([...armado.asistentes, ...armado.afuera].map((a) => a.asistente_id)),
       ];
       const [fichas, todas] = await Promise.all([
         idsAsistentes.length
-          ? supabase.from('asistentes').select('id, nombre, apellido, zonas').in('id', idsAsistentes)
+          ? supabase.from('asistentes').select('id, nombre, apellido').in('id', idsAsistentes)
           : Promise.resolve({ data: [], error: null }),
         // Para el desplegable de «sumar a alguien». La vista recorta lo que un Coordinador puede
         // ver de una Asistente; acá alcanza con el nombre.
@@ -108,16 +111,27 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
       if (fichas.error) throw fichas.error;
       if (todas.error) throw todas.error;
       const porId = new Map((fichas.data ?? []).map((a) => [a.id, a]));
+      const lugaresPorAsistente = await lugaresDeVarias('asistente_lugares', 'asistente_id', idsAsistentes);
 
-      const zonasDelEquipo = [
-        ...new Set(armado.asistentes.flatMap((a) => porId.get(a.asistente_id)?.zonas ?? [])),
+      // Quién alcanza a este Paciente se resuelve cruzando lugares con lugares: el mismo
+      // identificador de las dos puntas. Antes se comparaban dos textos escritos a mano, y dos
+      // maneras de escribir la misma localidad dejaban afuera a quien sí coordinaba.
+      const lugaresDelEquipo = [
+        ...new Set(
+          armado.asistentes.flatMap((a) => lugaresPorAsistente.get(a.asistente_id) ?? []),
+        ),
       ];
-      const alcanzan = zonasDelEquipo.length
+      const coordinanEsosLugares = await personasEnLosLugares(
+        'usuario_lugares',
+        'usuario_id',
+        lugaresDelEquipo,
+      );
+      const alcanzan = coordinanEsosLugares.length
         ? await supabase
             .from('usuarios')
             .select('id, nombre, apellido, rol')
             .eq('rol', 'coordinador')
-            .overlaps('zonas', zonasDelEquipo)
+            .in('id', coordinanEsosLugares)
         : { data: [], error: null };
       if (alcanzan.error) throw alcanzan.error;
 

@@ -103,6 +103,43 @@ INSERT INTO public.zonas_cobertura (prestadora_id, codigo, nombre, categoria, or
   ('11111111-1111-4111-8111-111111111111', 'zona_norte', 'Zona Norte',             'partido', 20),
   ('11111111-1111-4111-8111-111111111111', 'zona_sur',   'Zona Sur',               'partido', 30);
 
+-- Los lugares donde esta Prestadora trabaja.
+--
+-- LA ZONA ES EL ATAJO Y EL LUGAR ES EL DATO. En pantalla se marca una zona entera y después se
+-- desmarca lo que no; lo que queda guardado en cada ficha es cuál lugar. Por eso la zona no
+-- alcanza para sembrar: sin lugares cargados, ninguna ficha tendría dónde trabajar y quien
+-- coordina no alcanzaría a nadie.
+--
+-- DOS SE LLAMAN IGUAL A PROPÓSITO. Hay un Belgrano en la Ciudad y otro en San Isidro. Mientras
+-- esto eran palabras tecleadas, las dos eran la misma cosa para el sistema. Ahora son dos
+-- renglones distintos, y están en la semilla para que cualquier pantalla que vuelva a filtrar por
+-- el nombre se note enseguida.
+-- Entran como `oficial`, que es como llegan de verdad: el nombre y el identificador los pone el
+-- organismo del país y no se editan a mano. Eso es además lo que deja convivir a los dos Belgrano
+-- sin que la base los rechace por repetidos: lo que los distingue es el identificador, no el
+-- nombre. Los identificadores de acá son inventados, como todo lo demás de esta Organización.
+INSERT INTO public.lugares (id, prestadora_id, nombre, pais, provincia, municipio, fuente, id_oficial) VALUES
+  ('a1000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'Belgrano',      'AR', 'Ciudad Autónoma de Buenos Aires', 'Comuna 13', 'oficial', 'AR-C-13-BELGRANO'),
+  ('a1000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'Villa Urquiza', 'AR', 'Ciudad Autónoma de Buenos Aires', 'Comuna 12', 'oficial', 'AR-C-12-VILLA-URQUIZA'),
+  ('a1000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'Vicente López', 'AR', 'Buenos Aires', 'Vicente López', 'oficial', 'AR-B-VLOPEZ-CENTRO'),
+  ('a1000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 'Belgrano',      'AR', 'Buenos Aires', 'San Isidro',    'oficial', 'AR-B-SISIDRO-BELGRANO'),
+  ('a1000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111', 'Avellaneda',    'AR', 'Buenos Aires', 'Avellaneda',    'oficial', 'AR-B-AVELLANEDA'),
+  ('a1000000-0000-4000-8000-000000000006', '11111111-1111-4111-8111-111111111111', 'Lanús',         'AR', 'Buenos Aires', 'Lanús',         'oficial', 'AR-B-LANUS');
+
+-- Qué abarca cada zona. Es lo que le permite a la pantalla ofrecer «marcar toda la Zona Norte».
+INSERT INTO public.zona_lugares (zona_id, lugar_id, prestadora_id)
+SELECT z.id, v.lugar_id, '11111111-1111-4111-8111-111111111111'
+FROM (VALUES
+  ('caba',       'a1000000-0000-4000-8000-000000000001'::uuid),
+  ('caba',       'a1000000-0000-4000-8000-000000000002'),
+  ('zona_norte', 'a1000000-0000-4000-8000-000000000003'),
+  ('zona_norte', 'a1000000-0000-4000-8000-000000000004'),
+  ('zona_sur',   'a1000000-0000-4000-8000-000000000005'),
+  ('zona_sur',   'a1000000-0000-4000-8000-000000000006')
+) AS v(codigo, lugar_id)
+JOIN public.zonas_cobertura z
+  ON z.codigo = v.codigo AND z.prestadora_id = '11111111-1111-4111-8111-111111111111';
+
 
 -- ----------------------------------------------------------------------------
 -- 2. Las once cuentas: tres del Panel, cuatro Asistentes, tres Familias y una
@@ -129,25 +166,25 @@ INSERT INTO public.zonas_cobertura (prestadora_id, codigo, nombre, categoria, or
 --    Los tres roles del Panel están para comprobar que cada uno ve lo que le
 --    corresponde y nada más. Todos entran con la misma contraseña.
 -- ----------------------------------------------------------------------------
-WITH personas (id, email, nombre, rol, telefono, zonas) AS (
+WITH personas (id, email, nombre, rol, telefono) AS (
   VALUES
     -- Los tres roles del Panel
-    ('20000000-0000-4000-8000-000000000001'::uuid, 'superadmin@sandbox.local'::text,   'Sofía Superadmin'::text,      'superadmin'::text,       NULL::text,          NULL::text[]),
-    ('20000000-0000-4000-8000-000000000002',       'admin@sandbox.local',              'Andrea Administradora',       'admin_prestadora',       '+54 11 4000-0002',  NULL),
-    ('20000000-0000-4000-8000-000000000003',       'coordinadora@sandbox.local',       'Carla Coordinadora',          'coordinador',            '+54 11 4000-0003',  ARRAY['caba', 'zona_norte']),
+    ('20000000-0000-4000-8000-000000000001'::uuid, 'superadmin@sandbox.local'::text,   'Sofía Superadmin'::text,      'superadmin'::text,       NULL::text),
+    ('20000000-0000-4000-8000-000000000002',       'admin@sandbox.local',              'Andrea Administradora',       'admin_prestadora',       '+54 11 4000-0002'),
+    ('20000000-0000-4000-8000-000000000003',       'coordinadora@sandbox.local',       'Carla Coordinadora',          'coordinador',            '+54 11 4000-0003'),
     -- Las cuatro Asistentes
-    ('30000000-0000-4000-8000-000000000001',       'ana.asistente@sandbox.local',      'Ana Álvarez',                 'asistente',              '+54 11 4001-0001',  ARRAY['caba']),
-    ('30000000-0000-4000-8000-000000000002',       'bruno.asistente@sandbox.local',    'Bruno Bianchi',               'asistente',              '+54 11 4001-0002',  ARRAY['caba', 'zona_norte']),
-    ('30000000-0000-4000-8000-000000000003',       'clara.asistente@sandbox.local',    'Clara Cabrera',               'asistente',              '+54 11 4001-0003',  ARRAY['zona_sur']),
-    ('30000000-0000-4000-8000-000000000004',       'delia.asistente@sandbox.local',    'Delia Duarte',                'asistente',              '+54 11 4001-0004',  ARRAY['zona_norte']),
+    ('30000000-0000-4000-8000-000000000001',       'ana.asistente@sandbox.local',      'Ana Álvarez',                 'asistente',              '+54 11 4001-0001'),
+    ('30000000-0000-4000-8000-000000000002',       'bruno.asistente@sandbox.local',    'Bruno Bianchi',               'asistente',              '+54 11 4001-0002'),
+    ('30000000-0000-4000-8000-000000000003',       'clara.asistente@sandbox.local',    'Clara Cabrera',               'asistente',              '+54 11 4001-0003'),
+    ('30000000-0000-4000-8000-000000000004',       'delia.asistente@sandbox.local',    'Delia Duarte',                'asistente',              '+54 11 4001-0004'),
     -- Las tres Familias
-    ('40000000-0000-4000-8000-000000000001',       'familia.gomez@sandbox.local',      'Familia Gómez',               'familia',                '+54 11 4002-0001',  NULL),
-    ('40000000-0000-4000-8000-000000000002',       'familia.lopez@sandbox.local',      'Familia López',               'familia',                '+54 11 4002-0002',  NULL),
-    ('40000000-0000-4000-8000-000000000003',       'familia.morales@sandbox.local',    'Familia Morales',             'familia',                '+54 11 4002-0003',  NULL),
+    ('40000000-0000-4000-8000-000000000001',       'familia.gomez@sandbox.local',      'Familia Gómez',               'familia',                '+54 11 4002-0001'),
+    ('40000000-0000-4000-8000-000000000002',       'familia.lopez@sandbox.local',      'Familia López',               'familia',                '+54 11 4002-0002'),
+    ('40000000-0000-4000-8000-000000000003',       'familia.morales@sandbox.local',    'Familia Morales',             'familia',                '+54 11 4002-0003'),
     -- Una persona anotada en el círculo de la Familia Gómez, que no es la titular. Está para
     -- poder probar de verdad los accesos del círculo: sin ella, las tres cuentas de Familia son
     -- titulares y ven todo, con lo cual una instrucción que niegue algo no se puede comprobar.
-    ('40000000-0000-4000-8000-000000000011',       'marcela.gomez@sandbox.local',      'Marcela Gómez',               'familia',                '+54 11 4002-0011',  NULL)
+    ('40000000-0000-4000-8000-000000000011',       'marcela.gomez@sandbox.local',      'Marcela Gómez',               'familia',                '+54 11 4002-0011')
 ),
 cuentas_de_ingreso AS (
   INSERT INTO auth.users (
@@ -177,9 +214,18 @@ medios_de_ingreso AS (
   FROM personas p
   RETURNING user_id
 )
-INSERT INTO public.usuarios (id, rol, nombre, telefono, zonas, prestadora_id)
-SELECT p.id, p.rol, p.nombre, p.telefono, p.zonas, '11111111-1111-4111-8111-111111111111'
+INSERT INTO public.usuarios (id, rol, nombre, telefono, prestadora_id)
+SELECT p.id, p.rol, p.nombre, p.telefono, '11111111-1111-4111-8111-111111111111'
 FROM personas p;
+
+-- Hasta dónde llega quien coordina. Carla alcanza los dos lugares de la Ciudad y los dos de la
+-- Zona Norte; no alcanza la Zona Sur, así que Clara Cabrera le queda afuera. Es lo que hace que
+-- una prueba de alcance pueda fallar: si alcanzara a todo el mundo, no probaría nada.
+INSERT INTO public.usuario_lugares (usuario_id, lugar_id, prestadora_id) VALUES
+  ('20000000-0000-4000-8000-000000000003', 'a1000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111'),
+  ('20000000-0000-4000-8000-000000000003', 'a1000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111'),
+  ('20000000-0000-4000-8000-000000000003', 'a1000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111'),
+  ('20000000-0000-4000-8000-000000000003', 'a1000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111');
 
 
 -- ----------------------------------------------------------------------------
@@ -204,33 +250,47 @@ FROM personas p;
 -- ----------------------------------------------------------------------------
 
 INSERT INTO public.asistentes (
-  id, prestadora_id, nombre, telefono, email, especialidades, zonas,
+  id, prestadora_id, nombre, telefono, email, especialidades,
   estado, tipo_vinculo, fecha_alta, fecha_baja,
   horas_semanales, dni, canales
 ) VALUES
   ('30000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
    'Ana Álvarez', '+54 11 4001-0001', 'ana.asistente@sandbox.local',
-   NULL, ARRAY['caba'],
+   NULL,
    'activo', 'monotributo', CURRENT_DATE - 300, NULL,
    40, '20000001', ARRAY['directa']),
 
   ('30000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111',
    'Bruno Bianchi', '+54 11 4001-0002', 'bruno.asistente@sandbox.local',
-   ARRAY['Acompañamiento terapéutico'], ARRAY['caba', 'zona_norte'],
+   ARRAY['Acompañamiento terapéutico'],
    'activo', 'dependencia', CURRENT_DATE - 220, NULL,
    40, '20000002', ARRAY['directa', 'marketplace']),
 
   ('30000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111',
    'Clara Cabrera', '+54 11 4001-0003', 'clara.asistente@sandbox.local',
-   NULL, ARRAY['zona_sur'],
+   NULL,
    'activo', 'monotributo', CURRENT_DATE - 90, NULL,
    24, '20000003', ARRAY['marketplace']),
 
   ('30000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111',
    'Delia Duarte', '+54 11 4001-0004', 'delia.asistente@sandbox.local',
-   NULL, ARRAY['zona_norte'],
+   NULL,
    'cesado', 'monotributo', CURRENT_DATE - 500, CURRENT_DATE - 40,
    40, '20000004', ARRAY['directa']);
+
+-- Dónde acepta trabajar cada una. Ana en un solo lugar —el caso que mira el indicador de
+-- exclusividad—; Bruno en cuatro, cruzando dos zonas; Clara sólo en la Zona Sur, que es la que
+-- Carla Coordinadora no alcanza; Delia en uno de la Zona Norte aunque esté dada de baja, porque
+-- una ficha cesada conserva lo que tenía cargado.
+INSERT INTO public.asistente_lugares (asistente_id, lugar_id, prestadora_id) VALUES
+  ('30000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111'),
+  ('30000000-0000-4000-8000-000000000002', 'a1000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111'),
+  ('30000000-0000-4000-8000-000000000002', 'a1000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111'),
+  ('30000000-0000-4000-8000-000000000002', 'a1000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111'),
+  ('30000000-0000-4000-8000-000000000002', 'a1000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111'),
+  ('30000000-0000-4000-8000-000000000003', 'a1000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111'),
+  ('30000000-0000-4000-8000-000000000003', 'a1000000-0000-4000-8000-000000000006', '11111111-1111-4111-8111-111111111111'),
+  ('30000000-0000-4000-8000-000000000004', 'a1000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111');
 
 -- Los datos de plata van en dos columnas distintas y no en una sola, porque quien
 -- está por monotributo cobra por hora (`valor_hora`) y quien está en relación de
@@ -825,6 +885,14 @@ VALUES ('22222222-2222-4222-8222-222222222222', 'Cuidados del Sur S.R.L.', 'Cuid
 INSERT INTO public.zonas_cobertura (prestadora_id, codigo, nombre, categoria, orden) VALUES
   ('22222222-2222-4222-8222-222222222222', 'la_plata', 'La Plata', 'ciudad', 10);
 
+INSERT INTO public.lugares (id, prestadora_id, nombre, pais, provincia, municipio, fuente, id_oficial) VALUES
+  ('a2000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222', 'La Plata', 'AR', 'Buenos Aires', 'La Plata', 'oficial', 'AR-B-LA-PLATA');
+
+INSERT INTO public.zona_lugares (zona_id, lugar_id, prestadora_id)
+SELECT z.id, 'a2000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222'
+FROM public.zonas_cobertura z
+WHERE z.codigo = 'la_plata' AND z.prestadora_id = '22222222-2222-4222-8222-222222222222';
+
 -- Las cuatro cuentas de la segunda Prestadora, con la misma mecánica de tres
 -- tablas que explica el punto 2. Entran con la misma contraseña que el resto.
 WITH personas (id, email, nombre, rol, telefono) AS (
@@ -868,6 +936,15 @@ FROM personas p;
 
 INSERT INTO public.asistentes (id, nombre, prestadora_id)
 VALUES ('50000000-0000-4000-8000-000000000003', 'Elena Escobar', '22222222-2222-4222-8222-222222222222');
+
+-- Con lugar cargado de los dos lados, porque el alcance de quien coordina se resuelve cruzándolos:
+-- sin ninguno cargado la respuesta sería «no alcanza» por falta de dato, y una prueba de
+-- aislamiento que pasa porque los dos lados están vacíos no prueba nada.
+INSERT INTO public.asistente_lugares (asistente_id, lugar_id, prestadora_id) VALUES
+  ('50000000-0000-4000-8000-000000000003', 'a2000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222');
+
+INSERT INTO public.usuario_lugares (usuario_id, lugar_id, prestadora_id) VALUES
+  ('50000000-0000-4000-8000-000000000002', 'a2000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222');
 
 INSERT INTO public.familias (id, prestadora_id)
 VALUES ('50000000-0000-4000-8000-000000000004', '22222222-2222-4222-8222-222222222222');

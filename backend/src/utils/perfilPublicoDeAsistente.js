@@ -37,7 +37,7 @@
  * Se escriben como texto de consulta porque es así como se usan, y en un solo
  * lugar para que ninguna ruta nueva arme su propia lista más larga.
  */
-export const COLUMNAS_PERFIL_PUBLICO = 'id, nombre, foto_url, zonas, tipo_asistente_id, fecha_alta';
+export const COLUMNAS_PERFIL_PUBLICO = 'id, nombre, foto_url, tipo_asistente_id, fecha_alta';
 
 /**
  * Lo que la ficha del Asistente tiene y esta vidriera no muestra jamás. Están
@@ -97,9 +97,12 @@ export function perfilPublicoDeAsistente({
     id: asistente.id,
     nombre: asistente.nombre ?? null,
     foto_url: asistente.foto_url ?? null,
-    // Las zonas son la única parte del "dónde" que sale: dicen si esa persona llega hasta el
-    // barrio, que es lo que la Familia necesita para elegir. El domicilio de la persona no
-    // está ni en la consulta.
+    // Dónde trabaja es la única parte del "dónde" que sale: dice si esa persona llega hasta el
+    // barrio, que es lo que la Familia necesita para elegir. El domicilio de la persona no está
+    // ni en la consulta.
+    //
+    // Son los nombres de los lugares que tiene guardados, y llegan armados desde afuera: no están
+    // en su ficha sino en la tabla que la cruza con cada lugar.
     zonas: Array.isArray(asistente.zonas) ? asistente.zonas : [],
     // El tipo viaja armado y no como identificador suelto: el nombre visible de un tipo
     // general sale de las traducciones y el de uno propio de la Prestadora es un dato suyo,

@@ -5,7 +5,6 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
-import { ApareoDeClientes } from './ApareoDeClientes';
 import { mensajeDeError } from '../../lib/errores';
 import {
   LARGO_MINIMO_DEL_SECRETO_DEL_AVISO,
@@ -240,11 +239,6 @@ export function FacturacionFamiliasTab() {
               </Button>
             </section>
           )}
-
-          {/* Con qué cliente del otro software se corresponde cada Familia. Va acá y no en una
-              pantalla aparte porque es lo mismo que lo de arriba: cómo queda conectada esta
-              Prestadora con el software que factura y con el que sigue la cobranza. */}
-          <ApareoDeClientes />
         </>
       </EstadoLista>
     </div>

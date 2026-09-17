@@ -15,11 +15,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   TOPE_DE_FILAS,
-  elApareoDeLaFila,
   esIdentificador,
   leerArchivo,
   loFacturadoDeLaFila,
-  queHacerConLaFilaDeApareo,
   queHacerConLaFilaFacturada,
 } from '../intercambioDeFacturacion.js';
 
@@ -75,19 +73,4 @@ test('un identificador mal escrito se rechaza antes de preguntarle a la base', (
     queHacerConLaFilaFacturada({ factura_id: '0001-00000123', comprobante_tipo: 'Factura B', monto_facturado: 1 }),
     { resultado: 'rechazado', motivo: 'factura_id' }
   );
-});
-
-const FAMILIA = '44444444-4444-4444-4444-444444444444';
-
-test('la decision del apareo da lo mismo corriendo en el motor', () => {
-  const apareo = elApareoDeLaFila({ familia_id: FAMILIA, cliente_externo: ' CLI-0001 ' });
-  assert.equal(apareo.cliente_externo, 'CLI-0001');
-  assert.deepEqual(queHacerConLaFilaDeApareo(apareo, { apareada: null }), { resultado: 'apareado' });
-  assert.deepEqual(queHacerConLaFilaDeApareo(apareo, { apareada: 'CLI-0001' }), { resultado: 'sin_cambio' });
-});
-
-test('vaciar la referencia de una Familia apareada borra, y una que nunca lo estuvo no cambia nada', () => {
-  const vacia = elApareoDeLaFila({ familia_id: FAMILIA, cliente_externo: '' });
-  assert.deepEqual(queHacerConLaFilaDeApareo(vacia, { apareada: 'CLI-0001' }), { resultado: 'borrado' });
-  assert.deepEqual(queHacerConLaFilaDeApareo(vacia, { apareada: null }), { resultado: 'sin_cambio' });
 });

@@ -16,7 +16,6 @@ import {
   vencimientoDe,
 } from '../utils/facturacionDeFamilias.js';
 import {
-  CONEXION_DE_FACTURACION,
   TOPE_DE_FILAS,
   esIdentificador,
   loFacturadoDeLaFila,
@@ -115,26 +114,6 @@ async function nombresDeFamilias(prestadoraId, ids) {
     .in('id', unicos);
   if (error) throw new Error(error.message);
   return new Map((data || []).map((f) => [f.id, f.solicitudes?.nombre ?? null]));
-}
-
-/**
- * Con qué cliente del software de facturación se corresponde cada una de estas Familias.
- *
- * Va en lo que sale hacia ese software para que pueda decir de quién está hablando sin adivinar
- * por el nombre. Vacío quiere decir que esa Familia todavía no está apareada, y entonces el otro
- * software lo resuelve como siempre lo hizo. Acá no entra ningún dato fiscal: es una referencia.
- */
-async function clientesDelFacturador(prestadoraId, ids) {
-  const unicos = [...new Set(ids)];
-  if (unicos.length === 0) return new Map();
-  const { data, error } = await supabase
-    .from('clientes_externos_de_familias')
-    .select('familia_id, cliente_externo')
-    .eq('prestadora_id', prestadoraId)
-    .eq('conexion', CONEXION_DE_FACTURACION)
-    .in('familia_id', unicos);
-  if (error) throw new Error(error.message);
-  return new Map((data || []).map((c) => [c.familia_id, c.cliente_externo]));
 }
 
 /** La factura de esta Prestadora, o null. Nunca se busca una factura sin decir de quién es. */
@@ -626,10 +605,8 @@ panelCobrosRouter.get('/para-facturar', requiereRolPanel, async (req, res) => {
   if (error) return responderError(res, error);
 
   let nombres;
-  let apareos;
   try {
     nombres = await nombresDeFamilias(req.usuarioPanel.prestadoraId, (data || []).map((s) => s.familia_id));
-    apareos = await clientesDelFacturador(req.usuarioPanel.prestadoraId, (data || []).map((s) => s.familia_id));
   } catch (e) {
     return responderError(res, e);
   }
@@ -637,7 +614,6 @@ panelCobrosRouter.get('/para-facturar', requiereRolPanel, async (req, res) => {
   res.json((data || []).map((s) => ({
     factura_id: s.factura_id,
     familia: nombres.get(s.familia_id) ?? '',
-    cliente_externo: apareos.get(s.familia_id) ?? '',
     financiador_tipo: s.financiador_tipo ?? '',
     financiador_nombre: s.financiador_nombre ?? '',
     periodo: String(s.periodo).slice(0, 7),

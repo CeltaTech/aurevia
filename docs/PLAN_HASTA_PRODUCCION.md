@@ -11,28 +11,40 @@
 
 ## El dinero
 
-**1. Usted** — Con qué facturador se enchufa Careonys. **Careonys no emite comprobantes y no va a
-tener un facturador adentro**: le pide a uno de afuera que emita y guarda lo que ese facturador
-conteste. Dos preguntas: ¿cuál se integra primero, de los que usan hoy las Prestadoras? ¿Y hay
-alguna Prestadora a la vista fuera de Argentina, o se construye con Argentina cargada y nada más?
+**1. Usted** — Con qué facturador se enchufa Careonys primero: el que usen hoy las Prestadoras que
+conoce. **Careonys no emite comprobantes y no va a tener un facturador adentro.**
 
-**2.** El enchufe al facturador y la corrección de lo facturado, que son la misma tarea.
+**2.** El enchufe al facturador. **El reparto de tareas ya está definido y no depende de ningún
+país:**
 
+- **Careonys le manda** cuántas unidades hay que facturar y de qué —horas, guardias, o lo que esa
+  Prestadora use como medida—, el precio acordado, y el plazo de pago acordado.
+- **El facturador emite**, con los impuestos y el comprobante que correspondan donde esté, y
+  **devuelve el monto de la factura y la fecha de vencimiento**.
+- **Careonys guarda esos dos datos y hace el seguimiento de la cobranza**, que es lo que ya sabe
+  hacer.
+
+De ahí sale lo que hay que construir:
+
+- **El plazo de pago acordado, que hoy no existe.** La fecha de vencimiento se escribe a mano en
+  cada tanda y sale igual para todas las Familias. Es el dato que se le manda al facturador, así
+  que vive en el acuerdo con cada cliente, no en la pantalla que genera las facturas.
+- **El monto pasa a ser el que informó el facturador.** Hoy es el que calcula Careonys sumando
+  renglones, y con impuestos los dos números no tienen por qué coincidir. Quedan los dos: lo que se
+  mandó a facturar y lo que se facturó.
+- **Una factura que salió mal no se toca.** La corrección se le pide al facturador, y lo que él
+  devuelva se guarda: el comprobante que emitió, por cuánto y para qué lado. **Cómo se llama ese
+  comprobante es texto que viene del facturador y Careonys no lo interpreta**, igual que CeltaTech
+  con las capacidades de sus productos. Así ningún país entra en el código. Vale para las Familias
+  y para lo que una obra social reconoce de menos, que es la misma pieza.
 - **La cuenta es de la Prestadora**, con su CUIT y sus credenciales, configurada por ella. Careonys
   nunca factura con una cuenta propia: eso metería a CeltaTech adentro de la cadena. La clave se
   guarda como secreto y no se muestra en pantalla.
 - **Sin facturador conectado el sistema funciona igual.** Quien factura por afuera anota acá el
-  número y la fecha del comprobante, que es lo que hoy no se puede hacer. Nadie queda obligado a
-  contratar nada.
-- **Una factura que salió mal no se toca.** Queda registrada la corrección: de cuánto, para qué
-  lado, por qué motivo y con qué comprobante se respalda. Vale igual para las Familias y para lo
-  que una obra social reconoce de menos, que es la misma pieza.
-- **Cómo se llama ese comprobante es de cada país y no se deduce por parecido**: en Argentina son
-  la nota de crédito y la nota de débito, y de ningún otro país hay dato. Los tipos salen de una
-  tabla por país, con el molde de `monedas_por_pais`, y se carga sólo Argentina. Un país sin
-  investigar no ofrece ningún tipo: pide el número del comprobante y no le pone nombre.
-- **Un facturador es un enchufe, no el facturador.** Cada conexión concreta es una pieza aparte,
-  y agregar la segunda no puede obligar a tocar lo construido para la primera.
+  número del comprobante, el monto y el vencimiento, que es lo que hoy no se puede hacer. Nadie
+  queda obligado a contratar nada.
+- **Un facturador es un enchufe, no el facturador.** Cada conexión concreta es una pieza aparte, y
+  agregar la segunda no puede obligar a tocar lo construido para la primera.
 
 **3. Usted** — El ciclo de cobranza a obras sociales: hoy sólo existen validado y anulado. ¿Qué estados hacen falta — presentación, débito, conciliación?
 

@@ -273,7 +273,10 @@ generada en el motor; **sus títulos no se traducen**, porque son la forma que e
 tiene que leer y escribir, y traducirlos daría un archivo distinto por idioma. Al subir, una
 factura que ya tiene comprobante anotado no se pisa: se cuenta aparte y se avisa, así volver a
 subir el mismo archivo —o repetir un aviso— no hace daño. Se leen hasta 500 filas por vez. Las tres
-maneras escriben en la factura por el mismo lugar, `backend/src/utils/anotarLoFacturado.js`.
+maneras escriben en la factura por el mismo lugar, `backend/src/utils/anotarLoFacturado.js`. **Lo
+que se le entrega a quien programa del otro lado** —las dos direcciones, cómo se arma la firma, qué
+datos lleva cada aviso y qué contesta— está en `docs/CONEXION_CON_SOFTWARE_EXTERNO.md`, escrito para
+alguien que no conoce Careonys por dentro.
 
 **A quién se le reclama no es siempre la Familia.** Puede ser una obra social o un tercero, y eso
 vive en la ficha de la Familia (`financiador_tipo`, `financiador_nombre`); vacío quiere decir la

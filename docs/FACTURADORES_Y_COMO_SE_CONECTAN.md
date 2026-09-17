@@ -15,10 +15,10 @@ nada de lo construido. Lo que cambia de uno a otro son tres cosas: con qué cred
 cómo se llaman los campos, y si el software puede avisar por su cuenta lo que emitió. Eso es
 exactamente lo que ya está previsto que sea una pieza por software.
 
-**Y apareció una cosa que falta, y que no depende de cuál se elija:** Careonys no guarda el número
-de identificación fiscal de la Familia ni de la obra social. Ningún software de facturación de
-Argentina puede emitir un comprobante sin ese dato. Es lo único que hoy impide que la conexión
-directa funcione, y se arregla antes de saber con cuál se conecta.
+**Y hay un límite que vale para los cinco:** Careonys no guarda con qué número se identifica
+fiscalmente quien paga, y no lo va a guardar. Eso es dato de facturación puro, y lo tiene quien
+factura, en su propio padrón de clientes. Careonys le dice a quién cobrarle y cuánto; con qué
+número figura esa persona ante el organismo fiscal es asunto del software de facturación.
 
 ---
 
@@ -69,31 +69,26 @@ resto del producto no se entera de por cuál entró.
 
 ## 4. Lo que falta, y no depende de cuál se elija
 
-**Careonys no guarda con qué número se identifica fiscalmente quien paga.** Hoy, lo que sale hacia
-el software de facturación es: de quién es la factura, a quién se le reclama por nombre, de qué
+**Falta que los dos lados sepan que están hablando de la misma persona.** Hoy, lo que sale hacia el
+software de facturación es: de quién es la factura, a quién se le reclama por nombre, de qué
 período, en qué moneda, por cuánto y para cuándo
 (`panel/src/lib/intercambioDeFacturacion.js`, `COLUMNAS_QUE_SALEN`).
 
-Con el archivo a mano eso alcanza, porque la Prestadora ya tiene a sus clientes cargados en su
-propio software y los reconoce por el nombre. **Con conexión directa no alcanza**: el software
-recibe el pedido sin saber a quién facturarle, y no hay nadie del otro lado para completarlo.
+Con el archivo a mano eso alcanza, porque quien lo carga reconoce a sus clientes por el nombre.
+**Con conexión directa no alcanza**, porque no hay nadie del otro lado que reconozca nada: el
+software recibe un nombre y tiene que saber a cuál de sus clientes corresponde.
 
-Falta, como mínimo:
-
-- **Cómo se identifica fiscalmente quien paga** —en Argentina el CUIT o el documento—, para la
-  Familia y para la obra social.
-- **Bajo qué condición está inscripto**, que es lo que decide qué clase de comprobante se emite.
-
-**Esto no es un dato que Careonys pueda deducir ni completar solo**, y tampoco es igual en todos
-los países. Entra como configuración por país, igual que todo el resto del marco normativo.
+Lo que falta entonces **no es el dato fiscal, es la correspondencia**: que cada Familia de Careonys
+quede apareada con el cliente que el software de facturación ya tiene cargado. Una referencia, y
+nada más. El número de identificación fiscal, la condición frente al organismo y qué clase de
+comprobante corresponde viven del otro lado, que es donde se factura.
 
 ---
 
 ## 5. Qué se hace, entonces
 
-1. **Guardar la identificación fiscal de quien paga**, y sumarla a lo que sale hacia el software de
-   facturación. Sirve las tres maneras de trabajar, no sólo la conexión directa: con el archivo
-   también evita que alguien tenga que cruzar por nombre.
+1. **Resolver cómo se aparea cada Familia con el cliente del otro lado.** Es lo único que la
+   conexión directa necesita y hoy no existe.
 2. **Esperar a la primera Prestadora** para escribir la pieza de su software. Antes de eso, escribir
    una es elegir a ciegas entre cinco y acertar con suerte.
 3. **Si esa Prestadora usa un software que avisa solo lo que emitió** —como TusFacturasAPP—, la

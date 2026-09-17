@@ -124,9 +124,15 @@ decide ninguna restricción.
 
 **Y tiene que poder con las tres situaciones**, que las elige cada Prestadora: con el software que
 CeltaTech desarrolle para eso, con el de otro, o **con ninguno conectado**. Con ninguno, Careonys
-sigue funcionando con lo que él mismo registra; conectado, la verdad del estado de cuenta es la del
-otro software. **Nunca las dos a la vez:** quién manda sobre ese número es una sola fuente por
-Prestadora, y se configura. Dos números distintos para lo mismo es peor que no tener ninguno.
+sigue funcionando con lo que él mismo registra. **Conectado, Careonys no calcula: muestra lo que
+recibe, tal como lo recibe.** No lo recalcula, no lo completa con lo suyo y no lo compara contra
+nada. Un número que llega de afuera y otro calculado acá son dos verdades para lo mismo, y eso es
+peor que no tener ninguna.
+
+**El estado de cuenta lo ve solamente la administración de la Prestadora.** Cuánto debe una Familia
+y si está atrasada no es información de quien coordina turnos ni de nadie más: entra por el
+catálogo de permisos, con el mismo molde que `ver_pagos_asistente`, que nace reservada a
+administración.
 
 **Cada Prestadora con lo suyo, sin mezclar.** Una conexión con un software de facturación o de
 cobranzas es de una Prestadora, con su propia credencial, y nunca alcanza los datos de otra.

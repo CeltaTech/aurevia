@@ -11,14 +11,48 @@
 
 ## El domicilio y las localidades
 
-**1.** Partir el domicilio en sus partes —calle, número, piso, barrio, localidad, provincia,
-país— y que barrio y localidad salgan de una lista que carga la Prestadora, no de un casillero
-donde se escribe. Hoy el domicilio del Paciente es un renglón entero, así que no hay forma de
-buscar los Pacientes ni las Familias de una localidad. **Y la zona del Asistente también se
-teclea**, separada por comas: el sistema ya cruza las dos cosas para saber quién cubre una
-guardia, comparando esos textos, y una escrita distinto no encuentra a nadie sin que nadie se
-entere. La zona del Asistente pasa a usar la misma lista. Va antes del padrón de Clientes, porque
-la ficha del Cliente también lleva domicilio y conviene que nazca partido.
+**1.** Hacer la lista de lugares de cada Prestadora, partir el domicilio y que la zona se elija
+en vez de escribirse. Va antes del padrón de Clientes, porque la ficha del Cliente también lleva
+domicilio y conviene que nazca partida.
+
+**Qué hay hoy.** El domicilio del Paciente, el del Asistente y el domicilio temporal del Paciente
+son un renglón entero cada uno, así que no hay forma de buscar los Pacientes ni las Familias de
+una localidad. La zona del Asistente se teclea separada por comas en tres lugares: su alta, su
+ficha y la aprobación de su postulación. **Y ese texto decide dos cosas más de las que parecía:**
+qué Asistentes ve cada coordinadora —las reglas de la base comparan su texto contra el de ellos— y
+qué zonas ve la Familia en el perfil público del Asistente. Una zona escrita distinta no encuentra
+a nadie y nadie se entera. **La lista de zonas ya existe** y la Prestadora ya la carga en
+Configuración: lo que falta es que alguien la use donde importa.
+
+**Qué se construye.**
+
+- **Una lista de lugares por Prestadora**, de un solo nivel, que junta localidades y barrios. Cada
+  renglón guarda el nombre, el identificador oficial y el punto en el mapa, y dice de dónde salió:
+  del organismo oficial o cargado por la Prestadora.
+- **Se alimenta del organismo oficial de cada país**, que se consulta para cargar y no en vivo. En
+  Argentina, el servicio de direcciones del Estado, que el motor ya usa para ubicar direcciones en
+  el mapa. **No tiene un recurso de barrios**, pero en la Ciudad de Buenos Aires sus localidades
+  **son** los barrios; donde no los tenga, el barrio lo agrega la Prestadora colgando de su
+  localidad y queda marcado como propio. De dónde se alimenta la lista es configuración por país.
+- **La zona de cobertura pasa a ser un conjunto de lugares**, agrupados con el criterio de cada
+  Prestadora. El organismo oficial sirve de referencia para sugerir agrupamientos, nunca para
+  imponerlos.
+- **El domicilio se parte** en calle, número, piso, barrio o localidad, provincia y país, en los
+  tres lugares que hoy lo tienen: Paciente, Asistente y domicilio temporal del Paciente.
+- **De la Asistente se guardan lugares, no zonas.** La zona es el atajo para cargarlos: marca una
+  zona entera y después desmarca los lugares que no cubre y suma los de otra. Guardar la zona
+  diría de más, porque su disponibilidad no tiene por qué coincidir con el agrupamiento de la
+  Prestadora. Se sigue hablando de zonas en pantalla y al armar una guardia: agrupar para mostrar
+  es distinto de guardar.
+- **El alcance de cada coordinadora se guarda igual**, en lugares, para que las dos puntas de la
+  comparación sean la misma cosa.
+- **Buscar Pacientes y Familias por localidad**, que es lo último, cuando el domicilio ya está
+  partido.
+
+**Qué no se toca.** Las dos aplicaciones de teléfono, salvo lo que se rompa por el cambio de
+datos: el perfil público del Asistente va a mostrar los lugares elegidos en vez del texto
+tecleado, y nada más. Apariencia y recorrido esperan la maqueta. **No hay nada que convertir**,
+porque no hay datos reales; se comprueba contra la base antes de darlo por cierto.
 
 ---
 

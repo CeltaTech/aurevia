@@ -62,6 +62,9 @@ describe('el interruptor de disponibilidad en la lista de candidatos', () => {
   it('pero no queda bloqueado: la Coordinadora puede asignarle la guardia igual', () => {
     const bruno = evaluar([DISPONIBLE, NO_DISPONIBLE]).find((c) => c.asistente.id === NO_DISPONIBLE.id);
     expect(bruno.bloqueado).toBe(false);
+    // Ni desaconsejado, que es la otra forma de mandarlo al fondo. Esto es una preferencia que
+    // puso él, no un hecho de la agenda: resta puntos y nada más.
+    expect(bruno.desaconsejado).toBe(false);
   });
 
   it('queda debajo de quien sí está disponible', () => {

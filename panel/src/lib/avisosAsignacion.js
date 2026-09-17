@@ -31,7 +31,7 @@
 // Igual que `candidatos.js`, **no devuelve texto**: devuelve claves de traducción más los
 // valores a reemplazar, y la pantalla arma la frase con `t.guardias.avisos[clave]`.
 
-import { ultimoDiaDeLaGuardia } from './ausenciaQueTapa';
+import { ausenciaQueTapa, ultimoDiaDeLaGuardia } from './ausenciaQueTapa';
 import {
   TOPES,
   guardiasDeAsistente,
@@ -46,6 +46,7 @@ import {
 /** Las claves de traducción que devuelve este archivo. Viven en `t.guardias.avisos`. */
 export const AVISO = {
   SUPERPOSICION: 'superposicion',
+  AUSENCIA: 'ausencia',
   DESCANSO: 'descanso',
   HORAS_EXTRA: 'horas_extra',
   DOCUMENTACION: 'documentacion',
@@ -80,7 +81,7 @@ function matriculaAMirar(asistenteId, matriculas, ahora) {
  *
  * @param guardia      la fila de `guardias` que se va a asignar.
  * @param asistenteId  a quién se le va a dar.
- * @param datos        `{ asistentes, guardias, matriculas, documentos, ahora }` — lo mismo
+ * @param datos        `{ asistentes, guardias, ausencias, matriculas, documentos, ahora }` — lo mismo
  *                     que recibe `candidatosParaGuardia`, para que la pantalla pase el mismo
  *                     objeto en los dos lugares y no tenga que armar dos.
  * @param opciones     `{ topes }` — para pisar los topes sin tocar este archivo.
@@ -108,6 +109,21 @@ export function avisosDeAsignacion(guardia, asistenteId, datos = {}, opciones = 
       valores: { desde: hhmm(choque.hora_inicio), hasta: hhmm(choque.hora_fin) },
       grave: true,
     });
+  }
+
+  // --- 1 bis. Hay una ausencia registrada que tapa esta guardia. Grave por el mismo motivo que
+  //        la superposición: según lo que está cargado, esa persona ese día no está, y asignarle
+  //        el turno igual es contar con alguien que la agenda da por ausente.
+  //
+  //        Se asigna igual si quien coordina lo decide —la licencia pudo haberse cortado antes y
+  //        todavía no estar cargada—, y por eso este aviso existe: para que esa decisión se tome
+  //        con el motivo delante y quede escrita.
+  //
+  //        El aviso no dice de qué ausencia se trata. El tipo ni siquiera llega hasta acá, a
+  //        propósito: puede ser información de salud (`celtatech/CLAUDE.md` §6). Ver
+  //        `ausenciaQueTapa.js`.
+  if (ausenciaQueTapa(asistenteId, datos.ausencias, guardia.fecha, ultimoDiaDeLaGuardia(guardia))) {
+    avisos.push({ clave: AVISO.AUSENCIA, valores: {}, grave: true });
   }
 
   // --- 2. Descanso corto entre guardias.

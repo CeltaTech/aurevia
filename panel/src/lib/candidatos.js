@@ -417,11 +417,16 @@ const MOTIVO_DE_BLOQUEO = {
  *                  los valores de arriba sin tocar este archivo.
  *
  * @returns array ordenado de mejor a peor. Cada elemento:
- *   { asistente, puntaje, aFavor: [{clave, valores}], enContra: [...], bloqueado, yaInvitado }
+ *   { asistente, puntaje, aFavor: [{clave, valores}], enContra: [...], bloqueado, desaconsejado,
+ *     yaInvitado }
  *
- * Los bloqueados **también vienen en la lista**, al final y con su motivo a la vista. Sacarlos
- * haría que quien mira se pregunte por qué falta fulano y no encuentre respuesta en ningún
- * lado; verlo al fondo con "ese día ya tiene una guardia de 08:00 a 16:00" cierra la pregunta.
+ * Los bloqueados y los desaconsejados **también vienen en la lista**, al final y con su motivo a
+ * la vista. Sacarlos haría que quien mira se pregunte por qué falta fulano y no encuentre
+ * respuesta en ningún lado; verlo al fondo con "ese día ya tiene una guardia de 08:00 a 16:00"
+ * cierra la pregunta.
+ *
+ * `bloqueado` es el no de la base y no se puede pasar por arriba; `desaconsejado` es el no de la
+ * lista y sí. La diferencia está explicada adentro de `evaluarAsistente`.
  */
 export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
   if (!hueco) return [];
@@ -485,11 +490,13 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
     })
   );
 
-  // Primero los que se pueden asignar, después los bloqueados; dentro de cada grupo, por
-  // puntaje. El desempate por nombre es para que la lista no baile entre dos recargas cuando
-  // dos Asistentes empatan: una lista que se reordena sola es una lista en la que no se confía.
+  // Tres grupos, en este orden: los que se proponen, los desaconsejados —que se pueden asignar
+  // igual— y al final los bloqueados, que la base no deja. Dentro de cada grupo, por puntaje. El
+  // desempate por nombre es para que la lista no baile entre dos recargas cuando dos Asistentes
+  // empatan: una lista que se reordena sola es una lista en la que no se confía.
+  const grupo = (c) => (c.bloqueado ? 2 : c.desaconsejado ? 1 : 0);
   return evaluados.sort((a, b) => {
-    if (a.bloqueado !== b.bloqueado) return a.bloqueado ? 1 : -1;
+    if (grupo(a) !== grupo(b)) return grupo(a) - grupo(b);
     if (b.puntaje !== a.puntaje) return b.puntaje - a.puntaje;
     return String(a.asistente?.nombre ?? '').localeCompare(String(b.asistente?.nombre ?? ''));
   });
@@ -502,7 +509,23 @@ function evaluarAsistente(asistente, ctx) {
   const aFavor = [];
   const enContra = [];
   let puntaje = 0;
+  /* Las dos clases de «no» y por qué no son la misma.
+     ------------------------------------------------------------------------------------------
+     `bloqueado` es el no de la BASE: la Matrícula y la modalidad de trabajo las hace cumplir un
+     disparador, así que la asignación falla igual, se apriete lo que se apriete. Mostrar un botón
+     encendido ahí sería mandar a alguien contra una pared.
+
+     `desaconsejado` es el no de ESTA PANTALLA: que se pise con otra guardia y que haya una
+     ausencia registrada son hechos que el sistema conoce, pero que la base acepta sin decir nada.
+     Y son justo los dos sobre los que quien coordina puede saber algo que el sistema no sabe —que
+     la licencia se cortó antes, que las dos guardias se están permutando—. Ahí la lista propone
+     que no, y quien decide sigue siendo la persona: el botón queda encendido, con el motivo
+     delante y dejando constancia de lo que pasó por arriba.
+
+     Los dos van al fondo de la lista con su motivo a la vista, y los dos restan lo mismo. Lo
+     único que cambia entre uno y otro es si se puede apretar el botón. */
   let bloqueado = false;
+  let desaconsejado = false;
 
   const suma = (destino, clave, valores, peso) => {
     destino.push(valores ? { clave, valores } : { clave, valores: {} });
@@ -527,10 +550,13 @@ function evaluarAsistente(asistente, ctx) {
     suma(enContra, MOTIVO.SIN_CONTINUIDAD, null, pesos.sin_continuidad);
   }
 
-  // --- 2. ¿Está libre a esa hora? Lo único que bloquea sin discusión posible.
+  // --- 2. ¿Está libre a esa hora? Nadie puede estar en dos casas a la vez, así que esta persona
+  //        no se propone. Pero no es un bloqueo de la base: la base acepta la asignación sin
+  //        decir nada, y quien coordina puede saber que esas dos guardias se están permutando.
+  //        Por eso va a `desaconsejado` y no a `bloqueado` (ver la diferencia más arriba).
   const choque = guardiaQueSePisa(hueco, propias);
   if (choque) {
-    bloqueado = true;
+    desaconsejado = true;
     suma(
       enContra,
       MOTIVO.OCUPADO,
@@ -554,9 +580,10 @@ function evaluarAsistente(asistente, ctx) {
     suma(enContra, motivoDeModalidad, null, pesos.modalidad_distinta);
   }
 
-  // --- 2 ter. Ausencias registradas. Bloquea igual que estar ocupado, y por el mismo motivo:
-  //        quien tiene una ausencia que cubre esa fecha no está ese día, y eso no se arregla
-  //        con un descuento de puntaje.
+  // --- 2 ter. Ausencias registradas. Pesa igual que estar ocupado, y por el mismo motivo: quien
+  //        tiene una ausencia que cubre esa fecha no está ese día, y eso no se arregla con un
+  //        descuento de puntaje. Tampoco lo hace cumplir la base, así que es de la misma clase
+  //        que el choque de horarios: se desaconseja, no se bloquea.
   //
   //        Sin esta comprobación, quien está de licencia no solo aparece: aparece **arriba**,
   //        porque no tiene ninguna guardia encima y se lleva los puntos de "ese día lo tiene
@@ -565,7 +592,7 @@ function evaluarAsistente(asistente, ctx) {
   //        El motivo que se muestra no dice de qué ausencia se trata, y el tipo ni siquiera
   //        llega hasta acá: la razón está escrita en `ausenciaQueTapa` (CLAUDE.md §6).
   if (ausenciaQueTapa(asistente.id, ctx.ausencias, hueco.fecha, ultimoDia)) {
-    bloqueado = true;
+    desaconsejado = true;
     suma(enContra, MOTIVO.AUSENCIA, null, pesos.ausencia);
   }
 
@@ -691,6 +718,7 @@ function evaluarAsistente(asistente, ctx) {
     aFavor,
     enContra,
     bloqueado,
+    desaconsejado,
     yaInvitado: ctx.yaInvitado,
   };
 }

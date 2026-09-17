@@ -35,6 +35,14 @@ import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
    guardia se podía publicar, pero sin saber a quién se le había ofrecido ni hasta cuándo—
    y es la razón de ser de la tabla `ofertas_guardia`.
 
+   Y HAY UN TERCER CASO, QUE ES CARGAR LO YA ARREGLADO. Si el reemplazo se resolvió por teléfono,
+   no hay nada que proponer ni a quién preguntarle: hay que poder cargarlo. Por eso "asignársela"
+   también funciona con quien esta lista desaconseja —el que ese día tiene otra guardia, la que
+   figura de licencia—, con el motivo delante y dejando constancia. Los únicos que quedan fuera
+   son los que rechaza la base, la Matrícula y la modalidad de trabajo, donde apretar fallaría
+   igual. Invitar a varios, en cambio, no los incluye: ahí no hay nadie mirando caso por caso, y
+   una invitación a quien figura de licencia es una invitación mal hecha.
+
    LOS CUATRO ESTADOS (CLAUDE.md §7 regla 3) se manejan acá adentro, porque este panel
    carga datos propios que ninguna otra pantalla necesita: las matriculas, los papeles, las
    ausencias registradas y las invitaciones ya hechas. Cargarlos en la pantalla de arriba
@@ -231,19 +239,48 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
      Si no hay nada, se asigna y listo —no se le pone una pregunta de más a quien está tapando
      un hueco con el reloj en contra. Si hay algo, se muestra y se pregunta. El aviso nunca
      impide asignar: la Coordinadora sabe cosas que la base no sabe. */
-  function pedirAsignar(asistenteId) {
+  function pedirAsignar(candidato) {
+    const asistenteId = candidato.asistente.id;
     const avisos = avisosDeAsignacion(guardia, asistenteId, datos ?? {}, datos?.calculo);
-    if (avisos.length === 0) {
-      asignarDirecto(asistenteId);
+    // Sin nada que mirar se asigna y listo. Con algo, se muestra y se pregunta. Y a quien esta
+    // lista desaconseja se le pregunta siempre, aunque no haya salido ningún aviso: pasar por
+    // arriba de la propia lista en silencio dejaría sin constancia justo el caso que la necesita.
+    if (avisos.length === 0 && !candidato.desaconsejado) {
+      asignarDirecto(asistenteId, avisos);
       return;
     }
     setPorConfirmar({ asistenteId, avisos });
   }
 
-  async function asignarDirecto(asistenteId) {
+  /* Asignar, y antes dejar escrito qué se dejó de lado.
+     ------------------------------------------------------------------------------------------
+     La constancia va PRIMERO y no después, y si falla no se asigna. Lo que se registra es la
+     decisión de quien coordina —esta persona, este turno, estos avisos delante—, y una decisión
+     así no puede quedar sin registrar porque la segunda escritura se cayó. Al revés —asignar y
+     después registrar— la que se cae es la constancia, y el turno queda asignado sin que nadie
+     sepa qué se pasó por arriba, que es exactamente lo que esto viene a terminar. */
+  async function asignarDirecto(asistenteId, avisos = []) {
     setPorConfirmar(null);
     setEnCurso(`asignar:${asistenteId}`);
     setError(null);
+
+    if (avisos.length > 0) {
+      const { error: fallaConstancia } = await supabase
+        .from('auditoria_asignaciones_con_aviso')
+        .insert({
+          prestadora_id: prestadoraId,
+          usuario_id: usuario.id,
+          guardia_id: guardia.id,
+          asistente_id: asistenteId,
+          avisos,
+        });
+      if (fallaConstancia) {
+        setEnCurso(null);
+        mostrarFalla(fallaConstancia);
+        return;
+      }
+    }
+
     // Al asignar, la guardia deja de estar ofrecida. No es prolijidad: la base tiene una
     // restricción que impide que una guardia con Asistente siga publicada, así que sin
     // limpiar estas tres columnas la operación entera falla.
@@ -426,15 +463,21 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
                           <input
                             type="checkbox"
                             checked={elegidos.has(c.asistente.id)}
-                            disabled={c.bloqueado || c.yaInvitado || enCurso !== null}
+                            disabled={c.bloqueado || c.desaconsejado || c.yaInvitado || enCurso !== null}
                             onChange={() => alternarElegido(c.asistente.id)}
                           />
                           {c.asistente.nombre}
                         </label>
                         <span className="candidato-puntaje">{c.puntaje}</span>
+                        {/* Apagado sólo cuando la base no lo deja —Matrícula, modalidad—, porque
+                            ahí apretar falla igual. Lo que desaconseja esta lista se puede
+                            asignar: quien coordina puede saber que la licencia se cortó antes o
+                            que las dos guardias se están permutando, y entonces no está pidiendo
+                            nada raro, está cargando algo que ya arregló. El paso de confirmación
+                            de abajo es obligatorio en ese caso, y deja constancia. */}
                         <Button
                           disabled={c.bloqueado || enCurso !== null}
-                          onClick={() => pedirAsignar(c.asistente.id)}
+                          onClick={() => pedirAsignar(c)}
                         >
                           {enCurso === `asignar:${c.asistente.id}`
                             ? tp.asignando
@@ -457,7 +500,7 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
                           <div className="avisos-asignacion-botones">
                             <Button
                               disabled={enCurso !== null}
-                              onClick={() => asignarDirecto(c.asistente.id)}
+                              onClick={() => asignarDirecto(c.asistente.id, porConfirmar.avisos)}
                             >
                               {ta.asignar_igual}
                             </Button>

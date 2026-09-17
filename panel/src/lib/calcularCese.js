@@ -1,5 +1,6 @@
 import { obtenerValorEscala, obtenerFormulaVigente } from './escalasLegales';
 import { SEMANAS_POR_MES } from './costoDelVinculo';
+import { UNIDADES, unidadDeMedicionDe, valorDeLaUnidad } from './formaDePago';
 
 // Causales que nunca calculan un monto automático — quedan siempre para el abogado.
 // Ver docs/PRD_02B_Gestion_Personal.md sección "Fuera de alcance". A diferencia de las
@@ -42,15 +43,24 @@ function mesesDeAntiguedad(fechaAlta, fechaHecho) {
   return (hecho.getFullYear() - alta.getFullYear()) * 12 + (hecho.getMonth() - alta.getMonth());
 }
 
+// La indemnización se cuenta sobre una remuneración mensual, y a esta persona se le puede estar
+// pagando por hora, por guardia, por semana o por mes. Lo que sigue lleva cada forma a un mes,
+// y devuelve cero cuando no alcanza para hacerlo: cero no es una estimación, es lo que ya hacía
+// el sistema para decir que no hay con qué contar.
 function mejorRemuneracion(asistente) {
-  if (asistente.tipo_vinculo === 'dependencia' && asistente.sueldo_basico) {
-    return Number(asistente.sueldo_basico);
+  const unidad = unidadDeMedicionDe(asistente);
+  const valor = valorDeLaUnidad(asistente, unidad);
+  if (valor === null) return 0;
+
+  if (unidad === UNIDADES.MES) return valor;
+  // Cuántas semanas tiene un mes no se escribe dos veces: es el mismo número con el que el
+  // Simulador pasa un valor hora a un costo mensual.
+  if (unidad === UNIDADES.SEMANA) return valor * SEMANAS_POR_MES;
+  if (unidad === UNIDADES.HORA && asistente.horas_semanales) {
+    return valor * Number(asistente.horas_semanales) * SEMANAS_POR_MES;
   }
-  if (asistente.valor_hora && asistente.horas_semanales) {
-    // Cuántas semanas tiene un mes no se escribe dos veces: es el mismo número con el que el
-    // Simulador pasa un valor hora a un costo mensual.
-    return Number(asistente.valor_hora) * Number(asistente.horas_semanales) * SEMANAS_POR_MES;
-  }
+  // Por guardia no hay cómo llegar a un mes: la ficha no dice cuántas guardias hace por semana,
+  // y suponerlo pondría un número inventado adentro de una indemnización.
   return 0;
 }
 

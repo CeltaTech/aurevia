@@ -40,19 +40,19 @@ Las decisiones de fondo, que ya están tomadas y rigen todos los pasos de acá:
 - Todo valor de esta sección nace de fábrica, lo cambia la Prestadora en su configuración, **y
   también se puede cambiar para un caso puntual**.
 
-**1.** La forma de pago y las horas extra. Hoy no existe la modalidad de pago: la decide el código
-por el tipo de vínculo (`panel/src/lib/calcularLiquidacion.js:61-68` — dependencia da mensual fijo,
-monotributo da horas por valor hora), no hay pago por guardia ni por semana, y **no existe nada de
-horas extra**, así que una Asistente en relación de dependencia que se queda tres horas de más no
-cobra nada por ellas. La forma de pago pasa a elegirse por persona —hora, guardia, semana o mes— y
-cada Asistente tiene su valor de hora extra, que puede ser igual o distinto al normal.
-
-**2.** La Coordinadora registra lo ya arreglado. Si resolvió el reemplazo por teléfono, lo carga
+**1.** La Coordinadora registra lo ya arreglado. Si resolvió el reemplazo por teléfono, lo carga
 directamente, sin pasar por la propuesta del sistema. Las dos formas de trabajar conviven.
 
 ---
 
 ## El dinero
+
+**2.** Cada cuánto se le paga a cada Asistente. Con qué se le mide el trabajo ya se elige por
+persona —hora, guardia, semana o mes—, pero cada cuánto cobra es otra cosa y hoy no existe: el
+sistema da por sentado que el período es el mes calendario. Se arregla con cada persona —los
+viernes, cada quince días, a treinta días— y de eso sale qué período se genera y desde qué día
+hasta qué día. No cambia ni un centavo de la cuenta de cada período: sólo cuándo empieza y cuándo
+termina. Valor de fábrica por Prestadora, cambiable persona por persona.
 
 **3. Usted** — El ciclo de cobranza a obras sociales: hoy sólo existen validado y anulado. ¿Qué estados hacen falta — presentación, débito, conciliación?
 

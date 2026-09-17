@@ -35,6 +35,8 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
   // mientras la persona mira el desplegable: si desapareciera al aplicarla, el motivo elegido por
   // el motor se vería igual que uno elegido a mano.
   const [sugerencia, setSugerencia] = useState('');
+  const [horasExtra, setHorasExtra] = useState(String(guardia.horas_extra ?? 0));
+  const [horasExtraMotivo, setHorasExtraMotivo] = useState(guardia.horas_extra_motivo ?? '');
   const [nuevoAsistenteId, setNuevoAsistenteId] = useState('');
   const [nuevaFecha, setNuevaFecha] = useState(guardia.fecha);
   const [procesando, setProcesando] = useState(false);
@@ -94,6 +96,18 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
      quien registró, y el Panel lo usa cuando el teléfono del Asistente no pudo hacerlo. */
   async function handleRegistrarSalida() {
     actualizar({ salida_checkin_at: new Date().toISOString(), medio_transporte: medioTransporte });
+  }
+
+  /* Las horas de más se anotan cuando pasan, y no se deducen de la diferencia entre lo marcado y
+     lo planificado: llegar tarde o irse tarde no es una hora extra autorizada. Por eso hay un
+     motivo obligatorio en cuanto el número deja de ser cero — es lo que después sostiene el
+     importe en la liquidación. */
+  async function handleGuardarHorasExtra() {
+    const cantidad = Number(horasExtra);
+    actualizar({
+      horas_extra: cantidad,
+      horas_extra_motivo: cantidad === 0 ? null : horasExtraMotivo.trim(),
+    });
   }
 
   async function handleRegistrarLlegada() {
@@ -221,6 +235,12 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
   const puedeMarcarAusente = tieneAsistente && guardia.estado === 'programada';
   const puedeReasignar = guardia.estado === 'programada' || guardia.estado === 'ausente';
   const puedeOfrecer = !tieneAsistente && guardia.estado === 'programada';
+  // Se anotan mientras la guardia está en pie o ya terminó, y nunca en una cancelada: ahí no
+  // hubo trabajo que pagar. Mientras la liquidación del mes no esté hecha se pueden corregir.
+  const puedeAnotarHorasExtra = tieneAsistente && guardia.estado !== 'cancelada' && guardia.estado !== 'ausente';
+  // Horas de más sin decir por qué deja a quien liquide el mes siguiente sin poder explicar el
+  // importe. Volver a cero es sacarlas, y para eso no hace falta ningún motivo.
+  const horasExtraListas = Number(horasExtra) === 0 || horasExtraMotivo.trim() !== '';
 
   // El descanso adentro del turno sólo tiene sentido en una guardia que pasa la medianoche: en un
   // turno de ocho horas nadie duerme en el domicilio, y el bloque sería un formulario de más.
@@ -333,6 +353,36 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
                 {t.guardias.detalle.registrar_checkout}
               </Button>
             )}
+          </div>
+        )}
+
+        {/* Las horas de más se anotan acá, cuando pasaron, y no salen de restarle a la marca de
+            salida la hora de fin planificada: irse media hora tarde porque el relevo se demoró
+            no es una hora extra autorizada, y calcularlas así convertiría cualquier demora en
+            plata sin que nadie lo haya decidido. Quien las autoriza es quien coordina. */}
+        {puedeAnotarHorasExtra && (
+          <div className="panel-resultado-calculo">
+            <h3>{t.guardias.detalle.horas_extra_titulo}</h3>
+            <p className="panel-explicacion">{t.guardias.detalle.horas_extra_ayuda}</p>
+            <FormField
+              label={t.guardias.detalle.horas_extra_cantidad}
+              name="horas_extra"
+              type="number"
+              min="0"
+              step="0.25"
+              value={horasExtra}
+              onChange={(e) => setHorasExtra(e.target.value)}
+            />
+            <FormField
+              label={t.guardias.detalle.horas_extra_motivo}
+              name="horas_extra_motivo"
+              type="textarea"
+              value={horasExtraMotivo}
+              onChange={(e) => setHorasExtraMotivo(e.target.value)}
+            />
+            <Button variant="secondary" onClick={handleGuardarHorasExtra} disabled={procesando || !horasExtraListas}>
+              {t.guardias.detalle.horas_extra_guardar}
+            </Button>
           </div>
         )}
 

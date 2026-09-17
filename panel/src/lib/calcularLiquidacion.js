@@ -13,7 +13,9 @@
 // (`backend/src/utils/calcularLiquidacion.js`, ver `scripts/copias_entre_apps.mjs`). Es la
 // misma forma que ya tiene `escalasLegales.js`, que decide qué escala rige a una fecha.
 //
-// NO IMPORTA NADA A PROPÓSITO. Lo que se copia al motor no puede traerse medio Panel atrás.
+// LO ÚNICO QUE IMPORTA ES A SU HERMANO COPIADO. `formaDePago.js` también vive en las dos
+// carpetas y con el mismo nombre, así que la ruta relativa vale igual de los dos lados. Fuera
+// de eso no entra nada: lo que se copia al motor no puede traerse medio Panel atrás.
 //
 // LO QUE NO ES: un comprobante fiscal. El producto no emite facturas ni notas y no está
 // previsto que lo haga. Esto es la cuenta interna de qué se le paga a quién.
@@ -23,6 +25,17 @@
 // resuelve contra `escalas_legales` a la fecha del período; si esa escala no está, el concepto
 // queda afuera y se avisa, nunca se estima.
 // ---------------------------------------------------------------------------
+
+import {
+  COLUMNA_DEL_VALOR,
+  diasCubiertos,
+  diasEntre,
+  reglaDePagoDe,
+  unidadDeMedicionDe,
+  unidadesDelPeriodo,
+  valorDeLaHoraExtra,
+  valorDeLaUnidad,
+} from './formaDePago.js';
 
 export function esPeriodoValido(periodo) {
   if (typeof periodo !== 'string' || !/^\d{4}-\d{2}$/.test(periodo)) return false;
@@ -57,39 +70,72 @@ export function redondear(numero) {
  *
  * `sinEscala` sale con los conceptos que quedaron afuera por no tener escala utilizable.
  */
-export function calcularLiquidacion({ asistente, acumulado, conceptos, escalasPorTipo, moneda, jurisdiccion, periodo }) {
-  const esDependencia = asistente.tipo_vinculo === 'dependencia';
-  const baseUnidad = esDependencia ? 'sueldo_basico' : 'valor_hora';
-  const baseCruda = esDependencia ? asistente.sueldo_basico : asistente.valor_hora;
-  if (baseCruda === null || baseCruda === undefined) return { faltaBase: true };
+export function calcularLiquidacion({ asistente, acumulado, conceptos, escalasPorTipo, moneda, jurisdiccion, periodo, reglaDePago }) {
+  const regla = reglaDePagoDe(reglaDePago);
+  const unidad = unidadDeMedicionDe(asistente);
+  const baseUnidad = COLUMNA_DEL_VALOR[unidad];
+  const baseValor = valorDeLaUnidad(asistente, unidad);
+  if (baseValor === null) return { faltaBase: true };
 
-  const baseValor = Number(baseCruda);
   const horas = redondear(acumulado.horas);
-  // Quien está en relación de dependencia cobra su sueldo, que no se mueve con las guardias
-  // que haya hecho; para esa persona las horas son un control, no la cuenta.
-  const bruto = redondear(esDependencia ? baseValor : acumulado.horas * baseValor);
+  const desde = primerDia(periodo);
+  const hasta = ultimoDia(periodo);
+  const cuantas = unidadesDelPeriodo({
+    unidad,
+    acumulado,
+    diasDelPeriodo: diasEntre(desde, hasta),
+    diasDeLaPersona: diasCubiertos({
+      desde,
+      hasta,
+      fechaAlta: asistente.fecha_alta,
+      fechaBaja: asistente.fecha_baja,
+      prorratear: regla.prorratear_monto_fijo,
+    }),
+  });
+  const montoBase = redondear(cuantas * baseValor);
 
   // El renglón de la base va primero y no viene de ningún concepto. La descripción se escribe
   // con datos y no con una frase: la etiqueta que lee la Coordinadora sale de `base_unidad`,
   // que la pantalla traduce a los tres idiomas, mientras que esto es el detalle que permite
   // volver a explicar el importe años después sin depender del idioma en que se generó.
-  const descripcionBase = esDependencia
-    ? `sueldo_basico = ${baseValor.toFixed(2)}`
-    : `valor_hora ${baseValor.toFixed(2)} × ${horas.toFixed(2)} h`;
-
   const items = [
     {
       concepto_id: null,
-      descripcion: descripcionBase,
+      descripcion: `${baseUnidad} ${baseValor.toFixed(2)} × ${cuantas.toFixed(2)} ${unidad}`,
       signo: 'suma',
       unidad: 'base',
       valor_aplicado: baseValor,
-      monto: bruto,
+      monto: montoBase,
       orden: 0,
     },
   ];
 
+  // Las horas de más son remuneración, así que entran al bruto: un concepto que se calcula
+  // como porcentaje del bruto tiene que verlas. Y si nadie cargó cuánto vale la hora extra,
+  // no se estiman con el valor hora normal ni se pagan a cero: quedan afuera y se avisa, que
+  // es lo mismo que ya se hace con un concepto sin escala vigente.
+  const horasExtra = redondear(acumulado.horasExtra ?? 0);
+  const valorHoraExtra = valorDeLaHoraExtra(asistente);
   const sinEscala = [];
+  let importeHorasExtra = 0;
+
+  if (horasExtra > 0 && valorHoraExtra === null) {
+    sinEscala.push(`horas extra: hay ${horasExtra.toFixed(2)} h anotadas y la ficha no tiene cargado el valor de la hora extra`);
+  } else if (horasExtra > 0) {
+    importeHorasExtra = redondear(horasExtra * valorHoraExtra);
+    items.push({
+      concepto_id: null,
+      descripcion: `valor_hora_extra ${valorHoraExtra.toFixed(2)} × ${horasExtra.toFixed(2)} h`,
+      signo: 'suma',
+      unidad: 'horas_extra',
+      valor_aplicado: valorHoraExtra,
+      monto: importeHorasExtra,
+      orden: 1,
+    });
+  }
+
+  const bruto = redondear(montoBase + importeHorasExtra);
+
   let totalSumas = 0;
   let totalRestas = 0;
 
@@ -158,6 +204,12 @@ export function calcularLiquidacion({ asistente, acumulado, conceptos, escalasPo
       base_valor: baseValor,
       horas,
       guardias_contadas: acumulado.guardias,
+      horas_extra: horasExtra,
+      // El valor con el que se pagaron va en la foto: sin él, el importe no se puede volver a
+      // explicar. Sin horas extra no hay valor que guardar, y guardar el de la ficha diría que
+      // se pagó algo que no se pagó.
+      valor_hora_extra: importeHorasExtra > 0 ? valorHoraExtra : null,
+      importe_horas_extra: importeHorasExtra,
       bruto,
       total_sumas: totalSumas,
       total_restas: totalRestas,

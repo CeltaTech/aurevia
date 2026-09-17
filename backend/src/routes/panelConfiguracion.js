@@ -49,6 +49,7 @@ import {
   respuestasConfirmadas,
 } from '../utils/reenvioDeRespuestas.js';
 import { LIMITES_AVISO_PREVIO_GUARDIA } from '../utils/revisarRecordatoriosPush.js';
+import { reglaDePagoDe, revisarReglaDePago, soloLoQueCorreDelPago } from '../utils/formaDePago.js';
 import { METROS_TOLERANCIA_POR_OMISION, MINUTOS_TOLERANCIA_POR_OMISION } from '../utils/toleranciaCheckin.js';
 import {
   SEGUNDOS_EN_PANTALLA_POR_OMISION,
@@ -694,6 +695,46 @@ panelConfiguracionRouter.put('/alarmas-tomadas', async (req, res) => {
   }
 
   const { error } = await supabase.from('configuracion_alarmas_tomadas').upsert(
+    {
+      prestadora_id: req.usuarioPanel.prestadoraId,
+      regla: corridos,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'prestadora_id' }
+  );
+  if (error) return responderError(res, error);
+  res.json({ ok: true });
+});
+
+// --- Cómo se le paga el período a quien cobra un monto fijo ---
+//
+// A quien cobra por hora o por guardia se le paga lo que hizo, y no hay nada que decidir. La
+// pregunta aparece con el monto fijo —por semana o por mes— cuando la persona entró o se fue a
+// mitad del período: o se le paga la parte de los días que estuvo, o se le paga el monto entero.
+// Las dos formas se usan, y cuál corresponde lo arregla la Prestadora con cada persona, así que
+// acá está el valor con el que sale de fábrica —la parte proporcional— y la Prestadora lo cambia.
+
+panelConfiguracionRouter.get('/pago-asistentes', async (req, res) => {
+  const { data, error } = await supabase
+    .from('configuracion_pago_asistentes')
+    .select('regla')
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .maybeSingle();
+  if (error) return responderError(res, error);
+
+  // Que la fila no exista no es un error: es la configuración de fábrica.
+  const corrido = data?.regla ?? {};
+  res.json({ configuracion: { regla: reglaDePagoDe(corrido), corridos: corrido } });
+});
+
+panelConfiguracionRouter.put('/pago-asistentes', async (req, res) => {
+  const corridos = soloLoQueCorreDelPago(req.body?.regla);
+  const revision = revisarReglaDePago(corridos);
+  if (!revision.ok) {
+    return res.status(400).json({ error: `El valor de «${revision.clave}» está fuera de lo permitido` });
+  }
+
+  const { error } = await supabase.from('configuracion_pago_asistentes').upsert(
     {
       prestadora_id: req.usuarioPanel.prestadoraId,
       regla: corridos,

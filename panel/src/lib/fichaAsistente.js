@@ -18,7 +18,7 @@
  */
 
 /** Lo que hay que agregar al `select` para que la base traiga también los importes. */
-export const CAMPOS_PAGO = 'remuneraciones_asistente(valor_hora, sueldo_basico, categoria_cct)';
+export const CAMPOS_PAGO = 'remuneraciones_asistente(unidad_medicion, valor_hora, sueldo_basico, valor_guardia, valor_semana, valor_hora_extra, categoria_cct)';
 
 /** Lo que hay que agregar al `select` para que la base traiga también lo reservado. */
 export const CAMPOS_RESERVADOS = 'datos_reservados_asistente(causal_baja, score_riesgo_reclasificacion, indicadores_riesgo, motivo_exclusion_directo, motivo_exclusion_marketplace)';
@@ -40,8 +40,12 @@ export function conDatosAparte(asistente) {
   const reservado = primero(adjuntoReservado);
   return {
     ...ficha,
+    unidad_medicion: pago?.unidad_medicion ?? null,
     valor_hora: pago?.valor_hora ?? null,
     sueldo_basico: pago?.sueldo_basico ?? null,
+    valor_guardia: pago?.valor_guardia ?? null,
+    valor_semana: pago?.valor_semana ?? null,
+    valor_hora_extra: pago?.valor_hora_extra ?? null,
     categoria_cct: pago?.categoria_cct ?? null,
     causal_baja: reservado?.causal_baja ?? null,
     score_riesgo_reclasificacion: reservado?.score_riesgo_reclasificacion ?? null,

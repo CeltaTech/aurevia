@@ -80,6 +80,11 @@ export const GRUPOS = [
     copias: ['backend/src/utils/escalasLegales.js'],
   },
   {
+    que: 'con qué se mide el trabajo de cada Asistente, y qué es una hora extra',
+    original: 'panel/src/lib/formaDePago.js',
+    copias: ['backend/src/utils/formaDePago.js'],
+  },
+  {
     que: 'cuánto se le paga a un Asistente por un mes',
     original: 'panel/src/lib/calcularLiquidacion.js',
     copias: ['backend/src/utils/calcularLiquidacion.js'],

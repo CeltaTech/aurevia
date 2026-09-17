@@ -421,6 +421,8 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
                 <dd>{formatearHoras(liquidacion.horas, locale)}</dd>
                 <dt>{t.pagos_asistentes.col_guardias}</dt>
                 <dd>{liquidacion.guardias_contadas}</dd>
+                <dt>{t.pagos_asistentes.horas_extra}</dt>
+                <dd>{formatearHoras(liquidacion.horas_extra, locale)}</dd>
                 <dt>{t.pagos_asistentes.col_estado}</dt>
                 <dd>
                   <span className={claseBadge(liquidacion.estado)}>
@@ -428,6 +430,13 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
                   </span>
                 </dd>
               </dl>
+
+              {/* Horas anotadas que no se pagaron porque la ficha no tiene cargado cuánto vale
+                  la hora extra. Sin este aviso, el recibo sale más chico de lo que corresponde y
+                  nadie tiene por dónde enterarse. */}
+              {liquidacion.horas_extra > 0 && liquidacion.valor_hora_extra === null && (
+                <Alert variant="warning">{t.pagos_asistentes.horas_extra_sin_valor}</Alert>
+              )}
 
               <table className="panel-tabla">
                 <thead>

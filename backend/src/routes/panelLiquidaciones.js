@@ -118,9 +118,13 @@ export function acumularGuardias(guardias) {
   const porAsistente = new Map();
   for (const g of guardias) {
     if (g.estado !== ESTADO_HECHA) continue;
-    const acumulado = porAsistente.get(g.asistente_id) || { guardias: 0, horas: 0 };
+    const acumulado = porAsistente.get(g.asistente_id) || { guardias: 0, horas: 0, horasExtra: 0 };
     acumulado.guardias += 1;
     acumulado.horas += horasEntre(g.hora_inicio, g.hora_fin, g.dias_hasta_el_fin);
+    // Las horas de más se anotaron en la guardia cuando pasaron. Van aparte de las horas
+    // planificadas porque se pagan a otro valor, y sumarlas acá las escondería adentro del
+    // total sin que nadie pueda ver cuántas fueron.
+    acumulado.horasExtra += Number(g.horas_extra ?? 0);
     porAsistente.set(g.asistente_id, acumulado);
   }
   return porAsistente;
@@ -336,7 +340,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
   const guardias = await traerPaginado(() =>
     supabase
       .from('guardias')
-      .select('id, estado, hora_inicio, hora_fin, dias_hasta_el_fin, asistente_id')
+      .select('id, estado, hora_inicio, hora_fin, dias_hasta_el_fin, horas_extra, asistente_id')
       .eq('prestadora_id', prestadoraId)
       .gte('fecha', desde)
       .lte('fecha', hasta)
@@ -359,10 +363,20 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
   // Prestadora, en vez de colgada de la ficha, por lo mismo que los nombres de más arriba.
   const { data: remuneraciones, error: errorRemuneraciones } = await supabase
     .from('remuneraciones_asistente')
-    .select('asistente_id, valor_hora, sueldo_basico')
+    .select('asistente_id, unidad_medicion, valor_hora, sueldo_basico, valor_guardia, valor_semana, valor_hora_extra')
     .eq('prestadora_id', prestadoraId);
   if (errorRemuneraciones) return responderError(res, errorRemuneraciones);
   const pagoPorAsistente = new Map((remuneraciones || []).map((r) => [r.asistente_id, r]));
+
+  // Cómo paga esta Prestadora lo que no depende de una persona sola. Que la fila no exista no
+  // es un error: es la configuración de fábrica.
+  const { data: filaPago, error: errorConfigPago } = await supabase
+    .from('configuracion_pago_asistentes')
+    .select('regla')
+    .eq('prestadora_id', prestadoraId)
+    .maybeSingle();
+  if (errorConfigPago) return responderError(res, errorConfigPago);
+  const reglaDePago = filaPago?.regla ?? {};
 
   const { data: conceptos, error: errorConceptos } = await supabase
     .from('conceptos_liquidacion')
@@ -417,13 +431,14 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
 
     const pago = pagoPorAsistente.get(asistente.id) || {};
     const calculada = calcularLiquidacion({
-      asistente: { ...asistente, valor_hora: pago.valor_hora ?? null, sueldo_basico: pago.sueldo_basico ?? null },
-      acumulado: acumuladoPorAsistente.get(asistente.id) || { guardias: 0, horas: 0 },
+      asistente: { ...asistente, ...pago },
+      acumulado: acumuladoPorAsistente.get(asistente.id) || { guardias: 0, horas: 0, horasExtra: 0 },
       conceptos: conceptos || [],
       escalasPorTipo,
       moneda: prestadora.moneda,
       jurisdiccion: prestadora.pais,
       periodo,
+      reglaDePago,
     });
 
     if (calculada.faltaBase) {

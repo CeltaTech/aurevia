@@ -11,6 +11,7 @@ import {
   modalidadesHabilitadas,
   mensajeDeModalidad,
 } from '../../lib/modalidades';
+import { COLUMNA_DEL_VALOR, UNIDADES_POSIBLES, unidadDeMedicionDe } from '../../lib/formaDePago';
 import { nombreTipo } from '../../lib/tiposAsistente';
 import { useTiposAsistente } from '../../hooks/useTiposAsistente';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
@@ -59,8 +60,15 @@ export function PerfilTab({ asistente, onActualizado }) {
     estado: asistente.estado,
     tipo_vinculo: asistente.tipo_vinculo,
     categoria_cct: asistente.categoria_cct || '',
+    // Con qué se mide el trabajo de esta persona. Una ficha vieja no eligió ninguna, y lo que
+    // le corresponde es exactamente lo que el código deducía antes de su vínculo: así nadie
+    // cambia de forma de pago sin que alguien lo haya decidido.
+    unidad_medicion: unidadDeMedicionDe(asistente),
     valor_hora: asistente.valor_hora || '',
     sueldo_basico: asistente.sueldo_basico || '',
+    valor_guardia: asistente.valor_guardia || '',
+    valor_semana: asistente.valor_semana || '',
+    valor_hora_extra: asistente.valor_hora_extra || '',
     horas_semanales: asistente.horas_semanales || '',
     modalidades: modalidadesDelAsistente(asistente),
   });
@@ -143,8 +151,12 @@ export function PerfilTab({ asistente, onActualizado }) {
             asistente_id: asistente.id,
             prestadora_id: asistente.prestadora_id,
             categoria_cct: form.categoria_cct || null,
+            unidad_medicion: form.unidad_medicion,
             valor_hora: form.valor_hora || null,
             sueldo_basico: form.sueldo_basico || null,
+            valor_guardia: form.valor_guardia || null,
+            valor_semana: form.valor_semana || null,
+            valor_hora_extra: form.valor_hora_extra || null,
             updated_at: new Date().toISOString(),
           },
           { onConflict: 'asistente_id' },
@@ -259,14 +271,33 @@ export function PerfilTab({ asistente, onActualizado }) {
             <option value="dependencia">{t.asistentes.vinculo_dependencia}</option>
           </FormField>
 
-          {form.tipo_vinculo === 'dependencia' ? (
-            <>
-              <FormField label={t.asistentes.categoria_cct} name="categoria_cct" value={form.categoria_cct} onChange={(e) => set('categoria_cct', e.target.value)} />
-              <FormField label={t.asistentes.sueldo_basico} name="sueldo_basico" type="number" value={form.sueldo_basico} onChange={(e) => set('sueldo_basico', e.target.value)} />
-            </>
-          ) : (
-            <FormField label={t.asistentes.valor_hora} name="valor_hora" type="number" value={form.valor_hora} onChange={(e) => set('valor_hora', e.target.value)} />
+          {form.tipo_vinculo === 'dependencia' && (
+            <FormField label={t.asistentes.categoria_cct} name="categoria_cct" value={form.categoria_cct} onChange={(e) => set('categoria_cct', e.target.value)} />
           )}
+
+          {/* Con qué se mide el trabajo ya no lo deduce el código del vínculo: lo elige quien
+              carga la ficha. Se muestra el valor de la unidad elegida y no los cuatro, porque
+              cuatro casillas de importe al lado invitan a llenar la que no se usa, y un valor
+              cargado que no se paga es una pregunta cada vez que alguien abre la ficha. */}
+          <FormField label={t.asistentes.unidad_medicion} name="unidad_medicion" type="select" value={form.unidad_medicion} ayuda={t.asistentes.unidad_medicion_ayuda} onChange={(e) => set('unidad_medicion', e.target.value)}>
+            {UNIDADES_POSIBLES.map((unidad) => (
+              <option key={unidad} value={unidad}>{t.asistentes[`unidad_${unidad}`]}</option>
+            ))}
+          </FormField>
+
+          <FormField
+            label={t.asistentes[COLUMNA_DEL_VALOR[form.unidad_medicion]]}
+            name={COLUMNA_DEL_VALOR[form.unidad_medicion]}
+            type="number"
+            value={form[COLUMNA_DEL_VALOR[form.unidad_medicion]]}
+            onChange={(e) => set(COLUMNA_DEL_VALOR[form.unidad_medicion], e.target.value)}
+          />
+
+          {/* Se pregunta siempre, y no sólo a quien cobra por hora: una guardia con horas de más
+              se paga igual midan el trabajo como lo midan. Vacío quiere decir que no está
+              cargado, y entonces la liquidación avisa en vez de estimarlo. */}
+          <FormField label={t.asistentes.valor_hora_extra} name="valor_hora_extra" type="number" value={form.valor_hora_extra} ayuda={t.asistentes.valor_hora_extra_ayuda} onChange={(e) => set('valor_hora_extra', e.target.value)} />
+
           <FormField label={t.asistentes.horas_semanales} name="horas_semanales" type="number" value={form.horas_semanales} onChange={(e) => set('horas_semanales', e.target.value)} />
 
           <h2>{t.modalidades.etiqueta}</h2>

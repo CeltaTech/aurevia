@@ -79,7 +79,7 @@ Con el archivo a mano eso alcanza, porque quien lo carga reconoce a sus clientes
 software recibe un nombre y tiene que saber a cuál de sus clientes corresponde.
 
 Lo que falta entonces **no es el dato fiscal, es la correspondencia**: que cada Familia de Careonys
-quede apareada con el cliente que el software de facturación ya tiene cargado. Una referencia, y
+se corresponda con el cliente que el software de facturación ya tiene cargado. Una referencia, y
 nada más. El número de identificación fiscal, la condición frente al organismo y qué clase de
 comprobante corresponde viven del otro lado, que es donde se factura.
 
@@ -87,7 +87,7 @@ comprobante corresponde viven del otro lado, que es donde se factura.
 
 ## 5. Qué se hace, entonces
 
-1. **Resolver cómo se aparea cada Familia con el cliente del otro lado.** Es lo único que la
+1. **Resolver cómo se corresponde cada Familia con el cliente del otro lado.** Es lo único que la
    conexión directa necesita y hoy no existe.
 2. **Esperar a la primera Prestadora** para escribir la pieza de su software. Antes de eso, escribir
    una es elegir a ciegas entre cinco y acertar con suerte.

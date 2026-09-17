@@ -29,6 +29,7 @@ import {
 } from './AccesosDelCirculoModal';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { llamarApiPanel } from '../../lib/apiPanel';
+import { PLAZO_MAXIMO_EN_DIAS, plazoQueSePuedeGuardar } from '../../lib/facturacionDeFamilias';
 import { con } from '../../lib/textos';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -97,7 +98,7 @@ export function FamiliaDetalle() {
     setError(null);
     const { data, error: errorConsulta } = await supabase
       .from('familias')
-      .select('id, plan, solicitud_id, created_at, solicitudes!familias_solicitud_id_fkey(nombre, telefono, email, localidad), pacientes(*)')
+      .select('id, plan, dias_hasta_el_vencimiento, solicitud_id, created_at, solicitudes!familias_solicitud_id_fkey(nombre, telefono, email, localidad), pacientes(*)')
       .eq('id', id)
       .single();
 
@@ -114,6 +115,10 @@ export function FamiliaDetalle() {
       email: data.solicitudes?.email || '',
       localidad: data.solicitudes?.localidad || '',
       plan: data.plan || '',
+      dias_hasta_el_vencimiento:
+        data.dias_hasta_el_vencimiento === null || data.dias_hasta_el_vencimiento === undefined
+          ? ''
+          : String(data.dias_hasta_el_vencimiento),
     });
     setEstado('listo');
   }, [id, t]);
@@ -190,12 +195,20 @@ export function FamiliaDetalle() {
   async function guardarContacto() {
     setGuardandoContacto(true);
     setErrorContacto(null);
-    const { nombre, telefono, email, localidad, plan } = formContacto;
+    const { nombre, telefono, email, localidad, plan, dias_hasta_el_vencimiento: dias } = formContacto;
+    // Vacío es «no se acordó nada distinto», y entonces rige el plazo de la Prestadora. No es
+    // cero, que sería «paga el mismo día»: por eso se guarda vacío y no un número.
+    const plazo = plazoQueSePuedeGuardar(dias === '' ? '' : Number(dias));
+    if (!plazo.ok) {
+      setGuardandoContacto(false);
+      setErrorContacto(t.familias.plazo_fuera_de_borde);
+      return;
+    }
     const [{ error: errorSolicitud }, { error: errorFamilia }] = await Promise.all([
       familia.solicitud_id
         ? supabase.from('solicitudes').update({ nombre, telefono, email, localidad }).eq('id', familia.solicitud_id)
         : Promise.resolve({ error: null }),
-      supabase.from('familias').update({ plan }).eq('id', familia.id),
+      supabase.from('familias').update({ plan, dias_hasta_el_vencimiento: plazo.valor }).eq('id', familia.id),
     ]);
     setGuardandoContacto(false);
     if (errorSolicitud || errorFamilia) {
@@ -231,6 +244,19 @@ export function FamiliaDetalle() {
           <FormField label={t.familias.col_email} name="email_contacto" type="email" value={formContacto.email} onChange={(e) => setCampoContacto('email', e.target.value)} disabled={!puedeEditarFamilia} />
           <FormField label={t.familias.col_localidad} name="localidad_contacto" value={formContacto.localidad} onChange={(e) => setCampoContacto('localidad', e.target.value)} disabled={!puedeEditarFamilia} />
           <FormField label={t.familias.plan} name="plan_contacto" value={formContacto.plan} onChange={(e) => setCampoContacto('plan', e.target.value)} disabled={!puedeEditarFamilia} />
+          {/* Lo acordado con esta Familia pisa el plazo general de la Prestadora. Vacío quiere
+              decir que no se acordó nada distinto, no que pague el mismo día. */}
+          <FormField
+            label={t.familias.plazo_de_pago}
+            name="dias_hasta_el_vencimiento"
+            type="number"
+            min="0"
+            max={PLAZO_MAXIMO_EN_DIAS}
+            value={formContacto.dias_hasta_el_vencimiento}
+            ayuda={t.familias.plazo_de_pago_ayuda}
+            onChange={(e) => setCampoContacto('dias_hasta_el_vencimiento', e.target.value)}
+            disabled={!puedeEditarFamilia}
+          />
           <dl className="panel-detalle-lista">
             <dt>{t.familias.col_fecha_alta}</dt>
             <dd>{new Date(familia.created_at).toLocaleDateString()}</dd>

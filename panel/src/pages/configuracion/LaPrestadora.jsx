@@ -13,10 +13,11 @@ import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { FacturacionFamiliasTab } from './FacturacionFamiliasTab';
 
 /* Quién es la Prestadora y cómo trabaja: su nombre y sus datos, las modalidades
-   que tiene contratadas, las zonas donde presta y —si vende por marketplace— por
-   dónde cobra. */
+   que tiene contratadas, las zonas donde presta, a qué plazo le pagan las Familias
+   y —si vende por marketplace— por dónde cobra. */
 export function ConfiguracionPrestadora() {
   const { t } = useLocale();
   const { tieneModalidad } = useModalidades();
@@ -28,6 +29,7 @@ export function ConfiguracionPrestadora() {
       <TabModalidades />
       <h2>{t.configuracion.tab_zonas}</h2>
       <TabZonas />
+      <FacturacionFamiliasTab />
       {tieneModalidad('marketplace') && <TabPasarela />}
     </>
   );

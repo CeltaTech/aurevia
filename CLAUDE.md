@@ -105,9 +105,15 @@ nace del país configurado y se cambia desde Configuración; la de cada importe,
 `moneda` de su tabla, que la función `public.moneda_de_prestadora` completa al insertar.
 
 **Alcance, para que la regla de la moneda no se estire:** Careonys **no emite comprobantes
-fiscales y no está previsto que lo haga.** No hay tipo de comprobante, ni punto de venta, ni
-numeración autorizada, ni impuestos discriminados. Pide la moneda y nada más. Si algún día un
-importe se convierte, ahí sí se guarda la cotización usada con su fecha.
+fiscales y no está previsto que lo haga.** No tiene punto de venta, ni numeración autorizada, ni
+impuestos discriminados, y no calcula ningún importe fiscal. Pide la moneda y nada más. Si algún
+día un importe se convierte, ahí sí se guarda la cotización usada con su fecha.
+
+**Lo que sí guarda es lo que emitió otro.** El comprobante lo emite el software de facturación de
+la Prestadora, y de ahí vuelven tres datos que se anotan tal como llegaron: cómo se llama el
+comprobante, qué número tiene y cuánto quedó adeudando la Familia con los impuestos incluidos. Ese
+monto es el que se reclama; el sistema no lo revisa ni lo compara contra nada, porque no conoce
+los impuestos de ningún país. El nombre del comprobante es texto y no se interpreta.
 
 **Las funciones internas de la base no viven en un esquema publicado.** Las que usan las políticas
 de RLS están en el esquema `interno`, que queda afuera de la lista `schemas` de

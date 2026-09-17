@@ -55,6 +55,7 @@ import {
   revisarFrecuenciaDePago,
   soloLoQueCorreDeLaFrecuencia,
 } from '../utils/frecuenciaDePago.js';
+import { plazoQueSePuedeGuardar } from '../utils/facturacionDeFamilias.js';
 import { METROS_TOLERANCIA_POR_OMISION, MINUTOS_TOLERANCIA_POR_OMISION } from '../utils/toleranciaCheckin.js';
 import {
   SEGUNDOS_EN_PANTALLA_POR_OMISION,
@@ -762,6 +763,53 @@ panelConfiguracionRouter.put('/pago-asistentes', async (req, res) => {
       prestadora_id: req.usuarioPanel.prestadoraId,
       regla: corridos,
       frecuencia_pago: corridosDeLaFrecuencia,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'prestadora_id' }
+  );
+  if (error) return responderError(res, error);
+  res.json({ ok: true });
+});
+
+// --- A qué plazo pagan las Familias ---
+//
+// Es el plazo que se acordó, y es uno de los tres datos que Careonys le manda al software de
+// facturación: cuántas unidades, a qué precio, y a qué plazo. De él sale la fecha de vencimiento
+// de cada factura, que hasta ahora se escribía a mano para toda la tanda.
+//
+// NO HAY VALOR DE FÁBRICA. Una factura con un vencimiento que inventó el sistema se vería
+// vencida sin que nadie lo haya acordado. Vacío quiere decir que no se acordó ninguno, y
+// entonces la pantalla sigue pidiendo la fecha como hasta ahora.
+
+panelConfiguracionRouter.get('/facturacion-familias', async (req, res) => {
+  const { data, error } = await supabase
+    .from('configuracion_facturacion_familias')
+    .select('regla')
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .maybeSingle();
+  if (error) return responderError(res, error);
+
+  res.json({
+    configuracion: {
+      dias_hasta_el_vencimiento: data?.regla?.dias_hasta_el_vencimiento ?? null,
+    },
+  });
+});
+
+panelConfiguracionRouter.put('/facturacion-familias', async (req, res) => {
+  const revision = plazoQueSePuedeGuardar(req.body?.dias_hasta_el_vencimiento);
+  if (!revision.ok) {
+    return res.status(400).json({ error: 'El plazo de pago está fuera de lo permitido' });
+  }
+
+  // Vacío se guarda como objeto vacío y no como un cero: cero es «paga el mismo día» y vacío es
+  // «no se acordó nada». Son dos cosas distintas y la pantalla se comporta distinto con cada una.
+  const regla = revision.valor === null ? {} : { dias_hasta_el_vencimiento: revision.valor };
+
+  const { error } = await supabase.from('configuracion_facturacion_familias').upsert(
+    {
+      prestadora_id: req.usuarioPanel.prestadoraId,
+      regla,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'prestadora_id' }

@@ -11,39 +11,20 @@
 
 ## El dinero
 
-**1.** Lo que hace falta para trabajar con un software de facturación de afuera, **todo lo que no
-depende de cuál sea**. Se usa anotando los datos a mano, que es lo que hoy no se puede hacer, y el
-día que se conecte uno de verdad nada de esto cambia.
+**1.** Que cada Prestadora decida si Careonys se ocupa de la cobranza o no se ocupa.
 
-**El reparto de tareas ya está definido y no depende de ningún país:**
+Hoy Careonys da por sentado que él sigue la cobranza de todas. Puede no ser así: una Prestadora
+puede tener otro software de créditos y cobranzas —que CeltaTech también puede desarrollar— y
+querer que ese se ocupe. Entonces:
 
-- **Careonys le manda** cuántas unidades hay que facturar y de qué —horas, guardias, o lo que esa
-  Prestadora use como medida—, el precio acordado, y el plazo de pago acordado.
-- **El facturador emite**, con los impuestos y el comprobante que correspondan donde esté, y
-  **devuelve el monto de la factura y la fecha de vencimiento**.
-- **Careonys guarda esos dos datos y hace el seguimiento de la cobranza**, que es lo que ya sabe
-  hacer.
-
-De ahí sale lo que hay que construir:
-
-- **El plazo de pago acordado, que hoy no existe.** La fecha de vencimiento se escribe a mano en
-  cada tanda y sale igual para todas las Familias. Es el dato que se le manda al facturador, así
-  que vive en el acuerdo con cada cliente, no en la pantalla que genera las facturas.
-- **El monto pasa a ser el que informó el facturador.** Hoy es el que calcula Careonys sumando
-  renglones, y con impuestos los dos números no tienen por qué coincidir. Quedan los dos: lo que se
-  mandó a facturar y lo que se facturó.
-- **Una factura que salió mal no se toca.** La corrección se le pide al facturador, y lo que él
-  devuelva se guarda: el comprobante que emitió, por cuánto y para qué lado. **Cómo se llama ese
-  comprobante es texto que viene del facturador y Careonys no lo interpreta**, igual que CeltaTech
-  con las capacidades de sus productos. Así ningún país entra en el código. Vale para las Familias
-  y para lo que una obra social reconoce de menos, que es la misma pieza.
-- **La cuenta es de la Prestadora**, con su CUIT y sus credenciales, configurada por ella. Careonys
-  nunca factura con una cuenta propia: eso metería a CeltaTech adentro de la cadena. La clave se
-  guarda como secreto y no se muestra en pantalla.
-- **Sin software de facturación conectado el sistema funciona igual.** Quien factura por afuera
-  anota acá el número del comprobante, el monto y el vencimiento. Nadie queda obligado a contratar
-  nada.
-
+- **Un interruptor en la configuración de la Prestadora.** Encendido, Careonys le manda la factura
+  a quien tiene que pagarla, sigue la cobranza y anota los pagos, que es lo que hace hoy. Apagado,
+  no muestra nada de eso y no reclama nada.
+- **Quien tiene que pagar no es siempre la Familia.** Puede ser una obra social o un tercero. Ya
+  se guarda quién es; falta que la factura salga hacia el que corresponda.
+- **Una puerta para que el otro software avise.** Con el interruptor apagado, lo único que Careonys
+  necesita saber es si a esa Familia hay que ponerle alguna restricción por falta de pago. El otro
+  software lo avisa, Careonys lo muestra y **no decide nada**: quien decide es una persona.
 **2. Usted** — Con cuál de los softwares de facturación se conecta Careonys primero: el que usen
 hoy las Prestadoras. Recién se pregunta cuando el paso anterior esté hecho, porque no lo traba.
 

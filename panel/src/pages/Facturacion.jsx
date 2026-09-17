@@ -7,6 +7,11 @@ import { claseBadge } from '../lib/tonos';
 import { formatearImporte } from '../lib/dinero';
 import { hoyISO } from '../lib/horarios';
 import { MEDIOS, loQueEstaMalEnElCobro } from '../lib/cobrosDeFamilia';
+import {
+  SENTIDOS_POSIBLES,
+  loQueEstaMalEnLaCorreccion,
+  loQueEstaMalEnLoFacturado,
+} from '../lib/facturacionDeFamilias';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { FormField } from '../components/ui/FormField';
@@ -40,9 +45,18 @@ import { useModalAccesible } from '../hooks/useModalAccesible';
    suyos— es un cálculo sobre plata, y vive en el motor, en `utils/facturaDelPeriodo.js`. La
    pantalla pide el período y la fecha de vencimiento, y muestra cuántas facturas salieron.
 
-   LO QUE NO HACE. No emite comprobantes fiscales —el producto no los emite (regla 14)— y no
-   decide nada: que una Familia deba plata no corta ningún Servicio. La pantalla avisa; lo demás
-   lo resuelve una persona. */
+   QUIÉN EMITE EL COMPROBANTE Y QUÉ SE ANOTA ACÁ. El producto no emite comprobantes y no va a
+   emitirlos: el comprobante lo emite el software de facturación de la Prestadora, con los
+   impuestos y el formato de su país. Lo que sí hace esta pantalla es guardar lo que ese software
+   informó —cuánto salió, cómo se llama el comprobante y qué número tiene— y medir la cobranza
+   contra ese importe. Mientras no se anote nada, se reclama lo que se mandó a facturar.
+
+   Y UNA FACTURA EMITIDA NO SE TOCA. Si salió de más o de menos, quien emitió emite otro
+   comprobante por la diferencia y acá se anota como corrección, con su sentido, su monto y su
+   motivo. El producto no interpreta cómo se llama ese comprobante: eso cambia de país en país.
+
+   LO QUE NO HACE. No decide nada: que una Familia deba plata no corta ningún Servicio. La
+   pantalla avisa; lo demás lo resuelve una persona. */
 
 function mesActual() {
   return hoyISO().slice(0, 7);
@@ -52,6 +66,13 @@ function mesActual() {
 function textoDeOrigenes(origenes, t) {
   if (!origenes || origenes.length === 0) return t.facturacion.nunca_cobrado;
   return origenes.map((o) => traducirValor(t.facturacion, `origen_${o}`)).join(', ');
+}
+
+/* Cómo se llama el comprobante que se emitió, con su número si lo tiene. El nombre lo puso quien
+   emitió y acá se muestra tal cual: cambia de país en país y el producto no lo interpreta. */
+function textoDeComprobante(saldo) {
+  if (!saldo.comprobante_tipo) return '—';
+  return saldo.comprobante_numero ? `${saldo.comprobante_tipo} ${saldo.comprobante_numero}` : saldo.comprobante_tipo;
 }
 
 /** Un momento guardado, mostrado como fecha nada más: la hora no agrega nada acá. */
@@ -88,15 +109,11 @@ export function Facturacion() {
     recargar();
   }, [recargar]);
 
-  // Un saldo sin fecha de vencimiento no se puede reclamar ni mostrar como vencido, así que
-  // la fecha se pide antes de generar en vez de ponerle una por defecto: hasta cuándo tiene
-  // para pagar cada Familia lo acordó la Prestadora, no lo decide el sistema (regla 1, §7).
+  // Un saldo sin fecha de vencimiento no se puede reclamar ni mostrar como vencido, y esa fecha
+  // no la decide el sistema: sale del plazo acordado con cada Familia, o se escribe acá para
+  // toda la tanda y entonces pisa lo acordado. La Familia que no tiene ninguna de las dos cosas
+  // no se factura, y el aviso dice cuántas quedaron así.
   async function handleGenerar() {
-    if (!vencimiento) {
-      setError(t.facturacion.falta_vencimiento);
-      return;
-    }
-
     const confirmado = await confirmarDestructivo(t.facturacion.confirmar_generar);
     if (!confirmado) return;
 
@@ -105,12 +122,15 @@ export function Facturacion() {
     setError(null);
 
     try {
-      const { generadas, sinPrestaciones } = await llamarApiCobros('/facturas/generar', {
+      const { generadas, sinPrestaciones, sinVencimiento } = await llamarApiCobros('/facturas/generar', {
         method: 'POST',
-        body: JSON.stringify({ periodo: mes, fecha_vencimiento: vencimiento }),
+        body: JSON.stringify(vencimiento ? { periodo: mes, fecha_vencimiento: vencimiento } : { periodo: mes }),
       });
       setAvisoGeneracion(
-        t.facturacion.resultado_generacion.replace('{generadas}', generadas).replace('{sinPrestaciones}', sinPrestaciones)
+        t.facturacion.resultado_generacion
+          .replace('{generadas}', generadas)
+          .replace('{sinPrestaciones}', sinPrestaciones)
+          .replace('{sinVencimiento}', sinVencimiento)
       );
       recargar();
     } catch (e) {
@@ -157,7 +177,8 @@ export function Facturacion() {
           <thead>
             <tr>
               <th>{t.facturacion.col_familia}</th>
-              <th>{t.facturacion.col_facturado}</th>
+              <th>{t.facturacion.col_a_cobrar}</th>
+              <th>{t.facturacion.col_comprobante}</th>
               <th>{t.facturacion.col_cobrado}</th>
               <th>{t.facturacion.col_saldo}</th>
               <th>{t.facturacion.col_estado}</th>
@@ -172,7 +193,8 @@ export function Facturacion() {
             {saldos.map((s) => (
               <tr key={s.factura_id}>
                 <td>{s.familia_nombre || '—'}</td>
-                <td>{formatearImporte(s.monto_total, s.moneda, locale)}</td>
+                <td>{formatearImporte(s.monto_a_cobrar, s.moneda, locale)}</td>
+                <td>{textoDeComprobante(s)}</td>
                 <td>{formatearImporte(s.cobrado, s.moneda, locale)}</td>
                 <td>{formatearImporte(s.saldo, s.moneda, locale)}</td>
                 <td>
@@ -216,6 +238,10 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [procesando, setProcesando] = useState(false);
+  // Qué formulario está abierto abajo del detalle. Es uno solo por vez y siempre hay uno: el de
+  // anotar un cobro es el que queda cuando no se pidió ningún otro, porque es lo que se hace
+  // todos los días. Los otros tres se abren desde su propio botón.
+  const [formulario, setFormulario] = useState('cobro');
   const [aAnular, setAAnular] = useState(null);
   const [motivo, setMotivo] = useState('');
   // El aviso de que falta el motivo aparece recién cuando alguien escribió y borró, no apenas
@@ -227,6 +253,19 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
     medio: MEDIOS[0],
     referencia_externa: '',
     observaciones: '',
+  });
+  const [facturado, setFacturado] = useState({
+    monto_facturado: '',
+    comprobante_tipo: '',
+    comprobante_numero: '',
+    fecha_vencimiento: '',
+  });
+  const [correccion, setCorreccion] = useState({
+    sentido: SENTIDOS_POSIBLES[0],
+    monto: '',
+    comprobante_tipo: '',
+    comprobante_numero: '',
+    motivo: '',
   });
 
   const recargar = useCallback(async () => {
@@ -248,6 +287,57 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
   // La misma comprobación que hace el motor antes de escribir, leída del archivo compartido:
   // así el botón no ofrece guardar algo que después se rechaza (regla 12, §7).
   const loQueFalta = loQueEstaMalEnElCobro(cobro);
+  const loQueFaltaEnLoFacturado = loQueEstaMalEnLoFacturado({
+    ...facturado,
+    fecha_vencimiento: facturado.fecha_vencimiento || null,
+  });
+  const loQueFaltaEnLaCorreccion = loQueEstaMalEnLaCorreccion(correccion);
+
+  async function anotarLoFacturado() {
+    setProcesando(true);
+    setError(null);
+    try {
+      await llamarApiCobros(`/facturas/${facturaId}/facturado`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          monto_facturado: Number(facturado.monto_facturado),
+          comprobante_tipo: facturado.comprobante_tipo.trim(),
+          comprobante_numero: facturado.comprobante_numero.trim() || null,
+          ...(facturado.fecha_vencimiento ? { fecha_vencimiento: facturado.fecha_vencimiento } : {}),
+        }),
+      });
+      setFormulario('cobro');
+      await recargar();
+      await onCambio();
+    } catch (e) {
+      setError(mensajeDeError(e, t, 'anotar lo que se emitió'));
+    }
+    setProcesando(false);
+  }
+
+  async function anotarLaCorreccion() {
+    setProcesando(true);
+    setError(null);
+    try {
+      await llamarApiCobros(`/facturas/${facturaId}/correcciones`, {
+        method: 'POST',
+        body: JSON.stringify({
+          sentido: correccion.sentido,
+          monto: Number(correccion.monto),
+          comprobante_tipo: correccion.comprobante_tipo.trim(),
+          comprobante_numero: correccion.comprobante_numero.trim() || null,
+          motivo: correccion.motivo.trim(),
+        }),
+      });
+      setCorreccion({ ...correccion, monto: '', comprobante_numero: '', motivo: '' });
+      setFormulario('cobro');
+      await recargar();
+      await onCambio();
+    } catch (e) {
+      setError(mensajeDeError(e, t, 'anotar una corrección'));
+    }
+    setProcesando(false);
+  }
 
   async function registrarCobro() {
     setProcesando(true);
@@ -284,6 +374,7 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
       });
       setAAnular(null);
       setMotivo('');
+      setFormulario('cobro');
       await recargar();
       await onCambio();
     } catch (e) {
@@ -305,8 +396,24 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
               <dl className="panel-detalle-lista">
                 <dt>{t.facturacion.col_familia}</dt>
                 <dd>{detalle.familia_nombre || '—'}</dd>
-                <dt>{t.facturacion.col_facturado}</dt>
+                <dt>{t.facturacion.col_a_facturar}</dt>
                 <dd>{formatearImporte(detalle.monto_total, detalle.moneda, locale)}</dd>
+                <dt>{t.facturacion.col_facturado}</dt>
+                <dd>
+                  {detalle.monto_facturado === null
+                    ? '—'
+                    : formatearImporte(detalle.monto_facturado, detalle.moneda, locale)}
+                </dd>
+                <dt>{t.facturacion.col_comprobante}</dt>
+                <dd>{textoDeComprobante(detalle)}</dd>
+                {detalle.correcciones_contadas > 0 && (
+                  <>
+                    <dt>{t.facturacion.correcciones_titulo}</dt>
+                    <dd>{formatearImporte(detalle.correcciones_neto, detalle.moneda, locale)}</dd>
+                  </>
+                )}
+                <dt>{t.facturacion.col_a_cobrar}</dt>
+                <dd>{formatearImporte(detalle.monto_a_cobrar, detalle.moneda, locale)}</dd>
                 <dt>{t.facturacion.col_cobrado}</dt>
                 <dd>{formatearImporte(detalle.cobrado, detalle.moneda, locale)}</dd>
                 <dt>{t.facturacion.col_saldo}</dt>
@@ -370,6 +477,7 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
                                 setAAnular(c);
                                 setMotivo('');
                                 setMotivoTocado(false);
+                                setFormulario('anular');
                               }}
                               disabled={procesando}
                             >
@@ -383,10 +491,60 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
                 </table>
               )}
 
+              {/* Las correcciones van en su propia tabla y no mezcladas con los cobros. Un cobro
+                  es plata que entró; una corrección es plata que se dejó de deber o que se pasó a
+                  deber, y quien mira la cobranza necesita distinguirlas de un vistazo. */}
+              <h3>{t.facturacion.correcciones_titulo}</h3>
+              {detalle.correcciones.length === 0 ? (
+                <p className="panel-dato-vacio">{t.facturacion.sin_correcciones}</p>
+              ) : (
+                <table className="panel-tabla">
+                  <thead>
+                    <tr>
+                      <th>{t.facturacion.col_fecha}</th>
+                      <th>{t.facturacion.col_sentido}</th>
+                      <th>{t.facturacion.col_importe}</th>
+                      <th>{t.facturacion.col_comprobante}</th>
+                      <th>{t.facturacion.col_motivo}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {detalle.correcciones.map((c) => (
+                      <tr key={c.id}>
+                        <td>{c.fecha}</td>
+                        <td>
+                          {c.sentido === 'resta' ? t.facturacion.sentido_resta : t.facturacion.sentido_suma}
+                        </td>
+                        <td>{formatearImporte(c.monto, c.moneda, locale)}</td>
+                        <td>{textoDeComprobante(c)}</td>
+                        <td>{c.motivo}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
+              {detalle.monto_facturado === null && (
+                <Alert variant="info">{t.facturacion.sin_facturar}</Alert>
+              )}
+
+              <div className="panel-modal-acciones">
+                <Button variant="secondary" onClick={() => setFormulario('facturado')} disabled={procesando}>
+                  {t.facturacion.anotar_facturado}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => setFormulario('correccion')}
+                  disabled={procesando || detalle.monto_facturado === null}
+                >
+                  {t.facturacion.anotar_correccion}
+                </Button>
+              </div>
+
               {/* Anular pide por qué, y el motivo queda guardado. Se pregunta acá adentro y no en
                   otra ventana encima de esta, que taparía justamente la fila que se está por
                   anular. */}
-              {aAnular ? (
+              {formulario === 'anular' ? (
                 <>
                   <h3>{t.facturacion.anular_titulo}</h3>
                   <dl className="panel-detalle-lista">
@@ -413,7 +571,134 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
                     <Button onClick={anularCobro} disabled={procesando || motivo.trim() === ''}>
                       {procesando ? t.comun.guardando : t.facturacion.anular}
                     </Button>
-                    <Button variant="secondary" onClick={() => setAAnular(null)} disabled={procesando}>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setAAnular(null);
+                        setFormulario('cobro');
+                      }}
+                      disabled={procesando}
+                    >
+                      {t.comun.cancelar}
+                    </Button>
+                  </div>
+                </>
+              ) : formulario === 'facturado' ? (
+                <>
+                  <h3>{t.facturacion.facturado_titulo}</h3>
+                  <p className="panel-explicacion">{t.facturacion.facturado_ayuda}</p>
+                  <FormField
+                    label={t.facturacion.campo_monto_facturado}
+                    name="monto_facturado"
+                    type="number"
+                    required
+                    min="0"
+                    step="0.01"
+                    value={facturado.monto_facturado}
+                    ayuda={t.facturacion.campo_monto_facturado_ayuda}
+                    error={
+                      facturado.monto_facturado !== '' && loQueFaltaEnLoFacturado === 'monto_facturado'
+                        ? t.facturacion.monto_invalido
+                        : undefined
+                    }
+                    onChange={(e) => setFacturado({ ...facturado, monto_facturado: e.target.value })}
+                  />
+                  <FormField
+                    label={t.facturacion.campo_comprobante_tipo}
+                    name="comprobante_tipo"
+                    required
+                    value={facturado.comprobante_tipo}
+                    ayuda={t.facturacion.campo_comprobante_tipo_ayuda}
+                    onChange={(e) => setFacturado({ ...facturado, comprobante_tipo: e.target.value })}
+                  />
+                  <FormField
+                    label={t.facturacion.campo_comprobante_numero}
+                    name="comprobante_numero"
+                    value={facturado.comprobante_numero}
+                    ayuda={t.facturacion.campo_comprobante_numero_ayuda}
+                    onChange={(e) => setFacturado({ ...facturado, comprobante_numero: e.target.value })}
+                  />
+                  <FormField
+                    label={t.facturacion.col_vencimiento}
+                    name="fecha_vencimiento_facturado"
+                    type="date"
+                    value={facturado.fecha_vencimiento}
+                    ayuda={t.facturacion.campo_vencimiento_ayuda}
+                    onChange={(e) => setFacturado({ ...facturado, fecha_vencimiento: e.target.value })}
+                  />
+                  <div className="panel-modal-acciones">
+                    <Button onClick={anotarLoFacturado} disabled={procesando || loQueFaltaEnLoFacturado !== null}>
+                      {procesando ? t.comun.guardando : t.facturacion.guardar_facturado}
+                    </Button>
+                    <Button variant="secondary" onClick={() => setFormulario('cobro')} disabled={procesando}>
+                      {t.comun.cancelar}
+                    </Button>
+                  </div>
+                </>
+              ) : formulario === 'correccion' ? (
+                <>
+                  <h3>{t.facturacion.correccion_titulo}</h3>
+                  <p className="panel-explicacion">{t.facturacion.correccion_ayuda}</p>
+                  <FormField
+                    label={t.facturacion.campo_sentido}
+                    name="sentido"
+                    type="select"
+                    required
+                    value={correccion.sentido}
+                    onChange={(e) => setCorreccion({ ...correccion, sentido: e.target.value })}
+                  >
+                    {SENTIDOS_POSIBLES.map((s) => (
+                      <option key={s} value={s}>
+                        {s === 'resta' ? t.facturacion.sentido_resta : t.facturacion.sentido_suma}
+                      </option>
+                    ))}
+                  </FormField>
+                  <FormField
+                    label={t.facturacion.campo_correccion_monto}
+                    name="correccion_monto"
+                    type="number"
+                    required
+                    min="0"
+                    step="0.01"
+                    value={correccion.monto}
+                    ayuda={t.facturacion.campo_correccion_monto_ayuda}
+                    error={
+                      correccion.monto !== '' && loQueFaltaEnLaCorreccion === 'monto'
+                        ? t.facturacion.monto_invalido
+                        : undefined
+                    }
+                    onChange={(e) => setCorreccion({ ...correccion, monto: e.target.value })}
+                  />
+                  <FormField
+                    label={t.facturacion.campo_comprobante_tipo}
+                    name="correccion_comprobante_tipo"
+                    required
+                    value={correccion.comprobante_tipo}
+                    ayuda={t.facturacion.campo_comprobante_tipo_ayuda}
+                    onChange={(e) => setCorreccion({ ...correccion, comprobante_tipo: e.target.value })}
+                  />
+                  <FormField
+                    label={t.facturacion.campo_comprobante_numero}
+                    name="correccion_comprobante_numero"
+                    value={correccion.comprobante_numero}
+                    ayuda={t.facturacion.campo_comprobante_numero_ayuda}
+                    onChange={(e) => setCorreccion({ ...correccion, comprobante_numero: e.target.value })}
+                  />
+                  <FormField
+                    label={t.facturacion.campo_correccion_motivo}
+                    name="correccion_motivo"
+                    type="textarea"
+                    required
+                    rows={2}
+                    value={correccion.motivo}
+                    ayuda={t.facturacion.campo_correccion_motivo_ayuda}
+                    onChange={(e) => setCorreccion({ ...correccion, motivo: e.target.value })}
+                  />
+                  <div className="panel-modal-acciones">
+                    <Button onClick={anotarLaCorreccion} disabled={procesando || loQueFaltaEnLaCorreccion !== null}>
+                      {procesando ? t.comun.guardando : t.facturacion.guardar_correccion}
+                    </Button>
+                    <Button variant="secondary" onClick={() => setFormulario('cobro')} disabled={procesando}>
                       {t.comun.cancelar}
                     </Button>
                   </div>

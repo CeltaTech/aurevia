@@ -120,7 +120,7 @@ const FACTURA_EN_LA_BASE = {
   fecha_vencimiento: '2026-08-31',
 };
 
-function saldoConCobrado(cobrado, estado = 'pendiente', origenes = ['panel']) {
+function saldoConCobrado(cobrado, estado = 'pendiente', origenes = ['panel'], aCobrar = 100000) {
   return {
     factura_id: FACTURA,
     prestadora_id: PRESTADORA,
@@ -128,8 +128,12 @@ function saldoConCobrado(cobrado, estado = 'pendiente', origenes = ['panel']) {
     periodo: '2026-08-01',
     moneda: 'ARS',
     monto_total: '100000.00',
+    monto_facturado: aCobrar === 100000 ? null : String(aCobrar.toFixed(2)),
+    monto_a_cobrar: String(aCobrar.toFixed(2)),
+    correcciones_neto: '0.00',
+    correcciones_contadas: 0,
     cobrado: String(cobrado.toFixed(2)),
-    saldo: String((100000 - cobrado).toFixed(2)),
+    saldo: String((aCobrar - cobrado).toFixed(2)),
     estado,
     estado_guardado: estado,
     fecha_emision: '2026-08-01',
@@ -260,6 +264,7 @@ describe('el detalle de una factura', () => {
   it('trae los cobros, incluidos los anulados: anular no es borrar', async () => {
     respuestas.set('GET /rest/v1/saldos_familia', () => [saldoConCobrado(40000)]);
     respuestas.set('GET /rest/v1/familias', () => [{ id: FAMILIA, solicitudes: { nombre: 'Familia de prueba' } }]);
+    respuestas.set('GET /rest/v1/correcciones_factura_familia', () => []);
     respuestas.set('GET /rest/v1/cobros_familia', () => [
       { id: 'c-1', monto: '40000.00', estado: 'registrado', origen: 'panel' },
       { id: 'c-2', monto: '10000.00', estado: 'anulado', origen: 'panel', motivo_anulacion: 'cargado dos veces' },
@@ -270,6 +275,197 @@ describe('el detalle de una factura', () => {
     assert.equal(cuerpo.cobros.length, 2);
     assert.equal(cuerpo.cobros[1].estado, 'anulado');
     assert.equal(cuerpo.saldo, '60000.00');
+  });
+
+  it('trae también las correcciones, que no son cobros y van aparte', async () => {
+    respuestas.set('GET /rest/v1/saldos_familia', () => [saldoConCobrado(0)]);
+    respuestas.set('GET /rest/v1/familias', () => [{ id: FAMILIA, solicitudes: { nombre: 'Familia de prueba' } }]);
+    respuestas.set('GET /rest/v1/cobros_familia', () => []);
+    respuestas.set('GET /rest/v1/correcciones_factura_familia', () => [
+      { id: 'k-1', sentido: 'resta', monto: '6050.00', comprobante_tipo: 'Nota de crédito A', motivo: 'se facturaron cuatro horas de más' },
+    ]);
+
+    const { estado, cuerpo } = await pedir('GET', `/facturas/${FACTURA}`);
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.correcciones.length, 1);
+    assert.equal(cuerpo.correcciones[0].sentido, 'resta');
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Lo que emitió el software de facturación
+// ---------------------------------------------------------------------------------------
+
+describe('anotar lo que se emitió por una factura', () => {
+  it('el monto emitido pasa a ser el que se reclama, aunque no sea el que se mandó a facturar', async () => {
+    respuestas.set('GET /rest/v1/facturas_familia', () => [FACTURA_EN_LA_BASE]);
+    respuestas.set('PATCH /rest/v1/facturas_familia', () => []);
+    respuestas.set('GET /rest/v1/saldos_familia', () => [saldoConCobrado(0, 'pendiente', [], 121000)]);
+
+    const { estado, cuerpo } = await pedir('PUT', `/facturas/${FACTURA}/facturado`, {
+      monto_facturado: 121000,
+      comprobante_tipo: 'Factura B',
+      comprobante_numero: '0001-00000123',
+    });
+
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.saldo.monto_a_cobrar, '121000.00');
+    assert.equal(cuerpo.saldo.saldo, '121000.00');
+
+    const anotado = llamadas.find((l) => l.clave === 'PATCH /rest/v1/facturas_familia');
+    assert.equal(anotado.cuerpo.monto_facturado, 121000);
+    assert.equal(anotado.cuerpo.comprobante_tipo, 'Factura B');
+    assert.equal(anotado.cuerpo.comprobante_numero, '0001-00000123');
+    assert.ok(anotado.cuerpo.facturado_at);
+    assert.ok(anotado.url.includes(`prestadora_id=eq.${PRESTADORA}`));
+  });
+
+  it('sin número de comprobante también se anota: hay formas de facturar que no lo devuelven', async () => {
+    respuestas.set('GET /rest/v1/facturas_familia', () => [FACTURA_EN_LA_BASE]);
+    respuestas.set('PATCH /rest/v1/facturas_familia', () => []);
+    respuestas.set('GET /rest/v1/saldos_familia', () => [saldoConCobrado(0, 'pendiente', [], 121000)]);
+
+    const { estado } = await pedir('PUT', `/facturas/${FACTURA}/facturado`, {
+      monto_facturado: 121000,
+      comprobante_tipo: 'Recibo',
+    });
+    assert.equal(estado, 200);
+    const anotado = llamadas.find((l) => l.clave === 'PATCH /rest/v1/facturas_familia');
+    assert.equal(anotado.cuerpo.comprobante_numero, null);
+  });
+
+  it('sin tipo de comprobante no se anota: sin eso no se sabe qué se emitió', async () => {
+    const { estado } = await pedir('PUT', `/facturas/${FACTURA}/facturado`, { monto_facturado: 121000 });
+    assert.equal(estado, 400);
+    assert.equal(llamadas.some((l) => l.clave === 'PATCH /rest/v1/facturas_familia'), false);
+  });
+
+  it('si no viene vencimiento queda el que ya tenía, acordado con esa Familia', async () => {
+    respuestas.set('GET /rest/v1/facturas_familia', () => [FACTURA_EN_LA_BASE]);
+    respuestas.set('PATCH /rest/v1/facturas_familia', () => []);
+    respuestas.set('GET /rest/v1/saldos_familia', () => [saldoConCobrado(0, 'pendiente', [], 121000)]);
+
+    await pedir('PUT', `/facturas/${FACTURA}/facturado`, { monto_facturado: 121000, comprobante_tipo: 'Factura B' });
+    const anotado = llamadas.find((l) => l.clave === 'PATCH /rest/v1/facturas_familia');
+    assert.equal(anotado.cuerpo.fecha_vencimiento, undefined);
+  });
+
+  it('la factura de otra Prestadora no existe para esta', async () => {
+    respuestas.set('GET /rest/v1/facturas_familia', () => []);
+    const { estado } = await pedir('PUT', `/facturas/${FACTURA}/facturado`, {
+      monto_facturado: 121000,
+      comprobante_tipo: 'Factura B',
+    });
+    assert.equal(estado, 404);
+  });
+
+  it('quien no es del Panel no anota lo emitido', async () => {
+    rolDelUsuario = 'familia';
+    const { estado } = await pedir('PUT', `/facturas/${FACTURA}/facturado`, {
+      monto_facturado: 121000,
+      comprobante_tipo: 'Factura B',
+    });
+    assert.equal(estado, 403);
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Corregir una factura ya emitida
+// ---------------------------------------------------------------------------------------
+
+describe('corregir una factura ya emitida', () => {
+  it('lo que se reclama baja, y la factura no se toca', async () => {
+    respuestas.set('GET /rest/v1/facturas_familia', () => [FACTURA_EN_LA_BASE]);
+    respuestas.set('POST /rest/v1/correcciones_factura_familia', (cuerpo) => [{ id: 'k-1', ...cuerpo }]);
+    respuestas.set('GET /rest/v1/saldos_familia', () => [saldoConCobrado(0, 'pendiente', [], 94000)]);
+
+    const { estado, cuerpo } = await pedir('POST', `/facturas/${FACTURA}/correcciones`, {
+      sentido: 'resta',
+      monto: 6000,
+      comprobante_tipo: 'Nota de crédito A',
+      comprobante_numero: '0001-00000045',
+      motivo: 'se facturaron cuatro horas de más',
+    });
+
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.saldo.monto_a_cobrar, '94000.00');
+    assert.equal(cuerpo.correccion.sentido, 'resta');
+    assert.equal(cuerpo.correccion.registrada_por, USUARIO);
+    assert.equal(cuerpo.correccion.prestadora_id, PRESTADORA);
+    // La moneda no se manda: la copia de la factura un disparador de la base.
+    assert.equal(cuerpo.correccion.moneda, undefined);
+    assert.equal(llamadas.some((l) => l.clave.startsWith('PATCH /rest/v1/facturas_familia')), false);
+    assert.equal(llamadas.some((l) => l.clave.startsWith('DELETE ')), false);
+  });
+
+  it('una corrección que suma también entra: se facturó de menos', async () => {
+    respuestas.set('GET /rest/v1/facturas_familia', () => [FACTURA_EN_LA_BASE]);
+    respuestas.set('POST /rest/v1/correcciones_factura_familia', (cuerpo) => [{ id: 'k-2', ...cuerpo }]);
+    respuestas.set('GET /rest/v1/saldos_familia', () => [saldoConCobrado(0, 'pendiente', [], 105000)]);
+
+    const { estado, cuerpo } = await pedir('POST', `/facturas/${FACTURA}/correcciones`, {
+      sentido: 'suma',
+      monto: 5000,
+      comprobante_tipo: 'Nota de débito A',
+      motivo: 'faltó una guardia del último fin de semana',
+    });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.saldo.monto_a_cobrar, '105000.00');
+  });
+
+  it('sin motivo no se corrige: se está moviendo plata de un tercero', async () => {
+    const { estado } = await pedir('POST', `/facturas/${FACTURA}/correcciones`, {
+      sentido: 'resta',
+      monto: 6000,
+      comprobante_tipo: 'Nota de crédito A',
+    });
+    assert.equal(estado, 400);
+    assert.equal(llamadas.some((l) => l.clave === 'POST /rest/v1/correcciones_factura_familia'), false);
+  });
+
+  it('un sentido inventado no llega a la base', async () => {
+    const { estado } = await pedir('POST', `/facturas/${FACTURA}/correcciones`, {
+      sentido: 'anula',
+      monto: 6000,
+      comprobante_tipo: 'Nota de crédito A',
+      motivo: 'por las dudas',
+    });
+    assert.equal(estado, 400);
+  });
+
+  it('un monto de cero o negativo no es una corrección', async () => {
+    for (const monto of [0, -100]) {
+      const { estado } = await pedir('POST', `/facturas/${FACTURA}/correcciones`, {
+        sentido: 'resta',
+        monto,
+        comprobante_tipo: 'Nota de crédito A',
+        motivo: 'algo',
+      });
+      assert.equal(estado, 400);
+    }
+  });
+
+  it('no se corrige una factura que no es de esta Prestadora', async () => {
+    respuestas.set('GET /rest/v1/facturas_familia', () => []);
+    const { estado } = await pedir('POST', `/facturas/${FACTURA}/correcciones`, {
+      sentido: 'resta',
+      monto: 6000,
+      comprobante_tipo: 'Nota de crédito A',
+      motivo: 'no es mía',
+    });
+    assert.equal(estado, 404);
+    assert.equal(llamadas.some((l) => l.clave === 'POST /rest/v1/correcciones_factura_familia'), false);
+  });
+
+  it('quien no es del Panel no corrige facturas', async () => {
+    rolDelUsuario = 'asistente';
+    const { estado } = await pedir('POST', `/facturas/${FACTURA}/correcciones`, {
+      sentido: 'resta',
+      monto: 6000,
+      comprobante_tipo: 'Nota de crédito A',
+      motivo: 'algo',
+    });
+    assert.equal(estado, 403);
   });
 });
 
@@ -546,8 +742,20 @@ describe('la puerta de entrada para lo que viene de afuera', () => {
 const PACIENTE = '55555555-5555-5555-5555-555555555555';
 
 /** La base contesta con una Familia, un Paciente y lo que cada prueba le ponga encima. */
-function baseConUnaFamilia({ prestaciones = [], paquetes = [], items = [], yaFacturadas = [] } = {}) {
-  respuestas.set('GET /rest/v1/familias', () => [{ id: FAMILIA, pacientes: [{ id: PACIENTE, nombre: 'Juana Pérez' }] }]);
+function baseConUnaFamilia({
+  prestaciones = [],
+  paquetes = [],
+  items = [],
+  yaFacturadas = [],
+  plazoDeLaPrestadora = null,
+  plazoDeLaFamilia = null,
+} = {}) {
+  respuestas.set('GET /rest/v1/configuracion_facturacion_familias', () =>
+    plazoDeLaPrestadora === null ? [] : [{ regla: { dias_hasta_el_vencimiento: plazoDeLaPrestadora } }]
+  );
+  respuestas.set('GET /rest/v1/familias', () => [
+    { id: FAMILIA, dias_hasta_el_vencimiento: plazoDeLaFamilia, pacientes: [{ id: PACIENTE, nombre: 'Juana Pérez' }] },
+  ]);
   respuestas.set('GET /rest/v1/prestaciones', () => prestaciones);
   respuestas.set('GET /rest/v1/paquetes_prestaciones', () => paquetes);
   respuestas.set('GET /rest/v1/paquete_prestacion_items', () => items);
@@ -575,9 +783,58 @@ describe('generar las facturas de un período', () => {
     assert.equal(estado, 400);
   });
 
-  it('sin fecha de vencimiento tampoco: una factura que no vence no se puede reclamar', async () => {
-    const { estado } = await pedir('POST', '/facturas/generar', { periodo: '2026-08' });
-    assert.equal(estado, 400);
+  it('sin fecha escrita y sin plazo acordado, esa Familia no se factura: no se le inventa un vencimiento', async () => {
+    baseConUnaFamilia({ prestaciones: [unaPrestacion()] });
+
+    const { estado, cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08' });
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo, { generadas: 0, sinPrestaciones: 0, sinVencimiento: 1 });
+    assert.equal(llamadas.some((l) => l.clave === 'POST /rest/v1/facturas_familia'), false);
+  });
+
+  it('con el plazo que configuró la Prestadora, la factura vence sola', async () => {
+    baseConUnaFamilia({ prestaciones: [unaPrestacion()], plazoDeLaPrestadora: 10 });
+
+    const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08' });
+    assert.deepEqual(cuerpo, { generadas: 1, sinPrestaciones: 0, sinVencimiento: 0 });
+
+    const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_familia');
+    const hoy = new Date().toISOString().slice(0, 10);
+    const esperado = new Date(Date.parse(`${hoy}T00:00:00Z`) + 10 * 86400000).toISOString().slice(0, 10);
+    assert.equal(factura.cuerpo.fecha_emision, hoy);
+    assert.equal(factura.cuerpo.fecha_vencimiento, esperado);
+  });
+
+  it('lo acordado con la Familia gana sobre lo que configuró la Prestadora', async () => {
+    baseConUnaFamilia({ prestaciones: [unaPrestacion()], plazoDeLaPrestadora: 10, plazoDeLaFamilia: 30 });
+
+    await pedir('POST', '/facturas/generar', { periodo: '2026-08' });
+
+    const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_familia');
+    const hoy = new Date().toISOString().slice(0, 10);
+    const esperado = new Date(Date.parse(`${hoy}T00:00:00Z`) + 30 * 86400000).toISOString().slice(0, 10);
+    assert.equal(factura.cuerpo.fecha_vencimiento, esperado);
+  });
+
+  it('la fecha escrita para la tanda pisa cualquier plazo acordado', async () => {
+    baseConUnaFamilia({ prestaciones: [unaPrestacion()], plazoDeLaPrestadora: 10, plazoDeLaFamilia: 30 });
+
+    await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
+
+    const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_familia');
+    assert.equal(factura.cuerpo.fecha_vencimiento, '2026-08-31');
+  });
+
+  it('un plazo fuera de borde se ignora y manda la capa de arriba, en vez de dejar sin factura', async () => {
+    baseConUnaFamilia({ prestaciones: [unaPrestacion()], plazoDeLaPrestadora: 10, plazoDeLaFamilia: 4000 });
+
+    const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08' });
+    assert.equal(cuerpo.generadas, 1);
+
+    const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_familia');
+    const hoy = new Date().toISOString().slice(0, 10);
+    const esperado = new Date(Date.parse(`${hoy}T00:00:00Z`) + 10 * 86400000).toISOString().slice(0, 10);
+    assert.equal(factura.cuerpo.fecha_vencimiento, esperado);
   });
 
   it('la factura lleva lo que corre ese mes, y no lo que dejó de correr', async () => {
@@ -590,7 +847,7 @@ describe('generar las facturas de un período', () => {
 
     const { estado, cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
     assert.equal(estado, 200);
-    assert.deepEqual(cuerpo, { generadas: 1, sinPrestaciones: 0 });
+    assert.deepEqual(cuerpo, { generadas: 1, sinPrestaciones: 0, sinVencimiento: 0 });
 
     const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_familia');
     assert.equal(factura.cuerpo.monto_total, 10000);
@@ -625,7 +882,7 @@ describe('generar las facturas de un período', () => {
     baseConUnaFamilia({ prestaciones: [unaPrestacion()], yaFacturadas: [{ familia_id: FAMILIA }] });
 
     const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
-    assert.deepEqual(cuerpo, { generadas: 0, sinPrestaciones: 0 });
+    assert.deepEqual(cuerpo, { generadas: 0, sinPrestaciones: 0, sinVencimiento: 0 });
     assert.equal(llamadas.some((l) => l.clave === 'POST /rest/v1/facturas_familia'), false);
   });
 
@@ -633,7 +890,7 @@ describe('generar las facturas de un período', () => {
     baseConUnaFamilia({ prestaciones: [unaPrestacion({ vigente_hasta: '2026-06-30' })] });
 
     const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
-    assert.deepEqual(cuerpo, { generadas: 0, sinPrestaciones: 1 });
+    assert.deepEqual(cuerpo, { generadas: 0, sinPrestaciones: 1, sinVencimiento: 0 });
     assert.equal(llamadas.some((l) => l.clave === 'POST /rest/v1/facturas_familia'), false);
   });
 

@@ -413,3 +413,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** «El `codigo: 'aurevia'` no se renombra», con el motivo de que estaba adentro de datos que ya existen.
 - **Qué dice ahora:** que no se toca por ahora, y que cambiarlo se evalúa en el momento de la fusión con el Marketplace.
 - **Motivo:** el motivo anterior era falso. El Desarrollador precisó que nadie usó nunca la aplicación y que todos los datos cargados son inventados, así que no hay ninguna mudanza de datos que hacer: reconstruir la base los reescribe. El inventario contó 340 apariciones, ninguna tabla ni columna con ese nombre, y sólo unas trece filas que nacen de un archivo de datos de ejemplo. Lo que cuesta igual, se haga cuando se haga, son seis nombres de infraestructura de afuera.
+
+### Careonys no emite comprobantes, pero guarda el comprobante que emitió otro
+
+- **Qué decía antes:** que no hay tipo de comprobante, ni punto de venta, ni numeración autorizada, ni impuestos discriminados.
+- **Qué dice ahora:** que sigue sin emitir y sin calcular nada fiscal, y que anota tal como llegaron el nombre del comprobante, su número y el monto que la Familia quedó adeudando, impuestos incluidos.
+- **Motivo:** el Desarrollador precisó cómo se reparte el trabajo con el software de facturación de la Prestadora: ese software emite e informa el monto adeudado, y Careonys lo guarda y lo reclama. La frase anterior se leía como que esos datos no podían existir en la base, y con eso la pantalla de saldos no se podía construir. También se descartó la idea de comparar ese monto contra lo que se mandó a facturar: no hay criterio para decidir que llegó mal sin conocer los impuestos de cada país, que es justamente lo que el producto no conoce.

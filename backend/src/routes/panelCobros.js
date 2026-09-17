@@ -8,6 +8,12 @@ import {
   loQueEstaMalEnElCobro,
   primerDiaDelPeriodo,
 } from '../utils/cobrosDeFamilia.js';
+import {
+  loQueEstaMalEnLaCorreccion,
+  loQueEstaMalEnLoFacturado,
+  plazoDePagoDe,
+  vencimientoDe,
+} from '../utils/facturacionDeFamilias.js';
 import { armarLosRenglonesDeLaFactura } from '../utils/facturaDelPeriodo.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
@@ -33,8 +39,12 @@ import { responderError } from '../utils/errorConMotivo.js';
    LO QUE NO HACE, Y NO VA A HACER: decidir. Que una Familia deba plata no corta ningún
    Servicio. La pantalla avisa; si se le sigue prestando o no, lo decide una persona.
 
-   LO QUE TAMPOCO ES: un comprobante fiscal. El producto no emite facturas ni recibos (regla
-   14). Acá se anota lo que se acordó cobrar y lo que entró, nada más.
+   LO QUE TAMPOCO ES: un facturador. El producto no emite comprobantes y no va a emitirlos. Lo que
+   sí hace es mandar a facturar —cuántas unidades, a qué precio, a qué plazo— y guardar lo que el
+   software de facturación de la Prestadora le informa: el monto emitido, el vencimiento y cómo
+   se llama el comprobante. Ese nombre es texto que se guarda y no se interpreta, porque cambia
+   de país en país y el producto no conoce ninguno. Y una factura que salió mal no se toca: se anota
+   la corrección que emitió ese mismo software, con su monto y para qué lado va.
 
    QUIÉN PUEDE. En el catálogo `catalogo_acciones_permisos` no hay ninguna acción que hable de
    facturación ni de cobranzas, así que no se inventa una: se usa exactamente el mismo criterio
@@ -164,6 +174,17 @@ panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, async (req, res)
     .order('created_at', { ascending: false });
   if (error) return responderError(res, error);
 
+  // Las correcciones van al lado de los cobros y no adentro de ellos: son dos cosas distintas.
+  // Un cobro es plata que entró; una corrección es lo que se dejó de deber o se pasó a deber.
+  const { data: correcciones, error: errorCorrecciones } = await supabase
+    .from('correcciones_factura_familia')
+    .select('*')
+    .eq('factura_id', saldo.factura_id)
+    .eq('prestadora_id', prestadoraId)
+    .order('fecha', { ascending: false })
+    .order('created_at', { ascending: false });
+  if (errorCorrecciones) return responderError(res, errorCorrecciones);
+
   let nombres;
   try {
     nombres = await nombresDeFamilias(prestadoraId, [saldo.familia_id]);
@@ -171,7 +192,12 @@ panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, async (req, res)
     return responderError(res, e);
   }
 
-  res.json({ ...saldo, familia_nombre: nombres.get(saldo.familia_id) ?? null, cobros: cobros || [] });
+  res.json({
+    ...saldo,
+    familia_nombre: nombres.get(saldo.familia_id) ?? null,
+    cobros: cobros || [],
+    correcciones: correcciones || [],
+  });
 });
 
 // ---------------------------------------------------------------------------------------
@@ -200,16 +226,26 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
   const periodo = primerDiaDelPeriodo(req.body?.periodo);
   if (!periodo) return res.status(400).json({ error: 'Falta el período, en formato AAAA-MM' });
 
-  const vencimiento = String(req.body?.fecha_vencimiento ?? '').slice(0, 10);
-  // Una factura sin vencimiento no se puede reclamar ni mostrar como vencida, y hasta cuándo
-  // tiene para pagar cada Familia lo acuerda la Prestadora: no se le pone una por defecto.
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(vencimiento)) {
-    return res.status(400).json({ error: 'Falta la fecha de vencimiento' });
-  }
+  // La fecha puede venir escrita para toda la tanda —es lo que se hacía hasta ahora—, y en ese
+  // caso pisa cualquier plazo acordado. Si no viene, cada factura vence según el plazo de esa
+  // Familia. Una factura sin vencimiento no se puede reclamar ni mostrar como vencida, así que
+  // sin ninguna de las dos cosas esa Familia no se factura: no se le inventa una fecha.
+  const vencimientoDeLaTanda = String(req.body?.fecha_vencimiento ?? '').slice(0, 10);
+  const vencimientoEscrito = /^\d{4}-\d{2}-\d{2}$/.test(vencimientoDeLaTanda);
+
+  const { data: configuracion, error: errorConfiguracion } = await supabase
+    .from('configuracion_facturacion_familias')
+    .select('regla')
+    .eq('prestadora_id', prestadoraId)
+    .maybeSingle();
+  if (errorConfiguracion) return responderError(res, errorConfiguracion);
+  const plazoDeLaPrestadora = configuracion?.regla?.dias_hasta_el_vencimiento ?? null;
+
+  const hoy = new Date().toISOString().slice(0, 10);
 
   const { data: familias, error: errorFamilias } = await supabase
     .from('familias')
-    .select('id, pacientes(id, nombre)')
+    .select('id, dias_hasta_el_vencimiento, pacientes(id, nombre)')
     .eq('prestadora_id', prestadoraId)
     .is('deleted_at', null);
   if (errorFamilias) return responderError(res, errorFamilias);
@@ -272,9 +308,19 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
 
   let generadas = 0;
   let sinPrestaciones = 0;
+  let sinVencimiento = 0;
 
   for (const familia of familias || []) {
     if (yaFacturadas.has(familia.id)) continue;
+
+    const vencimiento = vencimientoEscrito
+      ? vencimientoDeLaTanda
+      : vencimientoDe(hoy, plazoDePagoDe(plazoDeLaPrestadora, familia.dias_hasta_el_vencimiento));
+
+    if (!vencimiento) {
+      sinVencimiento += 1;
+      continue;
+    }
 
     const suyos = (familia.pacientes || []).map((p) => p.id);
     const renglones = armarLosRenglonesDeLaFactura({
@@ -299,6 +345,10 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
         familia_id: familia.id,
         periodo,
         monto_total: montoTotal,
+        // La emisión se escribe en vez de dejarla en el valor por defecto de la base: el plazo
+        // de pago se cuenta desde este mismo día, y si uno lo pone la base y el otro el motor,
+        // un cambio de día entre los dos daría un vencimiento corrido.
+        fecha_emision: hoy,
         fecha_vencimiento: vencimiento,
       })
       .select('id')
@@ -317,7 +367,128 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
     generadas += 1;
   }
 
-  res.json({ generadas, sinPrestaciones });
+  res.json({ generadas, sinPrestaciones, sinVencimiento });
+});
+
+// ---------------------------------------------------------------------------------------
+// Lo que emitió el software de facturación
+// ---------------------------------------------------------------------------------------
+
+/**
+ * Anotar lo que se emitió por esta factura: el monto, el comprobante y el vencimiento.
+ *
+ * SE ANOTA A MANO Y TAMBIÉN LO VA A ESCRIBIR LA CONEXIÓN. Quien hoy factura por afuera —con el
+ * software que sea, o hasta a mano— entra acá lo que emitió, y desde ese momento la cobranza se
+ * mide contra ese número. El día que Careonys le pida la factura sola a un software de
+ * facturación, lo que conteste se guarda por esta misma puerta.
+ *
+ * EL TIPO DE COMPROBANTE NO SE COMPARA CONTRA NINGUNA LISTA. Cómo se llama lo que se emitió
+ * depende del país y lo sabe quien emite. Careonys lo guarda y lo muestra, nada más.
+ *
+ * SE PUEDE CORREGIR LO ANOTADO MIENTRAS SEA ESO: un dato mal tipeado. Lo que no se corrige por
+ * acá es una factura que salió mal, que es otra cosa y tiene su propia puerta más abajo.
+ */
+panelCobrosRouter.put('/facturas/:facturaId/facturado', requiereRolPanel, async (req, res) => {
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+  const cuerpo = req.body || {};
+
+  const problema = loQueEstaMalEnLoFacturado(cuerpo);
+  if (problema) return res.status(400).json({ error: `Falta o está mal el dato: ${problema}` });
+
+  let factura;
+  try {
+    factura = await facturaDeLaPrestadora(prestadoraId, req.params.facturaId);
+  } catch (e) {
+    return responderError(res, e);
+  }
+  if (!factura) return res.status(404).json({ error: 'Factura no encontrada' });
+
+  const cambios = {
+    monto_facturado: aDosDecimales(cuerpo.monto_facturado),
+    comprobante_tipo: String(cuerpo.comprobante_tipo).trim(),
+    comprobante_numero: String(cuerpo.comprobante_numero ?? '').trim() || null,
+    facturado_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  // El vencimiento lo informa quien emitió, y si no lo informa queda el que ya tenía: acordado
+  // con esa Familia y calculado al generar.
+  if (cuerpo.fecha_vencimiento) cambios.fecha_vencimiento = String(cuerpo.fecha_vencimiento).slice(0, 10);
+
+  const { error } = await supabase
+    .from('facturas_familia')
+    .update(cambios)
+    .eq('id', factura.id)
+    .eq('prestadora_id', prestadoraId);
+  if (error) return responderError(res, error, 400);
+
+  let saldo;
+  try {
+    saldo = await saldoDeLaFactura(prestadoraId, factura.id);
+  } catch (e) {
+    return responderError(res, e);
+  }
+
+  res.json({ saldo });
+});
+
+// ---------------------------------------------------------------------------------------
+// Las correcciones de una factura ya emitida
+// ---------------------------------------------------------------------------------------
+
+/**
+ * Anotar la corrección de una factura que salió mal.
+ *
+ * POR QUÉ NO SE ANULA NI SE EDITA LA FACTURA. Una factura emitida no se toca. Si se facturó de
+ * más o de menos, quien emitió emite otro comprobante por la diferencia, y acá se anota: por
+ * cuánto, para qué lado, con qué comprobante y por qué. La factura queda como está y el saldo
+ * sale de la suma, igual que con los cobros.
+ *
+ * CÓMO SE LLAMA ESE COMPROBANTE NO ENTRA EN NINGUNA LISTA. Cambia de país en país y lo decide
+ * quien emite. Careonys guarda el nombre como texto y lo único que mira es el sentido y el monto.
+ *
+ * EL MOTIVO ES OBLIGATORIO. Una corrección sin explicación no se puede revisar después, y lo que
+ * se está moviendo es plata de un tercero.
+ */
+panelCobrosRouter.post('/facturas/:facturaId/correcciones', requiereRolPanel, async (req, res) => {
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+  const cuerpo = req.body || {};
+
+  const problema = loQueEstaMalEnLaCorreccion(cuerpo);
+  if (problema) return res.status(400).json({ error: `Falta o está mal el dato: ${problema}` });
+
+  let factura;
+  try {
+    factura = await facturaDeLaPrestadora(prestadoraId, req.params.facturaId);
+  } catch (e) {
+    return responderError(res, e);
+  }
+  if (!factura) return res.status(404).json({ error: 'Factura no encontrada' });
+
+  const { data, error } = await supabase
+    .from('correcciones_factura_familia')
+    .insert({
+      prestadora_id: prestadoraId,
+      factura_id: factura.id,
+      sentido: cuerpo.sentido,
+      monto: aDosDecimales(cuerpo.monto),
+      comprobante_tipo: String(cuerpo.comprobante_tipo).trim(),
+      comprobante_numero: String(cuerpo.comprobante_numero ?? '').trim() || null,
+      motivo: String(cuerpo.motivo).trim(),
+      fecha: cuerpo.fecha ?? new Date().toISOString().slice(0, 10),
+      registrada_por: req.usuarioPanel.id,
+    })
+    .select()
+    .single();
+  if (error) return responderError(res, error, 400);
+
+  let saldo;
+  try {
+    saldo = await saldoDeLaFactura(prestadoraId, factura.id);
+  } catch (e) {
+    return responderError(res, e);
+  }
+
+  res.json({ correccion: data, saldo });
 });
 
 // ---------------------------------------------------------------------------------------

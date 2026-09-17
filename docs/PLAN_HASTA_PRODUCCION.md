@@ -11,18 +11,28 @@
 
 ## El dinero
 
-**1. Usted** — Una factura que salió mal no se toca: la corrección es un comprobante aparte. Hoy no
-existe ninguno de los dos —ni la corrección ni el comprobante—, así que una factura de más queda
-como deuda para siempre. Dos decisiones: ¿Careonys emite ese comprobante, o sólo refleja el que la
-Prestadora emitió con su sistema de facturación? Y si sólo refleja, ¿qué datos de ese comprobante
-necesita guardar para poder atar las dos puntas cuando un número no cierre?
+**1. Usted** — Con qué facturador se enchufa Careonys. **Careonys no emite comprobantes y no va a
+tener un facturador adentro**: le pide a uno de afuera que emita y guarda lo que ese facturador
+conteste. Dos preguntas: ¿cuál se integra primero, de los que usan hoy las Prestadoras? ¿Y hay
+alguna Prestadora a la vista fuera de Argentina, o se construye con Argentina cargada y nada más?
 
-**2.** Construir la corrección de lo facturado: para arriba o para abajo, con su motivo y con el
-comprobante que la respalda. Vale igual para las Familias y para lo que una obra social reconoce de
-menos, que es la misma pieza. **Cómo se llama ese comprobante es de cada país y no se deduce por
-parecido**: en Argentina son la nota de crédito y la nota de débito, y de ningún otro país hay dato.
-Los tipos salen de una tabla por país, con el molde de `monedas_por_pais`, y se carga sólo
-Argentina. Un país sin investigar no ofrece ningún tipo.
+**2.** El enchufe al facturador y la corrección de lo facturado, que son la misma tarea.
+
+- **La cuenta es de la Prestadora**, con su CUIT y sus credenciales, configurada por ella. Careonys
+  nunca factura con una cuenta propia: eso metería a CeltaTech adentro de la cadena. La clave se
+  guarda como secreto y no se muestra en pantalla.
+- **Sin facturador conectado el sistema funciona igual.** Quien factura por afuera anota acá el
+  número y la fecha del comprobante, que es lo que hoy no se puede hacer. Nadie queda obligado a
+  contratar nada.
+- **Una factura que salió mal no se toca.** Queda registrada la corrección: de cuánto, para qué
+  lado, por qué motivo y con qué comprobante se respalda. Vale igual para las Familias y para lo
+  que una obra social reconoce de menos, que es la misma pieza.
+- **Cómo se llama ese comprobante es de cada país y no se deduce por parecido**: en Argentina son
+  la nota de crédito y la nota de débito, y de ningún otro país hay dato. Los tipos salen de una
+  tabla por país, con el molde de `monedas_por_pais`, y se carga sólo Argentina. Un país sin
+  investigar no ofrece ningún tipo: pide el número del comprobante y no le pone nombre.
+- **Un facturador es un enchufe, no el facturador.** Cada conexión concreta es una pieza aparte,
+  y agregar la segunda no puede obligar a tocar lo construido para la primera.
 
 **3. Usted** — El ciclo de cobranza a obras sociales: hoy sólo existen validado y anulado. ¿Qué estados hacen falta — presentación, débito, conciliación?
 

@@ -16,6 +16,7 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { supabase } from '../db/connection.js';
+import { catalogoDeLugares } from '../utils/catalogoDeLugares.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
 export const panelLugaresDeTrabajoRouter = Router();
@@ -74,6 +75,20 @@ async function existeEnLaOrganizacion(tabla, id, prestadoraId) {
   if (error) throw error;
   return Boolean(data);
 }
+
+// --- La lista para elegir ---
+//
+// **Leer la lista no es configurarla.** Cargarla y editarla es de la administración y vive en
+// Configuración; elegir de ella la hace también quien coordina, cuando marca dónde acepta trabajar
+// una Asistente. Por eso la lectura está acá, del lado que coordinación alcanza, y sale del mismo
+// punto único de verdad que usa Configuración.
+panelLugaresDeTrabajoRouter.get('/catalogo', async (req, res) => {
+  try {
+    res.json(await catalogoDeLugares(req.usuarioPanel.prestadoraId));
+  } catch (error) {
+    responderError(res, error);
+  }
+});
 
 // --- Dónde acepta trabajar una Asistente ---
 

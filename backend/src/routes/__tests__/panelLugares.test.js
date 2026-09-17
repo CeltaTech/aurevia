@@ -179,12 +179,17 @@ describe('cargar la lista de lugares', () => {
     assert.equal(loEscritoEn('lugares').prestadora_id, PRESTADORA);
   });
 
-  it('sin nombre o sin país no se escribe nada', async () => {
-    for (const cuerpo of [{ pais: 'AR' }, { nombre: '   ', pais: 'AR' }, { nombre: 'Boedo' }]) {
+  it('sin nombre no se escribe nada', async () => {
+    for (const cuerpo of [{}, { nombre: '   ' }]) {
       const { estado } = await pedir('POST', '/configuracion/lugares', cuerpo);
       assert.equal(estado, 400);
     }
     assert.equal(loEscritoEn('lugares'), undefined);
+  });
+
+  it('el país es el de la Prestadora, no el que venga en el pedido', async () => {
+    await pedir('POST', '/configuracion/lugares', { nombre: 'Boedo', pais: 'BR' });
+    assert.equal(loEscritoEn('lugares').pais, 'AR');
   });
 
   it('el nombre de un lugar oficial no se edita a mano', async () => {
@@ -311,5 +316,35 @@ describe('hasta dónde llega una coordinadora', () => {
     quienLlama = { rol: 'coordinador', prestadora_id: PRESTADORA };
     const { estado } = await pedir('GET', `/lugares-de-trabajo/usuario/${COORDINADORA}`);
     assert.equal(estado, 403);
+  });
+});
+
+describe('la lista para elegir', () => {
+  it('trae los lugares y las zonas con lo que abarca cada una', async () => {
+    respuestas.set('GET /rest/v1/lugares', () => [{ id: LUGAR, nombre: 'Villa Urquiza' }]);
+    respuestas.set('GET /rest/v1/zonas_cobertura', () => [{ id: ZONA, nombre: 'Norte' }]);
+    respuestas.set('GET /rest/v1/zona_lugares', () => [{ zona_id: ZONA, lugar_id: LUGAR }]);
+
+    const { estado, cuerpo } = await pedir('GET', '/lugares-de-trabajo/catalogo');
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo.lugares.map((l) => l.id), [LUGAR]);
+    assert.deepEqual(cuerpo.zonas, [{ id: ZONA, nombre: 'Norte', lugares: [LUGAR] }]);
+  });
+
+  it('quien coordina la alcanza, porque elegir no es configurar', async () => {
+    quienLlama = { rol: 'coordinador', prestadora_id: PRESTADORA };
+    const { estado } = await pedir('GET', '/lugares-de-trabajo/catalogo');
+    assert.equal(estado, 200);
+    // Cargar la lista sigue siendo de la administración.
+    const { estado: estadoConfiguracion } = await pedir('GET', '/configuracion/lugares');
+    assert.equal(estadoConfiguracion, 403);
+  });
+
+  it('se lee solo la Organización de quien llama', async () => {
+    await pedir('GET', '/lugares-de-trabajo/catalogo');
+    for (const tabla of ['lugares', 'zonas_cobertura', 'zona_lugares']) {
+      const leido = llamadas.find((l) => l.clave === `GET /rest/v1/${tabla}`);
+      assert.equal(leido.filtros.get('prestadora_id'), `eq.${PRESTADORA}`);
+    }
   });
 });

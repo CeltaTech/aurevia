@@ -42,6 +42,7 @@ import {
 import { darDeAltaEnMeta, traerEstadosDeMeta } from '../utils/plantillasWhatsapp.js';
 import { redactarPlantillaWhatsapp, corregirPlantillaWhatsapp } from '../utils/iaPlantillasWhatsapp.js';
 import { buscarLugares, listarProvincias } from '../geocodificacion/index.js';
+import { lugaresDeLaPrestadora, paisDeLaPrestadora } from '../utils/catalogoDeLugares.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import { direccionDeEnvioDe, esDireccionDeCorreo } from '../utils/email.js';
 import {
@@ -156,11 +157,11 @@ panelConfiguracionRouter.delete('/zonas/:id', async (req, res) => {
 // un solo nivel: un barrio se distingue de una localidad nada más que por colgar de ella.
 
 panelConfiguracionRouter.get('/lugares', async (req, res) => {
-  let query = supabase.from('lugares').select('*').order('nombre');
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query;
-  if (error) return responderError(res, error);
-  res.json({ lugares: data });
+  try {
+    res.json({ lugares: await lugaresDeLaPrestadora(req.usuarioPanel.prestadoraId) });
+  } catch (error) {
+    responderError(res, error);
+  }
 });
 
 // Lo que sugiere el organismo oficial del país de esta Prestadora. Es para cargar la lista, no
@@ -191,10 +192,20 @@ panelConfiguracionRouter.get('/lugares/provincias', async (req, res) => {
 });
 
 panelConfiguracionRouter.post('/lugares', async (req, res) => {
-  const { nombre, pais, provincia, municipio, id_oficial, parte_de, lat, lng } = req.body;
-  if (!String(nombre ?? '').trim() || !String(pais ?? '').trim()) {
-    return res.status(400).json({ error: 'Faltan el nombre o el país del lugar' });
+  const { nombre, provincia, municipio, id_oficial, parte_de, lat, lng } = req.body;
+  if (!String(nombre ?? '').trim()) {
+    return res.status(400).json({ error: 'Falta el nombre del lugar' });
   }
+  // El país es el de la Prestadora y no viaja en el pedido: un lugar de una Prestadora argentina
+  // es argentino, y un valor que llega de afuera lo escribe quien llama.
+  let pais;
+  try {
+    pais = await paisDeLaPrestadora(req.usuarioPanel.prestadoraId);
+  } catch (error) {
+    return responderError(res, error);
+  }
+  if (!pais) return res.status(400).json({ error: 'La Prestadora todavía no tiene país configurado' });
+
   // De dónde salió no lo dice quien llama: lo dice si trajo o no el identificador del organismo.
   // Así nadie puede marcar como oficial algo que escribió a mano.
   const fuente = String(id_oficial ?? '').trim() ? 'oficial' : 'propio';
@@ -203,7 +214,7 @@ panelConfiguracionRouter.post('/lugares', async (req, res) => {
     .insert({
       prestadora_id: req.usuarioPanel.prestadoraId,
       nombre: String(nombre).trim(),
-      pais: String(pais).trim().toUpperCase(),
+      pais,
       provincia: provincia ?? null,
       municipio: municipio ?? null,
       id_oficial: fuente === 'oficial' ? String(id_oficial).trim() : null,

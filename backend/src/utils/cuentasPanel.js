@@ -7,6 +7,8 @@ import { CATALOGO_CIRCULO_FAMILIAR } from './catalogoCirculoFamiliar.js';
 import { laCuentaDelPanelEstaAlAlcance } from '../middleware/alcancePrestadora.js';
 import { APROBADAS, filasDeIncorporacion } from './etapasDeIncorporacion.js';
 import { guardarLugaresDe } from './lugaresDeCadaPersona.js';
+import { nombreDelLugar } from './catalogoDeLugares.js';
+import { domicilioEscrito, partesDelDomicilio } from './domicilioEscrito.js';
 
 // Comprueba que un tipo de Asistente exista y sea de los que esta Prestadora puede usar:
 // los generales de CeltaTech (`prestadora_id` vacío) o los que creó ella misma. Devuelve el
@@ -340,7 +342,7 @@ const FILAS_DE_UN_MIEMBRO_CIRCULO = [
 // manual de la Fase 1, en vez de duplicar la lógica (ver alcance de la Fase 3 en el plan
 // aprobado: "no se construye un camino de creación de datos paralelo y distinto").
 export async function crearAsistenteDirecto({
-  nombre, telefono, email, dni, domicilio, tipo_asistente_id, tipo_asistente, zonas, lugares, estado,
+  nombre, telefono, email, dni, domicilio, domicilioPartido, tipo_asistente_id, tipo_asistente, zonas, lugares, estado,
   tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales, modalidades,
   prestadoraId, usuarioPanelId, importacionId,
 }) {
@@ -370,7 +372,15 @@ export async function crearAsistenteDirecto({
   // (`geocodificacion/`); si no hay servicio para ese país, si se cae o si no la encuentra,
   // quedan en nulo y el alta sigue igual: el texto es el dato. Dato sensible: no sale en
   // registros ni en URLs (CLAUDE.md §6).
-  const ubicacion = await coordenadasDeDomicilio({ prestadoraId, direccion: domicilio });
+  //
+  // Desde el Panel llega partido —calle, número, piso, unidad y cuál de los lugares de la
+  // Prestadora—; desde una planilla importada llega como un renglón suelto, que es lo que la
+  // planilla trae. En los dos casos se guardan las partes que haya, y el renglón lo arma
+  // `domicilioEscrito`, que es el único lugar donde se decide dónde va cada coma.
+  const partes = partesDelDomicilio(domicilioPartido);
+  const nombreDeSuLugar = await nombreDelLugar(partes.lugar_id, prestadoraId);
+  const domicilioDelAsistente = domicilioEscrito({ ...partes, lugar: nombreDeSuLugar }) || domicilio || null;
+  const ubicacion = await coordenadasDeDomicilio({ prestadoraId, direccion: domicilioDelAsistente });
 
   let asistenteId;
   try {
@@ -384,7 +394,8 @@ export async function crearAsistenteDirecto({
       dni: dni || null,
       telefono: telefono || null,
       email,
-      domicilio: domicilio || null,
+      domicilio: domicilioDelAsistente,
+      ...partes,
       ...ubicacion,
       tipo_asistente_id: tipoAsistenteId,
       zonas: zonasArray,
@@ -545,22 +556,31 @@ export async function revocarMiembroCirculo(usuarioId, { prestadoraId, familiaId
 // /familia-directa) por el mismo motivo que crearAsistenteDirecto de arriba.
 export async function crearFamiliaDirecta({
   nombreContacto, telefono, email, localidad, plan,
-  nombrePaciente, domicilioPaciente, fechaNacimientoPaciente, nivelComplejidadPaciente, patologiasPaciente,
+  nombrePaciente, domicilioPaciente, domicilioDelPacientePartido,
+  fechaNacimientoPaciente, nivelComplejidadPaciente, patologiasPaciente,
   prestadoraId, importacionId,
 }) {
   if (!nombreContacto || !email || !nombrePaciente) {
     throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombreContacto, email, nombrePaciente)');
   }
 
+  // El domicilio llega partido desde el Panel, y como un renglón suelto desde una planilla
+  // importada, que es lo que la planilla trae. En los dos casos se guardan las partes que haya y
+  // el renglón se arma con `domicilioEscrito`, que es el único lugar donde se decide dónde va cada
+  // coma. El nombre del lugar se busca acá porque vive en otra tabla.
+  const partes = partesDelDomicilio(domicilioDelPacientePartido);
+  const nombreDeSuLugar = await nombreDelLugar(partes.lugar_id, prestadoraId);
+  const renglonPartido = domicilioEscrito({ ...partes, lugar: nombreDeSuLugar });
+
   // Lo que va a quedar escrito en `pacientes.domicilio`, y su punto en el mapa si se lo puede
   // ubicar. La localidad viaja aparte porque desempata: la misma calle con el mismo número
   // existe en decenas de partidos. Si no se puede ubicar, el Paciente se da de alta igual con
   // las coordenadas en nulo (ver `geocodificacion/index.js`).
-  const domicilioDelPaciente = domicilioPaciente || localidad || null;
+  const domicilioDelPaciente = renglonPartido || domicilioPaciente || localidad || null;
   const ubicacion = await coordenadasDeDomicilio({
     prestadoraId,
     direccion: domicilioDelPaciente,
-    localidad,
+    localidad: nombreDeSuLugar || localidad,
   });
 
   let familiaId;
@@ -608,6 +628,7 @@ export async function crearFamiliaDirecta({
         familia_id: familiaId,
         nombre: nombrePaciente,
         domicilio: domicilioDelPaciente,
+        ...partes,
         ...ubicacion,
         fecha_nacimiento: fechaNacimientoPaciente || null,
         nivel_complejidad: nivelComplejidadPaciente || null,

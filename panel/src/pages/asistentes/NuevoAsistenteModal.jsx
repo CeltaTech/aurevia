@@ -11,6 +11,8 @@ import { modalidadesHabilitadas, mensajeDeModalidad } from '../../lib/modalidade
 import { nombreTipo } from '../../lib/tiposAsistente';
 import { useTiposAsistente } from '../../hooks/useTiposAsistente';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio';
+import { DOMICILIO_VACIO, partesParaGuardar } from '../../lib/partesDeDomicilio';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -21,7 +23,7 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
   const [dni, setDni] = useState('');
   const [telefono, setTelefono] = useState('');
   const [email, setEmail] = useState('');
-  const [domicilio, setDomicilio] = useState('');
+  const [domicilio, setDomicilio] = useState(DOMICILIO_VACIO);
   const [tipoAsistenteId, setTipoAsistenteId] = useState('');
   /* Dónde acepta trabajar. Se guarda cuál de los lugares de la Prestadora, nunca el nombre
      tecleado: escrito a mano, «Villa Urquiza» y «villa urquiza» son dos lugares distintos y
@@ -69,7 +71,7 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
           dni,
           telefono,
           email,
-          domicilio,
+          domicilioPartido: partesParaGuardar(domicilio),
           tipo_asistente_id: tipoAsistenteId || null,
           lugares,
           modalidades: modalidadesMarcadas,
@@ -100,7 +102,7 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
           <FormField label={t.asistentes.telefono} name="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
           <FormField label={t.asistentes.email} name="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           {/* Opcional: si no se sabe al dar de alta, se carga después desde el legajo. */}
-          <FormField label={t.asistentes.domicilio} name="domicilio" value={domicilio} onChange={(e) => setDomicilio(e.target.value)} />
+          <CamposDeDomicilio valor={domicilio} alCambiar={setDomicilio} deshabilitado={guardando} />
           <FormField label={t.asistentes.col_tipo} name="tipo_asistente_id" type="select" value={tipoAsistenteId} onChange={(e) => setTipoAsistenteId(e.target.value)}>
             <option value="">{t.asistentes.tipo_sin_asignar}</option>
             {tiposAsistente.map((tipo) => (

@@ -6,6 +6,8 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio';
+import { DOMICILIO_VACIO, partesParaGuardar } from '../../lib/partesDeDomicilio';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -17,7 +19,7 @@ export function NuevaFamiliaModal({ onClose, onCreada }) {
   const [email, setEmail] = useState('');
   const [localidad, setLocalidad] = useState('');
   const [nombrePaciente, setNombrePaciente] = useState('');
-  const [domicilioPaciente, setDomicilioPaciente] = useState('');
+  const [domicilioPaciente, setDomicilioPaciente] = useState(DOMICILIO_VACIO);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
 
@@ -33,7 +35,10 @@ export function NuevaFamiliaModal({ onClose, onCreada }) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${data.session?.access_token}`,
         },
-        body: JSON.stringify({ nombreContacto, telefono, email, localidad, nombrePaciente, domicilioPaciente }),
+        body: JSON.stringify({
+          nombreContacto, telefono, email, localidad, nombrePaciente,
+          domicilioDelPacientePartido: partesParaGuardar(domicilioPaciente),
+        }),
       });
       const resultado = await respuesta.json().catch(() => ({}));
       if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
@@ -58,7 +63,7 @@ export function NuevaFamiliaModal({ onClose, onCreada }) {
           <FormField label={t.familias.col_email} name="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           <FormField label={t.familias.col_localidad} name="localidad" value={localidad} onChange={(e) => setLocalidad(e.target.value)} />
           <FormField label={t.familias.nueva.nombre_paciente} name="nombrePaciente" required value={nombrePaciente} onChange={(e) => setNombrePaciente(e.target.value)} />
-          <FormField label={t.familias.nueva.domicilio_paciente} name="domicilioPaciente" value={domicilioPaciente} onChange={(e) => setDomicilioPaciente(e.target.value)} />
+          <CamposDeDomicilio valor={domicilioPaciente} alCambiar={setDomicilioPaciente} deshabilitado={guardando} />
 
           <div className="panel-modal-acciones">
             <Button variant="secondary" type="button" onClick={onClose} disabled={guardando}>

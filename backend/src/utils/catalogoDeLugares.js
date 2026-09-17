@@ -38,6 +38,25 @@ export async function lugaresDeLaPrestadora(prestadoraId) {
   return data ?? [];
 }
 
+/** Cómo se llama ese lugar, para armar el renglón del domicilio.
+ *
+ *  Va filtrado por Prestadora además de por identificador: el identificador viene del pedido, y un
+ *  valor que viaja en el pedido lo escribe quien llama. Sin ese filtro, un identificador de otra
+ *  Organización contestaría el nombre de un lugar ajeno.
+ *
+ *  Devuelve cadena vacía si no existe, para que el renglón se arme igual sin ese pedazo. */
+export async function nombreDelLugar(lugarId, prestadoraId) {
+  if (!lugarId) return '';
+  const { data, error } = await supabase
+    .from('lugares')
+    .select('nombre')
+    .eq('id', lugarId)
+    .eq('prestadora_id', prestadoraId)
+    .maybeSingle();
+  if (error) throw error;
+  return String(data?.nombre ?? '');
+}
+
 /** Las zonas de cobertura de esa Organización con los lugares que abarca cada una. */
 export async function zonasConSusLugares(prestadoraId) {
   const [{ data: zonas, error: errorZonas }, { data: cruces, error: errorCruces }] = await Promise.all([

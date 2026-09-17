@@ -5,13 +5,15 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio';
+import { partesDesdeFila, partesParaGuardar } from '../../lib/partesDeDomicilio';
 
 export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const [nombre, setNombre] = useState(paciente.nombre || '');
   const [fechaNacimiento, setFechaNacimiento] = useState(paciente.fecha_nacimiento || '');
-  const [domicilio, setDomicilio] = useState(paciente.domicilio || '');
+  const [domicilio, setDomicilio] = useState(partesDesdeFila(paciente));
   const [nivelComplejidad, setNivelComplejidad] = useState(paciente.nivel_complejidad || '');
   const [patologias, setPatologias] = useState((paciente.patologias || []).join(', '));
   const [obraSocial, setObraSocial] = useState(paciente.obra_social || '');
@@ -28,7 +30,7 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
       .update({
         nombre,
         fecha_nacimiento: fechaNacimiento || null,
-        domicilio: domicilio || null,
+        ...partesParaGuardar(domicilio),
         nivel_complejidad: nivelComplejidad || null,
         patologias: patologias.split(',').map((p) => p.trim()).filter(Boolean),
         obra_social: obraSocial || null,
@@ -53,7 +55,7 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
         <form onSubmit={handleSubmit}>
           <FormField label={t.familias.col_nombre} name="nombre" required value={nombre} onChange={(e) => setNombre(e.target.value)} />
           <FormField label={t.familias.fecha_nacimiento} name="fecha_nacimiento" type="date" value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} />
-          <FormField label={t.familias.domicilio} name="domicilio" value={domicilio} onChange={(e) => setDomicilio(e.target.value)} />
+          <CamposDeDomicilio valor={domicilio} alCambiar={setDomicilio} deshabilitado={guardando} />
           <FormField label={t.familias.nivel_complejidad} name="nivel_complejidad" type="select" value={nivelComplejidad} onChange={(e) => setNivelComplejidad(e.target.value)}>
             <option value="">{t.comun.todos}</option>
             <option value="I">I</option>

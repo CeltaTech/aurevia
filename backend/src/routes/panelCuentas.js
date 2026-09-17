@@ -171,10 +171,10 @@ panelCuentasRouter.post('/familia', requiereRolPanel, exigirOrganizacionActiva, 
 // de la Familia siga viviendo en un único lugar (evita reproducir el bug de contacto
 // en blanco que tenían las Familias sembradas sin solicitud vinculada).
 panelCuentasRouter.post('/familia-directa', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('alta_manual_familia'), async (req, res) => {
-  const { nombreContacto, telefono, email, localidad, nombrePaciente, domicilioPaciente } = req.body;
+  const { nombreContacto, telefono, email, localidad, nombrePaciente, domicilioPaciente, domicilioDelPacientePartido } = req.body;
   try {
     const { familiaId, pacienteId } = await crearFamiliaDirecta({
-      nombreContacto, telefono, email, localidad, nombrePaciente, domicilioPaciente,
+      nombreContacto, telefono, email, localidad, nombrePaciente, domicilioPaciente, domicilioDelPacientePartido,
       prestadoraId: req.usuarioPanel.prestadoraId,
     });
     res.json({ ok: true, familiaId, pacienteId });
@@ -296,10 +296,10 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
 // (equivalente al default 'omitir' del pendiente #18 — política de verificación por
 // prestadora; la Fase 2 de este trabajo suma la configuración para cambiar este comportamiento).
 panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('alta_manual_asistente'), async (req, res) => {
-  const { nombre, telefono, email, dni, domicilio, tipo_asistente_id, zonas, lugares, estado, tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales, modalidades } = req.body;
+  const { nombre, telefono, email, dni, domicilio, domicilioPartido, tipo_asistente_id, zonas, lugares, estado, tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales, modalidades } = req.body;
   try {
     const { asistenteId } = await crearAsistenteDirecto({
-      nombre, telefono, email, dni, domicilio, tipo_asistente_id, zonas, lugares, estado,
+      nombre, telefono, email, dni, domicilio, domicilioPartido, tipo_asistente_id, zonas, lugares, estado,
       tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales, modalidades,
       prestadoraId: req.usuarioPanel.prestadoraId,
       usuarioPanelId: req.usuarioPanel.id,

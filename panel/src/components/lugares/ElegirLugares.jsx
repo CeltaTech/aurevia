@@ -12,10 +12,15 @@ import { useCatalogoDeLugares } from '../../hooks/useCatalogoDeLugares';
 
    Las zonas se pasan tal como vienen, porque acá sí sirven para agrupar: quien elige dónde acepta
    trabajar una Asistente piensa por zona, y marca la zona entera antes de sacarle lo que no va.
-   Lo que queda guardado siguen siendo los lugares. */
-export function ElegirLugares({ valor, onChange, deshabilitado = false }) {
+   Lo que queda guardado siguen siendo los lugares.
+
+   `catalogo` es para la pantalla que ya lo tiene cargado para otra cosa: se lo pasa y no se lo
+   vuelve a pedir. Sin eso, una ficha que elige lugares y además muestra un domicilio pediría la
+   misma lista dos veces. */
+export function ElegirLugares({ valor, onChange, catalogo, deshabilitado = false }) {
   const { t } = useLocale();
-  const { lugares, zonas, estado, error, recargar } = useCatalogoDeLugares();
+  const propio = useCatalogoDeLugares({ omitir: Boolean(catalogo) });
+  const { lugares, zonas, estado, error, recargar } = catalogo ?? propio;
 
   return (
     <EstadoLista

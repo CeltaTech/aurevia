@@ -29,6 +29,9 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { ElegirLugares } from '../../components/lugares/ElegirLugares';
+import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio';
+import { partesDesdeFila, partesParaGuardar, renglonDelDomicilio } from '../../lib/partesDeDomicilio';
+import { useCatalogoDeLugares } from '../../hooks/useCatalogoDeLugares';
 import { llamarApiLugaresDeTrabajo } from '../../lib/apiLugaresDeTrabajo';
 import { generarCertificadoTrabajo, generarCertificadoRemuneracionesServicios, descargarPDF } from '../../lib/generarDocumentoCese';
 import { con } from '../../lib/textos';
@@ -46,6 +49,10 @@ export function PerfilTab({ asistente, onActualizado }) {
   const puedeEditarIdentidad = esAdmin || puede('editar_identidad_asistente');
   const { paraElegir: tiposAsistente, porId: tiposPorId } = useTiposAsistente();
   const { modalidades } = useModalidades();
+  /* La lista de lugares de la Prestadora, pedida una sola vez para las tres cosas que la usan en
+     esta ficha: el lugar del domicilio, dónde acepta trabajar y el nombre del lugar con el que se
+     arma el renglón del domicilio. */
+  const catalogoDeLugares = useCatalogoDeLugares();
 
   /* Las formas de recibir trabajo que se pueden marcar en esta ficha. El techo lo pone la
      Prestadora con las modalidades que tenga activas. Se suma a la lista la que el Asistente
@@ -63,7 +70,7 @@ export function PerfilTab({ asistente, onActualizado }) {
     dni: asistente.dni || '',
     telefono: asistente.telefono || '',
     email: asistente.email || '',
-    domicilio: asistente.domicilio || '',
+    domicilio: partesDesdeFila(asistente),
     tipo_asistente_id: asistente.tipo_asistente_id || '',
     estado: asistente.estado,
     tipo_vinculo: asistente.tipo_vinculo,
@@ -164,7 +171,8 @@ export function PerfilTab({ asistente, onActualizado }) {
            Viaja solo cuando la pantalla lo tenía para mostrar: la vista que lee el Coordinador
            (`asistentes_coordinador`) no trae esta columna, así que mandarlo igual borraría un
            domicilio ya cargado que esa pantalla nunca llegó a mostrar. */
-        domicilio: form.domicilio.trim() || null,
+        domicilio: renglonDelDomicilio(form.domicilio, catalogoDeLugares.lugares) || null,
+        ...partesParaGuardar(form.domicilio),
         tipo_vinculo: form.tipo_vinculo,
         horas_semanales: form.horas_semanales || null,
         // La columna se llama `canales` de antes y no se renombra (regla 13). La palabra del
@@ -272,7 +280,12 @@ export function PerfilTab({ asistente, onActualizado }) {
       {/* El domicilio solo lo ve la administración: la vista del Coordinador no trae esa
           columna, así que ahí el campo aparecería siempre vacío por más que el dato exista. */}
       {esAdmin && (
-        <FormField label={t.asistentes.domicilio} name="domicilio" value={form.domicilio} onChange={(e) => set('domicilio', e.target.value)} disabled={!puedeEditarIdentidad} />
+        <CamposDeDomicilio
+          valor={form.domicilio}
+          alCambiar={(partes) => set('domicilio', partes)}
+          catalogo={catalogoDeLugares}
+          deshabilitado={!puedeEditarIdentidad}
+        />
       )}
 
       <dl className="panel-detalle-lista">
@@ -311,6 +324,7 @@ export function PerfilTab({ asistente, onActualizado }) {
       <h2>{t.configuracion.lugares_elegir_titulo}</h2>
       <EstadoLista estado={estadoLugares} error={errorLugares} recargar={cargarLugares}>
         <ElegirLugares
+          catalogo={catalogoDeLugares}
           valor={lugares}
           onChange={(siguiente) => { setLugares(siguiente); setGuardado(false); }}
           deshabilitado={guardando || !puedeEditarIdentidad}

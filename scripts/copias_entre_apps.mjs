@@ -80,6 +80,11 @@ export const GRUPOS = [
     copias: ['backend/src/utils/escalasLegales.js'],
   },
   {
+    que: 'el domicilio en un renglón, armado a partir de sus partes',
+    original: 'backend/src/utils/domicilioEscrito.js',
+    copias: ['panel/src/lib/domicilioEscrito.js'],
+  },
+  {
     que: 'con qué se mide el trabajo de cada Asistente, y qué es una hora extra',
     original: 'panel/src/lib/formaDePago.js',
     copias: ['backend/src/utils/formaDePago.js'],

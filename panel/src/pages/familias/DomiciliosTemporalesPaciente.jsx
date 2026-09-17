@@ -10,6 +10,9 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio';
+import { DOMICILIO_VACIO, partesParaGuardar, renglonDelDomicilio } from '../../lib/partesDeDomicilio';
+import { useCatalogoDeLugares } from '../../hooks/useCatalogoDeLugares';
 
 // Dónde se atiende al Paciente cuando no está en el domicilio de su ficha.
 //
@@ -22,6 +25,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const confirmarDestructivo = useConfirmarDestructivo();
+  const catalogoDeLugares = useCatalogoDeLugares();
 
   const [periodos, setPeriodos] = useState([]);
   const [dondeHoy, setDondeHoy] = useState(null);
@@ -29,7 +33,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
   const [error, setError] = useState(null);
 
   const [mostrandoForm, setMostrandoForm] = useState(false);
-  const [domicilio, setDomicilio] = useState('');
+  const [domicilio, setDomicilio] = useState(DOMICILIO_VACIO);
   const [lat, setLat] = useState('');
   const [lng, setLng] = useState('');
   const [motivo, setMotivo] = useState('');
@@ -80,7 +84,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
   }, [recargar]);
 
   function limpiarForm() {
-    setDomicilio('');
+    setDomicilio(DOMICILIO_VACIO);
     setLat('');
     setLng('');
     setMotivo('');
@@ -90,7 +94,10 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
   }
 
   async function handleGuardar() {
-    if (!domicilio.trim() || !motivo.trim() || !fechaInicio || lat === '' || lng === '') {
+    // El renglón se arma con las partes cargadas y el nombre del lugar. Vacío significa que no se
+    // cargó nada del domicilio, que es lo mismo que antes significaba el casillero en blanco.
+    const renglon = renglonDelDomicilio(domicilio, catalogoDeLugares.lugares);
+    if (!renglon || !motivo.trim() || !fechaInicio || lat === '' || lng === '') {
       setErrorForm(t.domicilios_temporales.form_incompleto);
       return;
     }
@@ -103,7 +110,8 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
       // foránea sobre las dos columnas juntas.
       prestadora_id: paciente.prestadora_id,
       paciente_id: paciente.id,
-      domicilio: domicilio.trim(),
+      domicilio: renglon,
+      ...partesParaGuardar(domicilio),
       lat: Number(lat),
       lng: Number(lng),
       motivo: motivo.trim(),
@@ -301,12 +309,13 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
               <div className="panel-resultado-calculo">
                 <h3>{t.domicilios_temporales.nuevo_titulo}</h3>
                 {errorForm && <Alert variant="error">{errorForm}</Alert>}
-                <FormField
-                  label={t.domicilios_temporales.col_domicilio}
-                  name="domicilio_temporal"
-                  value={domicilio}
-                  onChange={(e) => setDomicilio(e.target.value)}
-                  required
+                <CamposDeDomicilio
+                  valor={domicilio}
+                  alCambiar={setDomicilio}
+                  catalogo={catalogoDeLugares}
+                  prefijo="temporal_"
+                  deshabilitado={guardando}
+                  requerido
                 />
                 <FormField
                   label={t.domicilios_temporales.lat}

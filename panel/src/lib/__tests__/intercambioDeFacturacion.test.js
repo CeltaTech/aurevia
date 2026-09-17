@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  COLUMNAS_DEL_APAREO,
   COLUMNAS_QUE_SALEN,
+  LARGO_MAXIMO_DEL_CLIENTE_EXTERNO,
   TOPE_DE_FILAS,
   armarArchivo,
   fechaDeArchivo,
@@ -8,10 +10,13 @@ import {
   leerArchivo,
   loFacturadoDeLaFila,
   numeroDeArchivo,
+  elApareoDeLaFila,
+  queHacerConLaFilaDeApareo,
   queHacerConLaFilaFacturada,
 } from '../intercambioDeFacturacion';
 
 const FACTURA = '60000000-0000-4000-8000-000000000001';
+const FAMILIA = '44444444-4444-4444-4444-444444444444';
 const BIEN = {
   factura_id: FACTURA,
   comprobante_tipo: 'Factura B',
@@ -214,5 +219,56 @@ describe('queHacerConLaFilaFacturada', () => {
     expect(queHacerConLaFilaFacturada(BIEN, { yaVista: true, factura: sinFacturar })).toEqual({
       resultado: 'ya_facturada',
     });
+  });
+});
+
+describe('el apareo con el cliente del otro software', () => {
+  it("la referencia sale en el archivo, al lado del nombre de la Familia", () => {
+    expect(COLUMNAS_QUE_SALEN).toContain('cliente_externo');
+    expect(COLUMNAS_DEL_APAREO).toEqual(['familia_id', 'familia', 'cliente_externo']);
+  });
+
+  it('una referencia nueva se anota', () => {
+    const apareo = elApareoDeLaFila({ familia_id: FAMILIA, cliente_externo: ' CLI-0001 ' });
+    expect(apareo.cliente_externo).toBe('CLI-0001');
+    expect(queHacerConLaFilaDeApareo(apareo, { apareada: null })).toEqual({ resultado: 'apareado' });
+  });
+
+  it('la misma referencia que ya estaba no se vuelve a escribir', () => {
+    const apareo = elApareoDeLaFila({ familia_id: FAMILIA, cliente_externo: 'CLI-0001' });
+    expect(queHacerConLaFilaDeApareo(apareo, { apareada: 'CLI-0001' })).toEqual({ resultado: 'sin_cambio' });
+  });
+
+  it('vaciar la referencia de una Familia apareada borra el apareo', () => {
+    const apareo = elApareoDeLaFila({ familia_id: FAMILIA, cliente_externo: '   ' });
+    expect(queHacerConLaFilaDeApareo(apareo, { apareada: 'CLI-0001' })).toEqual({ resultado: 'borrado' });
+  });
+
+  it('una Familia que nunca estuvo apareada y sigue vacía no es un cambio', () => {
+    const apareo = elApareoDeLaFila({ familia_id: FAMILIA, cliente_externo: '' });
+    expect(queHacerConLaFilaDeApareo(apareo, { apareada: null })).toEqual({ resultado: 'sin_cambio' });
+  });
+
+  it('la misma Familia dos veces en el mismo archivo se rechaza la segunda', () => {
+    const apareo = elApareoDeLaFila({ familia_id: FAMILIA, cliente_externo: 'CLI-0002' });
+    expect(queHacerConLaFilaDeApareo(apareo, { yaVista: true })).toEqual({
+      resultado: 'rechazado',
+      motivo: 'repetida',
+    });
+  });
+
+  it('un identificador mal escrito se rechaza antes de mirar nada más', () => {
+    expect(queHacerConLaFilaDeApareo({ familia_id: 'CLI-0001', cliente_externo: 'CLI-0001' })).toEqual({
+      resultado: 'rechazado',
+      motivo: 'familia_id',
+    });
+  });
+
+  it('una referencia más larga de lo que entra en la base se rechaza acá', () => {
+    const apareo = elApareoDeLaFila({
+      familia_id: FAMILIA,
+      cliente_externo: 'X'.repeat(LARGO_MAXIMO_DEL_CLIENTE_EXTERNO + 1),
+    });
+    expect(queHacerConLaFilaDeApareo(apareo)).toEqual({ resultado: 'rechazado', motivo: 'cliente_externo' });
   });
 });

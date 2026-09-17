@@ -8,8 +8,11 @@
 // escrito una sola vez cuáles son, así las tres vías entran por la misma puerta y agregar la
 // tercera no obliga a rehacer las otras dos.
 //
-// QUÉ SALE. Por cada factura que todavía no tiene comprobante anotado: de quién es, a quién se le
-// reclama, de qué período, en qué moneda, por cuánto y para cuándo.
+// QUÉ SALE. Por cada factura que todavía no tiene comprobante anotado: de quién es, con qué
+// cliente del otro lado se corresponde esa Familia, a quién se le reclama, de qué período, en qué
+// moneda, por cuánto y para cuándo. La referencia al cliente del otro lado va vacía mientras esa
+// Familia no esté apareada, y ahí el software de facturación lo resuelve por el nombre como
+// siempre lo hizo.
 //
 // QUÉ VUELVE. Los tres datos de siempre —cómo se llama el comprobante, qué número tiene y cuánto
 // quedó adeudando la Familia— más el vencimiento, si quien emitió informa uno distinto del
@@ -31,6 +34,7 @@ import { loQueEstaMalEnLoFacturado } from './facturacionDeFamilias.js';
 export const COLUMNAS_QUE_SALEN = [
   'factura_id',
   'familia',
+  'cliente_externo',
   'financiador_tipo',
   'financiador_nombre',
   'periodo',
@@ -47,6 +51,65 @@ export const COLUMNAS_QUE_VUELVEN = [
   'monto_facturado',
   'fecha_vencimiento',
 ];
+
+/**
+ * Las columnas del archivo con el que se aparea cada Familia con el cliente del otro software.
+ *
+ * Es el mismo archivo para las dos direcciones: se baja con las Familias y la referencia que ya
+ * tengan —vacía las que todavía no—, se completa al lado de cada una y se vuelve a subir. Así una
+ * Prestadora que ya tenía sus clientes cargados antes de empezar aparea todo de una vez, sin
+ * buscar Familia por Familia.
+ */
+export const COLUMNAS_DEL_APAREO = ['familia_id', 'familia', 'cliente_externo'];
+
+/**
+ * Cuál de las clases de conexión del catálogo es la del software que emite los comprobantes.
+ *
+ * Está escrita una sola vez porque es la que usa todo lo de este archivo: el catálogo dice qué
+ * clases existen, y ésta dice cuál de ellas es la que a este ida y vuelta le importa.
+ */
+export const CONEXION_DE_FACTURACION = 'facturacion';
+
+/** Largo máximo de la referencia, el mismo que acepta la base. */
+export const LARGO_MAXIMO_DEL_CLIENTE_EXTERNO = 128;
+
+/**
+ * Lo que informó una fila sobre el apareo de una Familia.
+ *
+ * La referencia vacía no es un error: quiere decir que esa Familia no está apareada, y es lo que
+ * trae el archivo recién bajado. Qué se hace con ella lo decide la función de abajo.
+ */
+export function elApareoDeLaFila(fila) {
+  return {
+    familia_id: String(fila?.familia_id ?? '').trim(),
+    cliente_externo: String(fila?.cliente_externo ?? '').trim(),
+  };
+}
+
+/**
+ * Qué se hace con un renglón del archivo de apareo: anotarlo, borrarlo, saltearlo o rechazarlo.
+ *
+ * Está acá y no adentro de la ruta por lo mismo que la decisión de lo facturado: es lo único que
+ * puede salir mal y se prueba sin base.
+ *
+ * Borrar la referencia es una decisión legítima —se cambió de software, o se apareó a la Familia
+ * equivocada—, así que una celda vaciada a propósito borra. Lo que no puede pasar es que el
+ * archivo bajado y vuelto a subir sin tocar nada borre todo, y por eso una fila vacía que ya
+ * estaba vacía se cuenta como que no cambió nada.
+ */
+export function queHacerConLaFilaDeApareo(apareo, { yaVista = false, apareada = null } = {}) {
+  if (!esIdentificador(apareo?.familia_id)) return { resultado: 'rechazado', motivo: 'familia_id' };
+  if (yaVista) return { resultado: 'rechazado', motivo: 'repetida' };
+
+  const referencia = apareo?.cliente_externo ?? '';
+  if (referencia.length > LARGO_MAXIMO_DEL_CLIENTE_EXTERNO) {
+    return { resultado: 'rechazado', motivo: 'cliente_externo' };
+  }
+
+  if (referencia === '') return apareada ? { resultado: 'borrado' } : { resultado: 'sin_cambio' };
+  if (referencia === apareada) return { resultado: 'sin_cambio' };
+  return { resultado: 'apareado' };
+}
 
 /**
  * Cuántas filas como máximo se leen de un archivo de una vez.

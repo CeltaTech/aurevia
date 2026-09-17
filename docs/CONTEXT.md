@@ -293,6 +293,24 @@ que se le entrega a quien programa del otro lado** —las dos direcciones, cómo
 datos lleva cada aviso y qué contesta— está en `docs/CONEXION_CON_SOFTWARE_EXTERNO.md`, escrito para
 alguien que no conoce Careonys por dentro.
 
+**Con qué cliente del otro software se corresponde cada Familia.** El padrón de clientes no se
+duplica: se parte. Careonys es dueño de quién es el cliente y el software de afuera de cómo ese
+cliente figura ante el organismo fiscal, que acá no se guarda, no se pide y no se manda. Lo que
+une las dos mitades es una referencia —cómo identifica el otro software a esa misma persona—, que
+vive en `clientes_externos_de_familias`, es **por Familia y por conexión**, y hace falta para dos
+cosas: que la conexión directa pueda decir de qué cliente está hablando, y que una Prestadora que
+ya tenía sus clientes cargados antes de empezar pueda aparearlos sin rehacer nada de los dos
+lados. Qué clases de conexión hay —hoy facturación y cobranzas, que pueden ser de dos proveedores
+distintos— sale del catálogo `catalogo_conexiones_externas` y nunca de una lista escrita en el
+código. Se aparea desde Configuración → Facturación a Familias, de a una o subiendo un archivo con
+todas, y se baja el mismo archivo con las que faltan; bajarlo y subirlo sin tocar nada no borra
+nada. La referencia vacía deshace el apareo, y eso no mueve ningún dato de Careonys, que es lo que
+se gana partiendo el padrón en vez de copiarlo. **Dos Familias no pueden apuntar al mismo
+cliente** —le reclamarían a una sola persona lo de las dos—, y quien aparea recibe esa explicación,
+no una falla. Es configuración de la Prestadora, así que la pide el mismo portero que el resto de
+la configuración: administración, nunca quien coordina turnos. Vive en
+`backend/src/routes/panelClientesExternos.js` y en
+`panel/src/pages/configuracion/ApareoDeClientes.jsx`.
 **A quién se le reclama no es siempre la Familia.** Puede ser una obra social o un tercero, y eso
 vive en la ficha de la Familia (`financiador_tipo`, `financiador_nombre`); vacío quiere decir la
 Familia, que es lo corriente. Cada factura se lleva ese dato **copiado el día que se genera**,

@@ -451,6 +451,10 @@ async function probarElMotor({ motor }, sesiones, piezas) {
     // misma puerta otra vez. Se mira contra la tabla donde escribe, que es la extensión.
     ['asistente B', 'avisar que no puede continuar en una guardia de A', 'POST', `/api/app-asistentes/guardias/${piezas.guardiaA}/no-puedo-continuar`, sesiones.asistenteB, { detalle: 'INTRUSO' },
       `SELECT count(*) FROM public.extensiones_de_turno WHERE guardia_id = '${piezas.guardiaA}';`],
+    // El apareo con el cliente del software de facturación. Decide a quién se le va a reclamar lo
+    // de cada Familia, así que una Familia ajena tiene que ser una Familia que no existe.
+    ['admin B', 'aparear una Familia de A con un cliente suyo', 'PUT', `/api/panel/clientes-externos/${piezas.familiaDeA}`, sesiones.adminB, { conexion: 'facturacion', cliente_externo: 'INTRUSO' },
+      `SELECT count(*) FROM public.clientes_externos_de_familias WHERE familia_id = '${piezas.familiaDeA}';`],
     // Y la dirección contraria, porque el aislamiento no es simétrico por sí solo.
     ['familia A', 'ver un paciente de B',         'GET',    `/api/app-familias/pacientes/${piezas.pacienteB}`,           sesiones.familiaA],
     ['asistente A', 'ver una guardia de B',       'GET',    `/api/app-asistentes/guardias/${piezas.guardiaB}`,           sesiones.asistenteA],
@@ -548,6 +552,7 @@ async function principal() {
         guardiaA: uno(`SELECT id FROM public.guardias WHERE prestadora_id='${idA}' ORDER BY id LIMIT 1;`),
         pacienteB: uno(`SELECT id FROM public.pacientes WHERE prestadora_id='${idB}' ORDER BY id LIMIT 1;`),
         guardiaB: uno(`SELECT id FROM public.guardias WHERE prestadora_id='${idB}' ORDER BY id LIMIT 1;`),
+        familiaDeA: uno(`SELECT id FROM public.familias WHERE prestadora_id='${idA}' ORDER BY id LIMIT 1;`),
       };
     })(),
   ]);

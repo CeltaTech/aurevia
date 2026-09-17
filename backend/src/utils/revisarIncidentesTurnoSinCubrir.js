@@ -219,7 +219,7 @@ async function cerrarLosQueYaNoCorresponden({ abiertos, guardiaPorId, ahora }) {
     if (!guardia) continue;
 
     const comoTermino = guardia.asistente_id
-      ? CIERRES.CUBIERTO
+      ? CIERRES.LLEGO_UN_RELEVO
       : guardia.estado === 'cancelada'
         ? CIERRES.YA_NO_HACIA_FALTA
         : null;

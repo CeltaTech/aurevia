@@ -13,10 +13,13 @@ import { con } from '../../lib/textos';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import {
-  CIERRES_POSIBLES,
   esDefectoGrave,
   horasHastaElTurno,
+  revisarCierre,
+  valorDelFinal,
 } from '../../lib/incidenteTurnoSinCubrir';
+import { useFinalesTurnoSinCubrir } from '../../hooks/useFinalesTurnoSinCubrir';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { useAlarmasTomadas } from '../../hooks/useAlarmasTomadas';
 import { LaTomoYo } from './LaTomoYo';
 import { TIPOS_DE_ALARMA } from '../../lib/alarmasTomadas';
@@ -29,14 +32,20 @@ import { LoQuePasoEnLaCasa } from './LoQuePasoEnLaCasa';
    sección muestra la otra mitad: el turno queda abierto hasta que una persona diga cómo terminó.
    Quien abre y quien insiste es el motor; quien cierra a mano es quien coordina.
 
-   EL FINAL QUE SE ELIGE NO ES UN TRÁMITE. Que el turno haya quedado en manos de la familia no es
-   una variante de «cubierto»: es un defecto grave que no se pudo solucionar, y así queda escrito.
-   Por eso ese final trae un cartel antes de guardarlo, y no se esconde detrás de una lista igual
-   a las otras.
+   EL FINAL QUE SE ELIGE NO ES UN TRÁMITE. Que nadie haya ido, o que la persona atendida haya
+   quedado sola, no es una variante de «se cubrió»: es un defecto grave que no se pudo solucionar,
+   y así queda escrito. Por eso esos finales traen un cartel antes de guardarlos, y no se esconden
+   detrás de una lista igual a las otras. Cuál de ellos es una falla lo dice el catálogo de cada
+   Prestadora, porque un final que inventó ella no está en ninguna lista del código.
+
+   Y LA LISTA DE FINALES ES DE ELLA. Sale de `finales_turno_sin_cubrir`, no está escrita acá. Nace
+   con los que trae el producto y a partir de ahí ella saca, apaga y agrega los suyos. Uno de los
+   que trae —«se resolvió de otra manera»— pide escribir qué se hizo, y existe porque la destreza
+   de quien coordina no entra en ninguna lista.
 
    LO QUE CIERRA SOLO NO APARECE ACÁ. Si apareció una Asistente asignada, o el turno se canceló,
    el motor lo cierra sin preguntar: eso ya está escrito en la base. Lo que nadie puede saber
-   mirando la base es si alguien de la casa terminó cuidando. */
+   mirando la base es cómo se arregló la casa esa noche. */
 
 const TABLA = 'incidentes_turno_sin_cubrir';
 
@@ -176,15 +185,32 @@ export function TurnosSinCubrirAbiertos() {
   );
 }
 
+/* CERRAR EL EXPEDIENTE DICIENDO CÓMO TERMINÓ
+
+   La lista de finales no está escrita acá: sale del catálogo de esta Prestadora. Uno de ellos —«se
+   resolvió de otra manera»— obliga a escribir qué se hizo, y existe justamente porque la destreza
+   de quien coordina no entra en ninguna lista.
+
+   EL NOMBRE VISIBLE SALE DE DOS LADOS. Un final que trajo el producto tiene clave y su texto está
+   en las traducciones; uno que escribió la Prestadora se muestra tal cual, sin traducir, porque lo
+   escribió ella en su idioma. */
 function CerrarTurnoVacio({ incidente, onClose, onCerrado }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const confirmarDestructivo = useConfirmarDestructivo();
-  const [comoTermino, setComoTermino] = useState(CIERRES_POSIBLES[0]);
+  const finales = useFinalesTurnoSinCubrir(prestadoraId);
+  const [elegido, setElegido] = useState('');
+  const [detalle, setDetalle] = useState('');
   const [nota, setNota] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
+
+  // Ninguno viene elegido de arranque: el primero de la lista no es el final más probable, y
+  // dejarlo puesto hace que un descuido cierre el expediente diciendo algo que no pasó.
+  const fila = finales.filas.find((f) => valorDelFinal(f) === elegido) ?? null;
+  const revision = revisarCierre({ fila, detalle });
 
   async function guardar() {
     if (!(await confirmarDestructivo(t.continuidad.turnos_vacios_confirmar_cerrar))) return;
@@ -195,7 +221,8 @@ function CerrarTurnoVacio({ incidente, onClose, onCerrado }) {
         .from(TABLA)
         .update({
           resuelto_at: new Date().toISOString(),
-          resuelto_como: comoTermino,
+          resuelto_como: elegido,
+          resuelto_detalle: detalle.trim() || null,
           resuelto_por: usuario?.id ?? null,
           nota: nota.trim() || null,
         })
@@ -213,24 +240,47 @@ function CerrarTurnoVacio({ incidente, onClose, onCerrado }) {
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <h3 id={modal.idTitulo}>{t.continuidad.turnos_vacios_como_termino}</h3>
 
-        <FormField
-          label={t.continuidad.turnos_vacios_como_termino}
-          name="como-termino"
-          type="select"
-          value={comoTermino}
-          onChange={(e) => setComoTermino(e.target.value)}
-        >
-          {CIERRES_POSIBLES.map((cierre) => (
-            <option key={cierre} value={cierre}>
-              {t.continuidad[`turnos_vacios_cierre_${cierre}`]}
-            </option>
-          ))}
-        </FormField>
+        {finales.estado === 'cargando' && <p>{t.comun.cargando}</p>}
+        {finales.estado === 'error' && <Alert variant="error">{finales.error}</Alert>}
+        {/* Sin lista no hay nada que elegir, y eso no es una falla del sistema: es una Prestadora
+            que apagó todos sus finales. Se dice, y se dice dónde se arregla. */}
+        {finales.estado === 'listo' && finales.filas.length === 0 && (
+          <Alert variant="error">{t.continuidad.turnos_vacios_sin_finales}</Alert>
+        )}
+
+        {finales.estado === 'listo' && finales.filas.length > 0 && (
+          <FormField
+            label={t.continuidad.turnos_vacios_como_termino}
+            name="como-termino"
+            type="select"
+            value={elegido}
+            onChange={(e) => { setElegido(e.target.value); setDetalle(''); }}
+            required
+          >
+            <option value="">{t.continuidad.turnos_vacios_elegir}</option>
+            {finales.filas.map((f) => (
+              <option key={f.id} value={valorDelFinal(f)}>
+                {f.clave ? t.continuidad[`turnos_vacios_cierre_${f.clave}`] ?? f.clave : f.nombre}
+              </option>
+            ))}
+          </FormField>
+        )}
 
         {/* El cartel sale antes de guardar, no después: quien lo cierra tiene que saber qué está
             dejando escrito mientras todavía puede elegir otra cosa. */}
-        {esDefectoGrave(comoTermino) && (
+        {esDefectoGrave(fila) && (
           <Alert variant="error">{t.continuidad.turnos_vacios_defecto_grave}</Alert>
+        )}
+
+        {fila?.pide_detalle && (
+          <FormField
+            label={t.continuidad.turnos_vacios_detalle}
+            name="detalle-cierre"
+            type="textarea"
+            value={detalle}
+            onChange={(e) => setDetalle(e.target.value)}
+            required
+          />
         )}
 
         <FormField
@@ -247,7 +297,7 @@ function CerrarTurnoVacio({ incidente, onClose, onCerrado }) {
           <Button variant="secondary" onClick={onClose} disabled={guardando}>
             {t.comun.cancelar}
           </Button>
-          <Button onClick={guardar} disabled={guardando}>
+          <Button onClick={guardar} disabled={guardando || !revision.ok}>
             {t.continuidad.turnos_vacios_guardar}
           </Button>
         </div>

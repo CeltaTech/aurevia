@@ -115,6 +115,22 @@ comprobante, qué número tiene y cuánto quedó adeudando la Familia con los im
 monto es el que se reclama; el sistema no lo revisa ni lo compara contra nada, porque no conoce
 los impuestos de ningún país. El nombre del comprobante es texto y no se interpreta.
 
+**Careonys no asume tareas de facturación ni de créditos y cobranzas.** Las dos son software
+aparte, y Careonys **se sirve** de ellas: le **entrega** a facturación qué hay que cobrarle a cada
+cliente, y **se informa** del estado de cuenta —cuánto debe cada uno y si está atrasado—, porque
+eso es información que a la Prestadora le conviene tener a la vista para trabajar. Lo que no hace
+es el trabajo: no emite comprobantes, no calcula impuestos, no reclama, no gestiona la mora y no
+decide ninguna restricción.
+
+**Y tiene que poder con las tres situaciones**, que las elige cada Prestadora: con el software que
+CeltaTech desarrolle para eso, con el de otro, o **con ninguno conectado**. Con ninguno, Careonys
+sigue funcionando con lo que él mismo registra; conectado, la verdad del estado de cuenta es la del
+otro software. **Nunca las dos a la vez:** quién manda sobre ese número es una sola fuente por
+Prestadora, y se configura. Dos números distintos para lo mismo es peor que no tener ninguno.
+
+**Cada Prestadora con lo suyo, sin mezclar.** Una conexión con un software de facturación o de
+cobranzas es de una Prestadora, con su propia credencial, y nunca alcanza los datos de otra.
+
 **Las funciones internas de la base no viven en un esquema publicado.** Las que usan las políticas
 de RLS están en el esquema `interno`, que queda afuera de la lista `schemas` de
 `supabase/config.toml` a propósito: así no son direcciones web. Las políticas las siguen

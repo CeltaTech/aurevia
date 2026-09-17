@@ -11,24 +11,30 @@
 
 ## El dinero
 
-**1.** Guardar cómo se identifica fiscalmente quien paga —para la Familia y para la obra social—
-y sumarlo a lo que sale hacia el software de facturación. Hoy no se guarda, y **ningún software de
-facturación de Argentina puede emitir un comprobante sin ese dato**: con el archivo a mano alcanza
-porque alguien cruza por nombre, con conexión directa no hay nadie que lo complete. Entra como
-configuración por país, igual que el resto del marco normativo. Sirve a las tres maneras de
-trabajar, no sólo a la conexión directa.
+**1.** Que el estado de cuenta de cada cliente pueda venir de afuera. Hoy la puerta por la que
+avisa el software de créditos y cobranzas acepta una sola cosa —que a una Familia hay que
+restringirle el servicio— y rechaza a propósito todo importe. Tiene que poder informar también
+cuánto debe cada cliente y si está atrasado, que es lo que la Prestadora necesita a la vista para
+trabajar. La puerta, la firma y el aislamiento por Prestadora ya están hechos: es ampliar lo que
+entra, no construir otra.
 
-**2.** Escribir la conexión con el software de facturación de la primera Prestadora, cuando haya
-una y ella lo elija. **No se escribe antes**: se miraron los cinco que más se usan en Argentina y
-se conectan todos parecido pero con datos distintos, así que escribir uno a ciegas es acertar con
-suerte. Lo investigado está en `docs/FACTURADORES_Y_COMO_SE_CONECTAN.md`. **Cada software es una
-pieza aparte** y agregar la segunda no puede obligar a tocar la primera. Las otras dos maneras ya
-están hechas y alcanzan para salir a producción: se anota factura por factura a mano, o se baja un
-archivo con todo lo que falta facturar y se sube el que el software devuelve.
+**2.** Que el estado de cuenta tenga una sola fuente, y que la elija la Prestadora: el propio
+Careonys cuando no hay nada conectado, o el software de afuera cuando lo hay. Hoy Careonys siempre
+lo calcula de lo que él mismo registró, así que conectar un software de cobranzas dejaría dos
+números distintos para lo mismo, que es peor que no tener ninguno.
 
-**3. Usted** — El ciclo de cobranza a obras sociales: hoy sólo existen validado y anulado. ¿Qué estados hacen falta — presentación, débito, conciliación?
+**3.** Escribir la conexión de ida con el software de facturación de la primera Prestadora, cuando
+haya una y ella lo elija. **No se escribe antes**: se miraron los cinco que más se usan en
+Argentina y se conectan todos parecido pero con datos distintos, así que escribir uno a ciegas es
+acertar con suerte. Lo investigado está en `docs/FACTURADORES_Y_COMO_SE_CONECTAN.md`. **Cada
+software es una pieza aparte** y agregar la segunda no puede obligar a tocar la primera. Las otras
+dos maneras ya están hechas y alcanzan para salir a producción: se anota factura por factura a
+mano, o se baja un archivo con todo lo que falta facturar y se sube el que el software devuelve.
 
-**4.** Construir ese ciclo.
+**4.** Que la Prestadora pueda cargar en Configuración la conexión con su software de facturación
+y con el de créditos y cobranzas —cuál es, con qué credencial se entra— sin que ninguna alcance
+los datos de otra Prestadora. La credencial se guarda como secreto y no se vuelve a mostrar, igual
+que el secreto de la firma.
 
 **5. Usted** — ¿Se agrega una tercera vía de pago, con un intermediario que reciba en bloque y redistribuya? Si es sí, antes hay que resolver si eso cambia quién ejerce el control (art. 23 LCT).
 
@@ -194,9 +200,9 @@ De las especialidades de esta pantalla no queda nada por hacer: `asistentes.espe
 
 **Sacar el nombre viejo `aurevia` de adentro del producto se decide en el momento de la fusión con el Marketplace**, según lo que convenga en ese análisis. Está medido y no se pierde: nadie usó nunca la aplicación y todos los datos cargados son inventados, así que reconstruir la base los reescribe sin mudanza. Lo que cuesta igual, se haga cuando se haga, son seis nombres de afuera: el repositorio, el nombre del proyecto local, el servicio donde corre el motor con su dirección, y los dos depósitos de respaldo.
 
-**56. Usted** — ¿Dónde corre un módulo y contra qué base? Hoy `Modulos\` está vacía. De esto depende si la facturación y la cobranza salen a un módulo — la costura ya está sana — y si con eso se cierran sin construir los adaptadores de pasarela.
+**56. Usted** — ¿Dónde corre un módulo y contra qué base? Hoy `Modulos\` está vacía. **Facturación y créditos y cobranzas ya están decididas como software aparte del que Careonys se sirve**, así que esto no decide si salen, sino dónde corren cuando CeltaTech las desarrolle. También decide si con eso se cierran sin construir los adaptadores de pasarela.
 
-**57.** Sacar la facturación y la cobranza a un módulo, si corresponde.
+**57.** Sacar la facturación y la cobranza a un módulo, cuando haya dónde correrlo.
 
 ---
 

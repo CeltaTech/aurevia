@@ -194,7 +194,7 @@ De las especialidades de esta pantalla no queda nada por hacer: `asistentes.espe
 
 **Sacar el nombre viejo `aurevia` de adentro del producto se decide en el momento de la fusión con el Marketplace**, según lo que convenga en ese análisis. Está medido y no se pierde: nadie usó nunca la aplicación y todos los datos cargados son inventados, así que reconstruir la base los reescribe sin mudanza. Lo que cuesta igual, se haga cuando se haga, son seis nombres de afuera: el repositorio, el nombre del proyecto local, el servicio donde corre el motor con su dirección, y los dos depósitos de respaldo.
 
-**55. Usted** — ¿Dónde corre un módulo y contra qué base? Hoy `Modulos\` está vacía. **Facturación y créditos y cobranzas ya están decididas como software aparte del que Careonys se sirve**, así que esto no decide si salen, sino dónde corren cuando CeltaTech las desarrolle. También decide si con eso se cierran sin construir los adaptadores de pasarela.
+**55. Usted** — ¿Dónde corre un módulo y contra qué base? Hoy `Modulos\` está vacía. **Facturación y créditos y cobranzas ya están decididas como software aparte del que Careonys se sirve**, así que esto no decide si salen, sino dónde corren el día que existan. También decide si con eso se cierran sin construir los adaptadores de pasarela.
 
 **56.** Sacar la facturación y la cobranza a un módulo, cuando haya dónde correrlo.
 

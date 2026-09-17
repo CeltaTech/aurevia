@@ -122,8 +122,8 @@ eso es información que a la Prestadora le conviene tener a la vista para trabaj
 es el trabajo: no emite comprobantes, no calcula impuestos, no reclama, no gestiona la mora y no
 decide ninguna restricción.
 
-**Y tiene que poder con las tres situaciones**, que las elige cada Prestadora: con el software que
-CeltaTech desarrolle para eso, con el de otro, o **con ninguno conectado**. Con ninguno, Careonys
+**Y tiene que poder con las dos situaciones**, que las elige cada Prestadora: con un software de
+facturación conectado, o **con ninguno conectado**. Con ninguno, Careonys
 sigue funcionando con lo que él mismo registra. **Conectado, Careonys no calcula: muestra lo que
 recibe, tal como lo recibe.** No lo recalcula, no lo completa con lo suyo y no lo compara contra
 nada. Un número que llega de afuera y otro calculado acá son dos verdades para lo mismo, y eso es

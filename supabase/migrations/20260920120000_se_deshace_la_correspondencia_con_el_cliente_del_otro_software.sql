@@ -1,4 +1,4 @@
--- Se deshace el apareo con el cliente del otro software.
+-- Se deshace la correspondencia con el cliente del otro software.
 -- ==========================================================================
 --
 -- POR QUÉ. Las dos tablas que esta migración borra nacieron de un paso que nadie pidió: lo

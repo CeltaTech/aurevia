@@ -1,4 +1,4 @@
--- Cada Familia se aparea con el cliente que el otro software tiene cargado.
+-- Cada Familia se corresponde con el cliente que el otro software tiene cargado.
 -- =====================================================================
 --
 -- QUE FALTABA. El padron de clientes no se duplica: se parte. Careonys es dueno de quien es el
@@ -7,7 +7,7 @@
 -- pide y no lo manda. Lo que une las dos mitades es una referencia, y esa referencia no existia.
 --
 -- Sin ella, la conexion directa no puede decir de que cliente esta hablando, y una Prestadora que
--- ya tenia sus clientes cargados antes de empezar no tiene forma de apareados con sus Familias.
+-- ya tenia sus clientes cargados antes de empezar no tiene forma de hacerlos corresponder con sus Familias.
 --
 -- QUE SE GUARDA, Y QUE NO. Se guarda como identifica el otro software a ese cliente, y nada mas.
 -- No entra el numero fiscal, ni bajo que condicion esta inscripto, ni que comprobante le
@@ -60,7 +60,7 @@ REVOKE ALL ON TABLE public.catalogo_conexiones_externas FROM authenticated;
 GRANT SELECT ON TABLE public.catalogo_conexiones_externas TO authenticated;
 
 -- ---------------------------------------------------------------------------
--- 2. El apareo
+-- 2. La correspondencia
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.clientes_externos_de_familias (
@@ -104,7 +104,7 @@ REVOKE ALL ON TABLE public.clientes_externos_de_familias FROM anon;
 REVOKE ALL ON TABLE public.clientes_externos_de_familias FROM authenticated;
 GRANT SELECT ON TABLE public.clientes_externos_de_familias TO authenticated;
 
--- La Prestadora de la fila sale de la Familia, no de quien escribe: asi un apareo no puede caer en
+-- La Prestadora de la fila sale de la Familia, no de quien escribe: asi una correspondencia no puede caer en
 -- otra Prestadora ni por error ni a proposito. Calcada de la del estado de cuenta.
 CREATE OR REPLACE FUNCTION interno.prestadora_del_cliente_externo()
 RETURNS trigger
@@ -116,7 +116,7 @@ DECLARE
 BEGIN
   SELECT prestadora_id INTO v_prestadora FROM public.familias WHERE id = NEW.familia_id;
   IF v_prestadora IS NULL THEN
-    RAISE EXCEPTION 'La Familia del apareo no existe';
+    RAISE EXCEPTION 'La Familia de la correspondencia no existe';
   END IF;
   NEW.prestadora_id := v_prestadora;
   NEW.updated_at := now();
@@ -133,7 +133,7 @@ CREATE TRIGGER trg_prestadora_del_cliente_externo
   BEFORE INSERT OR UPDATE ON public.clientes_externos_de_familias
   FOR EACH ROW EXECUTE FUNCTION interno.prestadora_del_cliente_externo();
 
--- El apareo decide a quien se le va a reclamar lo de cada Familia: toda mano que lo escriba queda
+-- La correspondencia decide a quien se le va a reclamar lo de cada Familia: toda mano que lo escriba queda
 -- registrada, igual que en los cobros y en el estado de cuenta.
 DROP TRIGGER IF EXISTS trg_auditoria_soporte ON public.clientes_externos_de_familias;
 CREATE TRIGGER trg_auditoria_soporte
@@ -157,7 +157,7 @@ BEGIN
      WHERE schemaname = 'public' AND tablename = 'clientes_externos_de_familias'
        AND policyname = 'panel_lee_clientes_externos_de_familias'
   ) THEN
-    v_faltan := v_faltan || ' la politica de lectura del apareo;';
+    v_faltan := v_faltan || ' la politica de lectura de la correspondencia;';
   END IF;
 
   IF NOT EXISTS (
@@ -177,7 +177,7 @@ BEGIN
   END IF;
 
   IF v_faltan <> '' THEN
-    RAISE EXCEPTION 'La migracion del apareo con el cliente de afuera no quedo completa:%', v_faltan;
+    RAISE EXCEPTION 'La migracion de la correspondencia con el cliente de afuera no quedo completa:%', v_faltan;
   END IF;
 END;
 $comprobacion$;

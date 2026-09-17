@@ -93,8 +93,3 @@ comprobante corresponde viven del otro lado, que es donde se factura.
    una es elegir a ciegas entre cinco y acertar con suerte.
 3. **Si esa Prestadora usa un software que avisa solo lo que emitió** —como TusFacturasAPP—, la
    mitad de vuelta es todavía menos trabajo, porque la parte que anota ya está hecha.
-
-**Y una posibilidad que no hay que perder de vista:** CeltaTech tiene en carpeta desarrollar su
-propio software de facturación. Si eso ocurre, esa conexión es una pieza más de esta misma lista, y
-la única diferencia es que las dos puntas serían de la misma casa. **No incide en este desarrollo**,
-y esta estructura lo admite sin obra mayor.

@@ -18,6 +18,7 @@ import { responderError } from '../utils/errorConMotivo.js';
 import { APROBADAS, filasDeIncorporacion } from '../utils/etapasDeIncorporacion.js';
 import { RESULTADO_PENDIENTE } from '../utils/referenciasLaborales.js';
 import { coordenadasDeDomicilio } from '../geocodificacion/index.js';
+import { nombreDelLugar } from '../utils/catalogoDeLugares.js';
 import { reenviarActivacionCuenta } from '../utils/activacionCuenta.js';
 import { requierePermiso, permisosEfectivos } from '../utils/permisos.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
@@ -110,6 +111,12 @@ panelCuentasRouter.post('/familia', requiereRolPanel, exigirOrganizacionActiva, 
 
   const prestadoraId = req.usuarioPanel.prestadoraId;
 
+  // El lugar que quien atendió señaló en la lista, si lo señaló. Es lo que hace que la Familia
+  // recién creada se pueda encontrar por su localidad: el texto de la solicitud lo escribió quien
+  // llamó y no es ninguna de las fichas de la Prestadora. Va filtrado por Prestadora, como
+  // cualquier lectura de un lugar, para que un identificador ajeno no conteste nada.
+  const nombreDeSuLugar = await nombreDelLugar(solicitud.lugar_id, prestadoraId);
+
   // La solicitud trae una localidad y no una dirección con altura, así que casi siempre esto
   // vuelve sin coordenadas — y está bien: lo que se guarda en `pacientes.domicilio` es ese
   // texto, y lo que se manda a ubicar es exactamente lo que se guarda. El día que la solicitud
@@ -117,7 +124,7 @@ panelCuentasRouter.post('/familia', requiereRolPanel, exigirOrganizacionActiva, 
   const ubicacion = await coordenadasDeDomicilio({
     prestadoraId,
     direccion: solicitud.localidad,
-    localidad: solicitud.localidad,
+    localidad: nombreDeSuLugar || solicitud.localidad,
   });
 
   let familiaId;
@@ -142,6 +149,7 @@ panelCuentasRouter.post('/familia', requiereRolPanel, exigirOrganizacionActiva, 
         familia_id: familiaId,
         nombre: solicitud.nombre_paciente || solicitud.nombre,
         domicilio: solicitud.localidad,
+        lugar_id: solicitud.lugar_id || null,
         ...ubicacion,
         prestadora_id: prestadoraId,
       })

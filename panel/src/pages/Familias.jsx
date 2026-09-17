@@ -6,6 +6,8 @@ import { usePermisos } from '../context/PermisosContext';
 import { esAdminOSuperior } from '../lib/roles';
 import { supabase } from '../lib/supabaseClient';
 import { useFiltros } from '../hooks/useFiltros';
+import { useCatalogoDeLugares } from '../hooks/useCatalogoDeLugares';
+import { familiasConSuLocalidad, filtrarFamilias, localidadesConFamilias } from '../lib/familiasPorLocalidad';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
 import { NuevaFamiliaModal } from './familias/NuevaFamiliaModal';
@@ -21,15 +23,18 @@ export function Familias() {
   const [filas, setFilas] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
-  const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '' });
+  const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '', lugar: '' });
   const [mostrarNueva, setMostrarNueva] = useState(false);
+  // Los nombres de las localidades salen del catálogo y no de la ficha del Paciente: lo guardado
+  // es cuál lugar, y corregir una vez cómo se llama lo corrige en todas las fichas que lo nombran.
+  const catalogo = useCatalogoDeLugares();
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
     const { data, error: errorConsulta } = await supabase
       .from('familias')
-      .select('id, created_at, solicitudes!familias_solicitud_id_fkey(nombre, telefono, email, localidad), pacientes(id)')
+      .select('id, created_at, solicitudes!familias_solicitud_id_fkey(nombre, telefono, email, localidad), pacientes(id, lugar_id, deleted_at)')
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
@@ -47,18 +52,20 @@ export function Familias() {
     recargar();
   }, [recargar]);
 
-  const filasFiltradas = useMemo(() => {
-    // La fila se llama `fam` porque `f` ya es el objeto de filtros de la pantalla.
-    return filas.filter((fam) => {
-      if (!f.busqueda) return true;
-      const b = f.busqueda.toLowerCase();
-      return (
-        fam.solicitudes?.nombre?.toLowerCase().includes(b) ||
-        fam.solicitudes?.email?.toLowerCase().includes(b) ||
-        fam.solicitudes?.telefono?.toLowerCase().includes(b)
-      );
-    });
-  }, [filas, f]);
+  const nombreDeLugar = useMemo(() => {
+    const porId = new Map((catalogo.lugares ?? []).map((lugar) => [lugar.id, lugar.nombre]));
+    return (id) => porId.get(id) ?? '';
+  }, [catalogo.lugares]);
+
+  // Qué Familia está dónde, qué queda después de los filtros y qué localidades vale la pena
+  // ofrecer sale de `lib/familiasPorLocalidad.js`, que es el punto único de verdad. Acá sólo se
+  // dibuja.
+  const familias = useMemo(() => familiasConSuLocalidad(filas, nombreDeLugar), [filas, nombreDeLugar]);
+  const filasFiltradas = useMemo(() => filtrarFamilias(familias, f), [familias, f]);
+  const lugaresConFamilias = useMemo(
+    () => localidadesConFamilias(familias, catalogo.lugares),
+    [familias, catalogo.lugares],
+  );
 
   return (
     <div>
@@ -72,7 +79,15 @@ export function Familias() {
           value={f.busqueda}
           onChange={(e) => set('busqueda', e.target.value)}
         />
-        {puedeAltaManual && <Button onClick={() => setMostrarNueva(true)}>{t.familias.nueva.titulo}</Button>}
+        {lugaresConFamilias.length > 1 && (
+          <select value={f.lugar} onChange={(e) => set('lugar', e.target.value)} aria-label={t.familias.col_localidad}>
+            <option value="">{t.familias.filtro_localidad_todas}</option>
+            {lugaresConFamilias.map((lugar) => (
+              <option key={lugar.id} value={lugar.id}>{lugar.nombre}</option>
+            ))}
+          </select>
+        )}
+        {puedeAltaManual &&<Button onClick={() => setMostrarNueva(true)}>{t.familias.nueva.titulo}</Button>}
       </div>
 
       {mostrarNueva && (
@@ -105,9 +120,14 @@ export function Familias() {
               <div className="lista-tarjeta-header">
                 <div>
                   <p className="lista-tarjeta-titulo">{fam.solicitudes?.nombre || '—'}</p>
-                  <p className="lista-tarjeta-subtitulo">{fam.solicitudes?.localidad || '—'}</p>
+                  {/* Lo que se muestra son las localidades de sus Pacientes. Mientras no haya
+                      ninguna elegida queda lo que dijo quien llamó, que es lo único que se sabe
+                      de esa Familia hasta que alguien señale el lugar en la lista. */}
+                  <p className="lista-tarjeta-subtitulo">
+                    {fam.nombresDeLugares.join(', ') || fam.solicitudes?.localidad || '—'}
+                  </p>
                 </div>
-                <span className="badge">{t.familias.col_pacientes}: {fam.pacientes?.length ?? 0}</span>
+                <span className="badge">{t.familias.col_pacientes}: {fam.cuantosPacientes}</span>
               </div>
               <div className="lista-tarjeta-meta">
                 <span><strong>{t.familias.col_telefono}:</strong> {fam.solicitudes?.telefono || '—'}</span>

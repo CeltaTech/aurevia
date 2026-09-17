@@ -10,6 +10,8 @@ import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
+import { useCatalogoDeLugares } from '../hooks/useCatalogoDeLugares';
+import { ElegirUnLugar } from '../components/lugares/ElegirUnLugar';
 import { AsistentesSugeridos } from './solicitudes/AsistentesSugeridos';
 import { NuevaGuardiaModal } from './guardias/NuevaGuardiaModal';
 
@@ -24,6 +26,11 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
   const confirmarDestructivo = useConfirmarDestructivo();
   const [nuevoEstado, setNuevoEstado] = useState(solicitud.estado || 'nueva');
   const [nota, setNota] = useState(solicitud.nota_interna || '');
+  // Qué lugar de la lista es el que dijo quien llamó. Son dos cosas distintas y por eso se guardan
+  // aparte: `localidad` es lo que se escuchó, y esto es lo que se entendió. Sin esto, la Familia
+  // que nazca de esta Solicitud arranca sin localidad y no la encuentra ninguna búsqueda.
+  const [lugar, setLugar] = useState(solicitud.lugar_id || '');
+  const catalogo = useCatalogoDeLugares();
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
   const [convirtiendo, setConvirtiendo] = useState(false);
@@ -95,7 +102,7 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
 
     const { error: errorUpdate } = await supabase
       .from('solicitudes')
-      .update({ estado: nuevoEstado, nota_interna: nota })
+      .update({ estado: nuevoEstado, nota_interna: nota, lugar_id: lugar || null })
       .eq('id', solicitud.id);
 
     if (errorUpdate) {
@@ -135,6 +142,20 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
           <dt>{t.solicitudes.descripcion}</dt>
           <dd>{solicitud.descripcion || '—'}</dd>
         </dl>
+
+        {/* Es una lista y nunca texto libre: la localidad ya tiene ficha en la Prestadora y lo que
+            queda guardado es cuál, no cómo se llama. El texto de arriba no se pisa, porque es lo
+            que dijo quien llamó y puede no coincidir con ninguna ficha. */}
+        <ElegirUnLugar
+          lugares={catalogo.lugares}
+          zonas={catalogo.zonas}
+          estado={catalogo.estado}
+          valor={lugar}
+          onChange={(elegido) => setLugar(elegido || '')}
+          label={t.solicitudes.lugar_reconocido}
+          name="lugar_reconocido"
+          deshabilitado={guardando}
+        />
 
         <FormField label={t.solicitudes.col_estado} name="estado" type="select" value={nuevoEstado} onChange={(e) => setNuevoEstado(e.target.value)}>
           {ESTADOS.map((estado) => (

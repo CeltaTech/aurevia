@@ -592,6 +592,10 @@ export async function crearFamiliaDirecta({
         email,
         nombre_paciente: nombrePaciente,
         localidad: localidad || '',
+        // El lugar elegido para el Paciente también queda anotado en la Solicitud, que es de donde
+        // sale el contacto de la Familia. Si no quedara, dos filas que nacen juntas dirían cosas
+        // distintas sobre dónde está la persona.
+        lugar_id: partes.lugar_id || null,
         canal: 'alta_manual',
         estado: 'asignada',
         tipo_servicio: 'Cuidado domiciliario',

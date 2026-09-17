@@ -95,6 +95,11 @@ export const GRUPOS = [
     copias: ['backend/src/utils/facturacionDeFamilias.js'],
   },
   {
+    que: 'qué datos salen hacia el software de facturación y cuáles vuelven de él',
+    original: 'panel/src/lib/intercambioDeFacturacion.js',
+    copias: ['backend/src/utils/intercambioDeFacturacion.js'],
+  },
+  {
     que: 'cuánto se le paga a un Asistente por un mes',
     original: 'panel/src/lib/calcularLiquidacion.js',
     copias: ['backend/src/utils/calcularLiquidacion.js'],

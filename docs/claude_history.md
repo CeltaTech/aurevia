@@ -431,3 +431,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** nada. La factura tenía el lugar para guardar a quién se le reclama, pero no había de dónde sacarlo.
 - **Qué dice ahora:** que el dato vive en la ficha de la Familia —vacío quiere decir la Familia— y que cada factura se lo lleva escrito el día que se genera.
 - **Motivo:** una factura emitida no cambia. Si se mirara la ficha, el día que esa Familia pasara a pagar por sí misma las facturas viejas dejarían de decir a quién se le reclamaron, y el pasado cambiaría solo.
+
+### La conexión con el software de facturación deja de ser la única forma prevista
+
+- **Qué decía antes:** que el paso siguiente era elegir un software de facturación y escribirle una conexión directa, y que hasta entonces lo emitido se anotaba a mano factura por factura.
+- **Qué dice ahora:** que hay tres formas y las tres mueven los mismos datos —a mano, por archivo que se baja y se sube, y por conexión directa—; que las dos primeras ya están hechas y alcanzan para salir a producción; y que qué sale y qué vuelve está escrito una sola vez, así la tercera entra por la misma puerta el día que haya un nombre. La conexión directa se parte en dos: Careonys llamando al software de facturación necesita una pieza por software, y el software avisando a Careonys es una sola puerta firmada para todos.
+- **Motivo:** el Desarrollador planteó que las conexiones no se pueden prever todas y que las únicas genéricas son la carga manual y el intercambio de archivos. Escribir una pieza a medida para un software que todavía no se sabe cuál es sería inventar; en cambio el archivo no depende de ningún nombre, y el molde interior hace que agregar el primero no obligue a rehacer nada.

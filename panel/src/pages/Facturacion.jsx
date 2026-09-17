@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
 import { useConfirmarDestructivo } from '../context/TenantSessionContext';
@@ -13,6 +13,11 @@ import {
   loQueEstaMalEnLaCorreccion,
   loQueEstaMalEnLoFacturado,
 } from '../lib/facturacionDeFamilias';
+import {
+  COLUMNAS_QUE_VUELVEN,
+  armarArchivo,
+  leerArchivo,
+} from '../lib/intercambioDeFacturacion';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { FormField } from '../components/ui/FormField';
@@ -56,6 +61,18 @@ import { useModalAccesible } from '../hooks/useModalAccesible';
    comprobante por la diferencia y acá se anota como corrección, con su sentido, su monto y su
    motivo. El producto no interpreta cómo se llama ese comprobante: eso cambia de país en país.
 
+   Y ESO MISMO SE PUEDE HACER DE A MUCHAS, CON UN ARCHIVO. Anotar factura por factura sirve
+   cuando son pocas; con cien por mes no sirve. Por eso hay dos botones más: uno baja un archivo
+   con todo lo que falta facturar del período, para dárselo al software de facturación, y el otro
+   sube el archivo que ese software devuelve con lo que emitió. Lo que se anota es lo mismo que
+   se anota a mano, por la misma puerta: la única diferencia es cuántas van juntas. Qué columnas
+   lleva cada archivo está escrito una sola vez en `lib/intercambioDeFacturacion.js`, y sus
+   títulos no se traducen, porque son la forma que el otro software tiene que leer y escribir.
+
+   UNA FACTURA QUE YA TIENE COMPROBANTE NO SE PISA. Al subir el archivo se cuenta aparte y se
+   avisa. Así volver a subir el mismo archivo no hace daño, y se respeta que lo emitido no
+   cambia: lo que salió mal se arregla con una corrección, que tiene su propio camino.
+
    LO QUE NO HACE. No decide nada: que una Familia deba plata no corta ningún Servicio. La
    pantalla avisa; lo demás lo resuelve una persona. */
 
@@ -89,6 +106,20 @@ function soloLaFecha(momento) {
   return momento ? String(momento).slice(0, 10) : '—';
 }
 
+/* Deja un texto en la carpeta de descargas de quien está mirando. Se hace acá y no en
+   `intercambioDeFacturacion.js` porque ese archivo también corre en el motor, donde no hay
+   navegador. */
+function bajarComoArchivo(nombre, texto) {
+  const direccion = URL.createObjectURL(new Blob([texto], { type: 'text/csv;charset=utf-8' }));
+  const enlace = document.createElement('a');
+  enlace.href = direccion;
+  enlace.download = nombre;
+  document.body.appendChild(enlace);
+  enlace.click();
+  document.body.removeChild(enlace);
+  URL.revokeObjectURL(direccion);
+}
+
 export function Facturacion() {
   const { t, locale } = useLocale();
   const confirmarDestructivo = useConfirmarDestructivo();
@@ -106,6 +137,14 @@ export function Facturacion() {
   const [generando, setGenerando] = useState(false);
   const [avisoGeneracion, setAvisoGeneracion] = useState(null);
   const [detalleId, setDetalleId] = useState(null);
+  // El ida y vuelta por archivo. El campo de archivo va escondido y lo abre el botón, para que
+  // los tres botones de la fila se vean iguales.
+  const [intercambiando, setIntercambiando] = useState(false);
+  const [avisoIntercambio, setAvisoIntercambio] = useState(null);
+  // Qué renglones del archivo no se pudieron anotar y por qué. Se muestran con el número de
+  // renglón del archivo, para que quien lo subió los encuentre sin contar.
+  const [rechazos, setRechazos] = useState([]);
+  const campoDeArchivo = useRef(null);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -157,6 +196,79 @@ export function Facturacion() {
       setError(mensajeDeError(e, t, 'generación de facturas'));
     } finally {
       setGenerando(false);
+    }
+  }
+
+  /* Baja lo que falta facturar del período, en un archivo que abre cualquier planilla de cálculo.
+     Va lo que todavía no tiene comprobante anotado: si una factura ya se facturó, no tiene por
+     qué volver a salir. */
+  async function handleBajarParaFacturar() {
+    setIntercambiando(true);
+    setAvisoIntercambio(null);
+    setError(null);
+
+    try {
+      const filas = await llamarApiCobros(`/para-facturar?periodo=${mes}`);
+      if (filas.length === 0) {
+        setAvisoIntercambio(t.facturacion.exportar_vacio);
+        return;
+      }
+      bajarComoArchivo(`para-facturar-${mes}.csv`, armarArchivo(filas));
+      setAvisoIntercambio(t.facturacion.exportar_listo.replace('{cantidad}', filas.length));
+    } catch (e) {
+      setError(mensajeDeError(e, t, 'archivo para facturar'));
+    } finally {
+      setIntercambiando(false);
+    }
+  }
+
+  /* Sube el archivo que devolvió el software de facturación. El archivo se lee acá y al motor le
+     van las filas ya separadas; quién se guarda y quién se rechaza lo decide el motor, que es el
+     único que puede comprobar que cada factura sea de esta Prestadora. */
+  async function handleSubirFacturado(evento) {
+    const archivo = evento.target.files?.[0];
+    evento.target.value = '';
+    if (!archivo) return;
+
+    setIntercambiando(true);
+    setAvisoIntercambio(null);
+    setRechazos([]);
+    setError(null);
+
+    try {
+      const { columnas, filas } = leerArchivo(await archivo.text());
+      const faltan = COLUMNAS_QUE_VUELVEN.filter(
+        (c) => c !== 'fecha_vencimiento' && !columnas.includes(c)
+      );
+      if (faltan.length > 0) {
+        setError(t.facturacion.importar_faltan_columnas.replace('{columnas}', faltan.join(', ')));
+        return;
+      }
+      if (filas.length === 0) {
+        setError(t.facturacion.importar_sin_filas);
+        return;
+      }
+
+      const resultado = await llamarApiCobros('/facturado/importar', {
+        method: 'POST',
+        body: JSON.stringify({ filas }),
+      });
+      setAvisoIntercambio(
+        t.facturacion.resultado_importacion
+          .replace('{anotadas}', resultado.anotadas)
+          .replace('{yaFacturadas}', resultado.ya_facturadas)
+          .replace('{rechazadas}', resultado.rechazadas)
+      );
+      setRechazos(
+        (resultado.resultados || [])
+          .filter((r) => r.resultado === 'rechazado')
+          .map((r) => ({ renglon: r.indice + 2, motivo: r.motivo }))
+      );
+      recargar();
+    } catch (e) {
+      setError(mensajeDeError(e, t, 'importación de lo facturado'));
+    } finally {
+      setIntercambiando(false);
     }
   }
 
@@ -222,7 +334,41 @@ export function Facturacion() {
         <Button onClick={handleGenerar} disabled={generando}>
           {generando ? t.facturacion.generando : t.facturacion.generar}
         </Button>
+        <Button variant="secondary" onClick={handleBajarParaFacturar} disabled={intercambiando}>
+          {t.facturacion.exportar}
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={() => campoDeArchivo.current?.click()}
+          disabled={intercambiando}
+        >
+          {t.facturacion.importar}
+        </Button>
+        <input
+          ref={campoDeArchivo}
+          type="file"
+          accept=".csv,.txt,text/csv,text/plain"
+          onChange={handleSubirFacturado}
+          style={{ display: 'none' }}
+        />
       </div>
+
+      <p className="panel-explicacion">{t.facturacion.intercambio_explicacion}</p>
+
+      {avisoIntercambio && <Alert variant="info">{avisoIntercambio}</Alert>}
+
+      {rechazos.length > 0 && (
+        <Alert variant="error">
+          <strong>{t.facturacion.importar_rechazos_titulo}.</strong>{' '}
+          {rechazos
+            .map((r) =>
+              t.facturacion.importar_rechazo
+                .replace('{renglon}', r.renglon)
+                .replace('{motivo}', traducirValor(t.facturacion, `motivo_${r.motivo}`))
+            )
+            .join(' ')}
+        </Alert>
+      )}
 
       <EstadoLista
         estado={estado}

@@ -255,6 +255,18 @@ avisado se muestra y no decide nada**: quien decide es una persona. La puerta es
 `scripts/probar_aviso_de_cobranza.mjs`. El interruptor también se consulta desde la pantalla de
 saldos con `GET /api/cobros/configuracion`, que devuelve el interruptor y nunca el secreto.
 
+**El ida y vuelta con el software de facturación se puede hacer de tres maneras, y las tres mueven
+los mismos datos.** A mano, factura por factura, que es lo que había. Por archivo: desde la
+pantalla de Facturación se baja uno con todo lo que falta facturar del período —`GET
+/api/panel/cobros/para-facturar`—, se le entrega al software de facturación y se sube el que ese
+software devuelve —`POST /api/panel/cobros/facturado/importar`—, que anota de una vez qué comprobante
+salió por cada factura. Y por conexión directa, que todavía no está escrita. Qué columnas van y
+qué columnas vuelven está en un solo lugar, `panel/src/lib/intercambioDeFacturacion.js`, con copia
+generada en el motor; **sus títulos no se traducen**, porque son la forma que el otro software
+tiene que leer y escribir, y traducirlos daría un archivo distinto por idioma. Al subir, una
+factura que ya tiene comprobante anotado no se pisa: se cuenta aparte y se avisa, así volver a
+subir el mismo archivo no hace daño. Se leen hasta 500 filas por vez.
+
 **A quién se le reclama no es siempre la Familia.** Puede ser una obra social o un tercero, y eso
 vive en la ficha de la Familia (`financiador_tipo`, `financiador_nombre`); vacío quiere decir la
 Familia, que es lo corriente. Cada factura se lleva ese dato **copiado el día que se genera**,

@@ -12,11 +12,19 @@
 ## El dinero
 
 **1. Usted** — Con cuál de los softwares de facturación se conecta Careonys primero: el que usen
-hoy las Prestadoras.
+hoy las Prestadoras. **No traba nada más que el paso 2.** Las otras dos formas de trabajar ya
+están hechas y alcanzan para salir a producción: se anota factura por factura a mano, o se baja
+un archivo con todo lo que falta facturar, se le entrega al software de facturación y se sube el
+que ese software devuelve. Qué datos van y vienen está escrito en un solo lugar
+(`panel/src/lib/intercambioDeFacturacion.js`), así que la conexión directa entra por la misma
+puerta el día que haya un nombre.
 
 **2.** Escribir esa conexión, para que Careonys le pida la factura sola y guarde lo que conteste.
 **Cada software se maneja distinto, así que cada conexión es una pieza aparte**, y agregar la
-segunda no puede obligar a tocar la primera ni nada de lo construido antes.
+segunda no puede obligar a tocar la primera ni nada de lo construido antes. El camino de vuelta
+—que sea el software de facturación el que avise a Careonys— no necesita una pieza por software:
+es una sola puerta firmada, del mismo molde que la de los avisos de cobranza
+(`backend/src/pasarelas/firmaWebhook.js`).
 
 **3. Usted** — El ciclo de cobranza a obras sociales: hoy sólo existen validado y anulado. ¿Qué estados hacen falta — presentación, débito, conciliación?
 

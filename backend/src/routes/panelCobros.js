@@ -15,6 +15,12 @@ import {
   sigueLaCobranza,
   vencimientoDe,
 } from '../utils/facturacionDeFamilias.js';
+import {
+  TOPE_DE_FILAS,
+  esIdentificador,
+  loFacturadoDeLaFila,
+  queHacerConLaFilaFacturada,
+} from '../utils/intercambioDeFacturacion.js';
 import { armarLosRenglonesDeLaFactura } from '../utils/facturaDelPeriodo.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
@@ -495,6 +501,142 @@ panelCobrosRouter.put('/facturas/:facturaId/facturado', requiereRolPanel, async 
 
   res.json({ saldo });
 });
+
+// ---------------------------------------------------------------------------------------
+// El ida y vuelta con el software de facturación, por archivo
+// ---------------------------------------------------------------------------------------
+
+/**
+ * Lo que hay para facturar de un período: una fila por factura que todavía no tiene comprobante.
+ *
+ * POR QUÉ POR ARCHIVO. Cada software de facturación se conecta de una manera distinta, y una
+ * conexión sólo se puede escribir con el manual de ese software delante. El archivo, en cambio,
+ * lo lee y lo escribe cualquiera, así que esta vía sirve para todas las Prestadoras desde el
+ * primer día y no queda vieja cuando alguna conecte el suyo: los datos que van y vienen son los
+ * mismos, y están escritos una sola vez en `utils/intercambioDeFacturacion.js`.
+ *
+ * ACÁ SALEN LAS FILAS, NO EL ARCHIVO. Quien lo pide es el Panel, que lo arma con ese mismo
+ * archivo compartido y lo baja. Así el motor no tiene que saber nada de planillas de cálculo.
+ *
+ * UNA FACTURA YA FACTURADA NO SALE. Lo que se manda a facturar es lo que todavía no se facturó;
+ * volver a mandar lo emitido llevaría a emitirlo dos veces.
+ */
+panelCobrosRouter.get('/para-facturar', requiereRolPanel, async (req, res) => {
+  const periodo = primerDiaDelPeriodo(req.query.periodo);
+  if (!periodo) return res.status(400).json({ error: 'Falta el período, en formato AAAA-MM' });
+
+  const { data, error } = await supabase
+    .from('saldos_familia')
+    .select('*')
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .eq('periodo', periodo)
+    .is('facturado_at', null)
+    .order('fecha_emision', { ascending: true });
+  if (error) return responderError(res, error);
+
+  let nombres;
+  try {
+    nombres = await nombresDeFamilias(req.usuarioPanel.prestadoraId, (data || []).map((s) => s.familia_id));
+  } catch (e) {
+    return responderError(res, e);
+  }
+
+  res.json((data || []).map((s) => ({
+    factura_id: s.factura_id,
+    familia: nombres.get(s.familia_id) ?? '',
+    financiador_tipo: s.financiador_tipo ?? '',
+    financiador_nombre: s.financiador_nombre ?? '',
+    periodo: String(s.periodo).slice(0, 7),
+    moneda: s.moneda,
+    monto_a_facturar: s.monto_total,
+    fecha_vencimiento: s.fecha_vencimiento ?? '',
+  })));
+});
+
+/**
+ * Lo que el software de facturación emitió, llegado de a muchos.
+ *
+ * Es la misma puerta que la de anotar a mano, abierta para un lote: por cada fila se guardan los
+ * tres datos de siempre. Contesta una por una qué pasó, porque quien sube un archivo necesita
+ * saber exactamente cuál renglón no entró para corregir ese y no volver a subir todo.
+ *
+ * LO YA FACTURADO NO SE PISA. Si esa factura ya tiene comprobante anotado se contesta que ya
+ * estaba y no se toca nada: una factura emitida no cambia, y si lo emitido salió mal la salida
+ * es una corrección, que tiene su propia puerta. Volver a subir el mismo archivo, entonces, no
+ * hace ningún daño.
+ *
+ * LAS FILAS LLEGAN TAL COMO SALIERON DEL ARCHIVO, y la traducción a lo que guarda la base la hace
+ * el archivo compartido. Así el día que un software empuje estos mismos datos por una conexión
+ * directa, entra por acá sin pasar por ninguna pantalla.
+ */
+panelCobrosRouter.post('/facturado/importar', requiereRolPanel, async (req, res) => {
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+  const filas = req.body?.filas;
+
+  if (!Array.isArray(filas) || filas.length === 0) {
+    return res.status(400).json({ error: 'El archivo no trae ninguna fila' });
+  }
+  if (filas.length > TOPE_DE_FILAS) {
+    return res.status(400).json({ error: `Se leen hasta ${TOPE_DE_FILAS} filas por vez` });
+  }
+
+  const resultados = [];
+  const yaVistas = new Set();
+
+  for (let i = 0; i < filas.length; i += 1) {
+    const facturado = loFacturadoDeLaFila(filas[i] || {});
+    const renglon = { indice: i, factura_id: facturado.factura_id || null };
+
+    // La factura se busca antes de decidir, y sólo si vale la pena preguntar. Quién es de quién
+    // lo resuelve esta consulta: una factura de otra Prestadora no aparece, y entonces el renglón
+    // se rechaza igual que uno que no existe.
+    const yaVista = yaVistas.has(facturado.factura_id);
+    let factura = null;
+    if (!yaVista && esIdentificador(facturado.factura_id)) {
+      const { data, error: errorFactura } = await supabase
+        .from('facturas_familia')
+        .select('id, facturado_at')
+        .eq('id', facturado.factura_id)
+        .eq('prestadora_id', prestadoraId)
+        .maybeSingle();
+      if (errorFactura) return responderError(res, errorFactura);
+      factura = data;
+    }
+
+    const decision = queHacerConLaFilaFacturada(facturado, { yaVista, factura });
+    if (decision.resultado !== 'anotado') {
+      resultados.push({ ...renglon, ...decision });
+      continue;
+    }
+
+    const cambios = {
+      monto_facturado: aDosDecimales(facturado.monto_facturado),
+      comprobante_tipo: facturado.comprobante_tipo,
+      comprobante_numero: facturado.comprobante_numero,
+      facturado_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    if (facturado.fecha_vencimiento) cambios.fecha_vencimiento = facturado.fecha_vencimiento;
+
+    const { error } = await supabase
+      .from('facturas_familia')
+      .update(cambios)
+      .eq('id', factura.id)
+      .eq('prestadora_id', prestadoraId);
+    if (error) return responderError(res, error, 400);
+
+    yaVistas.add(facturado.factura_id);
+    resultados.push({ ...renglon, resultado: 'anotado' });
+  }
+
+  res.json({
+    anotadas: resultados.filter((r) => r.resultado === 'anotado').length,
+    ya_facturadas: resultados.filter((r) => r.resultado === 'ya_facturada').length,
+    rechazadas: resultados.filter((r) => r.resultado === 'rechazado').length,
+    resultados,
+  });
+});
+
 
 // ---------------------------------------------------------------------------------------
 // Las correcciones de una factura ya emitida

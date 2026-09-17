@@ -36,6 +36,9 @@ export function FacturacionFamiliasTab() {
   const [avisoConectado, setAvisoConectado] = useState(false);
   const [secreto, setSecreto] = useState('');
   const [guardandoSecreto, setGuardandoSecreto] = useState(false);
+  const [facturacionConectada, setFacturacionConectada] = useState(false);
+  const [secretoDeFacturacion, setSecretoDeFacturacion] = useState('');
+  const [guardandoSecretoDeFacturacion, setGuardandoSecretoDeFacturacion] = useState(false);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
@@ -49,6 +52,7 @@ export function FacturacionFamiliasTab() {
       setDias(configuracion.dias_hasta_el_vencimiento === null ? '' : String(configuracion.dias_hasta_el_vencimiento));
       setSigue(configuracion.sigue_la_cobranza !== false);
       setAvisoConectado(!!configuracion.aviso_de_restriccion_conectado);
+      setFacturacionConectada(!!configuracion.aviso_de_facturacion_conectado);
       setPrestadoraId(configuracion.prestadora_id ?? null);
       setEstado('listo');
     } catch (err) {
@@ -105,6 +109,25 @@ export function FacturacionFamiliasTab() {
     }
   }
 
+  // El secreto con el que firma el software de facturación. Es otro, y no el de arriba: el que
+  // factura y el que sigue la cobranza pueden ser de dos proveedores que no se conocen.
+  async function guardarSecretoDeFacturacion() {
+    setGuardandoSecretoDeFacturacion(true);
+    setError(null);
+    try {
+      await llamarApi('/facturacion-familias/secreto-del-aviso-de-facturacion', {
+        method: 'PUT',
+        body: JSON.stringify({ secreto: secretoDeFacturacion }),
+      });
+      setSecretoDeFacturacion('');
+      setFacturacionConectada(true);
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setGuardandoSecretoDeFacturacion(false);
+    }
+  }
+
   return (
     <div>
       <h2>{t.configuracion.facturacion_familias_titulo}</h2>
@@ -141,6 +164,46 @@ export function FacturacionFamiliasTab() {
           <Button onClick={guardar} disabled={guardando || !revisado.ok}>
             {guardando ? t.comun.guardando : t.comun.guardar}
           </Button>
+
+          {/* Que el software de facturación avise solo lo que emitió. Se ofrece siempre, sin
+              importar quién sigue la cobranza: son dos decisiones distintas, y facturar lo hace
+              siempre alguien de afuera. Mientras no haya secreto cargado, no entra ningún aviso,
+              y se sigue anotando a mano o con el archivo. */}
+          <section>
+            <h3>{t.configuracion.facturacion_aviso_titulo}</h3>
+            <p className="panel-explicacion">{t.configuracion.facturacion_aviso_explicacion}</p>
+            {prestadoraId && (
+              <FormField
+                label={t.configuracion.facturacion_aviso_direccion}
+                name="direccion_del_aviso_de_facturacion"
+                value={`${import.meta.env.VITE_API_URL}/api/avisos-de-facturacion/${prestadoraId}`}
+                readOnly
+                ayuda={t.configuracion.facturacion_aviso_direccion_ayuda}
+              />
+            )}
+            <Alert variant="info">
+              {facturacionConectada
+                ? t.configuracion.facturacion_aviso_conectado
+                : t.configuracion.facturacion_aviso_sin_conectar}
+            </Alert>
+            <FormField
+              label={t.configuracion.facturacion_aviso_secreto}
+              name="secreto_del_aviso_de_facturacion"
+              type="password"
+              value={secretoDeFacturacion}
+              ayuda={t.configuracion.facturacion_aviso_secreto_ayuda}
+              onChange={(e) => setSecretoDeFacturacion(e.target.value)}
+            />
+            <Button
+              onClick={guardarSecretoDeFacturacion}
+              disabled={
+                guardandoSecretoDeFacturacion ||
+                secretoDeFacturacion.trim().length < LARGO_MINIMO_DEL_SECRETO_DEL_AVISO
+              }
+            >
+              {guardandoSecretoDeFacturacion ? t.comun.guardando : t.comun.guardar}
+            </Button>
+          </section>
 
           {!sigue && (
             <section>

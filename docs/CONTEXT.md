@@ -260,12 +260,20 @@ los mismos datos.** A mano, factura por factura, que es lo que había. Por archi
 pantalla de Facturación se baja uno con todo lo que falta facturar del período —`GET
 /api/panel/cobros/para-facturar`—, se le entrega al software de facturación y se sube el que ese
 software devuelve —`POST /api/panel/cobros/facturado/importar`—, que anota de una vez qué comprobante
-salió por cada factura. Y por conexión directa, que todavía no está escrita. Qué columnas van y
+salió por cada factura. Y por conexión directa, que tiene dos mitades: **Careonys llamando al
+software de facturación exige una pieza por software y no está escrita**, porque no se puede
+escribir sin el manual de uno concreto; **el software de facturación llamando a Careonys sí está,
+y es una sola puerta para todos**: `POST /api/avisos-de-facturacion/:prestadoraId`, firmada con un
+secreto propio —distinto del de cobranzas, porque pueden ser dos proveedores que no se conocen—
+que la Prestadora carga desde Configuración y que vive en la caja fuerte de la base. Sin secreto
+cargado no entra ningún aviso. Acepta una factura o varias, y contesta renglón por renglón qué
+pasó con cada una. Qué columnas van y
 qué columnas vuelven está en un solo lugar, `panel/src/lib/intercambioDeFacturacion.js`, con copia
 generada en el motor; **sus títulos no se traducen**, porque son la forma que el otro software
 tiene que leer y escribir, y traducirlos daría un archivo distinto por idioma. Al subir, una
 factura que ya tiene comprobante anotado no se pisa: se cuenta aparte y se avisa, así volver a
-subir el mismo archivo no hace daño. Se leen hasta 500 filas por vez.
+subir el mismo archivo —o repetir un aviso— no hace daño. Se leen hasta 500 filas por vez. Las tres
+maneras escriben en la factura por el mismo lugar, `backend/src/utils/anotarLoFacturado.js`.
 
 **A quién se le reclama no es siempre la Familia.** Puede ser una obra social o un tercero, y eso
 vive en la ficha de la Familia (`financiador_tipo`, `financiador_nombre`); vacío quiere decir la

@@ -66,6 +66,7 @@ import { panelComprobacionesRouter } from './routes/panelComprobaciones.js';
 import { panelAvisosEnVivoRouter } from './routes/panelAvisosEnVivo.js';
 import { webhooksPasarelasRouter } from './routes/webhooksPasarelas.js';
 import { avisoDeCobranzaExternaRouter } from './routes/avisoDeCobranzaExterna.js';
+import { avisoDeFacturacionExternaRouter } from './routes/avisoDeFacturacionExterna.js';
 import { revisarAlertasIA } from './utils/revisarAlertasIA.js';
 import { revisarAvisosAutomaticosCese } from './utils/avisoAutomaticoCese.js';
 import { responderError } from './utils/errorConMotivo.js';
@@ -83,6 +84,7 @@ app.use(cors());
 app.use('/api/webhooks/pasarelas', webhooksPasarelasRouter);
 app.use('/api/whatsapp-webhook', whatsappWebhookRouter);
 app.use('/api/avisos-de-cobranza', avisoDeCobranzaExternaRouter);
+app.use('/api/avisos-de-facturacion', avisoDeFacturacionExternaRouter);
 
 app.use(express.json());
 

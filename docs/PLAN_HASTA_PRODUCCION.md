@@ -19,12 +19,13 @@ que ese software devuelve. Qué datos van y vienen está escrito en un solo luga
 (`panel/src/lib/intercambioDeFacturacion.js`), así que la conexión directa entra por la misma
 puerta el día que haya un nombre.
 
-**2.** Escribir esa conexión, para que Careonys le pida la factura sola y guarde lo que conteste.
-**Cada software se maneja distinto, así que cada conexión es una pieza aparte**, y agregar la
-segunda no puede obligar a tocar la primera ni nada de lo construido antes. El camino de vuelta
-—que sea el software de facturación el que avise a Careonys— no necesita una pieza por software:
-es una sola puerta firmada, del mismo molde que la de los avisos de cobranza
-(`backend/src/pasarelas/firmaWebhook.js`).
+**2.** Escribir esa conexión, para que Careonys le pida la factura sola a ese software. **Cada
+software se maneja distinto, así que cada conexión es una pieza aparte**, y agregar la segunda no
+puede obligar a tocar la primera ni nada de lo construido antes. Falta sólo esa mitad: el camino
+de vuelta ya está hecho y sirve para cualquier software —`POST
+/api/avisos-de-facturacion/:prestadoraId`, firmada con un secreto que la Prestadora carga en
+Configuración—, así que un software que pueda avisar solo lo que emitió ya se conecta hoy, sin
+esperar a nada.
 
 **3. Usted** — El ciclo de cobranza a obras sociales: hoy sólo existen validado y anulado. ¿Qué estados hacen falta — presentación, débito, conciliación?
 

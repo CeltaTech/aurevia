@@ -784,7 +784,7 @@ panelConfiguracionRouter.put('/pago-asistentes', async (req, res) => {
 panelConfiguracionRouter.get('/facturacion-familias', async (req, res) => {
   const { data, error } = await supabase
     .from('configuracion_facturacion_familias')
-    .select('regla, secreto_del_aviso_secret_id')
+    .select('regla, secreto_del_aviso_secret_id, secreto_del_aviso_de_facturacion_secret_id')
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
   if (error) return responderError(res, error);
@@ -797,6 +797,9 @@ panelConfiguracionRouter.get('/facturacion-familias', async (req, res) => {
       // a la caja fuerte: al navegador no le sirve para nada y sí sirve para terminar en un
       // registro donde no tendría que estar.
       aviso_de_restriccion_conectado: !!data?.secreto_del_aviso_secret_id,
+      // Lo mismo para el secreto con el que firma el software de facturación, que es otro: son dos
+      // software distintos y pueden ser de dos proveedores que no se conocen.
+      aviso_de_facturacion_conectado: !!data?.secreto_del_aviso_de_facturacion_secret_id,
       // Para que la pantalla pueda mostrar a qué dirección tiene que mandar sus avisos el otro
       // software. No es un secreto: sin el secreto de firma, conocerla no sirve de nada.
       prestadora_id: req.usuarioPanel.prestadoraId,
@@ -854,6 +857,36 @@ panelConfiguracionRouter.put(
     }
 
     const { error } = await supabase.rpc('guardar_secreto_del_aviso_de_cobranza', {
+      p_prestadora_id: req.usuarioPanel.prestadoraId,
+      p_secreto: secreto,
+    });
+    if (error) return responderError(res, error);
+    res.json({ ok: true });
+  }
+);
+
+// El secreto con el que el software de facturación firma lo que emitió.
+//
+// Es otro secreto, y no el mismo de arriba a propósito: el que factura y el que sigue la cobranza
+// pueden ser dos software de dos proveedores que no se conocen, y compartir el secreto haría que
+// rotar el de uno rompiera el del otro.
+//
+// Se cierra igual que aquél: lo carga Admin, no se muestra nunca más, y para cambiarlo se escribe
+// uno nuevo que reemplaza al anterior.
+const soloAdminParaElSecretoDeFacturacion = exigirAdminDePrestadora(
+  'El secreto del aviso de facturacion es de la Prestadora: solo Admin puede cambiarlo'
+);
+
+panelConfiguracionRouter.put(
+  '/facturacion-familias/secreto-del-aviso-de-facturacion',
+  soloAdminParaElSecretoDeFacturacion,
+  async (req, res) => {
+    const secreto = String(req.body?.secreto ?? '').trim();
+    if (secreto.length < LARGO_MINIMO_DEL_SECRETO_DEL_AVISO) {
+      return res.status(400).json({ error: 'El secreto es demasiado corto' });
+    }
+
+    const { error } = await supabase.rpc('guardar_secreto_del_aviso_de_facturacion', {
       p_prestadora_id: req.usuarioPanel.prestadoraId,
       p_secreto: secreto,
     });

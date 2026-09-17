@@ -21,6 +21,7 @@ import {
   loFacturadoDeLaFila,
   queHacerConLaFilaFacturada,
 } from '../utils/intercambioDeFacturacion.js';
+import { anotarLoFacturado, facturaParaAnotar } from '../utils/anotarLoFacturado.js';
 import { armarLosRenglonesDeLaFactura } from '../utils/facturaDelPeriodo.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
@@ -474,22 +475,10 @@ panelCobrosRouter.put('/facturas/:facturaId/facturado', requiereRolPanel, async 
   }
   if (!factura) return res.status(404).json({ error: 'Factura no encontrada' });
 
-  const cambios = {
-    monto_facturado: aDosDecimales(cuerpo.monto_facturado),
-    comprobante_tipo: String(cuerpo.comprobante_tipo).trim(),
-    comprobante_numero: String(cuerpo.comprobante_numero ?? '').trim() || null,
-    facturado_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-  // El vencimiento lo informa quien emitió, y si no lo informa queda el que ya tenía: acordado
-  // con esa Familia y calculado al generar.
-  if (cuerpo.fecha_vencimiento) cambios.fecha_vencimiento = String(cuerpo.fecha_vencimiento).slice(0, 10);
-
-  const { error } = await supabase
-    .from('facturas_familia')
-    .update(cambios)
-    .eq('id', factura.id)
-    .eq('prestadora_id', prestadoraId);
+  // Qué columnas quedan escritas —y que el vencimiento sólo se pise si quien emitió informa uno—
+  // está en `utils/anotarLoFacturado.js`, que es por donde escriben también el archivo y el aviso
+  // del software de facturación.
+  const { error } = await anotarLoFacturado(prestadoraId, factura.id, cuerpo);
   if (error) return responderError(res, error, 400);
 
   let saldo;
@@ -593,12 +582,7 @@ panelCobrosRouter.post('/facturado/importar', requiereRolPanel, async (req, res)
     const yaVista = yaVistas.has(facturado.factura_id);
     let factura = null;
     if (!yaVista && esIdentificador(facturado.factura_id)) {
-      const { data, error: errorFactura } = await supabase
-        .from('facturas_familia')
-        .select('id, facturado_at')
-        .eq('id', facturado.factura_id)
-        .eq('prestadora_id', prestadoraId)
-        .maybeSingle();
+      const { data, error: errorFactura } = await facturaParaAnotar(prestadoraId, facturado.factura_id);
       if (errorFactura) return responderError(res, errorFactura);
       factura = data;
     }
@@ -609,20 +593,7 @@ panelCobrosRouter.post('/facturado/importar', requiereRolPanel, async (req, res)
       continue;
     }
 
-    const cambios = {
-      monto_facturado: aDosDecimales(facturado.monto_facturado),
-      comprobante_tipo: facturado.comprobante_tipo,
-      comprobante_numero: facturado.comprobante_numero,
-      facturado_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    if (facturado.fecha_vencimiento) cambios.fecha_vencimiento = facturado.fecha_vencimiento;
-
-    const { error } = await supabase
-      .from('facturas_familia')
-      .update(cambios)
-      .eq('id', factura.id)
-      .eq('prestadora_id', prestadoraId);
+    const { error } = await anotarLoFacturado(prestadoraId, factura.id, facturado);
     if (error) return responderError(res, error, 400);
 
     yaVistas.add(facturado.factura_id);

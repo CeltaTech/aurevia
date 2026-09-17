@@ -119,6 +119,13 @@ const ES = {
     texto: `Guardia del ${d.fecha} a las ${d.horaInicio}. El Asistente avisó una emergencia. El detalle está en el Panel.`,
   }),
 
+  // Lo mismo: lo que escribió no entra acá. Y el texto no pide nada ni sugiere qué hacer — quien
+  // decide es quien coordina.
+  no_puede_continuar_la_extension: (d) => ({
+    asunto: 'El Asistente que espera el relevo no puede continuar',
+    texto: `Guardia del ${d.fecha} de ${d.horaInicio} a ${d.horaFin}. Terminó y el relevo no llegó. El Asistente sigue en el domicilio y avisó que no puede continuar. El detalle está en el Panel.`,
+  }),
+
   incidente_relevo_sin_resolver: (d) => ({
     asunto: 'Incidente de continuidad de guardia sin resolver',
     texto: `Guardia ${d.guardiaId}, nivel de escalada actual: ${d.nivel}. Sin resolver hace ${Math.round(d.minutos)} minutos.`,
@@ -408,6 +415,11 @@ const EN = {
     texto: `Shift on ${d.fecha} at ${d.horaInicio}. The care worker reported an emergency. The details are in the Panel.`,
   }),
 
+  no_puede_continuar_la_extension: (d) => ({
+    asunto: 'The care worker waiting for the handover cannot continue',
+    texto: `Shift on ${d.fecha} from ${d.horaInicio} to ${d.horaFin}. It ended and no one arrived. The care worker is still at the home and reported being unable to continue. The details are in the Panel.`,
+  }),
+
   incidente_relevo_sin_resolver: (d) => ({
     asunto: 'Shift handover incident unresolved',
     texto: `Shift ${d.guardiaId}, current escalation level: ${d.nivel}. Unresolved for ${Math.round(d.minutos)} minutes.`,
@@ -681,6 +693,11 @@ const PT = {
   emergencia_en_guardia: (d) => ({
     asunto: 'Emergência avisada a partir de um plantão',
     texto: `Plantão de ${d.fecha} às ${d.horaInicio}. O Assistente avisou uma emergência. O detalhe está no Painel.`,
+  }),
+
+  no_puede_continuar_la_extension: (d) => ({
+    asunto: 'O Assistente que espera o rendimento não pode continuar',
+    texto: `Plantão de ${d.fecha} das ${d.horaInicio} às ${d.horaFin}. Terminou e ninguém chegou. O Assistente continua no domicílio e avisou que não pode continuar. O detalhe está no Painel.`,
   }),
 
   incidente_relevo_sin_resolver: (d) => ({

@@ -17,6 +17,7 @@ import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
 import { visibilidadDelPedido, exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
 import { tipoConSusTareas } from '../utils/tareasDelTipo.js';
+import { estadoDeLaExtension } from '../utils/estadoDeLaExtension.js';
 import { carpetaDelAsistente, estadoDelCertificado } from '../utils/carpetaDelAsistente.js';
 import { guardarSuscripcionPush } from '../utils/suscripcionesPush.js';
 import {
@@ -447,10 +448,19 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
     .is('fin_at', null)
     .maybeSingle();
 
+  // Si su turno ya terminó y el relevo no llegó, ella sigue adentro. La pantalla tiene que
+  // decírselo, mostrarle cómo va la búsqueda y darle por dónde avisar que no puede continuar.
+  // Viene en blanco en la enorme mayoría de los turnos, que es lo normal.
+  const extension = await estadoDeLaExtension({
+    guardiaId: data.id,
+    prestadoraId: req.usuarioAsistente.prestadoraId,
+  });
+
   res.json({
     guardia,
     tipo,
     tareas,
+    extension,
     descansoAbierto: descansoAbierto ?? null,
     pacientesConReporte: conReporte,
     // Se sigue mandando para las versiones de la aplicación que todavía no saben de la lista:
@@ -869,6 +879,102 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
   }
 
   res.json({ ok: true, reportadoAt });
+});
+
+/* «No puedo continuar»: el botón de la que se quedó de más.
+   --------------------------------------------------------------------------
+   Aparece solamente cuando su turno ya terminó y ella sigue adentro porque el relevo no llegó.
+
+   NO LA LIBERA, Y ESO NO ES UN DESCUIDO. Irse deja al Paciente solo, y eso la expone a ella: el
+   producto no puede ofrecerle un botón que la meta en un problema. Lo que hace este botón es
+   decirle a quien coordina, con la máxima urgencia, que la persona que está tapando el agujero ya
+   no da más. De ahí en adelante decide quien coordina, que es quien puede ir, mandar a alguien o
+   hablar con la familia.
+
+   SIN ESTE BOTÓN, UNA EMERGENCIA PROPIA DE ELLA LA DEJA SIN NADA QUE APRETAR. El botón de
+   emergencia de la guardia deja de estar cuando la guardia terminó, y justo en el rato de más es
+   cuando más falta hace.
+
+   SE PUEDE APRETAR UNA SOLA VEZ POR EXTENSIÓN. Repetirlo no agrega ninguna información —quien
+   coordina ya está enterado— y multiplicaría avisos iguales, que terminan en un filtro del correo.
+
+   LO QUE ESCRIBIÓ NO SALE HACIA AFUERA. El aviso dice que pasó y de qué turno; el texto se lee
+   entrando al Panel (`celtatech/CLAUDE.md` §6). Y el detalle es opcional: quien está en el medio
+   de algo puede no estar en condiciones de escribir nada. */
+appAsistentesRouter.post('/guardias/:id/no-puedo-continuar', requiereRolAsistente, async (req, res) => {
+  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  if (!guardia) {
+    return res.status(404).json({ error: 'Guardia no encontrada' });
+  }
+
+  const { data: extension, error: errorExtension } = await supabase
+    .from('extensiones_de_turno')
+    .select('id, no_puede_continuar_at')
+    .eq('guardia_id', guardia.id)
+    .eq('prestadora_id', guardia.prestadora_id)
+    .is('hasta_at', null)
+    .maybeSingle();
+
+  if (errorExtension) {
+    return responderError(res, errorExtension);
+  }
+  // Sin extensión abierta no hay nada que avisar: su turno está corriendo y para eso está el botón
+  // de emergencia, que sí está a mano en esa pantalla.
+  if (!extension) {
+    return responderError(res, new ErrorConMotivo('no_encontrado', 'no hay extension abierta'));
+  }
+  if (extension.no_puede_continuar_at) {
+    return res.json({ ok: true, avisadoAt: extension.no_puede_continuar_at });
+  }
+
+  const detalle = typeof req.body?.detalle === 'string' ? req.body.detalle.trim() : '';
+
+  // Cuándo pasó, no cuándo se pudo enviar, con el mismo criterio que el aviso de emergencia: un
+  // aviso que estuvo media hora en la cola sin conexión guardado con la hora de la sincronización
+  // contaría mal lo que pasó. Se acepta sólo hacia atrás: una hora futura es un reloj mal puesto.
+  const delTelefono = Date.parse(req.body?.ocurrido_at ?? '');
+  const ahora = Date.now();
+  const avisadoAt = new Date(Number.isNaN(delTelefono) || delTelefono > ahora ? ahora : delTelefono).toISOString();
+
+  const { error } = await supabase
+    .from('extensiones_de_turno')
+    .update({
+      no_puede_continuar_at: avisadoAt,
+      // Un tope, para que un teléfono con un problema no escriba un texto sin fin. Se recorta y se
+      // guarda igual: un aviso así no se pierde porque alguien escribió de más.
+      no_puede_continuar_detalle: detalle ? detalle.slice(0, 2000) : null,
+    })
+    .eq('id', extension.id)
+    .eq('prestadora_id', guardia.prestadora_id);
+
+  if (error) {
+    return responderError(res, error);
+  }
+
+  // Se guarda primero y se avisa después, adentro de un `try`. Si el envío falla, la fila queda con
+  // `ultima_notificacion_at` en blanco y nunca se le devuelve un error a quien avisó: su acto ya
+  // está guardado, que es lo que la protege.
+  try {
+    const idioma = await idiomaDeLaPrestadora(guardia.prestadora_id);
+    await notificarCoordinador({
+      evento: 'no_puede_continuar_la_extension',
+      prestadoraId: guardia.prestadora_id,
+      ...aviso('no_puede_continuar_la_extension', idioma, {
+        fecha: guardia.fecha,
+        horaInicio: guardia.hora_inicio,
+        horaFin: guardia.hora_fin,
+      }),
+    });
+    await supabase
+      .from('extensiones_de_turno')
+      .update({ ultima_notificacion_at: new Date().toISOString(), veces_notificado: 1 })
+      .eq('id', extension.id)
+      .eq('prestadora_id', guardia.prestadora_id);
+  } catch (e) {
+    console.error('Error avisando al Coordinador de que no puede continuar la extension:', e.message);
+  }
+
+  res.json({ ok: true, avisadoAt });
 });
 
 /* El descanso adentro de la guardia.

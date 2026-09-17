@@ -55,6 +55,9 @@ export const api = {
   // porque si el aviso queda en la cola sin conexión lo que importa es esa hora y no la de la
   // sincronización.
   avisarEmergencia: (id, datos) => pedido(`/guardias/${id}/emergencia`, { method: 'POST', body: JSON.stringify(datos) }),
+  // El «no puedo continuar» de quien se quedó esperando el relevo. No la libera del turno: avisa
+  // con la máxima urgencia. Manda el momento por lo mismo que la emergencia.
+  noPuedeContinuar: (id, datos) => pedido(`/guardias/${id}/no-puedo-continuar`, { method: 'POST', body: JSON.stringify(datos) }),
   // El descanso adentro de una guardia larga. No cierra nada ni descuenta nada: deja constancia.
   empezarDescanso: (id, datos) => pedido(`/guardias/${id}/descanso/empezar`, { method: 'POST', body: JSON.stringify(datos) }),
   terminarDescanso: (id, datos) => pedido(`/guardias/${id}/descanso/terminar`, { method: 'POST', body: JSON.stringify(datos) }),

@@ -42,6 +42,8 @@ export async function sincronizarCola() {
           await api.avisarDemora(item.guardiaId, item.payload);
         } else if (item.tipo === 'emergencia') {
           await api.avisarEmergencia(item.guardiaId, item.payload);
+        } else if (item.tipo === 'no_puede_continuar') {
+          await api.noPuedeContinuar(item.guardiaId, item.payload);
         } else if (item.tipo === 'descanso_empezar') {
           await api.empezarDescanso(item.guardiaId, item.payload);
         } else if (item.tipo === 'descanso_terminar') {

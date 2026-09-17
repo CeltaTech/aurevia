@@ -308,6 +308,30 @@ export const T = {
       reportada: 'Aviso enviado a las {hora}. La Prestadora ya lo tiene.',
       sin_conexion: 'Sin conexión: el aviso quedó guardado en el teléfono y todavía no lo recibió nadie. Se envía solo cuando vuelva la señal. Mientras tanto, avise por otro medio.',
     },
+    // El rato de más: terminó el turno y el relevo no llegó. Los pasos de la búsqueda se cuentan
+    // sin ningún nombre, a propósito: lo que se contesta acá es «¿me están dejando sola?», y para
+    // eso no hace falta decir quién faltó.
+    extension: {
+      titulo: 'El relevo todavía no llegó',
+      desde: 'Su turno terminó a las {hora}. Desde esa hora queda registrado que sigue en el domicilio.',
+      sigue_a_cargo: 'Le pedimos que permanezca hasta que llegue el relevo: dejar sola a la persona cuidada la expone a usted. Estas horas de más quedan registradas.',
+      busqueda: 'Cómo va la búsqueda del relevo:',
+      pasos: {
+        coordinacion_avisada: 'La Prestadora ya está avisada.',
+        escalado: 'El aviso se amplió a más responsables de la Prestadora.',
+        turno_ofrecido: 'El turno ya se ofreció para que alguien lo tome.',
+        relevo_asignado: 'Hay un relevo asignado y todavía no marcó su llegada.',
+        sin_novedades: 'Sin novedades por ahora.',
+      },
+      boton: 'No puedo continuar',
+      explicacion: 'Esto le llega a la Prestadora con la máxima urgencia. No la libera del turno: sirve para que sepan que necesita que la releven ya.',
+      detalle: '¿Qué le está pasando? (opcional)',
+      detalle_placeholder: 'Si puede, escriba por qué no puede continuar.',
+      confirmar: 'Enviar el aviso',
+      enviando: 'Enviando el aviso…',
+      avisado: 'Aviso enviado a las {hora}. La Prestadora ya lo tiene.',
+      sin_conexion: 'Sin conexión: el aviso quedó guardado en el teléfono y todavía no lo recibió nadie. Se envía solo cuando vuelva la señal. Mientras tanto, avise por otro medio.',
+    },
     // El descanso adentro de una guardia larga. El texto dice con todas las letras que esto no es
     // una falta: sin esa frase, nadie aprieta el botón y el dato no existe.
     descanso: {
@@ -814,6 +838,27 @@ export const T = {
       reportada: 'Notice sent at {hora}. The Provider already has it.',
       sin_conexion: 'No connection: the notice is saved on the phone and nobody has received it yet. It will be sent on its own once the signal is back. In the meantime, report it by another means.',
     },
+    extension: {
+      titulo: 'The relief has not arrived yet',
+      desde: 'Your shift ended at {hora}. From that time on it is recorded that you are still at the home.',
+      sigue_a_cargo: 'Please stay until the relief arrives: leaving the person being cared for alone exposes you. These extra hours are recorded.',
+      busqueda: 'How the search for a relief is going:',
+      pasos: {
+        coordinacion_avisada: 'The Provider has already been notified.',
+        escalado: 'The notice was extended to more people in charge at the Provider.',
+        turno_ofrecido: 'The shift has already been offered for someone to take.',
+        relevo_asignado: 'A relief has been assigned and has not checked in yet.',
+        sin_novedades: 'No news so far.',
+      },
+      boton: 'I cannot continue',
+      explicacion: 'This reaches the Provider with the highest urgency. It does not release you from the shift: it lets them know you need to be relieved now.',
+      detalle: 'What is happening to you? (optional)',
+      detalle_placeholder: 'If you can, write why you cannot continue.',
+      confirmar: 'Send the notice',
+      enviando: 'Sending the notice…',
+      avisado: 'Notice sent at {hora}. The Provider already has it.',
+      sin_conexion: 'No connection: the notice is saved on the phone and nobody has received it yet. It will be sent on its own once the signal is back. In the meantime, report it by another means.',
+    },
     descanso: {
       boton_empezar: 'Start a rest period',
       boton_terminar: 'Rest period finished',
@@ -1284,6 +1329,27 @@ export const T = {
       confirmar: 'Enviar o aviso',
       enviando: 'Enviando o aviso…',
       reportada: 'Aviso enviado às {hora}. A Prestadora já o tem.',
+      sin_conexion: 'Sem conexão: o aviso ficou salvo no telefone e ninguém o recebeu ainda. É enviado sozinho quando o sinal voltar. Enquanto isso, avise por outro meio.',
+    },
+    extension: {
+      titulo: 'A rendição ainda não chegou',
+      desde: 'Seu plantão terminou às {hora}. A partir dessa hora fica registrado que continua no domicílio.',
+      sigue_a_cargo: 'Pedimos que permaneça até a rendição chegar: deixar sozinha a pessoa cuidada expõe você. Estas horas a mais ficam registradas.',
+      busqueda: 'Como vai a busca pela rendição:',
+      pasos: {
+        coordinacion_avisada: 'A Prestadora já foi avisada.',
+        escalado: 'O aviso foi ampliado a mais responsáveis da Prestadora.',
+        turno_ofrecido: 'O plantão já foi oferecido para que alguém o assuma.',
+        relevo_asignado: 'Há uma rendição designada e ainda não marcou a chegada.',
+        sin_novedades: 'Sem novidades por enquanto.',
+      },
+      boton: 'Não posso continuar',
+      explicacion: 'Isto chega à Prestadora com a máxima urgência. Não a libera do plantão: serve para que saibam que precisa ser rendida já.',
+      detalle: 'O que está acontecendo? (opcional)',
+      detalle_placeholder: 'Se puder, escreva por que não pode continuar.',
+      confirmar: 'Enviar o aviso',
+      enviando: 'Enviando o aviso…',
+      avisado: 'Aviso enviado às {hora}. A Prestadora já o tem.',
       sin_conexion: 'Sem conexão: o aviso ficou salvo no telefone e ninguém o recebeu ainda. É enviado sozinho quando o sinal voltar. Enquanto isso, avise por outro meio.',
     },
     descanso: {

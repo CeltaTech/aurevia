@@ -447,6 +447,10 @@ async function probarElMotor({ motor }, sesiones, piezas) {
       `SELECT md5(t::text) FROM public.guardias t WHERE id = '${piezas.guardiaA}';`],
     ['asistente B', 'avisar demora en una guardia de A', 'POST', `/api/app-asistentes/guardias/${piezas.guardiaA}/aviso-demora`, sesiones.asistenteB, { motivo: 'transporte' },
       `SELECT count(*) FROM public.alertas_tempranas_guardia WHERE guardia_id = '${piezas.guardiaA}';`],
+    // La que se quedó de más avisa que no puede continuar sobre el identificador de su guardia:
+    // misma puerta otra vez. Se mira contra la tabla donde escribe, que es la extensión.
+    ['asistente B', 'avisar que no puede continuar en una guardia de A', 'POST', `/api/app-asistentes/guardias/${piezas.guardiaA}/no-puedo-continuar`, sesiones.asistenteB, { detalle: 'INTRUSO' },
+      `SELECT count(*) FROM public.extensiones_de_turno WHERE guardia_id = '${piezas.guardiaA}';`],
     // Y la dirección contraria, porque el aislamiento no es simétrico por sí solo.
     ['familia A', 'ver un paciente de B',         'GET',    `/api/app-familias/pacientes/${piezas.pacienteB}`,           sesiones.familiaA],
     ['asistente A', 'ver una guardia de B',       'GET',    `/api/app-asistentes/guardias/${piezas.guardiaB}`,           sesiones.asistenteA],

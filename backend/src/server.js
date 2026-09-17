@@ -45,6 +45,7 @@ import { revisarGuardiasSinCubrir } from './utils/revisarGuardiasSinCubrir.js';
 import { revisarAusenciasAvisadas } from './utils/revisarAusenciasAvisadas.js';
 import { revisarIncidentesTurnoSinCubrir } from './utils/revisarIncidentesTurnoSinCubrir.js';
 import { revisarLlegadasDemoradas } from './utils/revisarLlegadasDemoradas.js';
+import { revisarExtensionesDeTurno } from './utils/revisarExtensionesDeTurno.js';
 import { armarCobrosDelPeriodo } from './utils/cobrosMarketplace.js';
 import { cortarLosAccesosDadosDeBaja } from './utils/corteDelAcceso.js';
 import { avisarElPrimerCobroQueViene } from './utils/avisoPrevioAlCobro.js';
@@ -254,6 +255,15 @@ setInterval(() => {
 revisarLlegadasDemoradas().catch((err) => console.error('Error en revisión inicial de llegadas demoradas:', err.message));
 setInterval(() => {
   revisarLlegadasDemoradas().catch((err) => console.error('Error en revisión de llegadas demoradas:', err.message));
+}, CINCO_MINUTOS_MS);
+
+// La Asistente que se queda adentro porque el relevo no llegó. Sólo anota desde cuándo está de
+// más y hasta cuándo: no avisa nada —de que falta el relevo ya se enteró quien coordina— y no
+// decide nada. Corre seguido porque lo que mira son minutos, y porque su pantalla necesita saber
+// que quedó de más apenas pasa la hora.
+revisarExtensionesDeTurno().catch((err) => console.error('Error en revisión inicial de extensiones de turno:', err.message));
+setInterval(() => {
+  revisarExtensionesDeTurno().catch((err) => console.error('Error en revisión de extensiones de turno:', err.message));
 }, CINCO_MINUTOS_MS);
 
 // El cobro de cada período de los accesos del Marketplace, en los rieles que no cobran solos. El

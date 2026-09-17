@@ -7,12 +7,14 @@ import { sincronizarCola, suscribirseASincronizacion } from '../lib/sincronizarC
 import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
 import { nombreTipo } from '../lib/tipoDeAsistente';
+import { finDeGuardia } from '../lib/horarios';
 import { obtenerUbicacion } from '../lib/ubicacionDelTelefono';
 import { useSeVe } from '../context/PerfilContext';
 import AntesDeLlegar from '../components/AntesDeLlegar';
 import DomicilioTemporal from '../components/DomicilioTemporal';
 import EmergenciaEnGuardia from '../components/EmergenciaEnGuardia';
 import DescansoEnGuardia from '../components/DescansoEnGuardia';
+import ExtensionDeTurno from '../components/ExtensionDeTurno';
 import EnlaceAlMapa from '../components/EnlaceAlMapa';
 import PaseDeGuardia from '../components/PaseDeGuardia';
 import CodigoDePresencia from '../components/CodigoDePresencia';
@@ -231,13 +233,18 @@ export default function GuardiaActiva() {
   // El descanso que quedó abierto, si hay uno. Es lo que hace que la pantalla ofrezca terminarlo
   // en vez de empezar otro cuando esta persona vuelve a abrir la aplicación al otro día.
   const [descansoAbierto, setDescansoAbierto] = useState(null);
+  // El rato que esta persona quedó de más porque el relevo no llegó. Es `null` en la enorme
+  // mayoría de los turnos, y cuando viene algo es lo único que le contesta la pregunta de en qué
+  // anda la búsqueda de quien la reemplace.
+  const [extension, setExtension] = useState(null);
 
   function cargar() {
     api
       .guardia(id)
-      .then(({ guardia: data, pacientesConReporte, tipo: elTipo, tareas: lasTareas, descansoAbierto: elDescanso }) => {
+      .then(({ guardia: data, pacientesConReporte, tipo: elTipo, tareas: lasTareas, descansoAbierto: elDescanso, extension: laExtension }) => {
         setGuardia(data);
         setDescansoAbierto(elDescanso ?? null);
+        setExtension(laExtension ?? null);
         setConReporte(pacientesConReporte ?? []);
         setTipo(elTipo ?? null);
         setTareas(lasTareas ?? null);
@@ -280,6 +287,19 @@ export default function GuardiaActiva() {
     const intervalo = setInterval(() => redibujar((v) => v + 1), 30000);
     return () => clearInterval(intervalo);
   }, [guardia, checkinPendiente, cerradoPendiente]);
+
+  // Pasó la hora de fin y esta persona sigue adentro. Recién ahí la pantalla vuelve a preguntar,
+  // porque es el único rato en que lo que muestra cambia sin que ella toque nada: primero para
+  // enterarse de que quedó de más, y después para ver avanzar la búsqueda del relevo. Mientras el
+  // turno corre normal no pregunta nada: sería consultar cada dos minutos, en todos los turnos,
+  // para no mostrar ninguna novedad.
+  useEffect(() => {
+    if (!guardia?.checkin_at || guardia?.checkout_at) return;
+    const intervalo = setInterval(() => {
+      if (finDeGuardia(guardia) <= new Date()) cargar();
+    }, 120000);
+    return () => clearInterval(intervalo);
+  }, [guardia]);
 
   // `comprobacion` es { codigo } o { motivoSinComprobar, detalle }, resuelto por
   // <PaseDeGuardia/>. Comprobación y ubicación van siempre juntas (decisión del Desarrollador):
@@ -599,6 +619,17 @@ export default function GuardiaActiva() {
               </div>
             </div>
           )}
+
+          {/* El rato de más, cuando terminó el turno y el relevo no llegó. Va antes que el resto
+              porque en ese momento es lo único que esta persona está esperando ver, y se dibuja
+              solo si hay una extensión abierta: en un turno que termina normal no aparece nada. */}
+          <ExtensionDeTurno
+            t={t}
+            locale={locale}
+            guardiaId={id}
+            extension={extension}
+            alAvisar={() => cargar()}
+          />
 
           {/* Lo que no admite esperar al cierre. Queda al final del bloque de la guardia en curso
               y no arriba de todo: el lugar de arriba es para lo que se hace siempre, y esto se usa

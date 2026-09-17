@@ -50,6 +50,7 @@
 //   cambio_de_asistente            → utils/avisoCambioDeAsistente.js (notificarCoordinador + push
 //                                    a la Familia), pedido por routes/panelGuardias.js
 //   emergencia_en_guardia          → routes/appAsistentes.js (notificarCoordinador)
+//   no_puede_continuar_la_extension→ routes/appAsistentes.js (notificarCoordinador)
 //   ausencia_avisada_con_tiempo    → utils/revisarAusenciasAvisadas.js (notificarCoordinador)
 //   ausencia_de_golpe              → utils/revisarAusenciasAvisadas.js (notificarCoordinador)
 // No hay ningún otro evento emitido. El vencimiento de documentos tiene un solo evento genérico,
@@ -174,6 +175,17 @@ export const CATALOGO_AVISOS = [
     admite_familia: false,
     // No se puede apagar, por lo mismo que el código del Círculo: hay una persona esperando del
     // otro lado. La configuración elige por qué canal sale y a qué dirección, nunca si sale.
+    se_puede_apagar: false,
+  },
+  {
+    evento: 'no_puede_continuar_la_extension',
+    descripcion: 'El Asistente que se quedó esperando el relevo avisó que no puede continuar',
+    admite_whatsapp: true,
+    // Tampoco por esta puerta. Acá además hay un turno que puede terminar sin nadie adentro, y esa
+    // conversación con la Familia la tiene la Prestadora, no un aviso automático.
+    admite_familia: false,
+    // Es el aviso más urgente que emite el producto: la única persona que está tapando el agujero
+    // dice que ya no da más. Nunca se apaga.
     se_puede_apagar: false,
   },
   {

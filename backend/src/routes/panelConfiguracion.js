@@ -41,6 +41,7 @@ import {
 } from '../utils/alarmasTomadas.js';
 import { darDeAltaEnMeta, traerEstadosDeMeta } from '../utils/plantillasWhatsapp.js';
 import { redactarPlantillaWhatsapp, corregirPlantillaWhatsapp } from '../utils/iaPlantillasWhatsapp.js';
+import { buscarLugares, listarProvincias } from '../geocodificacion/index.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import { direccionDeEnvioDe, esDireccionDeCorreo } from '../utils/email.js';
 import {
@@ -145,6 +146,145 @@ panelConfiguracionRouter.delete('/zonas/:id', async (req, res) => {
   const { data, error } = await query.select('id');
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró esa zona de cobertura' });
+  res.json({ ok: true });
+});
+
+// --- Los lugares donde trabaja la Prestadora ---
+//
+// La lista de localidades y barrios de la que salen después el domicilio del Paciente, el de la
+// Asistente, los lugares donde cada una acepta trabajar y qué abarca cada zona de cobertura. Es de
+// un solo nivel: un barrio se distingue de una localidad nada más que por colgar de ella.
+
+panelConfiguracionRouter.get('/lugares', async (req, res) => {
+  let query = supabase.from('lugares').select('*').order('nombre');
+  query = acotarAPrestadora(query, req.usuarioPanel);
+  const { data, error } = await query;
+  if (error) return responderError(res, error);
+  res.json({ lugares: data });
+});
+
+// Lo que sugiere el organismo oficial del país de esta Prestadora. Es para cargar la lista, no
+// para usarlo en vivo: lo que se elige acá queda guardado y de ahí en más el producto trabaja
+// contra su propia lista.
+panelConfiguracionRouter.get('/lugares/sugerencias', async (req, res) => {
+  try {
+    const lugares = await buscarLugares({
+      prestadoraId: req.usuarioPanel.prestadoraId,
+      texto: req.query.texto,
+      provincia: req.query.provincia,
+    });
+    res.json({ lugares });
+  } catch {
+    // Si el servicio del organismo no contestó se dice eso, y no una lista vacía: vacía haría
+    // creer que el lugar no existe y cargarlo a mano, duplicado. El error no se copia tal cual
+    // porque llegó de un tercero (CLAUDE.md §6).
+    res.status(502).json({ error: 'No se pudo consultar el servicio de direcciones. Vuelva a intentarlo.' });
+  }
+});
+
+panelConfiguracionRouter.get('/lugares/provincias', async (req, res) => {
+  try {
+    res.json({ provincias: await listarProvincias({ prestadoraId: req.usuarioPanel.prestadoraId }) });
+  } catch {
+    res.status(502).json({ error: 'No se pudo consultar el servicio de direcciones. Vuelva a intentarlo.' });
+  }
+});
+
+panelConfiguracionRouter.post('/lugares', async (req, res) => {
+  const { nombre, pais, provincia, municipio, id_oficial, parte_de, lat, lng } = req.body;
+  if (!String(nombre ?? '').trim() || !String(pais ?? '').trim()) {
+    return res.status(400).json({ error: 'Faltan el nombre o el país del lugar' });
+  }
+  // De dónde salió no lo dice quien llama: lo dice si trajo o no el identificador del organismo.
+  // Así nadie puede marcar como oficial algo que escribió a mano.
+  const fuente = String(id_oficial ?? '').trim() ? 'oficial' : 'propio';
+  const { data, error } = await supabase
+    .from('lugares')
+    .insert({
+      prestadora_id: req.usuarioPanel.prestadoraId,
+      nombre: String(nombre).trim(),
+      pais: String(pais).trim().toUpperCase(),
+      provincia: provincia ?? null,
+      municipio: municipio ?? null,
+      id_oficial: fuente === 'oficial' ? String(id_oficial).trim() : null,
+      fuente,
+      parte_de: parte_de ?? null,
+      lat: Number.isFinite(lat) ? lat : null,
+      lng: Number.isFinite(lng) ? lng : null,
+    })
+    .select('id')
+    .maybeSingle();
+  if (error) return responderError(res, error);
+  res.json({ ok: true, id: data?.id });
+});
+
+// Un lugar donde se dejó de trabajar se apaga y no se borra: hay fichas, domicilios y zonas que lo
+// nombran, y borrarlo dejaría a esas filas sin poder decir dónde estaban.
+panelConfiguracionRouter.patch('/lugares/:id', async (req, res) => {
+  const { nombre, activo, parte_de } = req.body;
+  const cambios = {};
+  if (nombre !== undefined) cambios.nombre = String(nombre).trim();
+  if (activo !== undefined) cambios.activo = Boolean(activo);
+  if (parte_de !== undefined) cambios.parte_de = parte_de ?? null;
+  if (!Object.keys(cambios).length) return res.status(400).json({ error: 'No hay nada para cambiar' });
+  cambios.updated_at = new Date().toISOString();
+
+  let query = supabase.from('lugares').update(cambios).eq('id', req.params.id);
+  // El nombre de un lugar oficial es el del organismo y no se edita a mano: si se pudiera, dos
+  // Prestadoras terminarían llamando distinto a la misma localidad y el identificador diría una
+  // cosa y la pantalla otra.
+  if (cambios.nombre !== undefined) query = query.eq('fuente', 'propio');
+  query = acotarAPrestadora(query, req.usuarioPanel);
+  const { data, error } = await query.select('id');
+  if (error) return responderError(res, error);
+  if (!data?.length) return res.status(404).json({ error: 'No se encontró ese lugar, o su nombre lo pone el organismo oficial' });
+  res.json({ ok: true });
+});
+
+// --- Qué lugares abarca cada zona de cobertura ---
+//
+// Agrupar es decisión de cada Prestadora: el organismo oficial sirve de referencia para sugerir,
+// nunca para imponer. Un mismo lugar puede estar en más de una zona.
+
+panelConfiguracionRouter.get('/zonas/:id/lugares', async (req, res) => {
+  let query = supabase.from('zona_lugares').select('lugar_id').eq('zona_id', req.params.id);
+  query = acotarAPrestadora(query, req.usuarioPanel);
+  const { data, error } = await query;
+  if (error) return responderError(res, error);
+  res.json({ lugares: (data ?? []).map((fila) => fila.lugar_id) });
+});
+
+panelConfiguracionRouter.put('/zonas/:id/lugares', async (req, res) => {
+  const lugares = Array.isArray(req.body?.lugares) ? req.body.lugares : null;
+  if (!lugares) return res.status(400).json({ error: 'Falta la lista de lugares' });
+
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+  // Que la zona sea de esta Organización se comprueba antes de borrar nada: sin esto, un
+  // identificador de otra Prestadora entraría al borrado y se llevaría puestos sus renglones.
+  const { data: zona, error: errorZona } = await supabase
+    .from('zonas_cobertura')
+    .select('id')
+    .eq('id', req.params.id)
+    .eq('prestadora_id', prestadoraId)
+    .maybeSingle();
+  if (errorZona) return responderError(res, errorZona);
+  if (!zona) return res.status(404).json({ error: 'No se encontró esa zona de cobertura' });
+
+  const { error: errorBorrado } = await supabase
+    .from('zona_lugares')
+    .delete()
+    .eq('zona_id', req.params.id)
+    .eq('prestadora_id', prestadoraId);
+  if (errorBorrado) return responderError(res, errorBorrado);
+
+  if (lugares.length) {
+    const { error } = await supabase.from('zona_lugares').insert(
+      lugares.map((lugarId) => ({ zona_id: req.params.id, lugar_id: lugarId, prestadora_id: prestadoraId })),
+    );
+    // Si alguno de los lugares no es de esta Organización, la clave foránea compuesta lo rechaza y
+    // no entra ninguno.
+    if (error) return responderError(res, error);
+  }
   res.json({ ok: true });
 });
 

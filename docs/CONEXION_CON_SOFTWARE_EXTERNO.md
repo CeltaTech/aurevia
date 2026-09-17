@@ -154,29 +154,58 @@ no termina cambiando lo que ya se había guardado.
 
 ---
 
-## 4. Avisar que a una Familia se le restringe el servicio
+## 4. Avisar cómo va la cobranza de una Familia
 
 Es el otro sentido: la Prestadora eligió que la cobranza la siga otro software, y ese software
-avisa cuando una Familia queda restringida por falta de pago, y cuando deja de estarlo.
+cuenta por acá cómo viene cada Familia. Dos cosas puede decir, **juntas o por separado, y por lo
+menos una**:
+
+- **Que se le restringe el servicio**, o que deja de estarlo.
+- **Cómo está su cuenta**: cuánto debe, en qué moneda y si está atrasada.
 
 ```json
 {
   "familia_id": "…",
   "restringida": true,
   "motivo": "Factura vencida hace más de 60 días",
-  "numero_del_aviso": "AV-2026-000412"
+  "numero_del_aviso": "AV-2026-000412",
+  "estado_de_cuenta": {
+    "saldo": 48500.50,
+    "moneda": "ARS",
+    "atrasado": true,
+    "dias_de_atraso": 12,
+    "vencimiento_mas_antiguo": "2026-08-10",
+    "fecha_del_estado": "2026-09-17"
+  }
 }
 ```
 
 | Dato | Obligatorio | Qué es |
 |---|---|---|
 | `familia_id` | sí | De qué Familia se trata |
-| `restringida` | sí | `true` cuando empieza la restricción, `false` cuando se levanta |
+| `restringida` | si no va `estado_de_cuenta` | `true` cuando empieza la restricción, `false` cuando se levanta |
 | `motivo` | no | Hasta 500 caracteres |
 | `numero_del_aviso` | no | El número del aviso del lado de quien lo manda. **Repetir el mismo número no anota dos veces** |
+| `estado_de_cuenta` | si no va `restringida` | Cómo está la cuenta de esa Familia |
 
-Careonys **no decide nada sobre este dato ni lo discute**: lo registra y lo muestra. Qué se hace con
-una Familia restringida lo decide la Prestadora.
+Y adentro de `estado_de_cuenta`:
+
+| Dato | Obligatorio | Qué es |
+|---|---|---|
+| `saldo` | sí | Cuánto debe. **Negativo es saldo a favor** |
+| `moneda` | sí | Código de tres letras, en mayúsculas: `ARS`, `USD`, `BRL` |
+| `atrasado` | sí | Si quien lleva la cobranza la considera atrasada |
+| `dias_de_atraso` | no | Días enteros, nunca negativo |
+| `vencimiento_mas_antiguo` | no | La fecha impaga más vieja, `AAAA-MM-DD` |
+| `fecha_del_estado` | no | De qué día es esta foto de la cuenta, `AAAA-MM-DD` |
+
+**Lo que no se informa queda vacío, y Careonys no lo completa.** No se deducen los días de atraso
+de ninguna fecha, no se suma nada y no se compara contra lo que este sistema tenga anotado: lo que
+entra se guarda y se muestra tal como llegó. Careonys **no decide nada sobre estos datos ni los
+discute**. Qué se hace con una Familia restringida o atrasada lo decide la Prestadora.
+
+**Careonys no pide ningún dato fiscal de quien paga, y no lo va a guardar.** Con qué número está
+inscripta esa persona y bajo qué condición es asunto de quien factura.
 
 ---
 

@@ -1,9 +1,14 @@
-// La puerta por la que el otro software de créditos y cobranzas avisa una restricción.
+// La puerta por la que el otro software de créditos y cobranzas avisa cómo va la cobranza.
 //
 // POR QUÉ EXISTE. Una Prestadora puede decidir que el seguimiento de la cobranza no es de este
-// sistema sino de otro software suyo. Con esa decisión tomada, lo único que este sistema necesita
-// saber es si a una Familia hay que ponerle alguna restricción por falta de pago. Esto es la
-// entrada de ese aviso, y nada más: **no entra ningún importe, ningún saldo y ninguna factura.**
+// sistema sino de otro software suyo. Con esa decisión tomada, ese software es el que sabe cómo
+// viene cada Familia, y por acá lo cuenta. Dos cosas puede decir, juntas o por separado: **si a
+// una Familia hay que ponerle alguna restricción**, y **cómo está su cuenta** —cuánto debe, en qué
+// moneda y si está atrasada—. Un aviso trae por lo menos una de las dos.
+//
+// Y NADA DE ESO SE CALCULA ACÁ. Lo que entra se anota y se muestra tal como llegó. No se completa
+// con lo que este sistema tenga anotado y no se compara contra nada: un saldo que llega de afuera
+// y otro calculado acá serían dos verdades para lo mismo.
 //
 // LO QUE ESTE AVISO NO HACE. No corta ningún Servicio, no cancela ninguna Guardia y no bloquea
 // ninguna pantalla. Se anota y se muestra. Quien decide qué hacer con una Familia que no paga es
@@ -30,7 +35,7 @@
 import express, { Router } from 'express';
 import { supabase } from '../db/connection.js';
 import { comprobarFirmaSinEsquemaPublicado } from '../pasarelas/firmaWebhook.js';
-import { loQueEstaMalEnElAviso } from '../utils/facturacionDeFamilias.js';
+import { aDosDecimales, loQueEstaMalEnElAviso } from '../utils/facturacionDeFamilias.js';
 
 export const avisoDeCobranzaExternaRouter = Router();
 
@@ -108,6 +113,11 @@ avisoDeCobranzaExternaRouter.post('/:prestadoraId', async (req, res) => {
     return res.status(400).json({ error: 'Aviso incompleto', dato: 'motivo' });
   }
 
+  // Qué trae este aviso. La comprobación de que trae por lo menos una de las dos cosas ya la hizo
+  // `loQueEstaMalEnElAviso`; acá sólo se mira cuál de las dos para saber qué anotar.
+  const traeRestriccion = cuerpo.restringida !== undefined && cuerpo.restringida !== null;
+  const traeEstado = cuerpo.estado_de_cuenta !== undefined && cuerpo.estado_de_cuenta !== null;
+
   // La Familia tiene que ser de esta Prestadora. El disparador de la base resuelve la Prestadora a
   // partir de la Familia, así que un aviso de una Familia ajena caería en la Prestadora de ella:
   // sin este control, quien tiene el secreto de una podría escribir sobre cualquier otra.
@@ -121,22 +131,48 @@ avisoDeCobranzaExternaRouter.post('/:prestadoraId', async (req, res) => {
 
   const numeroDelAviso = String(cuerpo.numero_del_aviso ?? '').trim() || null;
 
-  const { error } = await supabase.from('restricciones_de_cobranza').insert({
-    familia_id: familia.id,
-    restringida: cuerpo.restringida,
-    motivo: motivo || null,
-    origen: 'software_externo',
-    numero_del_aviso: numeroDelAviso,
-  });
-
-  if (error) {
-    // El mismo aviso mandado dos veces no es un problema: el software de afuera reintenta cuando
-    // no le llegó la respuesta. Se contesta que sí, porque la primera vez ya se anotó, y si se
-    // contestara que no volvería a intentarlo para siempre. `23505` es la clave repetida.
-    if (error.code === '23505') return res.status(200).json({ ok: true, repetido: true });
-    console.error('No se pudo anotar el aviso de restriccion:', prestadoraId, error.message);
-    return res.status(500).json({ error: 'No se pudo anotar el aviso' });
+  // El mismo aviso mandado dos veces no es un problema: el software de afuera reintenta cuando no
+  // le llegó la respuesta. Lo que ya estaba anotado se deja como está y se sigue con lo demás —no
+  // se corta acá—, porque un aviso que trae las dos cosas puede haber anotado una sola la vez
+  // anterior. `23505` es la clave repetida.
+  let todoEstabaAnotado = true;
+  async function anotar(tabla, fila, queEs) {
+    const { error } = await supabase.from(tabla).insert(fila);
+    if (!error) {
+      todoEstabaAnotado = false;
+      return true;
+    }
+    if (error.code === '23505') return true;
+    console.error('No se pudo anotar el aviso:', prestadoraId, queEs, error.message);
+    return false;
   }
 
+  if (traeRestriccion) {
+    const anotada = await anotar('restricciones_de_cobranza', {
+      familia_id: familia.id,
+      restringida: cuerpo.restringida,
+      motivo: motivo || null,
+      origen: 'software_externo',
+      numero_del_aviso: numeroDelAviso,
+    }, 'restriccion');
+    if (!anotada) return res.status(500).json({ error: 'No se pudo anotar el aviso' });
+  }
+
+  if (traeEstado) {
+    const estado = cuerpo.estado_de_cuenta;
+    const anotado = await anotar('estados_de_cuenta_externos', {
+      familia_id: familia.id,
+      saldo: aDosDecimales(estado.saldo),
+      moneda: estado.moneda,
+      atrasado: estado.atrasado,
+      dias_de_atraso: estado.dias_de_atraso ?? null,
+      vencimiento_mas_antiguo: estado.vencimiento_mas_antiguo ?? null,
+      fecha_del_estado: estado.fecha_del_estado ?? null,
+      numero_del_aviso: numeroDelAviso,
+    }, 'estado_de_cuenta');
+    if (!anotado) return res.status(500).json({ error: 'No se pudo anotar el aviso' });
+  }
+
+  if (todoEstabaAnotado) return res.status(200).json({ ok: true, repetido: true });
   return res.status(200).json({ ok: true });
 });

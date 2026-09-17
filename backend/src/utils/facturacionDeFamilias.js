@@ -124,15 +124,67 @@ export const FINANCIADORES_POSIBLES = Object.values(FINANCIADORES);
  */
 export const LARGO_MINIMO_DEL_SECRETO_DEL_AVISO = 32;
 
+/** Cuántos días de atraso como máximo se admiten en un aviso. Diez años es más que suficiente. */
+export const DIAS_DE_ATRASO_MAXIMOS = 3650;
+
+/** Cuánto puede medir el saldo que informa el otro software, para lado y lado. */
+export const SALDO_MAXIMO_DEL_AVISO = 999999999999.99;
+
+/** Si un texto tiene forma de fecha de calendario. */
+function tieneFormaDeFecha(valor) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(valor));
+}
+
 /**
- * Qué está mal en un aviso de restricción, o `null` si está bien.
+ * Qué está mal en el estado de cuenta que viene adentro de un aviso, o `null` si está bien.
+ *
+ * Son obligatorios el saldo, su moneda y si está atrasada: sin cualquiera de los tres el dato no
+ * se puede mostrar sin inventar la parte que falta, y acá no se inventa nada. Lo demás —cuántos
+ * días de atraso, desde qué vencimiento, de qué día es la foto— es opcional, porque hay software
+ * que no lo lleva, y exigirlo lo dejaría afuera.
+ *
+ * El saldo admite negativo a propósito: una Familia que pagó de más tiene saldo a favor.
+ */
+export function loQueEstaMalEnElEstadoDeCuenta(estado) {
+  const saldo = Number(estado?.saldo);
+  if (estado?.saldo === null || estado?.saldo === undefined || estado?.saldo === ''
+      || !Number.isFinite(saldo) || Math.abs(saldo) > SALDO_MAXIMO_DEL_AVISO) return 'saldo';
+  if (!/^[A-Z]{3}$/.test(String(estado?.moneda ?? ''))) return 'moneda';
+  if (typeof estado?.atrasado !== 'boolean') return 'atrasado';
+  if (estado?.dias_de_atraso !== undefined && estado?.dias_de_atraso !== null) {
+    const dias = Number(estado.dias_de_atraso);
+    if (!Number.isInteger(dias) || dias < 0 || dias > DIAS_DE_ATRASO_MAXIMOS) return 'dias_de_atraso';
+  }
+  if (estado?.vencimiento_mas_antiguo !== undefined && estado?.vencimiento_mas_antiguo !== null
+      && !tieneFormaDeFecha(estado.vencimiento_mas_antiguo)) return 'vencimiento_mas_antiguo';
+  if (estado?.fecha_del_estado !== undefined && estado?.fecha_del_estado !== null
+      && !tieneFormaDeFecha(estado.fecha_del_estado)) return 'fecha_del_estado';
+  return null;
+}
+
+/**
+ * Qué está mal en un aviso del software que lleva la cobranza, o `null` si está bien.
+ *
+ * Un aviso trae siempre de qué Familia se trata, y además **al menos una** de las dos cosas que
+ * ese software puede informar: si hay que ponerle alguna restricción, y cómo está su cuenta. Las
+ * dos juntas también valen. Quien hoy manda sólo la restricción sigue entrando igual, sin
+ * cambiarle nada.
  *
  * El motivo no es obligatorio: el otro software puede no tener ninguno que dar, y trabarlo dejaría
- * el aviso afuera. Lo que sí hace falta es saber de qué Familia se trata y para qué lado va.
+ * el aviso afuera.
  */
 export function loQueEstaMalEnElAviso(aviso) {
   if (!String(aviso?.familia_id ?? '').trim()) return 'familia_id';
-  if (typeof aviso?.restringida !== 'boolean') return 'restringida';
+
+  const traeRestriccion = aviso?.restringida !== undefined && aviso?.restringida !== null;
+  const traeEstado = aviso?.estado_de_cuenta !== undefined && aviso?.estado_de_cuenta !== null;
+  if (!traeRestriccion && !traeEstado) return 'aviso_vacio';
+
+  if (traeRestriccion && typeof aviso.restringida !== 'boolean') return 'restringida';
+  if (traeEstado) {
+    const malo = loQueEstaMalEnElEstadoDeCuenta(aviso.estado_de_cuenta);
+    if (malo) return `estado_de_cuenta.${malo}`;
+  }
   return null;
 }
 

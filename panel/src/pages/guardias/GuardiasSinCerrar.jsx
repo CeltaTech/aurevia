@@ -12,6 +12,9 @@ import { diasDeEspera, hoyISO } from '../../lib/horarios';
 import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../../lib/pacientesDeGuardia';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { useAlarmasTomadas } from '../../hooks/useAlarmasTomadas';
+import { LaTomoYo } from '../../components/continuidad/LaTomoYo';
+import { TIPOS_DE_ALARMA } from '../../lib/alarmasTomadas';
 
 // Las guardias que nadie cerró: el Coordinador (y el Admin de la Prestadora) las ve acá y las
 // cierra él.
@@ -41,6 +44,7 @@ export function GuardiasSinCerrar({ onCerrada }) {
   const [estadoCarga, setEstadoCarga] = useState('cargando');
   const [error, setError] = useState(null);
   const [aCerrar, setACerrar] = useState(null);
+  const tomas = useAlarmasTomadas();
 
   const cargar = useCallback(async () => {
     setEstadoCarga('cargando');
@@ -141,6 +145,13 @@ export function GuardiasSinCerrar({ onCerrada }) {
                     <Button variant="secondary" onClick={() => setACerrar(g)}>
                       {t.guardias_sin_cerrar.cerrar}
                     </Button>
+                    {/* Cerrarla es el final; tomarla es decir que alguien la está averiguando
+                        ahora, para que el aviso no siga llegándole a los demás mientras tanto. */}
+                    <LaTomoYo
+                      tipo={TIPOS_DE_ALARMA.GUARDIA_SIN_CERRAR}
+                      referenciaId={g.id}
+                      {...tomas}
+                    />
                   </td>
                 </tr>
               ))}

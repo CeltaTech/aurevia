@@ -12,6 +12,8 @@ import {
   horasHastaElTurno,
   reglaDelIncidenteDe,
 } from './incidenteTurnoSinCubrir.js';
+import { reglaDeLaToma, tomadasAhora } from './tomasDeAlarma.js';
+import { TIPOS_DE_ALARMA } from './alarmasTomadas.js';
 
 // El turno que llega sin nadie abre un incidente, y el incidente no se va solo.
 // ============================================================================
@@ -127,6 +129,16 @@ async function revisarPrestadora({ prestadoraId, guardias, ahora }) {
   // Una sola vez por Prestadora: todos los recordatorios de esta vuelta los lee la misma gente.
   const idioma = await idiomaDeLaPrestadora(prestadoraId);
 
+  // De cuáles ya se hizo cargo alguien. Un incidente tomado no recuerda: recordar existe porque
+  // nadie reaccionó, y acá alguien reaccionó. El incidente sigue abierto igual, y cuando a la toma
+  // se le cumple el rato el recordatorio vuelve.
+  const tomados = await tomadasAhora({
+    prestadoraId,
+    tipo: TIPOS_DE_ALARMA.TURNO_SIN_CUBRIR,
+    ahora,
+    regla: await reglaDeLaToma(prestadoraId),
+  });
+
   for (const guardia of guardias) {
     if (!elTurnoYaEsGrave({ guardia, regla, ahora })) continue;
 
@@ -143,6 +155,7 @@ async function revisarPrestadora({ prestadoraId, guardias, ahora }) {
     }
 
     if (yaNoSePuedeTapar) continue;
+    if (tomados.has(incidente.id)) continue;
     if (
       !necesitaNotificar({
         ultimaNotificacionAt: incidente.ultimo_recordatorio_at,

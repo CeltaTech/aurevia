@@ -124,6 +124,11 @@ export const GRUPOS = [
     copias: ['backend/src/utils/incidenteTurnoSinCubrir.js'],
   },
   {
+    que: 'qué significa que alguien se haga cargo de una alarma y cuánto dura esa toma',
+    original: 'panel/src/lib/alarmasTomadas.js',
+    copias: ['backend/src/utils/alarmasTomadas.js'],
+  },
+  {
     que: 'cómo se llama y dónde se guarda cada documento generado del legajo',
     original: 'panel/src/lib/documentosDeCese.js',
     copias: ['backend/src/utils/documentosDeCese.js'],

@@ -6,6 +6,8 @@ import { necesitaNotificar } from './insistencia.js';
 import { correrFaseAutomatica } from './faseAutomaticaRelevo.js';
 import { pacientesDeGuardia, pacientesDeGuardias } from './pacientesDeGuardia.js';
 import { intervaloParaPremura } from './umbralesPremura.js';
+import { reglaDeLaToma, tomadasAhora } from './tomasDeAlarma.js';
+import { TIPOS_DE_ALARMA } from './alarmasTomadas.js';
 import { horasEntre } from './horasDeGuardia.js';
 import { aviso } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
@@ -36,9 +38,12 @@ export async function revisarNotificacionesCoordinador() {
   // vuelta los lee la misma gente, la del Panel de esa Prestadora.
   for (const config of configuraciones) {
     const idioma = await idiomaDeLaPrestadora(config.prestadora_id);
-    await revisarAlertas(config, ahora, idioma);
-    await revisarIncidentes(config, ahora, idioma);
-    await revisarGuardiasSinCerrar(config, ahora, idioma);
+    // Cuánto dura hacerse cargo de una alarma también se pregunta una vez por Prestadora: es el
+    // mismo número para las tres clases de alarma que siguen.
+    const reglaDeLasTomas = await reglaDeLaToma(config.prestadora_id);
+    await revisarAlertas(config, ahora, idioma, reglaDeLasTomas);
+    await revisarIncidentes(config, ahora, idioma, reglaDeLasTomas);
+    await revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas);
   }
 }
 
@@ -59,7 +64,7 @@ const DIAS_HACIA_ATRAS_SIN_CERRAR = 7;
 const MS_POR_MINUTO = 60 * 1000;
 const MS_POR_HORA = 60 * MS_POR_MINUTO;
 
-async function revisarGuardiasSinCerrar(config, ahora, idioma) {
+async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) {
   const {
     prestadora_id: prestadoraId,
     umbrales_premura: umbrales,
@@ -101,7 +106,18 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma) {
     return;
   }
 
+  // De cuáles ya se hizo cargo alguien. Una alarma tomada no insiste y tampoco escala: escalar
+  // existe porque nadie reacciona, y acá alguien reaccionó. Cuando a la toma se le cumple el rato,
+  // la alarma vuelve al punto en que estaba.
+  const tomadas = await tomadasAhora({
+    prestadoraId,
+    tipo: TIPOS_DE_ALARMA.GUARDIA_SIN_CERRAR,
+    ahora,
+    regla: reglaDeLasTomas,
+  });
+
   for (const guardia of guardias) {
+    if (tomadas.has(guardia.id)) continue;
     const fin = finDeLaGuardia(guardia);
     if (!fin) continue;
 
@@ -209,7 +225,7 @@ function fechaISO(momento) {
   return corrida.toISOString().slice(0, 10);
 }
 
-async function revisarAlertas(config, ahora, idioma) {
+async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
   const { prestadora_id: prestadoraId, umbrales_premura: umbrales, minutos_antes_backup: minutosAntesBackup, coordinador_backup_id: backupId } = config;
 
   const { data: alertas, error } = await supabase
@@ -223,7 +239,16 @@ async function revisarAlertas(config, ahora, idioma) {
     return;
   }
 
+  // De cuáles ya se hizo cargo alguien. Ver el comentario de las guardias sin cerrar.
+  const tomadas = await tomadasAhora({
+    prestadoraId,
+    tipo: TIPOS_DE_ALARMA.ALERTA_TEMPRANA,
+    ahora,
+    regla: reglaDeLasTomas,
+  });
+
   for (const alerta of alertas ?? []) {
+    if (tomadas.has(alerta.id)) continue;
     const minutosPremura = (ahora.getTime() - new Date(alerta.detectado_at).getTime()) / 60_000;
     const intervalo = intervaloParaPremura(umbrales, minutosPremura);
 
@@ -257,7 +282,7 @@ async function revisarAlertas(config, ahora, idioma) {
   }
 }
 
-async function revisarIncidentes(config, ahora, idioma) {
+async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
   const {
     prestadora_id: prestadoraId,
     umbrales_premura: umbrales,
@@ -278,7 +303,16 @@ async function revisarIncidentes(config, ahora, idioma) {
     return;
   }
 
+  // De cuáles ya se hizo cargo alguien. Ver el comentario de las guardias sin cerrar.
+  const tomadas = await tomadasAhora({
+    prestadoraId,
+    tipo: TIPOS_DE_ALARMA.INCIDENTE_RELEVO,
+    ahora,
+    regla: reglaDeLasTomas,
+  });
+
   for (const incidente of incidentes ?? []) {
+    if (tomadas.has(incidente.id)) continue;
     const minutosPremura = (ahora.getTime() - new Date(incidente.iniciado_at).getTime()) / 60_000;
     const intervalo = intervaloParaPremura(umbrales, minutosPremura);
 

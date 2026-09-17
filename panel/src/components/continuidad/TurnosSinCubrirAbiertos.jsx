@@ -17,6 +17,9 @@ import {
   esDefectoGrave,
   horasHastaElTurno,
 } from '../../lib/incidenteTurnoSinCubrir';
+import { useAlarmasTomadas } from '../../hooks/useAlarmasTomadas';
+import { LaTomoYo } from './LaTomoYo';
+import { TIPOS_DE_ALARMA } from '../../lib/alarmasTomadas';
 
 /* LOS TURNOS QUE QUEDARON SIN NADIE, Y POR QUÉ NO SE VAN SOLOS DE ACÁ
 
@@ -41,6 +44,7 @@ export function TurnosSinCubrirAbiertos() {
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [cerrando, setCerrando] = useState(null);
+  const tomas = useAlarmasTomadas();
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -141,6 +145,9 @@ export function TurnosSinCubrirAbiertos() {
             </div>
             <div className="panel-modal-acciones">
               <Button onClick={() => setCerrando(i)}>{t.continuidad.turnos_vacios_cerrar}</Button>
+              {/* Cerrarlo dice cómo terminó; tomarlo dice que alguien está buscando quién lo
+                  cubra ahora mismo, y mientras tanto el recordatorio no le llega a los demás. */}
+              <LaTomoYo tipo={TIPOS_DE_ALARMA.TURNO_SIN_CUBRIR} referenciaId={i.id} {...tomas} />
             </div>
           </div>
         ))}

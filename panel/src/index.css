@@ -1275,6 +1275,16 @@ button.panel-kpi-card[aria-pressed='true'] {
   margin-top: 1rem;
 }
 
+/* «La tomo yo»: el botón cuando nadie se hizo cargo, y el nombre de quien la está atendiendo con
+   los minutos que le quedan cuando sí. Va al lado de las acciones de cada alarma. */
+.la-tomo-yo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.875rem;
+}
+
 /* Bloque de detalle que se abre debajo de una tabla, sin tapar la pantalla.
    A diferencia del modal, deja la lista a la vista mientras se lee el detalle. */
 .panel-detalle {

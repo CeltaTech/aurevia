@@ -17,6 +17,7 @@ import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { con } from '../../lib/textos';
+import { REGLA_QUE_SE_PUEDE_TOCAR } from '../../lib/alarmasTomadas';
 
 /* A quién se le avisa y por dónde: los correos de cada evento, la casilla desde la
    que salen, el aviso de cese, la revisión con inteligencia artificial y todo lo de
@@ -1393,6 +1394,89 @@ function TabWhatsappEscaladaCoordinador() {
             <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
           </div>
         )}
+      </EstadoLista>
+      <CuantoDuraTomarUnaAlarma />
+    </div>
+  );
+}
+
+/* CUÁNTO DURA HACERSE CARGO DE UNA ALARMA.
+   ==========================================================================
+
+   Va acá abajo y no en una pantalla propia porque es el otro lado de lo de arriba: arriba se
+   decide cada cuánto se insiste, acá cuánto se deja de insistir cuando alguien dijo que la está
+   atendiendo. Son un solo tema leído desde los dos lados.
+
+   ES UN SOLO NÚMERO Y NO APAGA NADA. Cuando el rato se cumple, la alarma vuelve como si nadie la
+   hubiera tomado. Por eso el número tiene borde por arriba y por abajo, y los dos están escritos
+   en `lib/alarmasTomadas.js`, que es el mismo archivo que usa el motor. */
+function CuantoDuraTomarUnaAlarma() {
+  const { t } = useLocale();
+  const [minutos, setMinutos] = useState('');
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+  const [guardado, setGuardado] = useState(false);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const { configuracion } = await llamarApi('/alarmas-tomadas');
+      setMinutos(String(configuracion.regla.minutos_que_dura_hacerse_cargo));
+      setEstado('listo');
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+      setEstado('error');
+    }
+  }, [t]);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  async function guardar() {
+    setGuardando(true);
+    setError(null);
+    try {
+      await llamarApi('/alarmas-tomadas', {
+        method: 'PUT',
+        body: JSON.stringify({ regla: { minutos_que_dura_hacerse_cargo: Number(minutos) } }),
+      });
+      setGuardado(true);
+    } catch (err) {
+      setGuardado(false);
+      setError(mensajeDeError(err, t));
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  const borde = REGLA_QUE_SE_PUEDE_TOCAR.minutos_que_dura_hacerse_cargo;
+
+  return (
+    <div>
+      <h2>{t.configuracion.tomar_alarma_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.tomar_alarma_explicacion}</p>
+      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+        <div>
+          {error && <Alert variant="error">{error}</Alert>}
+          {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
+          <FormField
+            label={t.configuracion.tomar_alarma_minutos}
+            name="minutos_que_dura_hacerse_cargo"
+            type="number"
+            min={borde.minimo}
+            max={borde.maximo}
+            value={minutos}
+            ayuda={con(t.configuracion.tomar_alarma_minutos_ayuda, { minimo: borde.minimo, maximo: borde.maximo })}
+            onChange={(e) => {
+              setMinutos(e.target.value);
+              setGuardado(false);
+            }}
+          />
+          <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+        </div>
       </EstadoLista>
     </div>
   );

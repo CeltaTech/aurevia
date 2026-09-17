@@ -33,6 +33,11 @@ import {
   revisarRegla as revisarReglaDelIncidente,
   soloLoQueCorreDeLaRegla as soloLoQueCorreDelIncidente,
 } from '../utils/incidenteTurnoSinCubrir.js';
+import {
+  reglaDeLaTomaDe,
+  revisarRegla as revisarReglaDeLaToma,
+  soloLoQueCorreDeLaRegla as soloLoQueCorreDeLaToma,
+} from '../utils/alarmasTomadas.js';
 import { darDeAltaEnMeta, traerEstadosDeMeta } from '../utils/plantillasWhatsapp.js';
 import { redactarPlantillaWhatsapp, corregirPlantillaWhatsapp } from '../utils/iaPlantillasWhatsapp.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
@@ -650,6 +655,44 @@ panelConfiguracionRouter.put('/incidentes-turno-sin-cubrir', async (req, res) =>
   }
 
   const { error } = await supabase.from('configuracion_incidentes_turno_sin_cubrir').upsert(
+    {
+      prestadora_id: req.usuarioPanel.prestadoraId,
+      regla: corridos,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'prestadora_id' }
+  );
+  if (error) return responderError(res, error);
+  res.json({ ok: true });
+});
+
+// --- Cuánto dura hacerse cargo de una alarma ---
+//
+// El único número del «la tomo yo»: cuántos minutos una alarma deja de insistir desde que alguien
+// dice que la está atendiendo. No apaga nada para siempre, y ésa es la razón por la que se
+// configura: cuando el rato se cumple, la alarma vuelve como si nadie la hubiera tomado.
+
+panelConfiguracionRouter.get('/alarmas-tomadas', async (req, res) => {
+  const { data, error } = await supabase
+    .from('configuracion_alarmas_tomadas')
+    .select('regla')
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .maybeSingle();
+  if (error) return responderError(res, error);
+
+  // Que la fila no exista no es un error: es la configuración de fábrica.
+  const corrido = data?.regla ?? {};
+  res.json({ configuracion: { regla: reglaDeLaTomaDe(corrido), corridos: corrido } });
+});
+
+panelConfiguracionRouter.put('/alarmas-tomadas', async (req, res) => {
+  const corridos = soloLoQueCorreDeLaToma(req.body?.regla);
+  const revision = revisarReglaDeLaToma(corridos);
+  if (!revision.ok) {
+    return res.status(400).json({ error: `El valor de «${revision.clave}» está fuera de lo permitido` });
+  }
+
+  const { error } = await supabase.from('configuracion_alarmas_tomadas').upsert(
     {
       prestadora_id: req.usuarioPanel.prestadoraId,
       regla: corridos,

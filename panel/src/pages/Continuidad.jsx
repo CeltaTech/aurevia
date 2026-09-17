@@ -17,6 +17,9 @@ import { mensajeDeError } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { TurnosSinCubrirAbiertos } from '../components/continuidad/TurnosSinCubrirAbiertos';
+import { LaTomoYo } from '../components/continuidad/LaTomoYo';
+import { useAlarmasTomadas } from '../hooks/useAlarmasTomadas';
+import { TIPOS_DE_ALARMA } from '../lib/alarmasTomadas';
 
 const TIPOS_RESOLUCION = ['suplente', 'franquero', 'emergencia', 'familiar'];
 
@@ -59,6 +62,7 @@ export function Continuidad() {
   const [incidenteResolviendo, setIncidenteResolviendo] = useState(null);
   const [actualizandoId, setActualizandoId] = useState(null);
   const [asistentesDisponibles, setAsistentesDisponibles] = useState([]);
+  const tomas = useAlarmasTomadas();
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -304,6 +308,9 @@ export function Continuidad() {
               <Button onClick={() => setIncidenteResolviendo(i)} disabled={actualizandoId === i.id}>
                 {t.continuidad.resolver}
               </Button>
+              {/* Resolver dice que el problema terminó; tomarlo dice que alguien está en eso
+                  ahora. Mientras tanto el incidente no insiste y tampoco escala solo. */}
+              <LaTomoYo tipo={TIPOS_DE_ALARMA.INCIDENTE_RELEVO} referenciaId={i.id} {...tomas} />
             </div>
           </div>
         ))}
@@ -355,6 +362,7 @@ export function Continuidad() {
               <Button onClick={() => resolverAlerta(a)} disabled={actualizandoId === a.id}>
                 {t.continuidad.resolver_alerta}
               </Button>
+              <LaTomoYo tipo={TIPOS_DE_ALARMA.ALERTA_TEMPRANA} referenciaId={a.id} {...tomas} />
             </div>
           </div>
         ))}

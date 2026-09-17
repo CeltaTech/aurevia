@@ -6,6 +6,7 @@ import { coordenadasDeDomicilio } from '../geocodificacion/index.js';
 import { CATALOGO_CIRCULO_FAMILIAR } from './catalogoCirculoFamiliar.js';
 import { laCuentaDelPanelEstaAlAlcance } from '../middleware/alcancePrestadora.js';
 import { APROBADAS, filasDeIncorporacion } from './etapasDeIncorporacion.js';
+import { guardarLugaresDe } from './lugaresDeCadaPersona.js';
 
 // Comprueba que un tipo de Asistente exista y sea de los que esta Prestadora puede usar:
 // los generales de CeltaTech (`prestadora_id` vacío) o los que creó ella misma. Devuelve el
@@ -317,6 +318,7 @@ export async function deshacerAlta(userId, { prestadoraId, filas = [] } = {}) {
 // Prestadora rechazó — es la misma lista, y tenerla dos veces es cómo se olvida una tabla en
 // una de las dos (regla 12 de CLAUDE.md §7).
 export const FILAS_DE_UN_ASISTENTE = [
+  { tabla: 'asistente_lugares', columna: 'asistente_id' },
   { tabla: 'verificaciones_asistente', columna: 'asistente_id' },
   { tabla: 'referencias_laborales_asistente', columna: 'asistente_id' },
   { tabla: 'asistentes' },
@@ -338,7 +340,7 @@ const FILAS_DE_UN_MIEMBRO_CIRCULO = [
 // manual de la Fase 1, en vez de duplicar la lógica (ver alcance de la Fase 3 en el plan
 // aprobado: "no se construye un camino de creación de datos paralelo y distinto").
 export async function crearAsistenteDirecto({
-  nombre, telefono, email, dni, domicilio, tipo_asistente_id, tipo_asistente, zonas, estado,
+  nombre, telefono, email, dni, domicilio, tipo_asistente_id, tipo_asistente, zonas, lugares, estado,
   tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales, modalidades,
   prestadoraId, usuarioPanelId, importacionId,
 }) {
@@ -396,6 +398,12 @@ export async function crearAsistenteDirecto({
       pendiente_conformidad: Boolean(importacionId),
     });
     if (errorAsistente) throw new Error(errorAsistente.message);
+
+    // Dónde acepta trabajar esta persona. Se guarda por la misma función que usa la ficha, para
+    // que el alta y la corrección dejen la lista igual. Si alguno de los lugares no es de esta
+    // Organización, la clave foránea compuesta rechaza la escritura entera, el alta se deshace
+    // como cualquier otro tropiezo y no queda una ficha a medias.
+    await guardarLugaresDe('asistente_lugares', 'asistente_id', asistenteId, prestadoraId, lugares);
 
     // Lo que cobra el Asistente va a su propia tabla, no a la ficha: ahí la base exige el
     // permiso `ver_pagos_asistente` antes de mostrarlo. Si el alta no trae ningún importe no

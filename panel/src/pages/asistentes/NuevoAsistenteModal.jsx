@@ -5,6 +5,7 @@ import { useModalidades } from '../../context/ModalidadesContext';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
+import { ElegirLugares } from '../../components/lugares/ElegirLugares';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { modalidadesHabilitadas, mensajeDeModalidad } from '../../lib/modalidades';
 import { nombreTipo } from '../../lib/tiposAsistente';
@@ -22,7 +23,10 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
   const [email, setEmail] = useState('');
   const [domicilio, setDomicilio] = useState('');
   const [tipoAsistenteId, setTipoAsistenteId] = useState('');
-  const [zonas, setZonas] = useState('');
+  /* Dónde acepta trabajar. Se guarda cuál de los lugares de la Prestadora, nunca el nombre
+     tecleado: escrito a mano, «Villa Urquiza» y «villa urquiza» son dos lugares distintos y
+     ninguna búsqueda los junta. Puede quedar vacío en el alta y cargarse después en la ficha. */
+  const [lugares, setLugares] = useState([]);
   const { paraElegir: tiposAsistente } = useTiposAsistente();
   const { modalidades } = useModalidades();
 
@@ -67,7 +71,7 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
           email,
           domicilio,
           tipo_asistente_id: tipoAsistenteId || null,
-          zonas: zonas.split(',').map((s) => s.trim()).filter(Boolean),
+          lugares,
           modalidades: modalidadesMarcadas,
         }),
       });
@@ -103,7 +107,8 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
               <option key={tipo.id} value={tipo.id}>{nombreTipo(tipo, t)}</option>
             ))}
           </FormField>
-          <FormField label={t.asistentes.col_zonas} name="zonas" value={zonas} onChange={(e) => setZonas(e.target.value)} />
+          <h3>{t.configuracion.lugares_elegir_titulo}</h3>
+          <ElegirLugares valor={lugares} onChange={setLugares} deshabilitado={guardando} />
 
           <h3>{t.modalidades.etiqueta}</h3>
           <p className="panel-explicacion">{t.modalidades.ayuda}</p>

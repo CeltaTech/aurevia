@@ -28,9 +28,11 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
+import { ElegirLugares } from '../../components/lugares/ElegirLugares';
+import { llamarApiLugaresDeTrabajo } from '../../lib/apiLugaresDeTrabajo';
 import { generarCertificadoTrabajo, generarCertificadoRemuneracionesServicios, descargarPDF } from '../../lib/generarDocumentoCese';
 import { con } from '../../lib/textos';
-import { errorDeLaRespuesta } from '../../lib/errores';
+import { errorDeLaRespuesta, mensajeDeError } from '../../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -63,7 +65,6 @@ export function PerfilTab({ asistente, onActualizado }) {
     email: asistente.email || '',
     domicilio: asistente.domicilio || '',
     tipo_asistente_id: asistente.tipo_asistente_id || '',
-    zonas: (asistente.zonas || []).join(', '),
     estado: asistente.estado,
     tipo_vinculo: asistente.tipo_vinculo,
     categoria_cct: asistente.categoria_cct || '',
@@ -90,6 +91,31 @@ export function PerfilTab({ asistente, onActualizado }) {
   const [guardado, setGuardado] = useState(false);
   const [reenviando, setReenviando] = useState(false);
   const [mensajeReenvio, setMensajeReenvio] = useState(null);
+
+  /* Dónde acepta trabajar esta persona. No está en la ficha: está en una tabla que la cruza con
+     cada lugar, y por eso se lee y se escribe por el motor, que deja guardados exactamente los que
+     quedaron tildados. Mientras no se pudo leer, no se manda nada al guardar: escribir una lista
+     que no se llegó a cargar borraría los lugares que la persona ya tenía. */
+  const [lugares, setLugares] = useState([]);
+  const [estadoLugares, setEstadoLugares] = useState('cargando');
+  const [errorLugares, setErrorLugares] = useState(null);
+
+  const cargarLugares = useCallback(async () => {
+    setEstadoLugares('cargando');
+    setErrorLugares(null);
+    try {
+      const datos = await llamarApiLugaresDeTrabajo(`/asistente/${asistente.id}`);
+      setLugares(datos.lugares ?? []);
+      setEstadoLugares('listo');
+    } catch (err) {
+      setErrorLugares(mensajeDeError(err, t));
+      setEstadoLugares('error');
+    }
+  }, [asistente.id, t]);
+
+  useEffect(() => {
+    cargarLugares();
+  }, [cargarLugares]);
 
   function set(campo, valor) {
     setForm((f) => ({ ...f, [campo]: valor }));
@@ -127,7 +153,6 @@ export function PerfilTab({ asistente, onActualizado }) {
       telefono: form.telefono.trim() || null,
       email: form.email.trim() || null,
       tipo_asistente_id: form.tipo_asistente_id || null,
-      zonas: form.zonas.split(',').map((s) => s.trim()).filter(Boolean),
       estado: form.estado,
       ...(esAdmin && {
         /* Dónde vive, escrito para que lo lea una persona. Las coordenadas (`lat`/`lng`) no se
@@ -188,6 +213,21 @@ export function PerfilTab({ asistente, onActualizado }) {
         return;
       }
     }
+
+    // Los lugares van por el motor, que es el único que escribe esa tabla.
+    if (estadoLugares === 'listo') {
+      try {
+        await llamarApiLugaresDeTrabajo(`/asistente/${asistente.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ lugares }),
+        });
+      } catch (err) {
+        setGuardando(false);
+        setError(mensajeDeError(err, t));
+        return;
+      }
+    }
+
     setGuardando(false);
     setGuardado(true);
     onActualizado();
@@ -268,7 +308,14 @@ export function PerfilTab({ asistente, onActualizado }) {
         </p>
       )}
 
-      <FormField label={t.asistentes.col_zonas} name="zonas" value={form.zonas} onChange={(e) => set('zonas', e.target.value)} disabled={!puedeEditarIdentidad} />
+      <h2>{t.configuracion.lugares_elegir_titulo}</h2>
+      <EstadoLista estado={estadoLugares} error={errorLugares} recargar={cargarLugares}>
+        <ElegirLugares
+          valor={lugares}
+          onChange={(siguiente) => { setLugares(siguiente); setGuardado(false); }}
+          deshabilitado={guardando || !puedeEditarIdentidad}
+        />
+      </EstadoLista>
 
       {asistente.estado === 'cesado' ? (
         <>

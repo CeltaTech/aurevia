@@ -7,6 +7,7 @@ import {
 } from '../middleware/alcancePrestadora.js';
 import { supabase } from '../db/connection.js';
 import { crearCuentaConPerfil, borrarCuenta } from '../utils/cuentasPanel.js';
+import { guardarLugaresDe } from '../utils/lugaresDeCadaPersona.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { ROLES_PANEL } from '../utils/roles.js';
 import { responderError } from '../utils/errorConMotivo.js';
@@ -42,11 +43,29 @@ panelUsuariosRouter.get('/', requiereRolPanel, soloAdministracion, async (req, r
   const { data, error } = await query;
 
   if (error) return responderError(res, error);
-  res.json({ usuarios: data });
+
+  // Hasta dónde llega cada cuenta, en cuántos lugares. La lista muestra el número y no los
+  // nombres: doscientas localidades no entran en una celda, y lo que se necesita de un vistazo es
+  // si el alcance está puesto o quedó vacío. Los nombres se ven al abrir la cuenta.
+  const cuentas = data ?? [];
+  const { data: cruces, error: errorLugares } = cuentas.length
+    ? await supabase
+      .from('usuario_lugares')
+      .select('usuario_id')
+      .in('usuario_id', cuentas.map((cuenta) => cuenta.id))
+    : { data: [], error: null };
+  if (errorLugares) return responderError(res, errorLugares);
+
+  const cuantos = new Map();
+  for (const cruce of cruces ?? []) {
+    cuantos.set(cruce.usuario_id, (cuantos.get(cruce.usuario_id) ?? 0) + 1);
+  }
+
+  res.json({ usuarios: cuentas.map((cuenta) => ({ ...cuenta, lugares: cuantos.get(cuenta.id) ?? 0 })) });
 });
 
 panelUsuariosRouter.post('/', requiereRolPanel, soloAdministracion, async (req, res) => {
-  const { email, nombre, telefono, zonas, rol } = req.body;
+  const { email, nombre, telefono, zonas, lugares, rol } = req.body;
   if (!email || !nombre) {
     return res.status(400).json({ error: 'Faltan email o nombre' });
   }
@@ -85,6 +104,20 @@ panelUsuariosRouter.post('/', requiereRolPanel, soloAdministracion, async (req, 
       email, nombre, telefono, rol: rolNuevo, zonas,
       prestadoraId: prestadoraDestino,
     });
+
+    // Hasta dónde llega esta cuenta, cuando el alta ya lo dice. Se guarda adentro del mismo pedido
+    // porque el alcance es parte de la cuenta: una cuenta creada y un alcance que no se llegó a
+    // escribir dejarían a alguien con acceso a algo que nadie decidió. Si la escritura falla, se
+    // borra la cuenta recién creada y el alta no ocurrió.
+    if (Array.isArray(lugares) && lugares.length > 0) {
+      try {
+        await guardarLugaresDe('usuario_lugares', 'usuario_id', userId, prestadoraDestino, lugares);
+      } catch (error) {
+        await borrarCuenta(userId, alcanceDelPanel(req.usuarioPanel));
+        throw error;
+      }
+    }
+
     res.json({ ok: true, id: userId, passwordTemporal });
   } catch (error) {
     responderError(res, error);

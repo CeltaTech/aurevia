@@ -17,6 +17,7 @@ import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { supabase } from '../db/connection.js';
 import { catalogoDeLugares } from '../utils/catalogoDeLugares.js';
+import { lugaresDe, guardarLugaresDe } from '../utils/lugaresDeCadaPersona.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
 export const panelLugaresDeTrabajoRouter = Router();
@@ -26,42 +27,6 @@ panelLugaresDeTrabajoRouter.use(requiereRolPanel, exigirOrganizacionActiva);
 // Cambiar hasta dónde llega una coordinadora es cambiar qué Asistentes ve, o sea un permiso. Eso
 // es de la administración, nunca de quien coordina (CLAUDE.md §5, mínimo privilegio).
 const soloAdministracion = exigirAdministracion('Solo Admin o Superadmin puede cambiar el alcance de una coordinadora');
-
-/** Los lugares guardados de esa persona, en la tabla que corresponda. */
-async function lugaresDe(tabla, columna, id, prestadoraId) {
-  const { data, error } = await supabase
-    .from(tabla)
-    .select('lugar_id')
-    .eq(columna, id)
-    .eq('prestadora_id', prestadoraId);
-  if (error) throw error;
-  return (data ?? []).map((fila) => fila.lugar_id);
-}
-
-/**
- * Deja guardados exactamente esos lugares: borra los que había y escribe los que llegaron.
- *
- * Se borra y se escribe, y no se calcula la diferencia, porque la pantalla manda la lista entera
- * de lo que quedó tildado: comparar acá sería adivinar cuál de las dos listas es la buena.
- *
- * Que los lugares sean de esta Organización no se comprueba renglón por renglón: lo hace la clave
- * foránea compuesta, que rechaza la inserción entera si alguno no lo es. Un control escrito acá
- * además del de la base sería la misma decisión en dos lugares.
- */
-async function guardarLugaresDe(tabla, columna, id, prestadoraId, lugares) {
-  const { error: errorBorrado } = await supabase
-    .from(tabla)
-    .delete()
-    .eq(columna, id)
-    .eq('prestadora_id', prestadoraId);
-  if (errorBorrado) throw errorBorrado;
-
-  if (!lugares.length) return;
-  const { error } = await supabase
-    .from(tabla)
-    .insert(lugares.map((lugarId) => ({ [columna]: id, lugar_id: lugarId, prestadora_id: prestadoraId })));
-  if (error) throw error;
-}
 
 /** Que la persona exista adentro de esta Organización se comprueba antes de borrar nada: sin esto,
  *  un identificador de otra Prestadora entraría al borrado. */

@@ -9,6 +9,9 @@ import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
+import { ElegirLugares } from '../components/lugares/ElegirLugares';
+import { llamarApiLugaresDeTrabajo } from '../lib/apiLugaresDeTrabajo';
+import { con } from '../lib/textos';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -74,7 +77,7 @@ export function UsuariosPanel() {
               <th>{t.usuarios_panel.col_nombre}</th>
               <th>{t.usuarios_panel.col_rol}</th>
               <th>{t.usuarios_panel.col_telefono}</th>
-              <th>{t.usuarios_panel.col_zonas}</th>
+              <th>{t.configuracion.lugares_alcance_titulo}</th>
               <th></th>
             </tr>
           </thead>
@@ -84,7 +87,9 @@ export function UsuariosPanel() {
                 <td>{u.nombre}</td>
                 <td>{t.usuarios_panel[`rol_${u.rol}`]}</td>
                 <td>{u.telefono || '—'}</td>
-                <td>{(u.zonas || []).join(', ') || '—'}</td>
+                {/* Quien administra alcanza a toda la Organización, así que el alcance por lugares
+                    no le dice nada: es la coordinación la que se acota. */}
+                <td>{u.rol === 'coordinador' ? con(t.configuracion.lugares_elegidos, { cantidad: u.lugares ?? 0 }) : '—'}</td>
                 <td>
                   {puedeEditar(u) && (
                     <button onClick={() => setEditando(u)}>{t.comun.editar}</button>
@@ -127,7 +132,11 @@ function NuevoUsuarioPanel({ esSuperadmin, onClose, onCreado }) {
   const [email, setEmail] = useState('');
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
-  const [zonas, setZonas] = useState('');
+  /* Hasta dónde llega esta cuenta. Se guardan lugares de la lista de la Prestadora, nunca nombres
+     tecleados: mientras el alcance de la coordinadora y la zona de la Asistente eran dos textos
+     escritos a mano, una letra distinta en uno de los dos no encontraba a nadie y nadie se
+     enteraba. */
+  const [lugares, setLugares] = useState([]);
   const [rol, setRol] = useState('coordinador');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
@@ -145,7 +154,8 @@ function NuevoUsuarioPanel({ esSuperadmin, onClose, onCreado }) {
           nombre,
           telefono,
           rol: rolFinal,
-          zonas: zonas.split(',').map((z) => z.trim()).filter(Boolean),
+          // Sólo quien coordina se acota: quien administra alcanza toda la Organización.
+          lugares: rolFinal === 'coordinador' ? lugares : [],
         }),
       });
       setCreado({ email, passwordTemporal: resultado.passwordTemporal });
@@ -199,7 +209,12 @@ function NuevoUsuarioPanel({ esSuperadmin, onClose, onCreado }) {
           <p className="panel-explicacion">{t.usuarios_panel.aviso_organizacion_activa}</p>
         )}
         <FormField label={t.usuarios_panel.col_telefono} name="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
-        <FormField label={t.usuarios_panel.col_zonas} name="zonas" value={zonas} onChange={(e) => setZonas(e.target.value)} placeholder={t.usuarios_panel.zonas_placeholder} />
+        {(!esSuperadmin || rol === 'coordinador') && (
+          <>
+            <h3>{t.configuracion.lugares_alcance_titulo}</h3>
+            <ElegirLugares valor={lugares} onChange={setLugares} deshabilitado={guardando} />
+          </>
+        )}
         <p className="panel-explicacion">{t.usuarios_panel.aviso_password_temporal}</p>
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>
@@ -218,10 +233,36 @@ function EditarUsuarioPanel({ usuario, onClose, onActualizado }) {
   const confirmarDestructivo = useConfirmarDestructivo();
   const [nombre, setNombre] = useState(usuario.nombre);
   const [telefono, setTelefono] = useState(usuario.telefono || '');
-  const [zonas, setZonas] = useState((usuario.zonas || []).join(', '));
   const [guardando, setGuardando] = useState(false);
   const [borrando, setBorrando] = useState(false);
   const [error, setError] = useState(null);
+
+  /* Hasta dónde llega esta cuenta. Vive en su propia tabla y se lee y se escribe por el motor, que
+     deja guardados exactamente los lugares que quedaron tildados. Mientras no se pudo leer no se
+     manda nada al guardar: escribir una lista que no se llegó a cargar dejaría a la coordinadora
+     sin alcance sin que nadie lo haya decidido. */
+  const esCoordinador = usuario.rol === 'coordinador';
+  const [lugares, setLugares] = useState([]);
+  const [estadoLugares, setEstadoLugares] = useState(esCoordinador ? 'cargando' : 'listo');
+  const [errorLugares, setErrorLugares] = useState(null);
+
+  const cargarLugares = useCallback(async () => {
+    if (!esCoordinador) return;
+    setEstadoLugares('cargando');
+    setErrorLugares(null);
+    try {
+      const datos = await llamarApiLugaresDeTrabajo(`/usuario/${usuario.id}`);
+      setLugares(datos.lugares ?? []);
+      setEstadoLugares('listo');
+    } catch (err) {
+      setErrorLugares(mensajeDeError(err, t));
+      setEstadoLugares('error');
+    }
+  }, [esCoordinador, usuario.id, t]);
+
+  useEffect(() => {
+    cargarLugares();
+  }, [cargarLugares]);
 
   async function handleGuardar() {
     setGuardando(true);
@@ -229,12 +270,14 @@ function EditarUsuarioPanel({ usuario, onClose, onActualizado }) {
     try {
       await llamarApi(`/${usuario.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({
-          nombre,
-          telefono,
-          zonas: zonas.split(',').map((z) => z.trim()).filter(Boolean),
-        }),
+        body: JSON.stringify({ nombre, telefono }),
       });
+      if (esCoordinador && estadoLugares === 'listo') {
+        await llamarApiLugaresDeTrabajo(`/usuario/${usuario.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ lugares }),
+        });
+      }
       onActualizado();
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -264,7 +307,14 @@ function EditarUsuarioPanel({ usuario, onClose, onActualizado }) {
         {error && <Alert variant="error">{error}</Alert>}
         <FormField label={t.usuarios_panel.col_nombre} name="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
         <FormField label={t.usuarios_panel.col_telefono} name="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
-        <FormField label={t.usuarios_panel.col_zonas} name="zonas" value={zonas} onChange={(e) => setZonas(e.target.value)} placeholder={t.usuarios_panel.zonas_placeholder} />
+        {esCoordinador && (
+          <>
+            <h3>{t.configuracion.lugares_alcance_titulo}</h3>
+            <EstadoLista estado={estadoLugares} error={errorLugares} recargar={cargarLugares}>
+              <ElegirLugares valor={lugares} onChange={setLugares} deshabilitado={guardando || borrando} />
+            </EstadoLista>
+          </>
+        )}
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={handleDarDeBaja} disabled={guardando || borrando}>
             {borrando ? t.comun.guardando : t.usuarios_panel.dar_de_baja}

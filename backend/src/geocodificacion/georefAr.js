@@ -2,9 +2,14 @@
 // (datos.gob.ar). Es oficial, gratuito y abierto: no pide clave, ni cuenta, ni contrato, así
 // que no hay ninguna credencial que guardar ni que rotar para esto.
 //
-// De todo lo que sabe contestar Georef acá se usa un solo recurso, `/direcciones`: se le manda
-// una dirección escrita como la escribiría una persona y devuelve, si la reconoce, la calle
-// normalizada, la provincia, la localidad y el punto en el mapa.
+// De Georef se usan tres recursos. `/direcciones` convierte una dirección escrita en un punto del
+// mapa. `/localidades` y `/provincias` alimentan la lista de lugares de cada Prestadora.
+//
+// **Georef no tiene un recurso de barrios, y no hace falta.** En la Ciudad de Buenos Aires sus
+// «localidades» son justamente los barrios —Saavedra, Constitución, Villa Urquiza, Monserrat,
+// Retiro—, y en el resto del país son las localidades. Por eso del lado del producto entran todas
+// a la misma lista de un solo nivel: son lo mismo para lo que se usan, que es decir dónde. El
+// barrio que Georef no tiene lo agrega la Prestadora colgándolo de su localidad.
 //
 // La dirección base sale de una variable de entorno con valor por descarte, igual que
 // `MERCADOPAGO_API_BASE` en `pasarelas/mercadopago.js`: en producción no se configura nada y
@@ -22,6 +27,28 @@ const ESPERA_MS = 5000;
  *  que es y no cambia (CLAUDE.md §7 regla 13). */
 export const FUENTE = 'georef_ar';
 
+/** Le pregunta a Georef y devuelve lo que contestó, ya convertido. Existe para que las tres
+ *  consultas traten igual la espera, la caída del servicio y la respuesta ilegible: son la misma
+ *  decisión repetida, y una sola función la sostiene (CLAUDE.md §8). */
+async function preguntarle(recurso, consulta) {
+  let respuesta;
+  try {
+    respuesta = await fetch(`${API_BASE}/${recurso}?${consulta}`, {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(ESPERA_MS),
+    });
+  } catch {
+    // Lo que lanza `fetch` cuando no llega a destino se descarta a propósito y se reemplaza por
+    // una frase propia: el domicilio viaja adentro de la dirección consultada, y un error que
+    // la arrastre termina copiado en el registro del servidor (CLAUDE.md §6).
+    throw new Error('No se pudo consultar el servicio de direcciones');
+  }
+  if (!respuesta.ok) {
+    throw new Error(`El servicio de direcciones contestó ${respuesta.status}`);
+  }
+  return (await respuesta.json().catch(() => null)) ?? {};
+}
+
 export async function geocodificar({ direccion, localidad, provincia }) {
   const buscada = String(direccion ?? '').trim();
   if (!buscada) return null;
@@ -35,23 +62,7 @@ export async function geocodificar({ direccion, localidad, provincia }) {
   if (conLocalidad) consulta.set('localidad', conLocalidad);
   if (conProvincia) consulta.set('provincia', conProvincia);
 
-  let respuesta;
-  try {
-    respuesta = await fetch(`${API_BASE}/direcciones?${consulta}`, {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(ESPERA_MS),
-    });
-  } catch {
-    // Lo que lanza `fetch` cuando no llega a destino se descarta a propósito y se reemplaza por
-    // una frase propia: el domicilio viaja adentro de la dirección consultada, y un error que
-    // la arrastre termina copiado en el registro del servidor (CLAUDE.md §6).
-    throw new Error('No se pudo consultar el servicio de direcciones');
-  }
-  if (!respuesta.ok) {
-    throw new Error(`El servicio de direcciones contestó ${respuesta.status}`);
-  }
-
-  const datos = await respuesta.json().catch(() => null);
+  const datos = await preguntarle('direcciones', consulta);
   const encontrada = datos?.direcciones?.[0];
   const lat = encontrada?.ubicacion?.lat;
   const lng = encontrada?.ubicacion?.lon;
@@ -74,4 +85,60 @@ export async function geocodificar({ direccion, localidad, provincia }) {
     confianza: ubicoLaPuerta ? 'exacta' : 'aproximada',
     fuente: FUENTE,
   };
+}
+
+/** Cuántos lugares se traen de una búsqueda. Es una lista para elegir, no un padrón para
+ *  recorrer: quien la mira escribe unas letras y espera reconocer el suyo entre pocos renglones. */
+const LUGARES_POR_BUSQUEDA = 25;
+
+/**
+ * Los lugares de Argentina que coinciden con lo que se escribió, para que la Prestadora los
+ * agregue a su lista.
+ *
+ * **Se consulta para cargar, y nunca en vivo.** El renglón queda guardado con su identificador,
+ * su nombre y su punto; de ahí en más el producto trabaja contra su propia lista y no depende de
+ * que el servicio del Estado esté levantado para armar una guardia.
+ *
+ * `provincia` es opcional y sirve para desempatar, que es lo corriente: hay un Belgrano en
+ * varias. Devuelve la lista vacía cuando no reconoce nada, que no es un error.
+ */
+export async function buscarLugares({ texto, provincia } = {}) {
+  const buscado = String(texto ?? '').trim();
+  if (!buscado) return [];
+
+  const consulta = new URLSearchParams({ nombre: buscado, max: String(LUGARES_POR_BUSQUEDA) });
+  const enProvincia = String(provincia ?? '').trim();
+  if (enProvincia) consulta.set('provincia', enProvincia);
+
+  const datos = await preguntarle('localidades', consulta);
+  const encontrados = Array.isArray(datos?.localidades) ? datos.localidades : [];
+
+  return encontrados
+    .filter((lugar) => lugar?.id && lugar?.nombre)
+    .map((lugar) => {
+      const lat = lugar?.centroide?.lat;
+      const lng = lugar?.centroide?.lon;
+      // Mismo cuidado que con las direcciones: `null` convertido a número da cero, y cero es una
+      // coordenada válida en el Golfo de Guinea. Sin punto no se inventa ninguno.
+      const tienePunto = Number.isFinite(lat) && Number.isFinite(lng);
+      return {
+        idOficial: String(lugar.id),
+        nombre: String(lugar.nombre),
+        provincia: lugar?.provincia?.nombre ?? null,
+        municipio: lugar?.municipio?.nombre ?? null,
+        lat: tienePunto ? lat : null,
+        lng: tienePunto ? lng : null,
+        fuente: FUENTE,
+      };
+    });
+}
+
+/** Las provincias de Argentina, para el casillero que acota la búsqueda. Son veinticuatro y no
+ *  cambian, así que se piden todas de una vez y no se filtran por texto. */
+export async function listarProvincias() {
+  const datos = await preguntarle('provincias', new URLSearchParams({ campos: 'id,nombre', max: '30' }));
+  const encontradas = Array.isArray(datos?.provincias) ? datos.provincias : [];
+  return encontradas
+    .filter((provincia) => provincia?.id && provincia?.nombre)
+    .map((provincia) => ({ idOficial: String(provincia.id), nombre: String(provincia.nombre) }));
 }

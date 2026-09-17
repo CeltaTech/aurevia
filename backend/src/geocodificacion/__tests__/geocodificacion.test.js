@@ -50,8 +50,13 @@ const servicioFalso = createServer((req, res) => {
 await new Promise((listo) => servicioFalso.listen(0, '127.0.0.1', listo));
 process.env.GEOREF_API_BASE = `http://127.0.0.1:${servicioFalso.address().port}`;
 
-const { coordenadasDeDomicilio, obtenerGeocodificador, paisesConGeocodificador } =
-  await import('../index.js');
+const {
+  buscarLugares,
+  coordenadasDeDomicilio,
+  listarProvincias,
+  obtenerGeocodificador,
+  paisesConGeocodificador,
+} = await import('../index.js');
 
 // Lo que el motor deja anotado del lado del servidor se junta acá, para poder comprobar qué
 // dice —y sobre todo qué no dice— sin ensuciar la salida de las pruebas.
@@ -236,5 +241,123 @@ describe('lo que ni siquiera vale preguntar', () => {
   it('el país se busca acotado a esa Prestadora', async () => {
     await coordenadasDeDomicilio({ prestadoraId: PRESTADORA, direccion: DIRECCION });
     assert.ok(consultasALaBase[0].includes(`id=eq.${PRESTADORA}`));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// La búsqueda de lugares, que es lo que alimenta la lista de cada Prestadora
+// ---------------------------------------------------------------------------
+//
+// Acá se prueba lo contrario que arriba: cuando el servicio se cae, esto **sí** tiene que fallar.
+// Del otro lado hay alguien buscando una localidad para tildarla, y una lista vacía le haría creer
+// que su localidad no existe y cargarla a mano, duplicada.
+
+/** Lo que contesta Georef cuando reconoce el nombre. Se copia la forma real del servicio, con el
+ *  punto en `centroide` y la provincia y el municipio adentro de su propio objeto. */
+function lugaresEncontrados() {
+  return {
+    cantidad: 2,
+    localidades: [
+      {
+        id: '30084300',
+        nombre: 'Villa Urquiza',
+        centroide: { lat: -31.6495, lon: -60.3768 },
+        provincia: { id: '30', nombre: 'Entre Ríos' },
+        municipio: { id: '300371', nombre: 'Villa Urquiza' },
+      },
+      {
+        id: '54098040',
+        nombre: 'General Urquiza',
+        centroide: { lat: null, lon: null },
+        provincia: { id: '54', nombre: 'Misiones' },
+        municipio: null,
+      },
+    ],
+  };
+}
+
+describe('los lugares que se traen para cargar la lista', () => {
+  it('vuelven con su identificador oficial, su nombre y su punto', async () => {
+    respuestaDelServicio = lugaresEncontrados();
+    const lugares = await buscarLugares({ prestadoraId: PRESTADORA, texto: 'Urquiza' });
+
+    assert.equal(lugares.length, 2);
+    assert.deepEqual(lugares[0], {
+      idOficial: '30084300',
+      nombre: 'Villa Urquiza',
+      provincia: 'Entre Ríos',
+      municipio: 'Villa Urquiza',
+      lat: -31.6495,
+      lng: -60.3768,
+      fuente: 'georef_ar',
+    });
+  });
+
+  it('el lugar sin punto viene sin punto, y nunca en cero', async () => {
+    respuestaDelServicio = lugaresEncontrados();
+    const lugares = await buscarLugares({ prestadoraId: PRESTADORA, texto: 'Urquiza' });
+
+    assert.equal(lugares[1].lat, null);
+    assert.equal(lugares[1].lng, null);
+  });
+
+  it('se pregunta por el nombre, con la provincia para desempatar', async () => {
+    respuestaDelServicio = lugaresEncontrados();
+    await buscarLugares({ prestadoraId: PRESTADORA, texto: 'Urquiza', provincia: 'Entre Ríos' });
+
+    assert.equal(consultasAlServicio.length, 1);
+    const consulta = new URL(consultasAlServicio[0], 'http://interno');
+    assert.equal(consulta.pathname, '/localidades');
+    assert.equal(consulta.searchParams.get('nombre'), 'Urquiza');
+    assert.equal(consulta.searchParams.get('provincia'), 'Entre Ríos');
+  });
+
+  it('lo que el servicio no reconoce vuelve como lista vacía, que no es un error', async () => {
+    respuestaDelServicio = { cantidad: 0, localidades: [] };
+    assert.deepEqual(await buscarLugares({ prestadoraId: PRESTADORA, texto: 'Nomeacuerdo' }), []);
+  });
+
+  it('cuando el servicio se cae, falla: una lista vacía haría cargar el lugar duplicado', async () => {
+    codigoDelServicio = 503;
+    await assert.rejects(() => buscarLugares({ prestadoraId: PRESTADORA, texto: 'Urquiza' }));
+  });
+
+  it('lo que falla no lleva adentro lo que se buscó', async () => {
+    codigoDelServicio = 500;
+    await assert.rejects(
+      () => buscarLugares({ prestadoraId: PRESTADORA, texto: DIRECCION }),
+      (error) => !error.message.includes(DIRECCION),
+    );
+  });
+
+  it('un país sin adaptador devuelve lista vacía: sus lugares se cargan a mano', async () => {
+    paisDeLaPrestadora = 'UY';
+    assert.deepEqual(await buscarLugares({ prestadoraId: PRESTADORA, texto: 'Urquiza' }), []);
+    assert.equal(consultasAlServicio.length, 0);
+  });
+
+  it('sin texto y sin Prestadora no se pregunta nada', async () => {
+    assert.deepEqual(await buscarLugares({ prestadoraId: PRESTADORA, texto: '   ' }), []);
+    assert.deepEqual(await buscarLugares({ prestadoraId: null, texto: 'Urquiza' }), []);
+    assert.equal(consultasALaBase.length, 0);
+    assert.equal(consultasAlServicio.length, 0);
+  });
+});
+
+describe('las provincias, para acotar la búsqueda', () => {
+  it('vuelven con su identificador y su nombre', async () => {
+    respuestaDelServicio = { provincias: [{ id: '30', nombre: 'Entre Ríos' }, { id: '54', nombre: 'Misiones' }] };
+    const provincias = await listarProvincias({ prestadoraId: PRESTADORA });
+
+    assert.deepEqual(provincias, [
+      { idOficial: '30', nombre: 'Entre Ríos' },
+      { idOficial: '54', nombre: 'Misiones' },
+    ]);
+    assert.equal(new URL(consultasAlServicio[0], 'http://interno').pathname, '/provincias');
+  });
+
+  it('un país sin adaptador no tiene ninguna que ofrecer', async () => {
+    paisDeLaPrestadora = 'UY';
+    assert.deepEqual(await listarProvincias({ prestadoraId: PRESTADORA }), []);
   });
 });

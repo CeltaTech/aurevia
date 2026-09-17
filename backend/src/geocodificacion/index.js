@@ -11,6 +11,14 @@
 // sumar un país es agregar un archivo y una línea en la tabla de abajo.
 //
 // Interfaz común que todo adaptador implementa:
+//   buscarLugares({ texto, provincia })
+//     -> [{ idOficial, nombre, provincia, municipio, lat, lng, fuente }]
+//     Los lugares del organismo oficial de ese país que coinciden con lo escrito, para que la
+//     Prestadora los agregue a su lista. Lista vacía cuando no reconoce nada, que no es un error.
+//   listarProvincias()
+//     -> [{ idOficial, nombre }]
+//     La división mayor de ese país, para acotar la búsqueda. Se llama «provincia» del lado del
+//     producto aunque el país la nombre de otra forma: lo que cambia es la palabra, no el lugar.
 //   geocodificar({ direccion, localidad, provincia })
 //     -> { lat, lng, confianza, fuente } | null
 //     `confianza` dice hasta dónde llegó el servicio, con dos valores para todos los países:
@@ -45,6 +53,48 @@ export function obtenerGeocodificador(pais) {
  *  punto inventado. Todo lo que mide distancias ya sabe callarse cuando faltan. */
 export const SIN_COORDENADAS = Object.freeze({ lat: null, lng: null });
 
+/** El adaptador que le corresponde a esa Prestadora, resuelto por su país. El país es el de la
+ *  Prestadora dueña de la fila, nunca uno por omisión escrito acá: cada Prestadora resuelve sus
+ *  lugares y sus direcciones con el servicio de su propio país (CLAUDE.md §2). Devuelve `null`
+ *  cuando ese país todavía no tiene adaptador. */
+async function geocodificadorDe(prestadoraId) {
+  const { data, error } = await supabase
+    .from('prestadoras')
+    .select('pais')
+    .eq('id', prestadoraId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return obtenerGeocodificador(data?.pais);
+}
+
+/**
+ * Los lugares del organismo oficial que coinciden con lo escrito, para que la Prestadora los
+ * agregue a su lista.
+ *
+ * **Un país sin adaptador no es un error.** Devuelve la lista vacía, y ahí la Prestadora carga
+ * sus lugares a mano: quedan guardados como propios y el producto funciona igual. Sugerir es una
+ * comodidad; tener la lista es lo necesario.
+ *
+ * **A diferencia de las coordenadas, acá el error sí sale para arriba.** Del otro lado hay alguien
+ * buscando una localidad para tildarla, y devolverle una lista vacía cuando el servicio se cayó le
+ * haría creer que su localidad no existe y cargarla a mano, duplicada.
+ */
+export async function buscarLugares({ prestadoraId, texto, provincia }) {
+  if (!prestadoraId || !String(texto ?? '').trim()) return [];
+  const geocodificador = await geocodificadorDe(prestadoraId);
+  if (!geocodificador?.buscarLugares) return [];
+  return geocodificador.buscarLugares({ texto, provincia });
+}
+
+/** Las provincias del país de esa Prestadora, para acotar la búsqueda. Lista vacía si su país
+ *  todavía no tiene adaptador. */
+export async function listarProvincias({ prestadoraId }) {
+  if (!prestadoraId) return [];
+  const geocodificador = await geocodificadorDe(prestadoraId);
+  if (!geocodificador?.listarProvincias) return [];
+  return geocodificador.listarProvincias();
+}
+
 /**
  * Las coordenadas de un domicilio, para guardarlas al lado del texto.
  *
@@ -68,16 +118,7 @@ export async function coordenadasDeDomicilio({ prestadoraId, direccion, localida
   if (!prestadoraId || !String(direccion ?? '').trim()) return SIN_COORDENADAS;
 
   try {
-    // El país es el de la Prestadora dueña de la fila, nunca uno por omisión escrito acá: cada
-    // Prestadora resuelve sus direcciones con el servicio de su propio país (CLAUDE.md §2).
-    const { data, error } = await supabase
-      .from('prestadoras')
-      .select('pais')
-      .eq('id', prestadoraId)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-
-    const geocodificador = obtenerGeocodificador(data?.pais);
+    const geocodificador = await geocodificadorDe(prestadoraId);
     if (!geocodificador) return SIN_COORDENADAS;
 
     const ubicada = await geocodificador.geocodificar({ direccion, localidad, provincia });

@@ -11,21 +11,20 @@
 
 ## El dinero
 
-**1. Usted** — Con cuál de los softwares de facturación se conecta Careonys primero: el que usen
-hoy las Prestadoras. **No traba nada más que el paso 2.** Las otras dos formas de trabajar ya
-están hechas y alcanzan para salir a producción: se anota factura por factura a mano, o se baja
-un archivo con todo lo que falta facturar, se le entrega al software de facturación y se sube el
-que ese software devuelve. Qué datos van y vienen está escrito en un solo lugar
-(`panel/src/lib/intercambioDeFacturacion.js`), así que la conexión directa entra por la misma
-puerta el día que haya un nombre.
+**1.** Guardar cómo se identifica fiscalmente quien paga —para la Familia y para la obra social—
+y sumarlo a lo que sale hacia el software de facturación. Hoy no se guarda, y **ningún software de
+facturación de Argentina puede emitir un comprobante sin ese dato**: con el archivo a mano alcanza
+porque alguien cruza por nombre, con conexión directa no hay nadie que lo complete. Entra como
+configuración por país, igual que el resto del marco normativo. Sirve a las tres maneras de
+trabajar, no sólo a la conexión directa.
 
-**2.** Escribir esa conexión, para que Careonys le pida la factura sola a ese software. **Cada
-software se maneja distinto, así que cada conexión es una pieza aparte**, y agregar la segunda no
-puede obligar a tocar la primera ni nada de lo construido antes. Falta sólo esa mitad: el camino
-de vuelta ya está hecho y sirve para cualquier software —`POST
-/api/avisos-de-facturacion/:prestadoraId`, firmada con un secreto que la Prestadora carga en
-Configuración—, así que un software que pueda avisar solo lo que emitió ya se conecta hoy, sin
-esperar a nada.
+**2.** Escribir la conexión con el software de facturación de la primera Prestadora, cuando haya
+una y ella lo elija. **No se escribe antes**: se miraron los cinco que más se usan en Argentina y
+se conectan todos parecido pero con datos distintos, así que escribir uno a ciegas es acertar con
+suerte. Lo investigado está en `docs/FACTURADORES_Y_COMO_SE_CONECTAN.md`. **Cada software es una
+pieza aparte** y agregar la segunda no puede obligar a tocar la primera. Las otras dos maneras ya
+están hechas y alcanzan para salir a producción: se anota factura por factura a mano, o se baja un
+archivo con todo lo que falta facturar y se sube el que el software devuelve.
 
 **3. Usted** — El ciclo de cobranza a obras sociales: hoy sólo existen validado y anulado. ¿Qué estados hacen falta — presentación, débito, conciliación?
 

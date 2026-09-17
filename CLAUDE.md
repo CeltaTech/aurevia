@@ -137,6 +137,27 @@ administración.
 **Cada Prestadora con lo suyo, sin mezclar.** Una conexión con un software de facturación o de
 cobranzas es de una Prestadora, con su propia credencial, y nunca alcanza los datos de otra.
 
+**El padrón de clientes no se duplica: se parte, y cada mitad tiene un solo dueño.** Careonys es
+dueño de **quién es el cliente** —que existe, cómo se llama, dónde vive, cómo se lo ubica, qué
+servicio recibe—, porque saber a quién le presta servicio la Prestadora es su trabajo, no es
+facturar. El software de facturación es dueño de **cómo ese cliente figura ante el organismo
+fiscal** —el número, bajo qué condición está inscripto, qué comprobante le corresponde—, y **eso
+Careonys no lo guarda, no lo pide y no lo manda**. Así no hay dos copias del mismo dato y nunca hay
+que decidir cuál gana.
+
+**El alta va en un solo sentido, de Careonys hacia afuera.** Careonys avisa que apareció un cliente
+y cada software conectado lo da de alta con lo suyo. **Al revés no**: un cliente creado adentro del
+facturador no existe para Careonys y no se trae. Un solo emisor y muchos receptores; dos padrones
+hablándose de igual a igual divergen siempre.
+
+**Lo que une las dos mitades es una referencia, y nada más.** Por Familia y por conexión, Careonys
+anota con qué cliente se corresponde del otro lado. No copia el nombre fiscal ni el número.
+Cambiar de software de facturación rehace esa referencia y no mueve ningún dato de Careonys.
+
+**Si del otro lado editan lo que es de Careonys, se avisa, no se bloquea.** Un software comprado
+deja cambiar el nombre o el domicilio de su cliente y eso no se puede impedir desde afuera. Lo que
+corresponde es que la Prestadora vea que se despegaron, no que el producto intente imponer nada.
+
 **Las funciones internas de la base no viven en un esquema publicado.** Las que usan las políticas
 de RLS están en el esquema `interno`, que queda afuera de la lista `schemas` de
 `supabase/config.toml` a propósito: así no son direcciones web. Las políticas las siguen

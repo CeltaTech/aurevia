@@ -65,6 +65,7 @@ import { panelGuardiasRouter } from './routes/panelGuardias.js';
 import { panelComprobacionesRouter } from './routes/panelComprobaciones.js';
 import { panelAvisosEnVivoRouter } from './routes/panelAvisosEnVivo.js';
 import { webhooksPasarelasRouter } from './routes/webhooksPasarelas.js';
+import { avisoDeCobranzaExternaRouter } from './routes/avisoDeCobranzaExterna.js';
 import { revisarAlertasIA } from './utils/revisarAlertasIA.js';
 import { revisarAvisosAutomaticosCese } from './utils/avisoAutomaticoCese.js';
 import { responderError } from './utils/errorConMotivo.js';
@@ -72,8 +73,8 @@ import { responderError } from './utils/errorConMotivo.js';
 const app = express();
 app.use(cors());
 
-/* Las dos entradas que se firman van montadas ANTES del lector de JSON general, y el orden no
-   es un detalle de estilo (pendientes #159 y #165): las dos comprueban la firma de lo que
+/* Las entradas que se firman van montadas ANTES del lector de JSON general, y el orden no
+   es un detalle de estilo (pendientes #159 y #165): todas comprueban la firma de lo que
    llegó, y una firma se calcula sobre los bytes exactos que llegaron. El primer middleware que
    lee el pedido se queda con él, así que si `express.json()` va antes, la ruta recibe un objeto
    ya armado y nunca vuelve a ver los bytes originales — la firma no coincidiría jamás y la
@@ -81,6 +82,7 @@ app.use(cors());
    adentro; acá lo único que hace falta es que se monten primero. */
 app.use('/api/webhooks/pasarelas', webhooksPasarelasRouter);
 app.use('/api/whatsapp-webhook', whatsappWebhookRouter);
+app.use('/api/avisos-de-cobranza', avisoDeCobranzaExternaRouter);
 
 app.use(express.json());
 

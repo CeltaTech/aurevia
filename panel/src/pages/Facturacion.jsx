@@ -8,6 +8,7 @@ import { formatearImporte } from '../lib/dinero';
 import { hoyISO } from '../lib/horarios';
 import { MEDIOS, loQueEstaMalEnElCobro } from '../lib/cobrosDeFamilia';
 import {
+  FINANCIADORES,
   SENTIDOS_POSIBLES,
   loQueEstaMalEnLaCorreccion,
   loQueEstaMalEnLoFacturado,
@@ -75,6 +76,14 @@ function textoDeComprobante(saldo) {
   return saldo.comprobante_numero ? `${saldo.comprobante_tipo} ${saldo.comprobante_numero}` : saldo.comprobante_tipo;
 }
 
+/* A quién se le reclama esta factura. Vacío quiere decir la Familia, que es lo corriente; cuando
+   paga otro, lo que sirve saber es su nombre, y el tipo queda de respaldo si no se cargó. */
+function textoDeFinanciador(saldo, t) {
+  const tipo = saldo.financiador_tipo || FINANCIADORES.FAMILIA;
+  if (tipo === FINANCIADORES.FAMILIA) return t.facturacion.financiador_familia;
+  return saldo.financiador_nombre || traducirValor(t.facturacion, `financiador_${tipo}`);
+}
+
 /** Un momento guardado, mostrado como fecha nada más: la hora no agrega nada acá. */
 function soloLaFecha(momento) {
   return momento ? String(momento).slice(0, 10) : '—';
@@ -87,6 +96,11 @@ export function Facturacion() {
   const [mes, setMes] = useState(mesActual());
   const [vencimiento, setVencimiento] = useState('');
   const [saldos, setSaldos] = useState([]);
+  // Si la Prestadora configuró que de la cobranza se ocupa otro software, esta pantalla no muestra
+  // saldos ni genera reclamos: muestra las restricciones que ese software avisó. Arranca en
+  // encendido porque es lo que hace la mayoría, y la respuesta lo corrige enseguida.
+  const [sigue, setSigue] = useState(true);
+  const [restricciones, setRestricciones] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [generando, setGenerando] = useState(false);
@@ -97,7 +111,13 @@ export function Facturacion() {
     setEstado('cargando');
     setError(null);
     try {
-      setSaldos(await llamarApiCobros(`/saldos?periodo=${mes}`));
+      const { sigue_la_cobranza: sigueLaCobranza } = await llamarApiCobros('/configuracion');
+      setSigue(sigueLaCobranza !== false);
+      if (sigueLaCobranza === false) {
+        setRestricciones(await llamarApiCobros('/restricciones'));
+      } else {
+        setSaldos(await llamarApiCobros(`/saldos?periodo=${mes}`));
+      }
       setEstado('listo');
     } catch (e) {
       setError(mensajeDeError(e, t, 'saldos de familias'));
@@ -152,6 +172,44 @@ export function Facturacion() {
       {error && estado !== 'error' && <Alert variant="error">{error}</Alert>}
       {avisoGeneracion && <Alert variant="info">{avisoGeneracion}</Alert>}
 
+      {!sigue && (
+        <>
+          <Alert variant="info">
+            <strong>{t.facturacion.cobranza_externa_titulo}.</strong> {t.facturacion.cobranza_externa_texto}
+          </Alert>
+
+          <h2>{t.facturacion.restricciones_titulo}</h2>
+          <EstadoLista
+            estado={estado}
+            error={error}
+            vacio={estado === 'listo' && restricciones.length === 0}
+            mensajeVacio={t.facturacion.restricciones_vacio}
+            recargar={recargar}
+          >
+            <table className="panel-tabla">
+              <thead>
+                <tr>
+                  <th>{t.facturacion.col_familia}</th>
+                  <th>{t.facturacion.col_motivo}</th>
+                  <th>{t.facturacion.col_aviso_fecha}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {restricciones.map((r) => (
+                  <tr key={r.id}>
+                    <td>{r.familia_nombre || '—'}</td>
+                    <td>{r.motivo || '—'}</td>
+                    <td>{soloLaFecha(r.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </EstadoLista>
+        </>
+      )}
+
+      {sigue && (
+        <>
       <div className="panel-filtros">
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           {t.facturacion.col_periodo}
@@ -177,6 +235,7 @@ export function Facturacion() {
           <thead>
             <tr>
               <th>{t.facturacion.col_familia}</th>
+              <th>{t.facturacion.col_financiador}</th>
               <th>{t.facturacion.col_a_cobrar}</th>
               <th>{t.facturacion.col_comprobante}</th>
               <th>{t.facturacion.col_cobrado}</th>
@@ -193,6 +252,7 @@ export function Facturacion() {
             {saldos.map((s) => (
               <tr key={s.factura_id}>
                 <td>{s.familia_nombre || '—'}</td>
+                <td>{textoDeFinanciador(s, t)}</td>
                 <td>{formatearImporte(s.monto_a_cobrar, s.moneda, locale)}</td>
                 <td>{textoDeComprobante(s)}</td>
                 <td>{formatearImporte(s.cobrado, s.moneda, locale)}</td>
@@ -214,6 +274,8 @@ export function Facturacion() {
           </tbody>
         </table>
       </EstadoLista>
+        </>
+      )}
 
       {detalleId && (
         <DetalleDeSaldo facturaId={detalleId} onCerrar={() => setDetalleId(null)} onCambio={recargar} />

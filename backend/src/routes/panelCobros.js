@@ -12,6 +12,7 @@ import {
   loQueEstaMalEnLaCorreccion,
   loQueEstaMalEnLoFacturado,
   plazoDePagoDe,
+  sigueLaCobranza,
   vencimientoDe,
 } from '../utils/facturacionDeFamilias.js';
 import { armarLosRenglonesDeLaFactura } from '../utils/facturaDelPeriodo.js';
@@ -120,6 +121,64 @@ async function saldoDeLaFactura(prestadoraId, facturaId) {
   if (error) throw new Error(error.message);
   return data ?? null;
 }
+
+// ---------------------------------------------------------------------------------------
+// Las restricciones que avisó el software de créditos y cobranzas
+//
+// Sólo se leen. El sistema no las decide, no las cambia y no hace nada con ellas: las muestra
+// para que una persona de la Prestadora sepa que a esa Familia le pusieron una restricción y
+// resuelva qué hacer. Ningún Servicio se corta ni ninguna Guardia se cancela por esto.
+//
+// De cada Familia vale el aviso más nuevo: los anteriores quedan guardados, pero lo que rige hoy
+// es el último. Y se devuelven sólo las que están restringidas, porque un aviso que levantó una
+// restricción no tiene nada que mostrar.
+// ---------------------------------------------------------------------------------------
+
+/**
+ * Si el seguimiento de la cobranza es de este sistema o de otro software.
+ *
+ * Vive acá y no sólo en Configuración porque la pantalla de saldos lo necesita para saber qué
+ * mostrar, y a Configuración entra únicamente quien administra: un Coordinador que abre la
+ * pantalla tiene que ver lo mismo que ve su Admin. De la fila sale sólo el interruptor; el
+ * secreto de la caja fuerte no se toca acá.
+ */
+panelCobrosRouter.get('/configuracion', requiereRolPanel, async (req, res) => {
+  const { data, error } = await supabase
+    .from('configuracion_facturacion_familias')
+    .select('regla')
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .maybeSingle();
+  if (error) return responderError(res, error);
+  res.json({ sigue_la_cobranza: sigueLaCobranza(data?.regla) });
+});
+
+panelCobrosRouter.get('/restricciones', requiereRolPanel, async (req, res) => {
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+
+  const { data, error } = await supabase
+    .from('restricciones_de_cobranza')
+    .select('id, familia_id, restringida, motivo, origen, created_at')
+    .eq('prestadora_id', prestadoraId)
+    .order('created_at', { ascending: false });
+  if (error) return responderError(res, error);
+
+  // El más nuevo de cada Familia, que es el que rige. La consulta ya vino del más nuevo al más
+  // viejo, así que alcanza con quedarse con el primero de cada una.
+  const ultimoDeCadaFamilia = new Map();
+  for (const aviso of data || []) {
+    if (!ultimoDeCadaFamilia.has(aviso.familia_id)) ultimoDeCadaFamilia.set(aviso.familia_id, aviso);
+  }
+  const vigentes = [...ultimoDeCadaFamilia.values()].filter((a) => a.restringida);
+
+  let nombres;
+  try {
+    nombres = await nombresDeFamilias(prestadoraId, vigentes.map((a) => a.familia_id));
+  } catch (e) {
+    return responderError(res, e);
+  }
+
+  res.json(vigentes.map((a) => ({ ...a, familia_nombre: nombres.get(a.familia_id) ?? null })));
+});
 
 // ---------------------------------------------------------------------------------------
 // Los saldos
@@ -245,7 +304,7 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
 
   const { data: familias, error: errorFamilias } = await supabase
     .from('familias')
-    .select('id, dias_hasta_el_vencimiento, pacientes(id, nombre)')
+    .select('id, dias_hasta_el_vencimiento, financiador_tipo, financiador_nombre, pacientes(id, nombre)')
     .eq('prestadora_id', prestadoraId)
     .is('deleted_at', null);
   if (errorFamilias) return responderError(res, errorFamilias);
@@ -350,6 +409,12 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
         // un cambio de día entre los dos daría un vencimiento corrido.
         fecha_emision: hoy,
         fecha_vencimiento: vencimiento,
+        // A quién se le reclama se copia de la ficha de la Familia el día que se genera, y no se
+        // mira más: una factura emitida no cambia, así que si mañana esa Familia pasa a pagar por
+        // sí misma, las viejas tienen que seguir diciendo a quién se le reclamaron. Vacío en la
+        // ficha se guarda vacío, que quiere decir la Familia.
+        financiador_tipo: familia.financiador_tipo ?? null,
+        financiador_nombre: familia.financiador_nombre ?? null,
       })
       .select('id')
       .single();

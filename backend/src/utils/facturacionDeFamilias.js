@@ -92,6 +92,50 @@ export function montoQueSeReclama(factura, correcciones = []) {
   return aDosDecimales(Number(emitido) + movido);
 }
 
+/**
+ * Si el seguimiento de la cobranza es de este sistema o de otro software.
+ *
+ * Lo decide la Prestadora. Encendido es lo que se viene haciendo: mandar la factura a quien tiene
+ * que pagarla, seguir el saldo y anotar los pagos. Apagado quiere decir que de eso se ocupa otro
+ * software de créditos y cobranzas, y que de ahí adentro sólo entra el aviso de si a una Familia
+ * hay que ponerle alguna restricción.
+ *
+ * Sin nada configurado queda encendido, porque es lo que hacen hoy todas las Prestadoras
+ * cargadas. Apagarlo es una decisión que se toma.
+ */
+export function sigueLaCobranza(regla) {
+  return regla?.sigue_la_cobranza !== false;
+}
+
+/** A quién se le puede reclamar una factura. Son identificadores guardados: no se renombran. */
+export const FINANCIADORES = {
+  FAMILIA: 'familia',
+  OBRA_SOCIAL: 'obra_social',
+  OTRO: 'otro',
+};
+
+export const FINANCIADORES_POSIBLES = Object.values(FINANCIADORES);
+
+/**
+ * Lo más corto que puede medir el secreto con el que ese otro software firma sus avisos.
+ *
+ * Treinta y dos caracteres es lo que genera solo cualquier software que los arme; más corto que
+ * eso se adivina probando, y entonces la puerta firmada deja de estar firmada.
+ */
+export const LARGO_MINIMO_DEL_SECRETO_DEL_AVISO = 32;
+
+/**
+ * Qué está mal en un aviso de restricción, o `null` si está bien.
+ *
+ * El motivo no es obligatorio: el otro software puede no tener ninguno que dar, y trabarlo dejaría
+ * el aviso afuera. Lo que sí hace falta es saber de qué Familia se trata y para qué lado va.
+ */
+export function loQueEstaMalEnElAviso(aviso) {
+  if (!String(aviso?.familia_id ?? '').trim()) return 'familia_id';
+  if (typeof aviso?.restringida !== 'boolean') return 'restringida';
+  return null;
+}
+
 /** Dos decimales sin arrastrar el error del punto flotante. */
 export function aDosDecimales(numero) {
   return Math.round((Number(numero) + Number.EPSILON) * 100) / 100;

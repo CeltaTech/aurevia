@@ -55,7 +55,7 @@ import {
   revisarFrecuenciaDePago,
   soloLoQueCorreDeLaFrecuencia,
 } from '../utils/frecuenciaDePago.js';
-import { plazoQueSePuedeGuardar } from '../utils/facturacionDeFamilias.js';
+import { LARGO_MINIMO_DEL_SECRETO_DEL_AVISO, plazoQueSePuedeGuardar, sigueLaCobranza } from '../utils/facturacionDeFamilias.js';
 import { METROS_TOLERANCIA_POR_OMISION, MINUTOS_TOLERANCIA_POR_OMISION } from '../utils/toleranciaCheckin.js';
 import {
   SEGUNDOS_EN_PANTALLA_POR_OMISION,
@@ -784,7 +784,7 @@ panelConfiguracionRouter.put('/pago-asistentes', async (req, res) => {
 panelConfiguracionRouter.get('/facturacion-familias', async (req, res) => {
   const { data, error } = await supabase
     .from('configuracion_facturacion_familias')
-    .select('regla')
+    .select('regla, secreto_del_aviso_secret_id')
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
   if (error) return responderError(res, error);
@@ -792,6 +792,14 @@ panelConfiguracionRouter.get('/facturacion-familias', async (req, res) => {
   res.json({
     configuracion: {
       dias_hasta_el_vencimiento: data?.regla?.dias_hasta_el_vencimiento ?? null,
+      sigue_la_cobranza: sigueLaCobranza(data?.regla),
+      // Del secreto sale de acá si está cargado o no, nunca su contenido, y tampoco la referencia
+      // a la caja fuerte: al navegador no le sirve para nada y sí sirve para terminar en un
+      // registro donde no tendría que estar.
+      aviso_de_restriccion_conectado: !!data?.secreto_del_aviso_secret_id,
+      // Para que la pantalla pueda mostrar a qué dirección tiene que mandar sus avisos el otro
+      // software. No es un secreto: sin el secreto de firma, conocerla no sirve de nada.
+      prestadora_id: req.usuarioPanel.prestadoraId,
     },
   });
 });
@@ -802,9 +810,17 @@ panelConfiguracionRouter.put('/facturacion-familias', async (req, res) => {
     return res.status(400).json({ error: 'El plazo de pago está fuera de lo permitido' });
   }
 
+  if (req.body?.sigue_la_cobranza !== undefined && typeof req.body.sigue_la_cobranza !== 'boolean') {
+    return res.status(400).json({ error: 'El seguimiento de la cobranza se enciende o se apaga' });
+  }
+
   // Vacío se guarda como objeto vacío y no como un cero: cero es «paga el mismo día» y vacío es
   // «no se acordó nada». Son dos cosas distintas y la pantalla se comporta distinto con cada una.
   const regla = revision.valor === null ? {} : { dias_hasta_el_vencimiento: revision.valor };
+
+  // Encendido es lo de fábrica, así que sólo se guarda el apagado: una regla que repite el valor
+  // de fábrica hace creer que alguien lo decidió.
+  if (req.body?.sigue_la_cobranza === false) regla.sigue_la_cobranza = false;
 
   const { error } = await supabase.from('configuracion_facturacion_familias').upsert(
     {
@@ -817,6 +833,34 @@ panelConfiguracionRouter.put('/facturacion-familias', async (req, res) => {
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });
+
+// El secreto con el que el otro software de créditos y cobranzas firma sus avisos de restricción.
+//
+// Se cierra más que el resto de la configuración, por lo mismo que las credenciales de WhatsApp:
+// es una llave de la Prestadora, y Superadmin es un rol técnico de CeltaTech. Quien lo carga es
+// Admin, y una vez cargado no vuelve a mostrarse: de la caja fuerte no sale nada hacia el
+// navegador. Para cambiarlo se escribe uno nuevo, que reemplaza al anterior.
+const soloAdminParaElSecretoDelAviso = exigirAdminDePrestadora(
+  'El secreto del aviso de cobranza es de la Prestadora: solo Admin puede cambiarlo'
+);
+
+panelConfiguracionRouter.put(
+  '/facturacion-familias/secreto-del-aviso',
+  soloAdminParaElSecretoDelAviso,
+  async (req, res) => {
+    const secreto = String(req.body?.secreto ?? '').trim();
+    if (secreto.length < LARGO_MINIMO_DEL_SECRETO_DEL_AVISO) {
+      return res.status(400).json({ error: 'El secreto es demasiado corto' });
+    }
+
+    const { error } = await supabase.rpc('guardar_secreto_del_aviso_de_cobranza', {
+      p_prestadora_id: req.usuarioPanel.prestadoraId,
+      p_secreto: secreto,
+    });
+    if (error) return responderError(res, error);
+    res.json({ ok: true });
+  }
+);
 
 // --- WhatsApp: credenciales de Meta Cloud API (Supabase Vault, ver
 //     supabase/migrations/ — el token nunca vuelve a

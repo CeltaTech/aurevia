@@ -6,7 +6,11 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
-import { PLAZO_MAXIMO_EN_DIAS, plazoQueSePuedeGuardar } from '../../lib/facturacionDeFamilias';
+import {
+  LARGO_MINIMO_DEL_SECRETO_DEL_AVISO,
+  PLAZO_MAXIMO_EN_DIAS,
+  plazoQueSePuedeGuardar,
+} from '../../lib/facturacionDeFamilias';
 
 /* A qué plazo pagan las Familias lo que se les factura.
    ==========================================================================
@@ -27,6 +31,11 @@ import { PLAZO_MAXIMO_EN_DIAS, plazoQueSePuedeGuardar } from '../../lib/facturac
 export function FacturacionFamiliasTab() {
   const { t } = useLocale();
   const [dias, setDias] = useState('');
+  const [sigue, setSigue] = useState(true);
+  const [prestadoraId, setPrestadoraId] = useState(null);
+  const [avisoConectado, setAvisoConectado] = useState(false);
+  const [secreto, setSecreto] = useState('');
+  const [guardandoSecreto, setGuardandoSecreto] = useState(false);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
@@ -38,6 +47,9 @@ export function FacturacionFamiliasTab() {
     try {
       const { configuracion } = await llamarApi('/facturacion-familias');
       setDias(configuracion.dias_hasta_el_vencimiento === null ? '' : String(configuracion.dias_hasta_el_vencimiento));
+      setSigue(configuracion.sigue_la_cobranza !== false);
+      setAvisoConectado(!!configuracion.aviso_de_restriccion_conectado);
+      setPrestadoraId(configuracion.prestadora_id ?? null);
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -60,13 +72,36 @@ export function FacturacionFamiliasTab() {
     try {
       await llamarApi('/facturacion-familias', {
         method: 'PUT',
-        body: JSON.stringify({ dias_hasta_el_vencimiento: dias === '' ? '' : Number(dias) }),
+        body: JSON.stringify({
+          dias_hasta_el_vencimiento: dias === '' ? '' : Number(dias),
+          sigue_la_cobranza: sigue,
+        }),
       });
       setGuardado(true);
     } catch (err) {
       setError(mensajeDeError(err, t));
     } finally {
       setGuardando(false);
+    }
+  }
+
+  // El secreto se guarda aparte del resto, y a propósito: va a la caja fuerte de la base por otra
+  // puerta, no vuelve a salir nunca, y guardarlo junto con lo demás obligaría a volver a
+  // escribirlo cada vez que se cambia el plazo de pago.
+  async function guardarSecreto() {
+    setGuardandoSecreto(true);
+    setError(null);
+    try {
+      await llamarApi('/facturacion-familias/secreto-del-aviso', {
+        method: 'PUT',
+        body: JSON.stringify({ secreto }),
+      });
+      setSecreto('');
+      setAvisoConectado(true);
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setGuardandoSecreto(false);
     }
   }
 
@@ -92,9 +127,55 @@ export function FacturacionFamiliasTab() {
               setGuardado(false);
             }}
           />
+          <FormField
+            label={t.configuracion.cobranza_sigue_titulo}
+            name="sigue_la_cobranza"
+            type="checkbox"
+            checked={sigue}
+            ayuda={t.configuracion.cobranza_sigue_ayuda}
+            onChange={(e) => {
+              setSigue(e.target.checked);
+              setGuardado(false);
+            }}
+          />
           <Button onClick={guardar} disabled={guardando || !revisado.ok}>
             {guardando ? t.comun.guardando : t.comun.guardar}
           </Button>
+
+          {!sigue && (
+            <section>
+              <h3>{t.configuracion.cobranza_aviso_titulo}</h3>
+              <p className="panel-explicacion">{t.configuracion.cobranza_aviso_explicacion}</p>
+              {prestadoraId && (
+                <FormField
+                  label={t.configuracion.cobranza_aviso_direccion}
+                  name="direccion_del_aviso"
+                  value={`${import.meta.env.VITE_API_URL}/api/avisos-de-cobranza/${prestadoraId}`}
+                  readOnly
+                  ayuda={t.configuracion.cobranza_aviso_direccion_ayuda}
+                />
+              )}
+              <Alert variant="info">
+                {avisoConectado
+                  ? t.configuracion.cobranza_aviso_conectado
+                  : t.configuracion.cobranza_aviso_sin_conectar}
+              </Alert>
+              <FormField
+                label={t.configuracion.cobranza_aviso_secreto}
+                name="secreto_del_aviso"
+                type="password"
+                value={secreto}
+                ayuda={t.configuracion.cobranza_aviso_secreto_ayuda}
+                onChange={(e) => setSecreto(e.target.value)}
+              />
+              <Button
+                onClick={guardarSecreto}
+                disabled={guardandoSecreto || secreto.trim().length < LARGO_MINIMO_DEL_SECRETO_DEL_AVISO}
+              >
+                {guardandoSecreto ? t.comun.guardando : t.comun.guardar}
+              </Button>
+            </section>
+          )}
         </>
       </EstadoLista>
     </div>

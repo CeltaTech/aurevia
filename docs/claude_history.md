@@ -419,3 +419,15 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** que no hay tipo de comprobante, ni punto de venta, ni numeración autorizada, ni impuestos discriminados.
 - **Qué dice ahora:** que sigue sin emitir y sin calcular nada fiscal, y que anota tal como llegaron el nombre del comprobante, su número y el monto que la Familia quedó adeudando, impuestos incluidos.
 - **Motivo:** el Desarrollador precisó cómo se reparte el trabajo con el software de facturación de la Prestadora: ese software emite e informa el monto adeudado, y Careonys lo guarda y lo reclama. La frase anterior se leía como que esos datos no podían existir en la base, y con eso la pantalla de saldos no se podía construir. También se descartó la idea de comparar ese monto contra lo que se mandó a facturar: no hay criterio para decidir que llegó mal sin conocer los impuestos de cada país, que es justamente lo que el producto no conoce.
+
+### Que Careonys siga la cobranza deja de estar dado por sentado y pasa a configurarse
+
+- **Qué decía antes:** que Careonys le manda la factura a quien tiene que pagarla, sigue la cobranza y anota los pagos, y que eso valía para todas las Prestadoras.
+- **Qué dice ahora:** que cada Prestadora decide si de la cobranza se ocupa Careonys o se ocupa otro software de créditos y cobranzas suyo. Con el interruptor apagado, la pantalla de Facturación no muestra saldos ni reclama nada, y lo único que entra es el aviso de que a una Familia hay que ponerle alguna restricción por falta de pago, por una puerta firmada con un secreto de esa Prestadora. Lo avisado se muestra y no decide nada.
+- **Motivo:** el Desarrollador precisó que una Prestadora puede tener otro software de créditos y cobranzas —que CeltaTech también puede desarrollar— y querer que ese se ocupe, y que Careonys simplemente sea notificado si hay alguna restricción al cliente por falta de pago. Dar por sentado lo contrario era el sistema decidiéndole la forma de trabajo a la Prestadora, que es al revés de como se decide acá.
+
+### A quién se le reclama cada factura se copia y no se mira la ficha
+
+- **Qué decía antes:** nada. La factura tenía el lugar para guardar a quién se le reclama, pero no había de dónde sacarlo.
+- **Qué dice ahora:** que el dato vive en la ficha de la Familia —vacío quiere decir la Familia— y que cada factura se lo lleva escrito el día que se genera.
+- **Motivo:** una factura emitida no cambia. Si se mirara la ficha, el día que esa Familia pasara a pagar por sí misma las facturas viejas dejarían de decir a quién se le reclamaron, y el pasado cambiaría solo.

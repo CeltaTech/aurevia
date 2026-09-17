@@ -241,6 +241,27 @@ funciona igual, anotando esos datos a mano. La cuenta de la resta vive en un sol
 general de la Prestadora y uno por Familia, que gana sobre el general; vacío quiere decir que no se
 acordó nada y cero, que paga el mismo día.
 
+**Que el sistema siga la cobranza lo decide cada Prestadora**, con un interruptor en Configuración
+→ Facturación a Familias (`configuracion_facturacion_familias`, campo `sigue_la_cobranza`).
+Encendido —que es lo de fábrica— la pantalla de Facturación muestra los saldos, genera los
+reclamos y anota los pagos. Apagado, no muestra ni reclama nada: de eso se ocupa el software de
+créditos y cobranzas de la Prestadora, y lo único que Careonys necesita saber es si a alguna
+Familia hay que ponerle una restricción por falta de pago. Ese otro software lo avisa por una
+puerta propia, `POST /api/avisos-de-cobranza/:prestadoraId`, firmada con un secreto que la
+Prestadora carga una sola vez y que se guarda en la caja fuerte de la base, nunca a la vista. El
+aviso repetido no suma nada, una Prestadora no puede escribir sobre la Familia de otra, y **lo
+avisado se muestra y no decide nada**: quien decide es una persona. La puerta está en
+`backend/src/routes/avisoDeCobranzaExterna.js` y la prueba en
+`scripts/probar_aviso_de_cobranza.mjs`. El interruptor también se consulta desde la pantalla de
+saldos con `GET /api/cobros/configuracion`, que devuelve el interruptor y nunca el secreto.
+
+**A quién se le reclama no es siempre la Familia.** Puede ser una obra social o un tercero, y eso
+vive en la ficha de la Familia (`financiador_tipo`, `financiador_nombre`); vacío quiere decir la
+Familia, que es lo corriente. Cada factura se lleva ese dato **copiado el día que se genera**,
+porque una factura emitida no cambia: si mañana esa Familia pasa a pagar por sí misma, las viejas
+tienen que seguir diciendo a quién se le reclamaron. El nombre es texto y no se interpreta — el
+padrón de obras sociales cambia de país en país y el producto no conoce ninguno.
+
 **En la modalidad Marketplace** (`docs/PRD_07_Modalidad_Marketplace.md`), la Familia le paga a la Prestadora por una pasarela,
 y **cada Prestadora arma su propia forma de cobrar** con las piezas que el producto le da
 —importe, cada cuánto, período gratuito, saldo de contactos, si se renueva sola— en

@@ -149,7 +149,6 @@ export const T = {
       domicilio_lugar: 'Localidad o barrio',
       domicilio_lugar_ninguno: 'Sin elegir',
       domicilio_lugar_sin_lista: 'La Prestadora todavía no cargó ninguna localidad ni barrio.',
-      domicilio_vacio: 'Sin domicilio cargado',
       // Con estas palabras se lee el domicilio en un renglón: «Av. Siempreviva 742, piso 4, unidad B, Belgrano».
       domicilio_palabra_piso: 'piso',
       domicilio_palabra_unidad: 'unidad',
@@ -1584,7 +1583,6 @@ export const T = {
       nueva: {
         titulo: 'Nueva Familia',
         nombre_paciente: 'Nombre del Paciente',
-        domicilio_paciente: 'Domicilio del Paciente',
         crear: 'Crear Familia',
         creando: 'Creando…',
       },
@@ -2985,7 +2983,6 @@ export const T = {
       domicilio_lugar: 'Town or neighbourhood',
       domicilio_lugar_ninguno: 'Not chosen',
       domicilio_lugar_sin_lista: 'The provider has not added any town or neighbourhood yet.',
-      domicilio_vacio: 'No address on file',
       // Con estas palabras se lee el domicilio en un renglón: «742 Evergreen Terrace, floor 4, unit B, Belgrano».
       domicilio_palabra_piso: 'floor',
       domicilio_palabra_unidad: 'unit',
@@ -4398,7 +4395,6 @@ export const T = {
       nueva: {
         titulo: 'New Family',
         nombre_paciente: 'Patient name',
-        domicilio_paciente: 'Patient address',
         crear: 'Create family',
         creando: 'Creating...',
       },
@@ -5783,7 +5779,6 @@ export const T = {
       domicilio_lugar: 'Cidade ou bairro',
       domicilio_lugar_ninguno: 'Sem escolher',
       domicilio_lugar_sin_lista: 'A prestadora ainda não cadastrou nenhuma cidade nem bairro.',
-      domicilio_vacio: 'Sem endereço cadastrado',
       // Con estas palabras se lee el domicilio en un renglón: «Rua Siempreviva 742, andar 4, unidade B, Belgrano».
       domicilio_palabra_piso: 'andar',
       domicilio_palabra_unidad: 'unidade',
@@ -7196,7 +7191,6 @@ export const T = {
       nueva: {
         titulo: 'Nova Família',
         nombre_paciente: 'Nome do paciente',
-        domicilio_paciente: 'Endereço do paciente',
         crear: 'Criar família',
         creando: 'Criando...',
       },

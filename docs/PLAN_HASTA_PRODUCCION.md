@@ -1,6 +1,6 @@
 # PLAN HASTA PRODUCCIÓN — Careonys
 
-**Una sola lista, del 1 al 73, en orden.** Se hace el 1, después el 2, y así hasta el final.
+**Una sola lista, del 1 al 74, en orden.** Se hace el 1, después el 2, y así hasta el final.
 
 - Los pasos que empiezan con **Usted** los contesta o los hace el Desarrollador. Los demás los hago yo.
 - **Un paso terminado se borra de este archivo.** No se marca como hecho: se saca.
@@ -224,13 +224,22 @@ De las especialidades de esta pantalla no queda nada por hacer: `asistentes.espe
 
 **67. Usted** — La regla de los archivos dice «nunca público» y hay un depósito público construido (`marca-prestadoras`); los otros cinco son privados. ¿La regla admite la excepción, o se cierra el depósito?
 
+**68. Usted** — La categoría de convenio del Asistente se teclea a mano, y de ella depende su
+remuneración básica. El convenio tiene sus categorías definidas y no las inventa la Prestadora,
+así que tecleadas quedan escritas distinto en cada ficha: no se puede saber cuántos Asistentes hay
+en cada una, ni aplicarle un cambio de escala a todos los de una categoría de una sola vez, y un
+error de tipeo sale impreso en el documento de cese. El campo viene de la aplicación vieja y nunca
+se discutió. **Qué hay que analizar:** si pasa a ser una lista que la Prestadora carga —porque las
+categorías de otro país son otras y no pueden venir escritas en el código—, y qué se hace con las
+liquidaciones que ya salieron.
+
 ---
 
 ## El sitio web
 
-**68. Usted** — ¿Se autoriza construir `careonys.com` según `docs/PRD_01_Sitio_Web.md`? El PRD ya está entero. Hoy `sitio-web/` es una página que dice «En construcción».
+**69. Usted** — ¿Se autoriza construir `careonys.com` según `docs/PRD_01_Sitio_Web.md`? El PRD ya está entero. Hoy `sitio-web/` es una página que dice «En construcción».
 
-**69.** Construirlo.
+**70.** Construirlo.
 
 ---
 
@@ -251,7 +260,7 @@ para el tratamiento de dato biométrico, la accesibilidad, la protección de dat
 cuatro preguntas sobre la ubicación de las personas. Los pasos que dependen de ellas dicen qué se
 construye igual mientras tanto.
 
-**70. Usted** — Las escalas legales: la validación, y los dos valores que el código usa y no
+**71. Usted** — Las escalas legales: la validación, y los dos valores que el código usa y no
 existen (`piso_minimo_indemnizacion` y `fraccion_computable_antiguedad`). En el mismo viaje va el
 texto del aviso sobre el abandono de persona: ninguno de los veintiún documentos de `docs/legal/`
 lo menciona —lo único parecido es el abandono de *trabajo*, art. 244 LCT, en
@@ -262,8 +271,8 @@ documento no hay aviso; la mecánica se construye igual, porque no depende de ni
 
 ## Cierre
 
-**71. Usted** — El documento de roles generado desde la base: ¿para quién es, interno de CeltaTech o manual para la Prestadora?
+**72. Usted** — El documento de roles generado desde la base: ¿para quién es, interno de CeltaTech o manual para la Prestadora?
 
-**72.** Generarlo.
+**73.** Generarlo.
 
-**73.** Correr las pruebas y publicar.
+**74.** Correr las pruebas y publicar.

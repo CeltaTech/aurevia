@@ -143,6 +143,13 @@ sea, y en los cuatro casos se guarda una sola vez, con todo lo que se sabe de é
 lo ubica, qué servicio recibe y cómo figura ante el organismo fiscal. Nada de eso se guarda por
 segunda vez en otra pantalla, en otra tabla ni en el software de otro.
 
+**Se lo cita todas las veces que haga falta; se lo copia ninguna.** Una obra social puede estar
+nombrada en cien fichas, y en las cien es la misma: lo que cada una guarda es cuál, no cómo se
+llama. El nombre escrito a mano en cada lugar termina siempre en datos que se contradicen entre
+sí, y entonces no hay forma de saber cuál vale. **Única excepción, y es historia, no padrón:** un
+comprobante ya emitido se lleva copiados los datos del día que se emitió, porque lo emitido no
+cambia aunque el Cliente cambie después.
+
 **Hacia afuera se entrega, y no se trae.** Careonys avisa que apareció un Cliente y cada software
 conectado lo da de alta con lo suyo. **Al revés no**: un cliente creado adentro del facturador no
 existe para Careonys. Un solo emisor y muchos receptores; dos padrones hablándose de igual a igual

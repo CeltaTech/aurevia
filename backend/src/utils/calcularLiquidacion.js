@@ -1,5 +1,10 @@
 // ---------------------------------------------------------------------------
-// calcularLiquidacion.js — cuánto se le paga a un Asistente por un mes
+// calcularLiquidacion.js — cuánto se le paga a un Asistente por un período
+//
+// EL PERÍODO YA NO ES SIEMPRE UN MES. Desde qué día hasta qué día va lo decide
+// `frecuenciaDePago.js`, porque con cada persona se arregla distinto: los viernes, cada quince
+// días, el mes cerrado. Acá eso llega hecho y esta cuenta no se entera de dónde salieron los
+// bordes. Quien no cambió nada sigue liquidando el mes calendario, exactamente igual que antes.
 //
 // POR QUÉ EXISTE ESTE ARCHIVO. Esta cuenta vivía adentro de la ruta del motor que genera las
 // liquidaciones, que era el único lugar que la necesitaba. Dejó de serlo: el Simulador de
@@ -36,11 +41,39 @@ import {
   valorDeLaHoraExtra,
   valorDeLaUnidad,
 } from './formaDePago.js';
+import { diasDelMesDelPeriodo } from './frecuenciaDePago.js';
 
+const ES_UN_DIA = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Un período puede venir de dos formas, y las dos son válidas.
+ *
+ * Como texto `AAAA-MM` es el mes calendario entero, que es lo que el sistema hizo siempre y lo
+ * que sigue haciendo quien no cambió nada. Como `{ desde, hasta }` es cualquier tramo, que es lo
+ * que arma `frecuenciaDePago.js` cuando a alguien se le paga los viernes o cada quince días.
+ */
 export function esPeriodoValido(periodo) {
+  if (periodo && typeof periodo === 'object') {
+    if (!ES_UN_DIA.test(periodo.desde ?? '') || !ES_UN_DIA.test(periodo.hasta ?? '')) return false;
+    return periodo.desde <= periodo.hasta;
+  }
   if (typeof periodo !== 'string' || !/^\d{4}-\d{2}$/.test(periodo)) return false;
   const mes = Number(periodo.slice(5, 7));
   return mes >= 1 && mes <= 12;
+}
+
+/**
+ * Desde qué día hasta qué día va el período, y cómo se lo nombra.
+ *
+ * La etiqueta es para los avisos que lee una persona, y por eso dice el mes cuando el período es
+ * un mes: «no hay escala vigente durante todo 2026-03» se entiende, y «durante todo 2026-03-01 a
+ * 2026-03-31» dice lo mismo con más ruido.
+ */
+export function bordesDelPeriodo(periodo) {
+  if (periodo && typeof periodo === 'object') {
+    return { desde: periodo.desde, hasta: periodo.hasta, etiqueta: `${periodo.desde} a ${periodo.hasta}` };
+  }
+  return { desde: primerDia(periodo), hasta: ultimoDia(periodo), etiqueta: periodo };
 }
 
 export function primerDia(periodo) {
@@ -78,12 +111,14 @@ export function calcularLiquidacion({ asistente, acumulado, conceptos, escalasPo
   if (baseValor === null) return { faltaBase: true };
 
   const horas = redondear(acumulado.horas);
-  const desde = primerDia(periodo);
-  const hasta = ultimoDia(periodo);
+  const { desde, hasta, etiqueta } = bordesDelPeriodo(periodo);
   const cuantas = unidadesDelPeriodo({
     unidad,
     acumulado,
     diasDelPeriodo: diasEntre(desde, hasta),
+    // El sueldo mensual se reparte sobre los días del mes y no sobre los del período: si no, a
+    // quien cobra los viernes se le pagaría el sueldo entero cada viernes.
+    diasDelMes: diasDelMesDelPeriodo({ desde, hasta }),
     diasDeLaPersona: diasCubiertos({
       desde,
       hasta,
@@ -146,7 +181,7 @@ export function calcularLiquidacion({ asistente, acumulado, conceptos, escalasPo
     if (concepto.origen_valor === 'escala_legal') {
       const escala = escalasPorTipo.get(concepto.escala_tipo);
       if (!escala) {
-        sinEscala.push(`${concepto.nombre}: no hay una escala «${concepto.escala_tipo}» vigente en ${jurisdiccion} durante todo ${periodo}`);
+        sinEscala.push(`${concepto.nombre}: no hay una escala «${concepto.escala_tipo}» vigente en ${jurisdiccion} durante todo ${etiqueta}`);
         continue;
       }
       // La escala dice el número y también en qué unidad está. Si no habla de lo mismo que el
@@ -198,7 +233,11 @@ export function calcularLiquidacion({ asistente, acumulado, conceptos, escalasPo
   return {
     liquidacion: {
       asistente_id: asistente.id,
-      periodo: primerDia(periodo),
+      // `periodo` es el día en que el período empieza, y con período mensual eso es el primero
+      // del mes, igual que siempre. Los dos bordes van aparte y son los que mandan.
+      periodo: desde,
+      periodo_desde: desde,
+      periodo_hasta: hasta,
       tipo_vinculo: asistente.tipo_vinculo,
       base_unidad: baseUnidad,
       base_valor: baseValor,

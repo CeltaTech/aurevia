@@ -68,6 +68,24 @@ function mesDelPeriodo(periodo) {
   return String(periodo ?? '').slice(0, 7);
 }
 
+/**
+ * Desde qué día hasta qué día va una liquidación, escrito para leer.
+ *
+ * Se muestra siempre, y no sólo cuando el período no es el mes: quien cobra por semana ve cinco
+ * renglones suyos en el mismo mes, y sin el tramo no habría forma de saber cuál es cuál.
+ *
+ * La fecha se arma con la hora del aparato a propósito. `new Date('2026-08-01')` se entiende en
+ * hora universal, y en un huso al oeste eso se muestra como el 31 de julio.
+ */
+function tramoDelPeriodo(liquidacion, locale) {
+  const desde = liquidacion.periodo_desde ?? liquidacion.periodo;
+  const hasta = liquidacion.periodo_hasta;
+  if (!desde) return '—';
+  const comoTexto = (dia) => new Date(`${dia}T00:00:00`).toLocaleDateString(locale);
+  if (!hasta) return comoTexto(desde);
+  return `${comoTexto(desde)} – ${comoTexto(hasta)}`;
+}
+
 function formatearHoras(valor, locale) {
   return `${(Math.round(Number(valor ?? 0) * 10) / 10).toLocaleString(locale)} h`;
 }
@@ -243,6 +261,7 @@ function LiquidacionesTab({ esAdmin }) {
           <thead>
             <tr>
               <th>{t.pagos_asistentes.col_asistente}</th>
+              <th>{t.pagos_asistentes.col_tramo}</th>
               <th>{t.pagos_asistentes.col_vinculo}</th>
               <th>{t.pagos_asistentes.col_horas}</th>
               <th>{t.pagos_asistentes.col_bruto}</th>
@@ -256,6 +275,7 @@ function LiquidacionesTab({ esAdmin }) {
             {filtradas.map((l) => (
               <tr key={l.id}>
                 <td>{l.asistente_nombre || '—'}</td>
+                <td>{tramoDelPeriodo(l, locale)}</td>
                 <td>{traducirValor(t.asistentes, `vinculo_${l.tipo_vinculo}`)}</td>
                 <td>{formatearHoras(l.horas, locale)}</td>
                 <td>{formatearImporte(l.bruto, l.moneda, locale)}</td>
@@ -410,6 +430,8 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
                 <dd>{liquidacion.asistente?.nombre || '—'}</dd>
                 <dt>{t.pagos_asistentes.col_periodo}</dt>
                 <dd>{mesDelPeriodo(liquidacion.periodo)}</dd>
+                <dt>{t.pagos_asistentes.col_tramo}</dt>
+                <dd>{tramoDelPeriodo(liquidacion, locale)}</dd>
                 <dt>{t.pagos_asistentes.col_vinculo}</dt>
                 <dd>{traducirValor(t.asistentes, `vinculo_${liquidacion.tipo_vinculo}`)}</dd>
                 <dt>{t.pagos_asistentes.detalle_base}</dt>

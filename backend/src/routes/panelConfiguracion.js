@@ -50,6 +50,11 @@ import {
 } from '../utils/reenvioDeRespuestas.js';
 import { LIMITES_AVISO_PREVIO_GUARDIA } from '../utils/revisarRecordatoriosPush.js';
 import { reglaDePagoDe, revisarReglaDePago, soloLoQueCorreDelPago } from '../utils/formaDePago.js';
+import {
+  frecuenciaDePagoDe,
+  revisarFrecuenciaDePago,
+  soloLoQueCorreDeLaFrecuencia,
+} from '../utils/frecuenciaDePago.js';
 import { METROS_TOLERANCIA_POR_OMISION, MINUTOS_TOLERANCIA_POR_OMISION } from '../utils/toleranciaCheckin.js';
 import {
   SEGUNDOS_EN_PANTALLA_POR_OMISION,
@@ -717,14 +722,24 @@ panelConfiguracionRouter.put('/alarmas-tomadas', async (req, res) => {
 panelConfiguracionRouter.get('/pago-asistentes', async (req, res) => {
   const { data, error } = await supabase
     .from('configuracion_pago_asistentes')
-    .select('regla')
+    .select('regla, frecuencia_pago')
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
   if (error) return responderError(res, error);
 
   // Que la fila no exista no es un error: es la configuración de fábrica.
   const corrido = data?.regla ?? {};
-  res.json({ configuracion: { regla: reglaDePagoDe(corrido), corridos: corrido } });
+  const corridoDeLaFrecuencia = data?.frecuencia_pago ?? {};
+  res.json({
+    configuracion: {
+      regla: reglaDePagoDe(corrido),
+      corridos: corrido,
+      // Con qué se mide el trabajo y cada cuánto se cobra son dos cosas distintas, y por eso
+      // viajan separadas. Se le puede pagar por hora y cobrar por mes.
+      frecuencia: frecuenciaDePagoDe(corridoDeLaFrecuencia),
+      corridos_frecuencia: corridoDeLaFrecuencia,
+    },
+  });
 });
 
 panelConfiguracionRouter.put('/pago-asistentes', async (req, res) => {
@@ -734,10 +749,19 @@ panelConfiguracionRouter.put('/pago-asistentes', async (req, res) => {
     return res.status(400).json({ error: `El valor de «${revision.clave}» está fuera de lo permitido` });
   }
 
+  const corridosDeLaFrecuencia = soloLoQueCorreDeLaFrecuencia(req.body?.frecuencia);
+  const revisionDeLaFrecuencia = revisarFrecuenciaDePago(corridosDeLaFrecuencia);
+  if (!revisionDeLaFrecuencia.ok) {
+    return res
+      .status(400)
+      .json({ error: `El valor de «${revisionDeLaFrecuencia.clave}» está fuera de lo permitido` });
+  }
+
   const { error } = await supabase.from('configuracion_pago_asistentes').upsert(
     {
       prestadora_id: req.usuarioPanel.prestadoraId,
       regla: corridos,
+      frecuencia_pago: corridosDeLaFrecuencia,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'prestadora_id' }

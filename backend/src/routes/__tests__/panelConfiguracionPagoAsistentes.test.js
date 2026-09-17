@@ -20,6 +20,7 @@ import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 
 import { REGLA_DE_PAGO } from '../../utils/formaDePago.js';
+import { FRECUENCIA_DE_PAGO } from '../../utils/frecuenciaDePago.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const USUARIO = '22222222-2222-2222-2222-222222222222';
@@ -176,6 +177,74 @@ describe('guardar', () => {
   it('escribe para esta Prestadora y no para cualquiera', async () => {
     await guardar({ regla: { prorratear_monto_fijo: false } });
     assert.equal(loEscrito().prestadora_id, PRESTADORA);
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Cada cuánto cobran los Asistentes
+//
+// Es otra cosa que con qué se les mide el trabajo, y por eso viaja en su propia clave. Vale
+// para las dos lo mismo: sólo se guarda lo corrido, y lo que está fuera de borde no se guarda.
+// ---------------------------------------------------------------------------------------
+
+describe('cada cuánto cobran los Asistentes', () => {
+  it('sin nada guardado, contesta los valores de fábrica', async () => {
+    const { cuerpo } = await leer();
+    assert.deepEqual(cuerpo.configuracion.frecuencia, FRECUENCIA_DE_PAGO);
+    assert.deepEqual(cuerpo.configuracion.corridos_frecuencia, {});
+  });
+
+  it('lo que la Prestadora corrió manda, y lo que no corrió sigue siendo de fábrica', async () => {
+    respuestas.set('GET /rest/v1/configuracion_pago_asistentes', () => [
+      { regla: {}, frecuencia_pago: { cada_cuanto: 'semana' } },
+    ]);
+    const { cuerpo } = await leer();
+    assert.equal(cuerpo.configuracion.frecuencia.cada_cuanto, 'semana');
+    assert.equal(cuerpo.configuracion.frecuencia.dias_hasta_el_pago, FRECUENCIA_DE_PAGO.dias_hasta_el_pago);
+    assert.deepEqual(cuerpo.configuracion.corridos_frecuencia, { cada_cuanto: 'semana' });
+  });
+
+  it('un valor guardado fuera de borde se ignora y manda el de fábrica', async () => {
+    // Una liquidación que no se puede generar es peor que una que sale con el valor de fábrica.
+    respuestas.set('GET /rest/v1/configuracion_pago_asistentes', () => [
+      { regla: {}, frecuencia_pago: { cada_cuanto: 'cada_luna_llena' } },
+    ]);
+    const { cuerpo } = await leer();
+    assert.equal(cuerpo.configuracion.frecuencia.cada_cuanto, FRECUENCIA_DE_PAGO.cada_cuanto);
+  });
+
+  it('escribe sólo lo que se corrió', async () => {
+    const { estado } = await guardar({
+      regla: {},
+      frecuencia: { ...FRECUENCIA_DE_PAGO, cada_cuanto: 'quincena', dias_hasta_el_pago: 30 },
+    });
+    assert.equal(estado, 200);
+    assert.deepEqual(loEscrito().frecuencia_pago, { cada_cuanto: 'quincena', dias_hasta_el_pago: 30 });
+  });
+
+  it('guardar sin tocar nada no congela ningún valor de fábrica', async () => {
+    await guardar({ regla: {}, frecuencia: { ...FRECUENCIA_DE_PAGO } });
+    assert.deepEqual(loEscrito().frecuencia_pago, {});
+  });
+
+  it('un plazo de pago disparatado se rechaza y no escribe nada', async () => {
+    // Un cero de más mandaría la fecha de pago a un año y medio, y nadie lo notaría hasta que
+    // alguien reclame.
+    const { estado, cuerpo } = await guardar({ regla: {}, frecuencia: { dias_hasta_el_pago: 600 } });
+    assert.equal(estado, 400);
+    assert.equal(loEscrito(), undefined, 'dijo que no y guardó igual');
+    noFiltraLaBase(cuerpo);
+  });
+
+  it('un día de corte que no existe se rechaza', async () => {
+    const { estado } = await guardar({ regla: {}, frecuencia: { dia_de_corte: 9 } });
+    assert.equal(estado, 400);
+    assert.equal(loEscrito(), undefined);
+  });
+
+  it('quien no manda frecuencia no borra nada raro: escribe vacío, que es heredar fábrica', async () => {
+    await guardar({ regla: { prorratear_monto_fijo: false } });
+    assert.deepEqual(loEscrito().frecuencia_pago, {});
   });
 });
 

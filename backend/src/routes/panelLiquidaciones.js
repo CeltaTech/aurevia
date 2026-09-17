@@ -6,14 +6,15 @@ import { horasEntre } from '../utils/horasDeGuardia.js';
 import { resolverEscalasVigentes } from '../utils/escalasLegales.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { responderError } from '../utils/errorConMotivo.js';
-import { calcularLiquidacion, esPeriodoValido, primerDia, ultimoDia } from '../utils/calcularLiquidacion.js';
+import { bordesDelPeriodo, calcularLiquidacion, esPeriodoValido, primerDia, ultimoDia } from '../utils/calcularLiquidacion.js';
+import { diaCorrido, frecuenciaDePagoDe, periodosQueTocan } from '../utils/frecuenciaDePago.js';
 
 // La cuenta de cuánto se le paga a alguien por un mes ya no vive acá: la comparte con el
 // Simulador de Vínculo, que proyecta esa misma cuenta bajo los dos tipos de vínculo. El punto
 // único de verdad está en el Panel y de este lado hay una copia generada
 // (`scripts/copias_entre_apps.mjs`). Se vuelven a exportar porque las pruebas de esta ruta las
 // llaman desde acá, que es donde se usan.
-export { calcularLiquidacion, esPeriodoValido, primerDia, ultimoDia };
+export { bordesDelPeriodo, calcularLiquidacion, esPeriodoValido, primerDia, ultimoDia };
 
 /* Lo que se le liquida a cada Asistente en un mes, guardado.
    ==========================================================================
@@ -87,16 +88,17 @@ const soloAdministracion = exigirAdministracion('La Prestadora no habilitó esta
 // ---------------------------------------------------------------------------------------
 
 /**
- * Si el vínculo de esa persona estaba en pie en algún momento del mes que se liquida.
+ * Si el vínculo de esa persona estaba en pie en algún momento del período que se liquida.
  *
  * Hace falta porque quien está en relación de dependencia cobra su sueldo aunque no haya
- * hecho ninguna guardia: sin este control, al generar un mes anterior a su ingreso le
+ * hecho ninguna guardia: sin este control, al generar un período anterior a su ingreso le
  * saldría una liquidación de un sueldo que nunca se le pagó. Las fechas son de tipo `date`,
  * o sea texto `AAAA-MM-DD`, que se compara igual que un número.
  */
 export function vinculoVigenteEnElPeriodo(asistente, periodo) {
-  if (asistente.fecha_alta && asistente.fecha_alta > ultimoDia(periodo)) return false;
-  if (asistente.fecha_baja && asistente.fecha_baja < primerDia(periodo)) return false;
+  const { desde, hasta } = bordesDelPeriodo(periodo);
+  if (asistente.fecha_alta && asistente.fecha_alta > hasta) return false;
+  if (asistente.fecha_baja && asistente.fecha_baja < desde) return false;
   return true;
 }
 
@@ -144,8 +146,9 @@ export function acumularGuardias(guardias) {
  * sería adivinar.
  */
 export function escalasEstablesDelPeriodo(filasEscalas, periodo, jurisdiccion) {
-  const alEmpezar = resolverEscalasVigentes(filasEscalas, primerDia(periodo), jurisdiccion);
-  const alTerminar = resolverEscalasVigentes(filasEscalas, ultimoDia(periodo), jurisdiccion);
+  const { desde, hasta } = bordesDelPeriodo(periodo);
+  const alEmpezar = resolverEscalasVigentes(filasEscalas, desde, jurisdiccion);
+  const alTerminar = resolverEscalasVigentes(filasEscalas, hasta, jurisdiccion);
 
   const sinCategoria = (resueltas, tipo) =>
     [...resueltas.values()].find((f) => f.tipo === tipo && !f.categoria) || null;
@@ -303,11 +306,16 @@ panelLiquidacionesRouter.get('/', requiereRolPanel, requierePermiso(PERMISO_LECT
     return res.status(400).json({ error: 'Falta el período a liquidar, en formato AAAA-MM' });
   }
 
+  // Se piden las liquidaciones que TOCAN ese mes, no las que empiezan el primer día. Desde que
+  // el período puede ser una semana o una quincena, un mes contiene varias, y una de ellas
+  // puede haber empezado el mes anterior. Quien mira septiembre tiene que ver esa semana.
   const { data, error } = await supabase
     .from('liquidaciones_asistente')
     .select('*')
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
-    .eq('periodo', primerDia(periodo))
+    .lte('periodo_desde', ultimoDia(periodo))
+    .gte('periodo_hasta', primerDia(periodo))
+    .order('periodo_desde', { ascending: true })
     .order('created_at', { ascending: true });
   if (error) return responderError(res, error);
 
@@ -337,17 +345,20 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
   if (errorPrestadora) return responderError(res, errorPrestadora);
   if (!prestadora) return res.status(404).json({ error: 'Prestadora no encontrada' });
 
+  // Se traen las guardias de un tramo un poco más ancho que el mes, porque un período semanal o
+  // quincenal puede empezar en el mes anterior o terminar en el siguiente. Cada período se queda
+  // después con las suyas. Quince días de más a cada lado cubren cualquiera de las tres formas.
   const guardias = await traerPaginado(() =>
     supabase
       .from('guardias')
-      .select('id, estado, hora_inicio, hora_fin, dias_hasta_el_fin, horas_extra, asistente_id')
+      .select('id, fecha, estado, hora_inicio, hora_fin, dias_hasta_el_fin, horas_extra, asistente_id')
       .eq('prestadora_id', prestadoraId)
-      .gte('fecha', desde)
-      .lte('fecha', hasta)
+      .gte('fecha', diaCorrido(desde, -15))
+      .lte('fecha', diaCorrido(hasta, 15))
       .not('asistente_id', 'is', null)
       .order('id', { ascending: true })
   );
-  const acumuladoPorAsistente = acumularGuardias(guardias);
+  const acumuladoDelMes = acumularGuardias(guardias.filter((g) => g.fecha >= desde && g.fecha <= hasta));
 
   const asistentes = await traerPaginado(() =>
     supabase
@@ -363,7 +374,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
   // Prestadora, en vez de colgada de la ficha, por lo mismo que los nombres de más arriba.
   const { data: remuneraciones, error: errorRemuneraciones } = await supabase
     .from('remuneraciones_asistente')
-    .select('asistente_id, unidad_medicion, valor_hora, sueldo_basico, valor_guardia, valor_semana, valor_hora_extra')
+    .select('asistente_id, unidad_medicion, valor_hora, sueldo_basico, valor_guardia, valor_semana, valor_hora_extra, frecuencia_pago')
     .eq('prestadora_id', prestadoraId);
   if (errorRemuneraciones) return responderError(res, errorRemuneraciones);
   const pagoPorAsistente = new Map((remuneraciones || []).map((r) => [r.asistente_id, r]));
@@ -372,11 +383,12 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
   // es un error: es la configuración de fábrica.
   const { data: filaPago, error: errorConfigPago } = await supabase
     .from('configuracion_pago_asistentes')
-    .select('regla')
+    .select('regla, frecuencia_pago')
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
   if (errorConfigPago) return responderError(res, errorConfigPago);
   const reglaDePago = filaPago?.regla ?? {};
+  const frecuenciaDeLaPrestadora = filaPago?.frecuencia_pago ?? {};
 
   const { data: conceptos, error: errorConceptos } = await supabase
     .from('conceptos_liquidacion')
@@ -394,22 +406,24 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
     .select('*')
     .eq('jurisdiccion', prestadora.pais);
   if (errorEscalas) return responderError(res, errorEscalas);
-  const escalasPorTipo = escalasEstablesDelPeriodo(filasEscalas || [], periodo, prestadora.pais);
 
   // Entra quien trabajó en el mes —aunque después se haya dado de baja, porque el trabajo que
   // hizo se le paga igual— y también quien está activo sin haber hecho ninguna guardia,
   // siempre que su vínculo estuviera en pie: el de dependencia cobra su sueldo lo mismo.
   const aLiquidar = asistentes.filter(
-    (a) => acumuladoPorAsistente.has(a.id) || (a.estado === 'activo' && vinculoVigenteEnElPeriodo(a, periodo))
+    (a) => acumuladoDelMes.has(a.id) || (a.estado === 'activo' && vinculoVigenteEnElPeriodo(a, periodo))
   );
 
+  // Las que ya están, de cualquier período que toque este mes. Se identifica cada una por la
+  // persona y el día en que su período empieza, que es lo que la base tiene por única.
   const { data: yaExistentes, error: errorExistentes } = await supabase
     .from('liquidaciones_asistente')
-    .select('id, asistente_id, estado')
+    .select('id, asistente_id, periodo_desde, estado')
     .eq('prestadora_id', prestadoraId)
-    .eq('periodo', desde);
+    .lte('periodo_desde', hasta)
+    .gte('periodo_hasta', desde);
   if (errorExistentes) return responderError(res, errorExistentes);
-  const existentePorAsistente = new Map((yaExistentes || []).map((l) => [l.asistente_id, l]));
+  const existentes = new Map((yaExistentes || []).map((l) => [`${l.asistente_id}|${l.periodo_desde}`, l]));
 
   const resultado = {
     generadas: 0,
@@ -421,64 +435,91 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
     sin_escala: new Set(),
   };
 
+  // La escala vigente no depende de la persona sino del tramo de días, y con frecuencia mensual
+  // todos comparten el mismo. Se resuelve una vez por tramo y no una por persona.
+  const escalasPorTramo = new Map();
+  const escalasDe = (unPeriodo) => {
+    const llave = `${unPeriodo.desde}|${unPeriodo.hasta}`;
+    if (!escalasPorTramo.has(llave)) {
+      escalasPorTramo.set(llave, escalasEstablesDelPeriodo(filasEscalas || [], unPeriodo, prestadora.pais));
+    }
+    return escalasPorTramo.get(llave);
+  };
+
   for (const asistente of aLiquidar) {
-    const existente = existentePorAsistente.get(asistente.id);
-    // Una liquidación pagada no se toca: es el registro de una plata que ya salió.
-    if (existente?.estado === 'pagada') {
-      resultado.omitidas_ya_pagadas.push(asistente.nombre);
-      continue;
-    }
-
     const pago = pagoPorAsistente.get(asistente.id) || {};
-    const calculada = calcularLiquidacion({
-      asistente: { ...asistente, ...pago },
-      acumulado: acumuladoPorAsistente.get(asistente.id) || { guardias: 0, horas: 0, horasExtra: 0 },
-      conceptos: conceptos || [],
-      escalasPorTipo,
-      moneda: prestadora.moneda,
-      jurisdiccion: prestadora.pais,
-      periodo,
-      reglaDePago,
-    });
 
-    if (calculada.faltaBase) {
-      resultado.sin_dato_base.push(asistente.nombre);
-      continue;
-    }
-    for (const aviso of calculada.sinEscala) resultado.sin_escala.add(aviso);
+    // Cada persona tiene su propio calendario de cobro: lo de fábrica, corrido por la
+    // Prestadora, corrido a su vez por lo que se arregló con ella. Pedir «septiembre» quiere
+    // decir generar todos los períodos suyos que tocan septiembre, que con frecuencia mensual
+    // es uno solo y es el mes entero, igual que siempre.
+    const frecuencia = frecuenciaDePagoDe(frecuenciaDeLaPrestadora, pago.frecuencia_pago);
+    const suyos = periodosQueTocan(desde, hasta, frecuencia);
 
-    // Rehacer un mes es borrar la liquidación anterior y generar otra. Se borra recién acá,
-    // con la cuenta nueva ya hecha, para no dejar el mes sin nada si algo salía mal antes.
-    if (existente) {
-      const { error: errorBorrado } = await supabase
+    for (const unPeriodo of suyos) {
+      if (!acumuladoDelMes.has(asistente.id) && !vinculoVigenteEnElPeriodo(asistente, unPeriodo)) continue;
+
+      const existente = existentes.get(`${asistente.id}|${unPeriodo.desde}`);
+      // Una liquidación pagada no se toca: es el registro de una plata que ya salió.
+      if (existente?.estado === 'pagada') {
+        resultado.omitidas_ya_pagadas.push(asistente.nombre);
+        continue;
+      }
+
+      const delPeriodo = acumularGuardias(
+        guardias.filter((g) => g.asistente_id === asistente.id && g.fecha >= unPeriodo.desde && g.fecha <= unPeriodo.hasta)
+      );
+
+      const calculada = calcularLiquidacion({
+        asistente: { ...asistente, ...pago },
+        acumulado: delPeriodo.get(asistente.id) || { guardias: 0, horas: 0, horasExtra: 0 },
+        conceptos: conceptos || [],
+        escalasPorTipo: escalasDe(unPeriodo),
+        moneda: prestadora.moneda,
+        jurisdiccion: prestadora.pais,
+        periodo: unPeriodo,
+        reglaDePago,
+      });
+
+      if (calculada.faltaBase) {
+        if (!resultado.sin_dato_base.includes(asistente.nombre)) resultado.sin_dato_base.push(asistente.nombre);
+        continue;
+      }
+      for (const aviso of calculada.sinEscala) resultado.sin_escala.add(aviso);
+
+      // Rehacer un período es borrar la liquidación anterior y generar otra. Se borra recién
+      // acá, con la cuenta nueva ya hecha, para no dejarlo sin nada si algo salía mal antes.
+      if (existente) {
+        const { error: errorBorrado } = await supabase
+          .from('liquidaciones_asistente')
+          .delete()
+          .eq('id', existente.id)
+          .eq('prestadora_id', prestadoraId);
+        if (errorBorrado) return responderError(res, errorBorrado);
+      }
+
+      // La moneda no se manda: la completa la base con la de la Prestadora, igual que en todas
+      // las tablas de importes (regla 14).
+      const { data: guardada, error: errorGuardar } = await supabase
         .from('liquidaciones_asistente')
-        .delete()
-        .eq('id', existente.id)
-        .eq('prestadora_id', prestadoraId);
-      if (errorBorrado) return responderError(res, errorBorrado);
+        .insert({ prestadora_id: prestadoraId, ...calculada.liquidacion, generada_por: req.usuarioPanel.id })
+        .select()
+        .single();
+      if (errorGuardar) return responderError(res, errorGuardar);
+
+      const { error: errorItems } = await supabase
+        .from('liquidaciones_asistente_items')
+        .insert(calculada.items.map((item) => ({ liquidacion_id: guardada.id, ...item })));
+      if (errorItems) {
+        // Una liquidación sin sus renglones no explica nada: si los renglones no entraron, la
+        // cabecera tampoco se queda.
+        await supabase.from('liquidaciones_asistente').delete().eq('id', guardada.id).eq('prestadora_id', prestadoraId);
+        return responderError(res, errorItems);
+      }
+
+      if (existente) resultado.rehechas += 1;
+      else resultado.generadas += 1;
     }
-
-    // La moneda no se manda: la completa la base con la de la Prestadora, igual que en todas
-    // las tablas de importes (regla 14).
-    const { data: guardada, error: errorGuardar } = await supabase
-      .from('liquidaciones_asistente')
-      .insert({ prestadora_id: prestadoraId, ...calculada.liquidacion, generada_por: req.usuarioPanel.id })
-      .select()
-      .single();
-    if (errorGuardar) return responderError(res, errorGuardar);
-
-    const { error: errorItems } = await supabase
-      .from('liquidaciones_asistente_items')
-      .insert(calculada.items.map((item) => ({ liquidacion_id: guardada.id, ...item })));
-    if (errorItems) {
-      // Una liquidación sin sus renglones no explica nada: si los renglones no entraron, la
-      // cabecera tampoco se queda.
-      await supabase.from('liquidaciones_asistente').delete().eq('id', guardada.id).eq('prestadora_id', prestadoraId);
-      return responderError(res, errorItems);
-    }
-
-    if (existente) resultado.rehechas += 1;
-    else resultado.generadas += 1;
   }
 
   res.json({ ...resultado, sin_escala: [...resultado.sin_escala] });

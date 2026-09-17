@@ -85,6 +85,11 @@ export const GRUPOS = [
     copias: ['backend/src/utils/formaDePago.js'],
   },
   {
+    que: 'cada cuánto cobra cada Asistente, y desde qué día hasta qué día va su período',
+    original: 'panel/src/lib/frecuenciaDePago.js',
+    copias: ['backend/src/utils/frecuenciaDePago.js'],
+  },
+  {
     que: 'cuánto se le paga a un Asistente por un mes',
     original: 'panel/src/lib/calcularLiquidacion.js',
     copias: ['backend/src/utils/calcularLiquidacion.js'],

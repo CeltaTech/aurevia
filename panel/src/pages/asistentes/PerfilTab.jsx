@@ -12,6 +12,13 @@ import {
   mensajeDeModalidad,
 } from '../../lib/modalidades';
 import { COLUMNA_DEL_VALOR, UNIDADES_POSIBLES, unidadDeMedicionDe } from '../../lib/formaDePago';
+import {
+  FRECUENCIAS,
+  FRECUENCIAS_POSIBLES,
+  FRECUENCIA_DE_PAGO,
+  FRECUENCIA_QUE_SE_PUEDE_TOCAR,
+  soloLoQueCorreDeLaFrecuencia,
+} from '../../lib/frecuenciaDePago';
 import { nombreTipo } from '../../lib/tiposAsistente';
 import { useTiposAsistente } from '../../hooks/useTiposAsistente';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
@@ -71,6 +78,12 @@ export function PerfilTab({ asistente, onActualizado }) {
     valor_hora_extra: asistente.valor_hora_extra || '',
     horas_semanales: asistente.horas_semanales || '',
     modalidades: modalidadesDelAsistente(asistente),
+    // Cada cuánto cobra esta persona. Vacío es lo normal y quiere decir «lo que diga la
+    // Prestadora»: acá se guarda solamente lo que se arregló distinto con ella. Los campos
+    // arrancan en el valor de fábrica para que, al encender el arreglo propio, no haya que
+    // completar de cero tres cosas para cambiar una.
+    frecuencia_propia: Object.keys(asistente.frecuencia_pago ?? {}).length > 0,
+    frecuencia: { ...FRECUENCIA_DE_PAGO, ...(asistente.frecuencia_pago ?? {}) },
   });
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
@@ -80,6 +93,11 @@ export function PerfilTab({ asistente, onActualizado }) {
 
   function set(campo, valor) {
     setForm((f) => ({ ...f, [campo]: valor }));
+    setGuardado(false);
+  }
+
+  function setFrecuencia(clave, valor) {
+    setForm((f) => ({ ...f, frecuencia: { ...f.frecuencia, [clave]: valor } }));
     setGuardado(false);
   }
 
@@ -157,6 +175,9 @@ export function PerfilTab({ asistente, onActualizado }) {
             valor_guardia: form.valor_guardia || null,
             valor_semana: form.valor_semana || null,
             valor_hora_extra: form.valor_hora_extra || null,
+            // Sin arreglo propio, vacío: hereda lo de la Prestadora y sigue heredándolo el día
+            // que ella lo cambie. Con arreglo propio, sólo lo que difiere de fábrica.
+            frecuencia_pago: form.frecuencia_propia ? soloLoQueCorreDeLaFrecuencia(form.frecuencia) : {},
             updated_at: new Date().toISOString(),
           },
           { onConflict: 'asistente_id' },
@@ -299,6 +320,66 @@ export function PerfilTab({ asistente, onActualizado }) {
           <FormField label={t.asistentes.valor_hora_extra} name="valor_hora_extra" type="number" value={form.valor_hora_extra} ayuda={t.asistentes.valor_hora_extra_ayuda} onChange={(e) => set('valor_hora_extra', e.target.value)} />
 
           <FormField label={t.asistentes.horas_semanales} name="horas_semanales" type="number" value={form.horas_semanales} onChange={(e) => set('horas_semanales', e.target.value)} />
+
+          {/* Cada cuánto cobra es otra cosa que con qué se le mide el trabajo, y por eso va en su
+              propio bloque. Lo normal es que cobre cada cuánto cobra el resto; esto está acá
+              porque con cada persona se arregla distinto, y hasta hoy no había dónde anotarlo.
+              No cambia ni un centavo: sólo desde qué día hasta qué día va su período. */}
+          <FormField
+            label={t.asistentes.frecuencia_pago_propia}
+            name="frecuencia_propia"
+            type="checkbox"
+            checked={form.frecuencia_propia}
+            ayuda={t.asistentes.frecuencia_pago_propia_ayuda}
+            onChange={(e) => set('frecuencia_propia', e.target.checked)}
+          />
+
+          {form.frecuencia_propia && (
+            <>
+              <FormField
+                label={t.asistentes.frecuencia_pago_cada_cuanto}
+                name="frecuencia_cada_cuanto"
+                type="select"
+                value={form.frecuencia.cada_cuanto}
+                onChange={(e) => setFrecuencia('cada_cuanto', e.target.value)}
+              >
+                {FRECUENCIAS_POSIBLES.map((cual) => (
+                  <option key={cual} value={cual}>
+                    {t.configuracion.frecuencia_pago_cada_cuanto_opciones[cual]}
+                  </option>
+                ))}
+              </FormField>
+
+              {form.frecuencia.cada_cuanto === FRECUENCIAS.SEMANA && (
+                <FormField
+                  label={t.asistentes.frecuencia_pago_dia_de_corte}
+                  name="frecuencia_dia_de_corte"
+                  type="select"
+                  value={form.frecuencia.dia_de_corte}
+                  onChange={(e) => setFrecuencia('dia_de_corte', Number(e.target.value))}
+                >
+                  {[1, 2, 3, 4, 5, 6, 7].map((dia) => (
+                    <option key={dia} value={dia}>
+                      {t.configuracion.frecuencia_pago_dias[dia]}
+                    </option>
+                  ))}
+                </FormField>
+              )}
+
+              <FormField
+                label={t.asistentes.frecuencia_pago_dias_hasta_el_pago}
+                name="frecuencia_dias_hasta_el_pago"
+                type="number"
+                min={FRECUENCIA_QUE_SE_PUEDE_TOCAR.dias_hasta_el_pago.minimo}
+                max={FRECUENCIA_QUE_SE_PUEDE_TOCAR.dias_hasta_el_pago.maximo}
+                value={form.frecuencia.dias_hasta_el_pago}
+                ayuda={t.asistentes.frecuencia_pago_dias_hasta_el_pago_ayuda}
+                onChange={(e) =>
+                  setFrecuencia('dias_hasta_el_pago', e.target.value === '' ? '' : Number(e.target.value))
+                }
+              />
+            </>
+          )}
 
           <h2>{t.modalidades.etiqueta}</h2>
           <p className="panel-explicacion">{t.modalidades.ayuda}</p>

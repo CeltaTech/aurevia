@@ -513,19 +513,21 @@ describe('quién puede mirar y quién puede tocar', () => {
 });
 
 describe('generar el mes', () => {
-  function prepararLaBase({ liquidacionesExistentes = [] } = {}) {
+  function prepararLaBase({ liquidacionesExistentes = [], remuneracion, configuracionPago = [], guardias } = {}) {
     respuestas.set('GET /rest/v1/prestadoras', () => [{ pais: 'AR', moneda: 'ARS' }]);
-    respuestas.set('GET /rest/v1/guardias', () => [
-      { id: 'g-1', estado: 'completada', hora_inicio: '08:00:00', hora_fin: '16:00:00', asistente_id: 'a-1' },
+    // La fecha de la guardia importa: desde que el período puede ser una semana, cada uno se
+    // queda con las guardias que caen adentro de sus bordes.
+    respuestas.set('GET /rest/v1/guardias', () => guardias ?? [
+      { id: 'g-1', fecha: '2026-08-10', estado: 'completada', hora_inicio: '08:00:00', hora_fin: '16:00:00', asistente_id: 'a-1' },
     ]);
     respuestas.set('GET /rest/v1/asistentes', () => [
       { id: 'a-1', nombre: 'Asistente de prueba', estado: 'activo', tipo_vinculo: 'monotributo', fecha_alta: '2020-01-01', fecha_baja: null },
     ]);
     respuestas.set('GET /rest/v1/remuneraciones_asistente', () => [
-      { asistente_id: 'a-1', valor_hora: 1500, sueldo_basico: null },
+      remuneracion ?? { asistente_id: 'a-1', valor_hora: 1500, sueldo_basico: null },
     ]);
     // Sin fila: es la configuración de fábrica, que es el caso corriente.
-    respuestas.set('GET /rest/v1/configuracion_pago_asistentes', () => []);
+    respuestas.set('GET /rest/v1/configuracion_pago_asistentes', () => configuracionPago);
     respuestas.set('GET /rest/v1/conceptos_liquidacion', () => []);
     respuestas.set('GET /rest/v1/escalas_legales', () => []);
     respuestas.set('GET /rest/v1/liquidaciones_asistente', () => liquidacionesExistentes);
@@ -552,7 +554,7 @@ describe('generar el mes', () => {
 
   it('una liquidación ya pagada no se rehace', async () => {
     // Es el registro de una plata que ya salió: rehacerla sería reescribir lo que se pagó.
-    prepararLaBase({ liquidacionesExistentes: [{ id: 'liq-vieja', asistente_id: 'a-1', estado: 'pagada' }] });
+    prepararLaBase({ liquidacionesExistentes: [{ id: 'liq-vieja', asistente_id: 'a-1', periodo_desde: '2026-08-01', estado: 'pagada' }] });
     const { estado, cuerpo } = await pedir('POST', '/generar', { periodo: '2026-08' });
     assert.equal(estado, 200);
     assert.equal(cuerpo.generadas, 0);
@@ -563,7 +565,7 @@ describe('generar el mes', () => {
   });
 
   it('una liquidación pendiente se borra y se rehace', async () => {
-    prepararLaBase({ liquidacionesExistentes: [{ id: 'liq-vieja', asistente_id: 'a-1', estado: 'pendiente' }] });
+    prepararLaBase({ liquidacionesExistentes: [{ id: 'liq-vieja', asistente_id: 'a-1', periodo_desde: '2026-08-01', estado: 'pendiente' }] });
     const { estado, cuerpo } = await pedir('POST', '/generar', { periodo: '2026-08' });
     assert.equal(estado, 200);
     assert.equal(cuerpo.rehechas, 1);
@@ -610,5 +612,122 @@ describe('generar el mes', () => {
     const { estado } = await pedir('POST', '/generar', { periodo: 'agosto' });
     assert.equal(estado, 400);
     assert.equal(llamadas.some((l) => l.clave === 'GET /rest/v1/guardias'), false);
+  });
+
+  // -------------------------------------------------------------------------------------
+  // Cada cuánto cobra cada Asistente
+  //
+  // Se sigue pidiendo un mes, como siempre. Lo que cambió es que adentro de ese mes cada
+  // persona recibe los períodos suyos: uno solo si cobra por mes, cinco si cobra los viernes.
+  // -------------------------------------------------------------------------------------
+
+  /** Una guardia de ocho horas, que a mil quinientos la hora da doce mil. */
+  const guardiaDe = (id, fecha) => ({
+    id,
+    fecha,
+    estado: 'completada',
+    hora_inicio: '08:00:00',
+    hora_fin: '16:00:00',
+    asistente_id: 'a-1',
+  });
+
+  it('quien cobra por semana recibe una liquidación por cada semana del mes', async () => {
+    // Agosto de 2026 con corte los viernes tiene cinco semanas, y hay una guardia en cada una.
+    prepararLaBase({
+      configuracionPago: [{ regla: null, frecuencia_pago: { cada_cuanto: 'semana' } }],
+      guardias: [
+        guardiaDe('g-1', '2026-08-03'),
+        guardiaDe('g-2', '2026-08-10'),
+        guardiaDe('g-3', '2026-08-18'),
+        guardiaDe('g-4', '2026-08-25'),
+        guardiaDe('g-5', '2026-08-31'),
+      ],
+    });
+
+    const { estado, cuerpo } = await pedir('POST', '/generar', { periodo: '2026-08' });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.generadas, 5);
+
+    const escrituras = llamadas.filter((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente');
+    assert.deepEqual(
+      escrituras.map((e) => [e.cuerpo.periodo_desde, e.cuerpo.periodo_hasta]),
+      [
+        ['2026-08-01', '2026-08-07'],
+        ['2026-08-08', '2026-08-14'],
+        ['2026-08-15', '2026-08-21'],
+        ['2026-08-22', '2026-08-28'],
+        ['2026-08-29', '2026-09-04'],
+      ]
+    );
+
+    // Y cada semana cobra la suya: ninguna guardia se paga dos veces ni se queda sin pagar.
+    for (const escritura of escrituras) {
+      assert.equal(escritura.cuerpo.horas, 8);
+      assert.equal(escritura.cuerpo.bruto, 12000);
+    }
+  });
+
+  it('quien cobra cada quince días recibe las dos mitades del mes', async () => {
+    prepararLaBase({
+      configuracionPago: [{ regla: null, frecuencia_pago: { cada_cuanto: 'quincena' } }],
+      guardias: [guardiaDe('g-1', '2026-08-10'), guardiaDe('g-2', '2026-08-20')],
+    });
+
+    const { cuerpo } = await pedir('POST', '/generar', { periodo: '2026-08' });
+    assert.equal(cuerpo.generadas, 2);
+
+    const escrituras = llamadas.filter((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente');
+    assert.deepEqual(
+      escrituras.map((e) => [e.cuerpo.periodo_desde, e.cuerpo.periodo_hasta]),
+      [
+        ['2026-08-01', '2026-08-15'],
+        ['2026-08-16', '2026-08-31'],
+      ]
+    );
+  });
+
+  it('lo que se arregló con la persona pisa lo de la Prestadora', async () => {
+    // La Prestadora cierra por semana; con esta persona se arregló el mes entero.
+    prepararLaBase({
+      configuracionPago: [{ regla: null, frecuencia_pago: { cada_cuanto: 'semana' } }],
+      remuneracion: {
+        asistente_id: 'a-1',
+        valor_hora: 1500,
+        sueldo_basico: null,
+        frecuencia_pago: { cada_cuanto: 'mes' },
+      },
+    });
+
+    const { cuerpo } = await pedir('POST', '/generar', { periodo: '2026-08' });
+    assert.equal(cuerpo.generadas, 1);
+
+    const escritura = llamadas.find((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente');
+    assert.equal(escritura.cuerpo.periodo_desde, '2026-08-01');
+    assert.equal(escritura.cuerpo.periodo_hasta, '2026-08-31');
+  });
+
+  it('sin frecuencia configurada todo sale igual que antes: un período, el mes entero', async () => {
+    // Es la prueba que sostiene el paso entero. Una Prestadora que no tocó nada no puede notar
+    // que esto se construyó.
+    prepararLaBase();
+    const { cuerpo } = await pedir('POST', '/generar', { periodo: '2026-08' });
+    assert.equal(cuerpo.generadas, 1);
+
+    const escritura = llamadas.find((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente');
+    assert.equal(escritura.cuerpo.periodo, '2026-08-01');
+    assert.equal(escritura.cuerpo.periodo_desde, '2026-08-01');
+    assert.equal(escritura.cuerpo.periodo_hasta, '2026-08-31');
+    assert.equal(escritura.cuerpo.bruto, 12000);
+  });
+
+  it('una frecuencia guardada fuera de borde no rompe la liquidación: vale la de fábrica', async () => {
+    // Una liquidación que no se puede generar es peor que una que sale con el valor de fábrica.
+    prepararLaBase({ configuracionPago: [{ regla: null, frecuencia_pago: { cada_cuanto: 'cada_luna_llena' } }] });
+    const { estado, cuerpo } = await pedir('POST', '/generar', { periodo: '2026-08' });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.generadas, 1);
+
+    const escritura = llamadas.find((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente');
+    assert.equal(escritura.cuerpo.periodo_hasta, '2026-08-31');
   });
 });

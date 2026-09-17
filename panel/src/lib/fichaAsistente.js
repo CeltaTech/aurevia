@@ -18,7 +18,7 @@
  */
 
 /** Lo que hay que agregar al `select` para que la base traiga también los importes. */
-export const CAMPOS_PAGO = 'remuneraciones_asistente(unidad_medicion, valor_hora, sueldo_basico, valor_guardia, valor_semana, valor_hora_extra, categoria_cct)';
+export const CAMPOS_PAGO = 'remuneraciones_asistente(unidad_medicion, valor_hora, sueldo_basico, valor_guardia, valor_semana, valor_hora_extra, categoria_cct, frecuencia_pago)';
 
 /** Lo que hay que agregar al `select` para que la base traiga también lo reservado. */
 export const CAMPOS_RESERVADOS = 'datos_reservados_asistente(causal_baja, score_riesgo_reclasificacion, indicadores_riesgo, motivo_exclusion_directo, motivo_exclusion_marketplace)';
@@ -47,6 +47,9 @@ export function conDatosAparte(asistente) {
     valor_semana: pago?.valor_semana ?? null,
     valor_hora_extra: pago?.valor_hora_extra ?? null,
     categoria_cct: pago?.categoria_cct ?? null,
+    // Cada cuánto cobra esta persona. Vacío quiere decir «lo que diga la Prestadora», y es lo
+    // normal: sólo se guarda acá lo que se arregló distinto con ella.
+    frecuencia_pago: pago?.frecuencia_pago ?? {},
     causal_baja: reservado?.causal_baja ?? null,
     score_riesgo_reclasificacion: reservado?.score_riesgo_reclasificacion ?? null,
     indicadores_riesgo: reservado?.indicadores_riesgo ?? null,

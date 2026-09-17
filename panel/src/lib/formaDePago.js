@@ -178,14 +178,24 @@ export function diasCubiertos({ desde, hasta, fechaAlta, fechaBaja, prorratear }
 /**
  * Cuántas unidades se le pagan a esta persona en el período, y de ahí sale el importe.
  *
- * Por hora y por guardia, lo que hizo. Por mes, la parte del período que estuvo. Por semana,
- * los días que estuvo divididos por siete: el período que se liquida es un mes y el valor es
- * semanal, así que hay una conversión, y no hay más que una forma de hacerla.
+ * Por hora y por guardia, lo que hizo. Por semana, los días que estuvo divididos por siete. Por
+ * mes, los días que estuvo divididos por los días del mes.
+ *
+ * DIVIDIR POR LOS DÍAS DEL MES Y NO POR LOS DEL PERÍODO NO ES UN DETALLE. Desde que el período
+ * dejó de ser siempre el mes calendario, los dos números pueden no coincidir: a alguien con
+ * sueldo mensual que cobra los viernes se le liquidan cuatro o cinco períodos de siete días por
+ * mes. Dividiendo por los días del período, cada semana daría 7/7 = 1, o sea el sueldo entero
+ * cada viernes. Dividiendo por los del mes, las semanas suman un sueldo y nada más.
+ *
+ * `diasDelMes` sale de `diasDelMesDelPeriodo` en `frecuenciaDePago.js`. Cuando no viene, se usan
+ * los del período, que es lo correcto justamente en el caso de siempre: con período mensual los
+ * dos números son el mismo.
  */
-export function unidadesDelPeriodo({ unidad, acumulado, diasDelPeriodo, diasDeLaPersona }) {
+export function unidadesDelPeriodo({ unidad, acumulado, diasDelPeriodo, diasDelMes, diasDeLaPersona }) {
   if (unidad === UNIDADES.HORA) return acumulado?.horas ?? 0;
   if (unidad === UNIDADES.GUARDIA) return acumulado?.guardias ?? 0;
   if (unidad === UNIDADES.SEMANA) return diasDeLaPersona / DIAS_DE_UNA_SEMANA;
-  if (!diasDelPeriodo) return 0;
-  return diasDeLaPersona / diasDelPeriodo;
+  const divisor = diasDelMes ?? diasDelPeriodo;
+  if (!divisor) return 0;
+  return diasDeLaPersona / divisor;
 }

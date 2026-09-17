@@ -146,9 +146,9 @@ segunda vez en otra pantalla, en otra tabla ni en el software de otro.
 **Se lo cita todas las veces que haga falta; se lo copia ninguna.** Una obra social puede estar
 nombrada en cien fichas, y en las cien es la misma: lo que cada una guarda es cuál, no cómo se
 llama. El nombre escrito a mano en cada lugar termina siempre en datos que se contradicen entre
-sí, y entonces no hay forma de saber cuál vale. **Única excepción, y es historia, no padrón:** un
-comprobante ya emitido se lleva copiados los datos del día que se emitió, porque lo emitido no
-cambia aunque el Cliente cambie después.
+sí, y entonces no hay forma de saber cuál vale. **Y no hay excepción.** Que un comprobante emitido
+conserve los datos del día que se emitió es asunto de quien lo emite —el software de facturación o
+el contable—, no de Careonys, que no emite ninguno.
 
 **Hacia afuera se entrega, y no se trae.** Careonys avisa que apareció un Cliente y cada software
 conectado lo da de alta con lo suyo. **Al revés no**: un cliente creado adentro del facturador no

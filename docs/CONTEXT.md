@@ -245,3 +245,34 @@ mismo trabajo diario avisa al teléfono de quien paga unos días antes de que ll
 silencioso (§3.8). Y un cobro que no entra no apaga nada en el acto: abre un período de gracia de
 siete días, se avisa una vez, cada riel reintenta mientras dura, y recién al llegar esa fecha sin
 que la plata haya entrado el acceso se suspende (§3.9).
+
+## Cuando falta una Asistente
+
+Las decisiones de fondo de esta parte del producto, que ya están construidas y rigen cualquier
+cosa que se agregue acá:
+
+- **El sistema nunca asigna solo. Propone. Quien fija es la Coordinadora.** La programación de
+  turnos es responsabilidad de ella, con las propuestas del sistema, y no hace falta ninguna tarea
+  nueva en el catálogo de permisos.
+- **Y hay dos clases de «no» en la lista de candidatos, que no se mezclan.** Lo que rechaza la
+  base con un disparador —la Matrícula, la modalidad de trabajo— deja el botón apagado, porque
+  apretarlo fallaría igual. Lo que desaconseja la pantalla —que se pise con otra guardia, que haya
+  una ausencia registrada— deja el botón encendido: la base lo acepta, y quien coordina puede
+  saber algo que el sistema no sabe. Cuando se asigna con un aviso delante, la decisión queda
+  escrita en `auditoria_asignaciones_con_aviso`, que no se puede corregir ni borrar. Vive en
+  `panel/src/lib/candidatos.js` y `panel/src/lib/avisosAsignacion.js`.
+- **El equipo de un Paciente** son las Asistentes que habitualmente trabajan con él más la persona
+  que los coordina. Dentro del equipo puede haber una franquera, que cubre los días francos y las
+  emergencias. Lo guardado se llama por su función —*cubre francos*— y no cambia nunca; el nombre
+  visible lo configura cada Prestadora, con «franquera / franquero» como valor de fábrica.
+- **La Asistente que está adentro se queda hasta que llegue el relevo.** No se le pregunta —es un
+  deber del oficio, y abandonar al Paciente la expone a ella—, pero se le pide, no se le ordena.
+- **Al familiar no se le pide nada.** Es el cliente y no le debe nada a nadie. Ningún Coordinador
+  puede pedirle que se quede. Que igual termine quedándose puede pasar, y cuando pasa es porque la
+  ausencia de la Asistente no se resolvió a tiempo: entonces **se registra como un defecto grave
+  del servicio que no se pudo solucionar**, nunca como un turno cubierto y nunca como un pedido con
+  respuesta. Se registra porque esa falla puede costar el servicio si la familia se enoja.
+- **La lista de finales posibles no se cierra**, porque la destreza del Coordinador no entra en
+  ninguna lista. «Se resolvió de otra manera», con texto libre, está siempre.
+- Todo valor de esta parte nace de fábrica, lo cambia la Prestadora en su configuración, **y
+  también se puede cambiar para un caso puntual**.

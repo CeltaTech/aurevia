@@ -12,7 +12,12 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 
 const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
-const DIAS_GENERACION_SIN_VIGENCIA_HASTA_DEFAULT = 90;
+/** Hasta dónde se generan las guardias de una serie que no tiene fecha de fin, mientras la consulta
+ *  de más abajo todavía no trajo el número. No es el valor de fábrica: ése lo decide la Prestadora
+ *  y vive en la base, en el `DEFAULT 90` de `prestadoras.dias_generacion_series_guardia`. Acá está
+ *  sólo para que la ventana no arranque con un horizonte vacío durante ese instante. Si alguna vez
+ *  los dos números se separan, manda el de la base. */
+const DIAS_GENERACION_SIN_VIGENCIA_HASTA_DE_RESGUARDO = 90;
 
 /**
  * @param inicial  qué viene ya elegido cuando la ventana no se abre desde cero: `asistenteId` y
@@ -27,7 +32,7 @@ export function NuevaGuardiaModal({ onClose, onCreada, inicial = {} }) {
   const [esSerie, setEsSerie] = useState(false);
   const [asistentes, setAsistentes] = useState([]);
   const [pacientes, setPacientes] = useState([]);
-  const [diasGeneracion, setDiasGeneracion] = useState(DIAS_GENERACION_SIN_VIGENCIA_HASTA_DEFAULT);
+  const [diasGeneracion, setDiasGeneracion] = useState(DIAS_GENERACION_SIN_VIGENCIA_HASTA_DE_RESGUARDO);
   const [asistenteId, setAsistenteId] = useState(inicial.asistenteId ?? '');
   // A quiénes atiende el turno. Es una lista y no un valor suelto porque una guardia puede
   // cubrir a más de una persona: un matrimonio en su casa, o un grupo en un asilo.

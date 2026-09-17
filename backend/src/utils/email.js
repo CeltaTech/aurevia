@@ -3,7 +3,13 @@ import nodemailer from 'nodemailer';
 import { supabase } from '../db/connection.js';
 import { marcaDeLaPrestadora } from './marcaPrestadora.js';
 
-const SMTP_HOST = 'smtp.gmail.com';
+/** Por qué servidor sale el correo cuando se usa el camino SMTP. Sale del entorno: escrito en el
+ *  código ata el producto a un proveedor de correo, y quien corra el motor con otra casilla no
+ *  tendría dónde decirlo. El valor de reserva es el de la máquina de desarrollo, para que quien ya
+ *  tenía sus dos variables cargadas no note ningún cambio. El puerto va con él: no todos los
+ *  servidores escuchan en el mismo. */
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
+const SMTP_PORT = Number(process.env.SMTP_PORT) || 465;
 
 // ---------------------------------------------------------------------------
 // Por dónde sale el correo
@@ -107,7 +113,7 @@ function transporteDelDespachante(clave) {
 // IPv6 da ENETUNREACH, así que una fracción aleatoria de los envíos fallaba (pendiente
 // #37, detectado al verificar la recuperación de MFA por email). Se resuelve acá mismo
 // a una IPv4 y se pasa como host literal, con `servername` explícito para que el TLS
-// siga validando el certificado contra smtp.gmail.com.
+// siga validando el certificado contra el nombre del servidor y no contra la dirección.
 async function crearTransporterCompartido() {
   let host = SMTP_HOST;
   try {
@@ -118,8 +124,8 @@ async function crearTransporterCompartido() {
   }
   return nodemailer.createTransport({
     host,
-    port: 465,
-    secure: true,
+    port: SMTP_PORT,
+    secure: SMTP_PORT === 465,
     servername: SMTP_HOST,
     auth: {
       user: process.env.SMTP_USER,

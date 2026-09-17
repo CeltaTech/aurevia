@@ -2,7 +2,12 @@ import { supabase } from '../db/connection.js';
 import { sumarDias } from './fechas.js';
 import { pacientesDeSeries, anotarPacientesEnGuardias } from './pacientesDeGuardia.js';
 
-const DIAS_GENERACION_DEFAULT = 90;
+/** Cuántos días de guardias se generan por delante cuando la consulta no trajo el número. No es el
+ *  valor de fábrica: ése lo decide la Prestadora y vive en la base, en el `DEFAULT 90` de
+ *  `prestadoras.dias_generacion_series_guardia`, que además es `NOT NULL`. Esto es el resguardo
+ *  para que un día sin dato no arme un horizonte inválido y deje de generar guardias en silencio.
+ *  Si alguna vez los dos números se separan, manda el de la base. */
+const DIAS_GENERACION_DE_RESGUARDO = 90;
 const UN_DIA_MS = 24 * 60 * 60 * 1000;
 
 function generarFechasFaltantes(desdeExclusiveISO, hastaInclusiveISO, diasSemana) {
@@ -38,7 +43,7 @@ export async function extenderSeriesGuardiaAbiertas() {
   const hoyISO = new Date().toISOString().slice(0, 10);
 
   for (const { id: prestadoraId, dias_generacion_series_guardia: diasConfigurados } of prestadoras ?? []) {
-    const horizonte = diasConfigurados ?? DIAS_GENERACION_DEFAULT;
+    const horizonte = diasConfigurados ?? DIAS_GENERACION_DE_RESGUARDO;
     const limiteISO = sumarDias(hoyISO, horizonte);
 
     const { data: series, error: errorSeries } = await supabase

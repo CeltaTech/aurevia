@@ -14,6 +14,7 @@ import {
 } from './incidenteTurnoSinCubrir.js';
 import { reglaDeLaToma, tomadasAhora } from './tomasDeAlarma.js';
 import { TIPOS_DE_ALARMA } from './alarmasTomadas.js';
+import { escalonesYaAvisados, escalarSiCorresponde, minutosDesde } from './avisosDeEscalon.js';
 
 // El turno que llega sin nadie abre un incidente, y el incidente no se va solo.
 // ============================================================================
@@ -109,7 +110,7 @@ async function revisarPrestadora({ prestadoraId, guardias, ahora }) {
 
   const { data: abiertos, error: errorAbiertos } = await supabase
     .from('incidentes_turno_sin_cubrir')
-    .select('id, guardia_id, ultimo_recordatorio_at, veces_recordado')
+    .select('id, guardia_id, abierto_at, ultimo_recordatorio_at, veces_recordado')
     .eq('prestadora_id', prestadoraId)
     .is('resuelto_at', null);
 
@@ -139,6 +140,15 @@ async function revisarPrestadora({ prestadoraId, guardias, ahora }) {
     regla: await reglaDeLaToma(prestadoraId),
   });
 
+  // El incidente que lleva demasiado abierto deja de ser asunto de quien coordina a ese Paciente.
+  // Cuándo pasa eso, y a quién le llega, está en `avisosDeEscalon.js`. Dos consultas por vuelta,
+  // no dos por incidente.
+  const configEscalada = await configuracionDeLaEscalada(prestadoraId);
+  const escalonesQueSalieron = await escalonesYaAvisados({
+    prestadoraId,
+    tipo: TIPOS_DE_ALARMA.TURNO_SIN_CUBRIR,
+  });
+
   for (const guardia of guardias) {
     if (!elTurnoYaEsGrave({ guardia, regla, ahora })) continue;
 
@@ -156,6 +166,31 @@ async function revisarPrestadora({ prestadoraId, guardias, ahora }) {
 
     if (yaNoSePuedeTapar) continue;
     if (tomados.has(incidente.id)) continue;
+
+    await escalarSiCorresponde({
+      prestadoraId,
+      tipo: TIPOS_DE_ALARMA.TURNO_SIN_CUBRIR,
+      referenciaId: incidente.id,
+      minutosPremura: minutosDesde(incidente.abierto_at, ahora),
+      config: configEscalada,
+      idioma,
+      // El cuerpo se arma sólo si hay un escalón para mandar: la mayoría de las vueltas no escala
+      // nada, y armarlo cuesta una consulta por los Pacientes del turno.
+      texto: async () =>
+        (
+          await armarElRecordatorio({
+            guardia,
+            prestadoraId,
+            idioma,
+            horas,
+            veces: (incidente.veces_recordado ?? 0) + 1,
+            ahora,
+          })
+        ).aviso.texto,
+      yaSalieron: escalonesQueSalieron,
+      ahora,
+    });
+
     if (
       !necesitaNotificar({
         ultimaNotificacionAt: incidente.ultimo_recordatorio_at,
@@ -200,11 +235,34 @@ async function cerrarLosQueYaNoCorresponden({ abiertos, guardiaPorId, ahora }) {
   }
 }
 
+/**
+ * Los minutos a los que esta Prestadora hace subir de escalón una alarma.
+ *
+ * Sin fila configurada no hay escalones, y eso no es una falla: es una Prestadora que todavía no
+ * armó su escalada. Devuelve un objeto vacío, que `escalonesQueCorresponden` lee como «apagado».
+ */
+async function configuracionDeLaEscalada(prestadoraId) {
+  const { data, error } = await supabase
+    .from('configuracion_escalada_coordinador')
+    .select('minutos_antes_todos_los_coordinadores, minutos_antes_administracion')
+    .eq('prestadora_id', prestadoraId)
+    .maybeSingle();
+
+  if (error) {
+    console.error(
+      `Error leyendo la escalada del Coordinador (prestadora ${prestadoraId}):`,
+      error.message
+    );
+    return {};
+  }
+  return data ?? {};
+}
+
 async function abrirIncidente({ guardia, prestadoraId }) {
   const { data, error } = await supabase
     .from('incidentes_turno_sin_cubrir')
     .insert({ prestadora_id: prestadoraId, guardia_id: guardia.id })
-    .select('id, guardia_id, ultimo_recordatorio_at, veces_recordado')
+    .select('id, guardia_id, abierto_at, ultimo_recordatorio_at, veces_recordado')
     .single();
 
   if (error) {
@@ -218,7 +276,13 @@ async function abrirIncidente({ guardia, prestadoraId }) {
   return data;
 }
 
-async function recordar({ incidente, guardia, prestadoraId, idioma, horas, ahora }) {
+/**
+ * El aviso de un turno sin cubrir, y a quién coordina se lo escribe.
+ *
+ * Vive aparte porque lo piden dos: el recordatorio, que se lo manda a quien coordina, y el
+ * escalón, que le manda lo mismo a más gente. El escalón no cuenta otra cosa.
+ */
+async function armarElRecordatorio({ guardia, prestadoraId, idioma, horas, veces, ahora }) {
   let pacientes = [];
   try {
     pacientes = (await pacientesDeGuardias([guardia], 'id, nombre')).get(guardia.id) ?? [];
@@ -232,25 +296,39 @@ async function recordar({ incidente, guardia, prestadoraId, idioma, horas, ahora
     ahora,
   });
 
+  return {
+    destinatarios,
+    aviso: aviso(EVENTO, idioma, {
+      fecha: guardia.fecha,
+      horaInicio: guardia.hora_inicio,
+      horaFin: guardia.hora_fin,
+      pacientes: pacientes.map((p) => p.nombre),
+      yaEmpezo: (horas ?? 0) <= 0,
+      horas: Math.round(Math.abs(horas ?? 0)),
+      veces,
+      candidatos,
+      cubrenFrancos,
+    }),
+  };
+}
+
+async function recordar({ incidente, guardia, prestadoraId, idioma, horas, ahora }) {
+  const veces = (incidente.veces_recordado ?? 0) + 1;
+  const { destinatarios, aviso: texto } = await armarElRecordatorio({
+    guardia,
+    prestadoraId,
+    idioma,
+    horas,
+    veces,
+    ahora,
+  });
+
   if (!destinatarios.length) {
     // Sin nadie a quien escribirle no se marca el recordatorio: el incidente sigue abierto y la
     // vuelta siguiente lo intenta de nuevo. Marcarlo sería dar por avisado a nadie.
     console.error(`El turno ${guardia.id} no tiene a quien coordine con correo cargado.`);
     return;
   }
-
-  const veces = (incidente.veces_recordado ?? 0) + 1;
-  const texto = aviso(EVENTO, idioma, {
-    fecha: guardia.fecha,
-    horaInicio: guardia.hora_inicio,
-    horaFin: guardia.hora_fin,
-    pacientes: pacientes.map((p) => p.nombre),
-    yaEmpezo: (horas ?? 0) <= 0,
-    horas: Math.round(Math.abs(horas ?? 0)),
-    veces,
-    candidatos,
-    cubrenFrancos,
-  });
 
   for (const to of destinatarios) {
     try {

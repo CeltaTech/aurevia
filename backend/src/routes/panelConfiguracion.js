@@ -9,6 +9,7 @@ import { avisoDelCatalogo, mezclarAvisosConCatalogo, sePuedeApagar, VALORES_POR_
 import { cosaDelCatalogo, mezclarVisibilidadConCatalogo } from '../utils/catalogoVisibilidad.js';
 import { LIMITES_ALERTAS_IA, VALORES_POR_DEFECTO_ALERTAS_IA } from '../utils/revisarAlertasIA.js';
 import { validarUmbralesPremura } from '../utils/umbralesPremura.js';
+import { MINUTOS_QUE_SE_PUEDEN_TOCAR } from '../utils/ordenDeLaEscalada.js';
 import {
   PERFIL_POR_DEFECTO,
   pesosYTopesDe,
@@ -1618,6 +1619,12 @@ const MINUTOS_GRACIA_CIERRE_POR_DEFECTO = 15;
 const MINUTOS_DE_UN_DIA = 24 * 60;
 const HORAS_ANTES_DE_ESCALAR_POR_DEFECTO = 4;
 const HORAS_DE_TRES_DIAS = 72;
+// Los mismos números que trae la base cuando nadie tocó nada
+// (`20260917100000_la_alarma_que_nadie_atiende_sube_de_escalon.sql`). Están acá porque la fila
+// puede no existir todavía, y lo que se le muestra a quien configura tiene que ser lo que va a
+// pasar de verdad si no toca nada.
+const MINUTOS_ANTES_DE_TODOS_POR_DEFECTO = 45;
+const MINUTOS_ANTES_DE_ADMINISTRACION_POR_DEFECTO = 90;
 
 panelConfiguracionRouter.get('/escalada-coordinador', async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
@@ -1649,6 +1656,8 @@ panelConfiguracionRouter.get('/escalada-coordinador', async (req, res) => {
       minutos_antes_fase_automatica: 120,
       minutos_gracia_cierre_guardia: MINUTOS_GRACIA_CIERRE_POR_DEFECTO,
       horas_antes_aviso_grave_sin_cerrar: HORAS_ANTES_DE_ESCALAR_POR_DEFECTO,
+      minutos_antes_todos_los_coordinadores: MINUTOS_ANTES_DE_TODOS_POR_DEFECTO,
+      minutos_antes_administracion: MINUTOS_ANTES_DE_ADMINISTRACION_POR_DEFECTO,
     },
   });
 });
@@ -1658,6 +1667,7 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
     coordinador_backup_id, minutos_antes_backup, umbrales_premura,
     fase_automatica_activa, minutos_antes_fase_automatica,
     minutos_gracia_cierre_guardia, horas_antes_aviso_grave_sin_cerrar,
+    minutos_antes_todos_los_coordinadores, minutos_antes_administracion,
   } = req.body;
 
   // Los tramos deciden cada cuánto se le vuelve a insistir al Coordinador. Antes se guardaban
@@ -1689,6 +1699,26 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
     }
   }
 
+  // Los dos escalones de arriba se apagan dejando el campo vacío, así que el nulo es un valor
+  // válido y no un dato que falta. Lo que no puede pasar es que el número quede fuera de los
+  // bordes, que son los mismos que mira el Panel antes de mandar.
+  for (const [campo, valor] of [
+    ['minutos_antes_todos_los_coordinadores', minutos_antes_todos_los_coordinadores],
+    ['minutos_antes_administracion', minutos_antes_administracion],
+  ]) {
+    if (valor === undefined || valor === null || valor === '') continue;
+    const { minimo, maximo } = MINUTOS_QUE_SE_PUEDEN_TOCAR[campo];
+    const minutos = Number(valor);
+    if (!Number.isInteger(minutos) || minutos < minimo || minutos > maximo) {
+      return res.status(400).json({
+        error: `Los minutos antes de escalar tienen que ser un número entero entre ${minimo} y ${maximo}`,
+      });
+    }
+  }
+
+  const enMinutosOApagado = (valor) =>
+    valor === undefined || valor === null || valor === '' ? null : Number(valor);
+
   const { error } = await supabase
     .from('configuracion_escalada_coordinador')
     .upsert({
@@ -1701,6 +1731,8 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
       minutos_gracia_cierre_guardia: minutos_gracia_cierre_guardia ?? MINUTOS_GRACIA_CIERRE_POR_DEFECTO,
       horas_antes_aviso_grave_sin_cerrar:
         horas_antes_aviso_grave_sin_cerrar ?? HORAS_ANTES_DE_ESCALAR_POR_DEFECTO,
+      minutos_antes_todos_los_coordinadores: enMinutosOApagado(minutos_antes_todos_los_coordinadores),
+      minutos_antes_administracion: enMinutosOApagado(minutos_antes_administracion),
       updated_at: new Date().toISOString(),
     });
   if (error) return responderError(res, error);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ordenDeLaEscalada } from '../ordenDeLaEscalada';
+import { ESCALONES, escalonesQueCorresponden, esEscalon, ordenDeLaEscalada } from '../ordenDeLaEscalada';
 
 const claves = (config) => ordenDeLaEscalada(config).map((e) => e.clave);
 
@@ -48,5 +48,72 @@ describe('ordenDeLaEscalada', () => {
       { clave: 'respaldo', minuto: 15 },
       { clave: 'fase_automatica', minuto: 120 },
     ]);
+  });
+
+  it('los dos escalones de arriba se muestran donde les toca por su minuto', () => {
+    expect(claves({
+      ...COMPLETA,
+      minutosAntesTodosLosCoordinadores: 45,
+      minutosAntesAdministracion: 90,
+    })).toEqual(['insistencia', 'respaldo', 'todos_los_coordinadores', 'administracion', 'fase_automatica']);
+  });
+
+  it('el campo vacío apaga ese escalón, y no lo manda al final', () => {
+    expect(claves({ ...COMPLETA, minutosAntesTodosLosCoordinadores: '', minutosAntesAdministracion: null }))
+      .toEqual(['insistencia', 'respaldo', 'fase_automatica']);
+  });
+});
+
+const CONFIG = {
+  minutos_antes_todos_los_coordinadores: 45,
+  minutos_antes_administracion: 90,
+};
+
+describe('escalonesQueCorresponden', () => {
+  it('antes del primer minuto no corresponde ninguno', () => {
+    expect(escalonesQueCorresponden(CONFIG, 44)).toEqual([]);
+  });
+
+  it('cumplido el minuto exacto, ese escalón ya corresponde', () => {
+    expect(escalonesQueCorresponden(CONFIG, 45)).toEqual([ESCALONES.TODOS_LOS_COORDINADORES]);
+  });
+
+  it('una alarma vieja alcanza los dos de una vez, primero el equipo', () => {
+    // Pasa cuando el proceso de fondo estuvo caído: no se sube de a un escalón por vuelta.
+    expect(escalonesQueCorresponden(CONFIG, 600))
+      .toEqual([ESCALONES.TODOS_LOS_COORDINADORES, ESCALONES.ADMINISTRACION]);
+  });
+
+  it('con la administración configurada antes, sale primero la administración', () => {
+    expect(escalonesQueCorresponden({ ...CONFIG, minutos_antes_administracion: 10 }, 600))
+      .toEqual([ESCALONES.ADMINISTRACION, ESCALONES.TODOS_LOS_COORDINADORES]);
+  });
+
+  it('un escalón sin minuto está apagado y no aparece nunca', () => {
+    expect(escalonesQueCorresponden({ minutos_antes_administracion: 90 }, 10000))
+      .toEqual([ESCALONES.ADMINISTRACION]);
+  });
+
+  it('sin configuración no corresponde nada', () => {
+    expect(escalonesQueCorresponden(undefined, 10000)).toEqual([]);
+    expect(escalonesQueCorresponden({}, 10000)).toEqual([]);
+  });
+
+  it('una premura que no es un número no hace subir nada', () => {
+    expect(escalonesQueCorresponden(CONFIG, NaN)).toEqual([]);
+    expect(escalonesQueCorresponden(CONFIG, undefined)).toEqual([]);
+  });
+});
+
+describe('esEscalon', () => {
+  it('reconoce los tres que el producto guarda', () => {
+    expect(esEscalon('coordinador_respaldo')).toBe(true);
+    expect(esEscalon('todos_los_coordinadores')).toBe(true);
+    expect(esEscalon('administracion')).toBe(true);
+  });
+
+  it('y nada más', () => {
+    expect(esEscalon('insistencia')).toBe(false);
+    expect(esEscalon(undefined)).toBe(false);
   });
 });

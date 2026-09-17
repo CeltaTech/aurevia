@@ -28,6 +28,8 @@ const DATOS = {
   },
   guardia_sin_cerrar_respaldo: { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', minutosDeAtraso: 90 },
   escalada_a_respaldo: {},
+  escalada_a_todos_los_coordinadores: { minutos: 45 },
+  escalada_a_la_administracion: { minutos: 90 },
   alerta_temprana_sin_resolver: { guardiaId: 'g-1', origen: 'un origen', motivo: 'no contesta', minutos: 30 },
   alerta_temprana_respaldo: { guardiaId: 'g-1', minutos: 30 },
   aviso_demora_asistente: { fecha: '2026-10-07', horaInicio: '08:00', origen: 'un origen', motivo: 'tránsito' },

@@ -1,7 +1,9 @@
 import { supabase } from '../db/connection.js';
 import { notificarCoordinador, avisarPorWhatsapp } from './whatsapp.js';
 import { enviarPushFamilia } from './push.js';
-import { configuracionEvento } from './email.js';
+import { configuracionEvento, enviarEmail } from './email.js';
+import { correoDe } from './correoDeUnaPersona.js';
+import { escalonesYaAvisados, escalarSiCorresponde } from './avisosDeEscalon.js';
 import { necesitaNotificar } from './insistencia.js';
 import { correrFaseAutomatica } from './faseAutomaticaRelevo.js';
 import { pacientesDeGuardia, pacientesDeGuardias } from './pacientesDeGuardia.js';
@@ -116,6 +118,12 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
     regla: reglaDeLasTomas,
   });
 
+  // Y hasta qué escalón subió cada una. Una consulta por clase de alarma, no una por guardia.
+  const escalonesQueSalieron = await escalonesYaAvisados({
+    prestadoraId,
+    tipo: TIPOS_DE_ALARMA.GUARDIA_SIN_CERRAR,
+  });
+
   for (const guardia of guardias) {
     if (tomadas.has(guardia.id)) continue;
     const fin = finDeLaGuardia(guardia);
@@ -161,6 +169,25 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
       });
       await supabase.from('guardias').update({ aviso_sin_cerrar_backup_at: ahora.toISOString() }).eq('id', guardia.id);
     }
+
+    // Los escalones que siguen: todos los Coordinadores, y después la administración. El cuerpo es
+    // el mismo que ya salió; lo que cambia es a quién le llega.
+    await escalarSiCorresponde({
+      prestadoraId,
+      tipo: TIPOS_DE_ALARMA.GUARDIA_SIN_CERRAR,
+      referenciaId: guardia.id,
+      minutosPremura,
+      config,
+      idioma,
+      ahora,
+      yaSalieron: escalonesQueSalieron,
+      texto: aviso('guardia_sin_cerrar_respaldo', idioma, {
+        fecha: guardia.fecha,
+        horaInicio: guardia.hora_inicio,
+        horaFin: guardia.hora_fin,
+        minutosDeAtraso: minutosPremura,
+      }).texto,
+    });
 
     // El tercer escalón. A esta altura la insistencia al Coordinador y el aviso a su respaldo
     // ya salieron y no alcanzaron: la guardia lleva horas abierta. Deja de ser un aviso de
@@ -247,6 +274,11 @@ async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
     regla: reglaDeLasTomas,
   });
 
+  const escalonesQueSalieron = await escalonesYaAvisados({
+    prestadoraId,
+    tipo: TIPOS_DE_ALARMA.ALERTA_TEMPRANA,
+  });
+
   for (const alerta of alertas ?? []) {
     if (tomadas.has(alerta.id)) continue;
     const minutosPremura = (ahora.getTime() - new Date(alerta.detectado_at).getTime()) / 60_000;
@@ -279,6 +311,22 @@ async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
       });
       await supabase.from('alertas_tempranas_guardia').update({ backup_notificado_at: ahora.toISOString() }).eq('id', alerta.id);
     }
+
+    // Ver el comentario de las guardias sin cerrar.
+    await escalarSiCorresponde({
+      prestadoraId,
+      tipo: TIPOS_DE_ALARMA.ALERTA_TEMPRANA,
+      referenciaId: alerta.id,
+      minutosPremura,
+      config,
+      idioma,
+      ahora,
+      yaSalieron: escalonesQueSalieron,
+      texto: aviso('alerta_temprana_respaldo', idioma, {
+        guardiaId: alerta.guardia_id,
+        minutos: minutosPremura,
+      }).texto,
+    });
   }
 }
 
@@ -309,6 +357,11 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
     tipo: TIPOS_DE_ALARMA.INCIDENTE_RELEVO,
     ahora,
     regla: reglaDeLasTomas,
+  });
+
+  const escalonesQueSalieron = await escalonesYaAvisados({
+    prestadoraId,
+    tipo: TIPOS_DE_ALARMA.INCIDENTE_RELEVO,
   });
 
   for (const incidente of incidentes ?? []) {
@@ -351,6 +404,22 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
       });
       await supabase.from('incidentes_relevo').update({ backup_notificado_at: ahora.toISOString() }).eq('id', incidente.id);
     }
+
+    // Ver el comentario de las guardias sin cerrar.
+    await escalarSiCorresponde({
+      prestadoraId,
+      tipo: TIPOS_DE_ALARMA.INCIDENTE_RELEVO,
+      referenciaId: incidente.id,
+      minutosPremura,
+      config,
+      idioma,
+      ahora,
+      yaSalieron: escalonesQueSalieron,
+      texto: aviso('incidente_relevo_respaldo', idioma, {
+        guardiaId: incidente.guardia_entrante_id,
+        minutos: minutosPremura,
+      }).texto,
+    });
 
     if (
       faseAutomaticaActiva
@@ -438,20 +507,39 @@ async function notificarFamiliaSiCorresponde({ prestadoraId, guardiaEntranteId, 
   }
 }
 
+// El correo no se pide acá: `usuarios` no tiene esa columna —vive en la tabla de cuentas—, y
+// pedírsela hacía que la consulta entera fallara con un error de columna desconocida. El código lo
+// leía como «ese Coordinador no existe» y salía sin avisar: el escalón al respaldo no llegaba
+// nunca, en silencio. Ahora el teléfono sale de la ficha y el correo de donde está
+// (`correoDeUnaPersona.js`).
 async function notificarCoordinadorBackup({ backupId, prestadoraId, texto, idioma }) {
   const { data: usuario } = await supabase
     .from('usuarios')
-    .select('telefono, email')
+    .select('telefono')
     .eq('id', backupId)
     .single();
 
   if (!usuario) return;
 
+  const textos = aviso('escalada_a_respaldo', idioma);
+
   await notificarCoordinador({
     evento: 'incidente_relevo_sin_resolver',
     prestadoraId,
-    ...aviso('escalada_a_respaldo', idioma),
+    ...textos,
     texto,
     telefono: usuario.telefono,
   });
+
+  // Y al correo de esa persona, además. Lo de arriba sale por WhatsApp al número del respaldo, y si
+  // ese canal no está andando cae al correo general de la Prestadora, que es el que ya recibió la
+  // insistencia: el escalón se quedaría sin llegarle justamente a quien tenía que reaccionar. Que
+  // reciba las dos cosas cuando el WhatsApp sí sale es preferible a que no reciba ninguna.
+  const correo = await correoDe(backupId);
+  if (!correo) return;
+  try {
+    await enviarEmail({ to: correo, asunto: textos.asunto, texto, prestadoraId });
+  } catch (e) {
+    console.error(`Error avisándole al Coordinador de respaldo (${backupId}):`, e.message);
+  }
 }

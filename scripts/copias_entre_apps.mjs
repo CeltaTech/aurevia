@@ -85,6 +85,11 @@ export const GRUPOS = [
     copias: ['backend/src/utils/calcularLiquidacion.js'],
   },
   {
+    que: 'en qué orden sube una alarma que no se resuelve, y a qué escalones ya llegó',
+    original: 'panel/src/lib/ordenDeLaEscalada.js',
+    copias: ['backend/src/utils/ordenDeLaEscalada.js'],
+  },
+  {
     que: 'la marca de la Prestadora y qué funciones tiene encendidas',
     original: 'pwa-familias/src/context/PerfilContext.jsx',
     copias: ['pwa-asistentes/src/context/PerfilContext.jsx'],

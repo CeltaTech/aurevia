@@ -7,7 +7,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion';
 import { DIRECCION_DEL_MOTOR } from '../../lib/apiPanel';
 import { ordenarTramosPremura } from '../../lib/tramosPremura';
-import { ordenDeLaEscalada } from '../../lib/ordenDeLaEscalada';
+import { MINUTOS_QUE_SE_PUEDEN_TOCAR, ordenDeLaEscalada } from '../../lib/ordenDeLaEscalada';
 import { traducirValor } from '../../i18n/valores';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
@@ -1210,6 +1210,18 @@ const escaladaGraveSinCerrarValida = (valor) => {
   return Number.isInteger(horas) && horas > 0 && horas <= HORAS_DE_TRES_DIAS;
 };
 
+/* El campo vacío apaga ese escalón, y apagarlo es una decisión válida: no hay un interruptor
+   aparte. Por eso vacío pasa la revisión y sale como nulo hacia el motor. */
+const minutosDeEscalonValidos = (valor, campo) => {
+  if (valor === null || valor === undefined || valor === '') return true;
+  const { minimo, maximo } = MINUTOS_QUE_SE_PUEDEN_TOCAR[campo];
+  const minutos = Number(valor);
+  return Number.isInteger(minutos) && minutos >= minimo && minutos <= maximo;
+};
+
+const enNumeroOApagado = (valor) =>
+  valor === null || valor === undefined || valor === '' ? null : Number(valor);
+
 /* Lo que se acaba de configurar, dicho en orden.
 
    Los tres escalones no se ordenan eligiendo un orden: se ordenan solos, según el minuto que
@@ -1224,6 +1236,8 @@ function EscaladaEnOrden({ form }) {
     minutosAntesBackup: form.minutos_antes_backup,
     faseAutomaticaActiva: form.fase_automatica_activa,
     minutosAntesFaseAutomatica: form.minutos_antes_fase_automatica,
+    minutosAntesTodosLosCoordinadores: form.minutos_antes_todos_los_coordinadores,
+    minutosAntesAdministracion: form.minutos_antes_administracion,
   });
 
   const cuando = (minuto) => {
@@ -1303,6 +1317,19 @@ function TabWhatsappEscaladaCoordinador() {
       setError(con(t.configuracion.whatsapp_escalada_horas_guardia_sin_cerrar_grave_invalido, { maximo: HORAS_DE_TRES_DIAS }));
       return;
     }
+    // Los dos escalones de arriba se apagan dejando el campo vacío. Vacío está bien; lo que no
+    // se manda es un número fuera de los bordes, que la base rechazaría con un error suyo.
+    const fueraDeBorde = [
+      'minutos_antes_todos_los_coordinadores',
+      'minutos_antes_administracion',
+    ].find((campo) => !minutosDeEscalonValidos(form[campo], campo));
+    if (fueraDeBorde) {
+      setGuardado(false);
+      setError(
+        con(t.configuracion.whatsapp_escalada_minutos_escalon_invalido, MINUTOS_QUE_SE_PUEDEN_TOCAR[fueraDeBorde])
+      );
+      return;
+    }
     setGuardando(true);
     setError(null);
     // Se ordenan antes de mandarlos: el motor lee la lista de arriba hacia abajo y se
@@ -1320,6 +1347,8 @@ function TabWhatsappEscaladaCoordinador() {
           minutos_antes_fase_automatica: Number(form.minutos_antes_fase_automatica),
           minutos_gracia_cierre_guardia: Number(form.minutos_gracia_cierre_guardia),
           horas_antes_aviso_grave_sin_cerrar: Number(form.horas_antes_aviso_grave_sin_cerrar),
+          minutos_antes_todos_los_coordinadores: enNumeroOApagado(form.minutos_antes_todos_los_coordinadores),
+          minutos_antes_administracion: enNumeroOApagado(form.minutos_antes_administracion),
         }),
       });
       // La pantalla se queda con la lista tal como quedó guardada, no como se tipeó: si
@@ -1375,6 +1404,22 @@ function TabWhatsappEscaladaCoordinador() {
               type="number"
               value={form.minutos_antes_fase_automatica ?? ''}
               onChange={(e) => set('minutos_antes_fase_automatica', e.target.value)}
+            />
+            <FormField
+              label={t.configuracion.whatsapp_escalada_minutos_todos_los_coordinadores}
+              name="minutos_antes_todos_los_coordinadores"
+              type="number"
+              value={form.minutos_antes_todos_los_coordinadores ?? ''}
+              onChange={(e) => set('minutos_antes_todos_los_coordinadores', e.target.value)}
+              ayuda={t.configuracion.whatsapp_escalada_minutos_todos_los_coordinadores_ayuda}
+            />
+            <FormField
+              label={t.configuracion.whatsapp_escalada_minutos_administracion}
+              name="minutos_antes_administracion"
+              type="number"
+              value={form.minutos_antes_administracion ?? ''}
+              onChange={(e) => set('minutos_antes_administracion', e.target.value)}
+              ayuda={t.configuracion.whatsapp_escalada_minutos_administracion_ayuda}
             />
             <EscaladaEnOrden form={form} />
             <FormField

@@ -85,6 +85,16 @@ const ES = {
 
   escalada_a_respaldo: () => ({ asunto: 'Escalada a Coordinador de respaldo' }),
 
+  // Los dos escalones que siguen. El asunto dice los minutos porque el cuerpo es el mismo que ya
+  // recibió quien coordina: sin eso, quien lo lee no sabe por qué le está llegando a él.
+  escalada_a_todos_los_coordinadores: (d) => ({
+    asunto: `Escalada a todos los Coordinadores: sin resolver hace ${d.minutos} minutos`,
+  }),
+
+  escalada_a_la_administracion: (d) => ({
+    asunto: `Escalada a la administración: sin resolver hace ${d.minutos} minutos`,
+  }),
+
   alerta_temprana_sin_resolver: (d) => ({
     asunto: 'Alerta temprana de posible ausencia sin resolver',
     // El origen va adelante del motivo a propósito: quien lee tiene que poder distinguir de un
@@ -371,6 +381,14 @@ const EN = {
 
   escalada_a_respaldo: () => ({ asunto: 'Escalated to the backup coordinator' }),
 
+  escalada_a_todos_los_coordinadores: (d) => ({
+    asunto: `Escalated to every coordinator: unresolved for ${d.minutos} minutes`,
+  }),
+
+  escalada_a_la_administracion: (d) => ({
+    asunto: `Escalated to management: unresolved for ${d.minutos} minutes`,
+  }),
+
   alerta_temprana_sin_resolver: (d) => ({
     asunto: 'Early warning of a possible no-show, unresolved',
     texto: `Shift ${d.guardiaId}. Source: ${d.origen}. Reason: ${d.motivo ?? '—'}. Unresolved for ${Math.round(d.minutos)} minutes.`,
@@ -637,6 +655,14 @@ const PT = {
   }),
 
   escalada_a_respaldo: () => ({ asunto: 'Escalado ao Coordenador de retaguarda' }),
+
+  escalada_a_todos_los_coordinadores: (d) => ({
+    asunto: `Escalado a todos os Coordenadores: sem resolver há ${d.minutos} minutos`,
+  }),
+
+  escalada_a_la_administracion: (d) => ({
+    asunto: `Escalado à administração: sem resolver há ${d.minutos} minutos`,
+  }),
 
   alerta_temprana_sin_resolver: (d) => ({
     asunto: 'Alerta antecipado de possível ausência sem resolver',

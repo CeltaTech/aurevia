@@ -17,9 +17,12 @@ import { mensajeDeError } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { TurnosSinCubrirAbiertos } from '../components/continuidad/TurnosSinCubrirAbiertos';
+import { ConsentimientosVigentes } from '../components/continuidad/ConsentimientosVigentes';
 import { LaTomoYo } from '../components/continuidad/LaTomoYo';
 import { useAlarmasTomadas } from '../hooks/useAlarmasTomadas';
 import { TIPOS_DE_ALARMA } from '../lib/alarmasTomadas';
+import { ORIGENES } from '../lib/pacienteSolo';
+import { LoQuePasoEnLaCasa } from '../components/continuidad/LoQuePasoEnLaCasa';
 
 const TIPOS_RESOLUCION = ['suplente', 'franquero', 'emergencia', 'familiar'];
 
@@ -33,18 +36,22 @@ const TIPOS_RESOLUCION = ['suplente', 'franquero', 'emergencia', 'familiar'];
    puede escribir. */
 const VISTA_AVISOS_DE_CIERRE = 'notificaciones_cierre_servicio_quien_cerro';
 
-/* LAS EXCEPCIONES DE FAMILIAR, Y POR QUÉ SE MIRAN ACÁ
+/* LOS FAMILIARES QUE SE QUEDARON CUIDANDO, Y POR QUÉ SE MIRAN ACÁ
 
-   Cuando un incidente de relevo se resuelve con un familiar del Paciente cubriendo el turno, eso
-   se anota en `excepciones_familiar_relevo` con la fecha desde la que rige y sin fecha de fin:
-   el incidente queda resuelto y la excepción queda abierta. Una excepción abierta significa que
-   en esa casa hay alguien cuidando que no es personal de la Prestadora, así que mientras siga
-   abierta no está cubierto lo que se contrató. Sin esta sección se anotaba y no la leía nadie.
+   Cuando no va nadie y termina quedándose alguien de la casa, eso se anota con la fecha desde la
+   que rige y sin fecha de fin. Mientras siga sin fin, en esa casa hay alguien cuidando que no es
+   personal de la Prestadora: no está cubierto lo que se contrató. Sin esta sección se anotaba y
+   no lo leía nadie.
+
+   NO ES UN TURNO CUBIERTO Y NO ES UNA EXCEPCIÓN AUTORIZADA. La Familia contrató para no tener
+   que quedarse; que se haya quedado igual es un defecto grave del servicio que no se pudo
+   solucionar, y puede costar el servicio. Nadie le pide a un familiar que se quede, así que acá
+   no hay nada que autorizar: quien firma la fila deja escrito el hecho.
 
    Se cierra escribiendo la fecha de fin. Cerrarla no deshace nada ni borra el hecho: dice que ya
    volvió a haber personal en esa casa, y por eso la fila deja de pedir atención.
 
-   NO SE MUESTRA QUIÉN LA AUTORIZÓ. El dato se guarda —la tabla tiene la columna— pero traerlo a
+   NO SE MUESTRA QUIÉN LO REGISTRÓ. El dato se guarda —la tabla tiene la columna— pero traerlo a
    la pantalla exigiría una vista aparte, porque `usuarios` deja leer únicamente la fila propia.
    El mismo motivo por el que los avisos de cierre se leen de una vista. */
 const TABLA_EXCEPCIONES = 'excepciones_familiar_relevo';
@@ -84,24 +91,14 @@ export function Continuidad() {
       if (errorNotificaciones) throw errorNotificaciones;
       if (errorExcepciones) throw errorExcepciones;
 
-      // El incidente que originó cada excepción ya está resuelto, así que no viene en la consulta
-      // de arriba y hay que pedirlo aparte. Es el único camino hasta el Paciente: la excepción
-      // guarda de qué incidente salió, y el incidente, de qué turno.
-      const idsIncidentesDeExcepciones = Array.from(
-        new Set((excepcionesData ?? []).map((e) => e.incidente_id).filter(Boolean)),
-      );
-      const { data: incidentesDeExcepciones } = idsIncidentesDeExcepciones.length
-        ? await supabase.from('incidentes_relevo').select('id, guardia_entrante_id').in('id', idsIncidentesDeExcepciones)
-        : { data: [] };
-      const guardiaPorIncidente = Object.fromEntries(
-        (incidentesDeExcepciones ?? []).map((i) => [i.id, i.guardia_entrante_id]),
-      );
-
+      // El turno sale derecho de la fila. Antes se llegaba dando la vuelta por el incidente de
+      // relevo, y esa vuelta dejó de servir cuando el hecho pasó a llegar también por los otros
+      // dos caminos, que no abren ningún incidente.
       const idsGuardias = Array.from(
         new Set([
           ...(incidentesData ?? []).flatMap((i) => [i.guardia_entrante_id, i.guardia_saliente_id].filter(Boolean)),
           ...(alertasData ?? []).map((a) => a.guardia_id),
-          ...Object.values(guardiaPorIncidente).filter(Boolean),
+          ...(excepcionesData ?? []).map((e) => e.guardia_id).filter(Boolean),
         ]),
       );
 
@@ -145,7 +142,7 @@ export function Continuidad() {
       }));
 
       const filasExcepciones = (excepcionesData ?? []).map((e) => {
-        const g = guardiasPorId[guardiaPorIncidente[e.incidente_id]];
+        const g = guardiasPorId[e.guardia_id];
         return {
           ...e,
           paciente_nombre: nombresDelTurno(g),
@@ -159,6 +156,7 @@ export function Continuidad() {
         return {
           ...i,
           paciente_nombre: nombresDelTurno(gEntrante),
+          pacientes: gEntrante?.pacientes ?? [],
           asistente_ausente_nombre: gEntrante ? asistentesPorId[gEntrante.asistente_id] || '—' : '—',
           asistente_saliente_nombre: gSaliente ? asistentesPorId[gSaliente.asistente_id] || '—' : null,
           fecha: gEntrante?.fecha,
@@ -311,6 +309,18 @@ export function Continuidad() {
               {/* Resolver dice que el problema terminó; tomarlo dice que alguien está en eso
                   ahora. Mientras tanto el incidente no insiste y tampoco escala solo. */}
               <LaTomoYo tipo={TIPOS_DE_ALARMA.INCIDENTE_RELEVO} referenciaId={i.id} {...tomas} />
+              {/* Lo que puede haber pasado en esa casa mientras tanto. No cierra el incidente:
+                  se registra el hecho y el incidente sigue abierto hasta que alguien diga cómo
+                  terminó. */}
+              {i.guardia_entrante_id && (
+                <LoQuePasoEnLaCasa
+                  guardiaId={i.guardia_entrante_id}
+                  pacientes={i.pacientes}
+                  origen={ORIGENES.RELEVO}
+                  incidenteId={i.id}
+                  alRegistrar={recargar}
+                />
+              )}
             </div>
           </div>
         ))}
@@ -417,8 +427,14 @@ export function Continuidad() {
               <strong>{t.continuidad.col_paciente}: {e.paciente_nombre}</strong>
               <div>{t.continuidad.excepciones_col_familiar}: {e.familiar_nombre || '—'}</div>
               <div>{t.continuidad.excepciones_col_desde}: {diaDelMomento(e.desde_at) || '—'}</div>
+              {/* Por cuál de los tres caminos se llegó hasta acá. Un origen que esta versión no
+                  conoce no se calla ni se inventa: se dice que no se sabe. */}
+              <div>
+                {t.continuidad.excepciones_col_origen}:{' '}
+                {t.continuidad[`excepciones_origen_${e.origen}`] ?? t.continuidad.excepciones_origen_desconocido}
+              </div>
               {/* Cuánto lleva abierta, que es lo que dice cuál mirar primero. El día en que se
-                  autorizó se dice aparte porque «hace tres días» y «el 12» contestan preguntas
+                  registró se dice aparte porque «hace tres días» y «el 12» contestan preguntas
                   distintas: una, si esto se está estirando; la otra, contra qué turno mirarlo. */}
               <div className="panel-guardia-alerta">
                 {e.dias_abierta === 0
@@ -437,6 +453,11 @@ export function Continuidad() {
           </div>
         ))}
       </EstadoLista>
+
+      {/* Va debajo y aparte: son dos hechos distintos. Arriba, las casas donde quedó cuidando
+          alguien de la familia; acá, aquellas en las que la familia aceptó que la persona
+          atendida quedara sola. Un mismo turno puede tener los dos, y ninguno explica al otro. */}
+      <ConsentimientosVigentes />
 
       {incidenteResolviendo && (
         <ResolverIncidente
@@ -483,12 +504,18 @@ function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto
       const ahora = new Date().toISOString();
 
       if (esFamiliar) {
-        const { error: errorExcepcion } = await supabase.from('excepciones_familiar_relevo').insert({
+        // Queda escrito colgando del turno, no del incidente: el mismo hecho llega por tres
+        // caminos y sólo éste abre un incidente de relevo. El incidente se guarda igual, porque
+        // dice de dónde salió. Y quien firma registra el hecho: no autorizó nada, porque a un
+        // familiar no se le pide que se quede.
+        const { error: errorExcepcion } = await supabase.from(TABLA_EXCEPCIONES).insert({
           prestadora_id: prestadoraId,
+          guardia_id: incidente.guardia_entrante_id,
+          origen: ORIGENES.RELEVO,
           incidente_id: incidente.id,
           familiar_nombre: familiarNombre,
-          autorizado_por: usuario.id,
-          motivo,
+          registrado_por: usuario.id,
+          motivo: motivo.trim() || null,
           desde_at: ahora,
         });
         if (errorExcepcion) throw errorExcepcion;
@@ -524,7 +551,9 @@ function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto
     }
   }
 
-  const puedeGuardar = esFamiliar ? familiarNombre && motivo : Boolean(asistenteId);
+  // El motivo dejó de ser obligatorio: era la justificación de una excepción autorizada, y esto
+  // no es una excepción autorizada. El familiar no tiene que justificar nada.
+  const puedeGuardar = esFamiliar ? Boolean(familiarNombre.trim()) : Boolean(asistenteId);
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
@@ -540,8 +569,11 @@ function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto
 
         {esFamiliar ? (
           <>
+            {/* Se dice en la cara de quien lo está cargando, antes de que lo cargue: esto no es
+                una forma de cubrir el turno. La Familia contrató para no tener que quedarse. */}
+            <Alert variant="error">{t.continuidad.resolver_familiar_es_defecto_grave}</Alert>
             <FormField label={t.continuidad.resolver_familiar_nombre} name="familiar_nombre" value={familiarNombre} onChange={(e) => setFamiliarNombre(e.target.value)} required />
-            <FormField label={t.continuidad.resolver_familiar_motivo} name="motivo" type="textarea" value={motivo} onChange={(e) => setMotivo(e.target.value)} required />
+            <FormField label={t.continuidad.resolver_familiar_motivo} name="motivo" type="textarea" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
           </>
         ) : (
           <FormField label={t.continuidad.resolver_asistente} name="asistente_id" type="select" value={asistenteId} onChange={(e) => setAsistenteId(e.target.value)} required>

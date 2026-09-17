@@ -20,6 +20,8 @@ import {
 import { useAlarmasTomadas } from '../../hooks/useAlarmasTomadas';
 import { LaTomoYo } from './LaTomoYo';
 import { TIPOS_DE_ALARMA } from '../../lib/alarmasTomadas';
+import { ORIGENES } from '../../lib/pacienteSolo';
+import { LoQuePasoEnLaCasa } from './LoQuePasoEnLaCasa';
 
 /* LOS TURNOS QUE QUEDARON SIN NADIE, Y POR QUÉ NO SE VAN SOLOS DE ACÁ
 
@@ -148,6 +150,16 @@ export function TurnosSinCubrirAbiertos() {
               {/* Cerrarlo dice cómo terminó; tomarlo dice que alguien está buscando quién lo
                   cubra ahora mismo, y mientras tanto el recordatorio no le llega a los demás. */}
               <LaTomoYo tipo={TIPOS_DE_ALARMA.TURNO_SIN_CUBRIR} referenciaId={i.id} {...tomas} />
+              {/* Los dos hechos que pueden haber pasado en esa casa. Ninguno cierra el turno:
+                  registrarlos no lo cuenta como cubierto, y por eso están al lado del botón de
+                  cerrar y no adentro de él. */}
+              <LoQuePasoEnLaCasa
+                guardiaId={i.guardia_id}
+                pacientes={i.pacientes}
+                origen={ORIGENES.TURNO_SIN_CUBRIR}
+                incidenteId={i.id}
+                alRegistrar={recargar}
+              />
             </div>
           </div>
         ))}

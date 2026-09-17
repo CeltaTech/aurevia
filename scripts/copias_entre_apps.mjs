@@ -129,6 +129,11 @@ export const GRUPOS = [
     copias: ['backend/src/utils/incidenteTurnoSinCubrir.js'],
   },
   {
+    que: 'qué se registra cuando no va nadie: el consentimiento de la Familia y el familiar que se quedó',
+    original: 'panel/src/lib/pacienteSolo.js',
+    copias: ['backend/src/utils/pacienteSolo.js'],
+  },
+  {
     que: 'qué significa que alguien se haga cargo de una alarma y cuánto dura esa toma',
     original: 'panel/src/lib/alarmasTomadas.js',
     copias: ['backend/src/utils/alarmasTomadas.js'],

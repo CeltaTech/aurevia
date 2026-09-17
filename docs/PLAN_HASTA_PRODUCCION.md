@@ -25,6 +25,7 @@ querer que ese se ocupe. Entonces:
 - **Una puerta para que el otro software avise.** Con el interruptor apagado, lo único que Careonys
   necesita saber es si a esa Familia hay que ponerle alguna restricción por falta de pago. El otro
   software lo avisa, Careonys lo muestra y **no decide nada**: quien decide es una persona.
+
 **2. Usted** — Con cuál de los softwares de facturación se conecta Careonys primero: el que usen
 hoy las Prestadoras. Recién se pregunta cuando el paso anterior esté hecho, porque no lo traba.
 

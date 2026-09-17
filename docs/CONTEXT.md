@@ -223,11 +223,23 @@ Planillas 3, pero no el cobro directo a familias particulares. Se construyó des
 caminos están hechos.
 
 **En prestación directa**, la factura del círculo familiar vive en `facturas_familia`, la maneja
-`backend/src/routes/panelCobros.js`, se emite y se sigue desde `panel/src/pages/Facturacion.jsx`, y
+`backend/src/routes/panelCobros.js`, se sigue desde `panel/src/pages/Facturacion.jsx`, y
 la Familia la ve en su aplicación (`facturas()` / `factura(id)` en `pwa-familias/src/lib/api.js`).
 Una factura no cuelga de ningún Paciente: se le factura al círculo entero, y un mismo comprobante
 puede llevar renglones de más de una persona cuidada. Qué se cobra y cada cuánto lo decide la
 Prestadora; el producto no fija precio ni período.
+
+**El comprobante no lo emite Careonys**, lo emite el software de facturación de la Prestadora, con
+su cuenta y los impuestos de su país. De ahí vuelven tres datos que se anotan tal como llegaron —
+cómo se llama el comprobante, qué número tiene y cuánto quedó adeudando la Familia—, y ese monto es
+el que se reclama; mientras no haya nada anotado se muestra lo que se mandó a facturar. Una factura
+emitida no se toca: la corrección es otro comprobante, que se anota en
+`correcciones_factura_familia` con su sentido y su monto. Sin software conectado el sistema
+funciona igual, anotando esos datos a mano. La cuenta de la resta vive en un solo lugar, la vista
+`saldos_familia`, y las comprobaciones que hacen la pantalla y el motor salen del mismo archivo,
+`lib/facturacionDeFamilias.js`. El plazo de pago acordado es lo que fija el vencimiento: hay uno
+general de la Prestadora y uno por Familia, que gana sobre el general; vacío quiere decir que no se
+acordó nada y cero, que paga el mismo día.
 
 **En la modalidad Marketplace** (`docs/PRD_07_Modalidad_Marketplace.md`), la Familia le paga a la Prestadora por una pasarela,
 y **cada Prestadora arma su propia forma de cobrar** con las piezas que el producto le da

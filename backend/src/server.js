@@ -42,6 +42,7 @@ import { revisarNotificacionesCoordinador } from './utils/revisarNotificacionesC
 import { extenderSeriesGuardiaAbiertas } from './utils/generacionSeriesGuardia.js';
 import { revisarRecordatoriosPush } from './utils/revisarRecordatoriosPush.js';
 import { revisarGuardiasSinCubrir } from './utils/revisarGuardiasSinCubrir.js';
+import { revisarAusenciasAvisadas } from './utils/revisarAusenciasAvisadas.js';
 import { revisarLlegadasDemoradas } from './utils/revisarLlegadasDemoradas.js';
 import { armarCobrosDelPeriodo } from './utils/cobrosMarketplace.js';
 import { cortarLosAccesosDadosDeBaja } from './utils/corteDelAcceso.js';
@@ -224,6 +225,16 @@ setInterval(() => {
 revisarGuardiasSinCubrir().catch((err) => console.error('Error en revisión inicial de guardias sin cubrir:', err.message));
 setInterval(() => {
   revisarGuardiasSinCubrir().catch((err) => console.error('Error en revisión de guardias sin cubrir:', err.message));
+}, CINCO_MINUTOS_MS);
+
+// Aviso a la Coordinadora cuando falta un Asistente, y distinto según cómo llegó la falta: con
+// margen para conseguir reemplazo, o con el turno empezando enseguida. El de arriba no lo ve,
+// porque mira los turnos sin nadie asignado y el de una Asistente de licencia la sigue teniendo
+// asignada. Se mira seguido porque la clase se recalcula: la que ayer tenía tres días de margen
+// hoy puede ser urgente.
+revisarAusenciasAvisadas().catch((err) => console.error('Error en revisión inicial de ausencias avisadas:', err.message));
+setInterval(() => {
+  revisarAusenciasAvisadas().catch((err) => console.error('Error en revisión de ausencias avisadas:', err.message));
 }, CINCO_MINUTOS_MS);
 
 // Alertas de llegada demorada que nadie avisó (pendiente #101, docs/PLAN_HASTA_PRODUCCION.md). Sólo detecta

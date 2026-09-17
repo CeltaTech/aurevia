@@ -19,6 +19,25 @@ import { useMotivosSustitucionGuardia } from '../../hooks/useMotivosSustitucionG
 import { nombreMotivoSustitucion, valorGuardado } from '../../lib/motivoDeSustitucion';
 
 const TIPOS = ['enfermedad_inculpable', 'accidente_inculpable', 'otra_licencia', 'ausencia_no_justificada'];
+
+// El momento de ahora con la forma que pide una caja de fecha y hora (`2026-09-16T14:30`), en hora
+// local. `toISOString()` a secas daría la hora en UTC, que en horario argentino se lee tres horas
+// corrida. Es lo que viene puesto en «cuándo avisó»: el caso corriente es que la Coordinadora
+// cargue la ausencia al enterarse, y el que avisó antes se corrige hacia atrás.
+function ahoraLocal() {
+  const momento = new Date();
+  const corrida = new Date(momento.getTime() - momento.getTimezoneOffset() * 60000);
+  return corrida.toISOString().slice(0, 16);
+}
+
+// De lo que escribió la Coordinadora al momento exacto que se guarda. Vacío devuelve `null`, y
+// entonces la base pone el momento de la carga: una ausencia sin este dato se trata como urgente,
+// que es el error barato.
+function momentoGuardado(texto) {
+  if (!texto) return null;
+  const momento = new Date(texto);
+  return Number.isNaN(momento.getTime()) ? null : momento.toISOString();
+}
 const API_URL = import.meta.env.VITE_API_URL;
 
 async function llamarApiAusencias(path, opciones = {}) {
@@ -45,7 +64,7 @@ export function AusenciasCoberturaTab({ asistente }) {
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
-  const [nueva, setNueva] = useState({ tipo: 'enfermedad_inculpable', fecha_inicio: '', fecha_fin: '', observaciones: '' });
+  const [nueva, setNueva] = useState({ tipo: 'enfermedad_inculpable', fecha_inicio: '', fecha_fin: '', observaciones: '', avisada_en: ahoraLocal() });
   const [coberturaForm, setCoberturaForm] = useState({});
   const [cierreForm, setCierreForm] = useState({});
   const [subiendoCertificado, setSubiendoCertificado] = useState(null);
@@ -174,6 +193,7 @@ export function AusenciasCoberturaTab({ asistente }) {
       fecha_inicio: nueva.fecha_inicio,
       fecha_fin: nueva.fecha_fin || null,
       observaciones: nueva.observaciones || null,
+      avisada_en: momentoGuardado(nueva.avisada_en),
       guardias_afectadas: afectadas,
       dias_computados: diasComputados(nueva),
     });
@@ -182,7 +202,7 @@ export function AusenciasCoberturaTab({ asistente }) {
       setError(t.comun.error_generico);
       return;
     }
-    setNueva({ tipo: 'enfermedad_inculpable', fecha_inicio: '', fecha_fin: '', observaciones: '' });
+    setNueva({ tipo: 'enfermedad_inculpable', fecha_inicio: '', fecha_fin: '', observaciones: '', avisada_en: ahoraLocal() });
     recargar();
   }
 
@@ -483,6 +503,14 @@ export function AusenciasCoberturaTab({ asistente }) {
       </FormField>
       <FormField label={t.asistentes.ausencias.fecha_inicio} name="fecha_inicio" type="date" value={nueva.fecha_inicio} onChange={(e) => setNueva((f) => ({ ...f, fecha_inicio: e.target.value }))} required />
       <FormField label={t.asistentes.ausencias.fecha_fin} name="fecha_fin" type="date" value={nueva.fecha_fin} onChange={(e) => setNueva((f) => ({ ...f, fecha_fin: e.target.value }))} />
+      <FormField
+        label={t.asistentes.ausencias.avisada_en}
+        name="avisada_en"
+        type="datetime-local"
+        value={nueva.avisada_en}
+        ayuda={t.asistentes.ausencias.ayuda_avisada_en}
+        onChange={(e) => setNueva((f) => ({ ...f, avisada_en: e.target.value }))}
+      />
       <FormField label={t.comun.nota_interna} name="observaciones" type="textarea" value={nueva.observaciones} onChange={(e) => setNueva((f) => ({ ...f, observaciones: e.target.value }))} />
       <Button onClick={registrarAusencia} disabled={guardando || !nueva.fecha_inicio}>
         {guardando ? t.comun.guardando : t.asistentes.ausencias.registrar_nueva}

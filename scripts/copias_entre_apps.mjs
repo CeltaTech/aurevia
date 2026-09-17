@@ -114,6 +114,11 @@ export const GRUPOS = [
     copias: ['backend/src/utils/ausenciaQueTapa.js'],
   },
   {
+    que: 'si una ausencia llegó con tiempo o de golpe',
+    original: 'panel/src/lib/avisoDeAusencia.js',
+    copias: ['backend/src/utils/avisoDeAusencia.js'],
+  },
+  {
     que: 'cómo se llama y dónde se guarda cada documento generado del legajo',
     original: 'panel/src/lib/documentosDeCese.js',
     copias: ['backend/src/utils/documentosDeCese.js'],

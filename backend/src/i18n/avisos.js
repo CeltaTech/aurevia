@@ -160,6 +160,26 @@ const ES = {
       : `${d.turnos.length} guardias, desde la del ${d.turnos[0].fecha}, las hace ${d.asistenteNuevo ?? 'otro Asistente'}.`,
   }),
 
+  ausencia_avisada_con_tiempo: (d) => ({
+    asunto: 'Un Asistente avisó que falta',
+    texto: [
+      `${d.asistente ?? 'Un Asistente'} no va a estar desde el ${d.fechaInicio}${d.fechaFin ? ` hasta el ${d.fechaFin}` : ''}.`,
+      `Deja ${d.turnos} guardia(s) sin nadie. La primera es la del ${d.fecha}, de ${d.horaInicio} a ${d.horaFin}, y empieza en ${d.horas} h.`,
+      d.veces > 1 ? `Es el aviso número ${d.veces} de esta misma ausencia.` : null,
+    ].filter(Boolean).join('\n'),
+  }),
+
+  ausencia_de_golpe: (d) => ({
+    asunto: d.yaEmpezo ? 'Falta un Asistente: la guardia ya tendría que haber empezado' : 'Falta un Asistente y la guardia empieza enseguida',
+    texto: [
+      `${d.asistente ?? 'Un Asistente'} no va a estar desde el ${d.fechaInicio}${d.fechaFin ? ` hasta el ${d.fechaFin}` : ''}.`,
+      `Guardia del ${d.fecha}, de ${d.horaInicio} a ${d.horaFin}, para ${unirNombres(d.pacientes, 'y', 'Paciente sin nombre cargado')}.`,
+      d.yaEmpezo ? `Tendría que haber empezado hace ${d.horas} h.` : `Empieza en ${d.horas} h.`,
+      d.turnos > 1 ? `Además deja otras ${d.turnos - 1} guardia(s) sin nadie.` : null,
+      d.veces > 1 ? `Es el aviso número ${d.veces} de esta misma ausencia.` : null,
+    ].filter(Boolean).join('\n'),
+  }),
+
   guardia_sin_cubrir: (d) => ({
     asunto: d.yaEmpezo ? 'Guardia sin cubrir: la hora de inicio ya pasó' : 'Guardia sin cubrir',
     texto: [
@@ -403,6 +423,26 @@ const EN = {
       : `${d.turnos.length} shifts, starting with the one on ${d.turnos[0].fecha}, will be covered by ${d.asistenteNuevo ?? 'another Assistant'}.`,
   }),
 
+  ausencia_avisada_con_tiempo: (d) => ({
+    asunto: 'An Assistant reported an absence',
+    texto: [
+      `${d.asistente ?? 'An Assistant'} will be away from ${d.fechaInicio}${d.fechaFin ? ` to ${d.fechaFin}` : ''}.`,
+      `This leaves ${d.turnos} shift(s) with nobody. The first one is on ${d.fecha}, from ${d.horaInicio} to ${d.horaFin}, and it starts in ${d.horas} h.`,
+      d.veces > 1 ? `This is notice number ${d.veces} for this same absence.` : null,
+    ].filter(Boolean).join('\n'),
+  }),
+
+  ausencia_de_golpe: (d) => ({
+    asunto: d.yaEmpezo ? 'An Assistant is missing: the shift should have started already' : 'An Assistant is missing and the shift starts shortly',
+    texto: [
+      `${d.asistente ?? 'An Assistant'} will be away from ${d.fechaInicio}${d.fechaFin ? ` to ${d.fechaFin}` : ''}.`,
+      `Shift on ${d.fecha}, from ${d.horaInicio} to ${d.horaFin}, for ${unirNombres(d.pacientes, 'and', 'patient with no name on file')}.`,
+      d.yaEmpezo ? `It should have started ${d.horas} h ago.` : `It starts in ${d.horas} h.`,
+      d.turnos > 1 ? `It also leaves ${d.turnos - 1} more shift(s) with nobody.` : null,
+      d.veces > 1 ? `This is notice number ${d.veces} for this same absence.` : null,
+    ].filter(Boolean).join('\n'),
+  }),
+
   guardia_sin_cubrir: (d) => ({
     asunto: d.yaEmpezo ? 'Shift not covered: the start time has passed' : 'Shift not covered',
     texto: [
@@ -630,6 +670,26 @@ const PT = {
     cuerpo: d.turnos.length === 1
       ? `O plantão de ${d.turnos[0].fecha}, das ${d.turnos[0].horaInicio} às ${d.turnos[0].horaFin}, será feito por ${d.asistenteNuevo ?? 'outro Assistente'}.`
       : `${d.turnos.length} plantões, a partir do de ${d.turnos[0].fecha}, serão feitos por ${d.asistenteNuevo ?? 'outro Assistente'}.`,
+  }),
+
+  ausencia_avisada_con_tiempo: (d) => ({
+    asunto: 'Um Assistente avisou que vai faltar',
+    texto: [
+      `${d.asistente ?? 'Um Assistente'} não vai estar de ${d.fechaInicio}${d.fechaFin ? ` até ${d.fechaFin}` : ''}.`,
+      `Deixa ${d.turnos} plantão(ões) sem ninguém. O primeiro é o de ${d.fecha}, das ${d.horaInicio} às ${d.horaFin}, e começa em ${d.horas} h.`,
+      d.veces > 1 ? `É o aviso número ${d.veces} desta mesma ausência.` : null,
+    ].filter(Boolean).join('\n'),
+  }),
+
+  ausencia_de_golpe: (d) => ({
+    asunto: d.yaEmpezo ? 'Falta um Assistente: o plantão já deveria ter começado' : 'Falta um Assistente e o plantão começa em seguida',
+    texto: [
+      `${d.asistente ?? 'Um Assistente'} não vai estar de ${d.fechaInicio}${d.fechaFin ? ` até ${d.fechaFin}` : ''}.`,
+      `Plantão de ${d.fecha}, das ${d.horaInicio} às ${d.horaFin}, para ${unirNombres(d.pacientes, 'e', 'Paciente sem nome cadastrado')}.`,
+      d.yaEmpezo ? `Deveria ter começado há ${d.horas} h.` : `Começa em ${d.horas} h.`,
+      d.turnos > 1 ? `Além disso, deixa outros ${d.turnos - 1} plantão(ões) sem ninguém.` : null,
+      d.veces > 1 ? `É o aviso número ${d.veces} desta mesma ausência.` : null,
+    ].filter(Boolean).join('\n'),
   }),
 
   guardia_sin_cubrir: (d) => ({

@@ -50,6 +50,8 @@
 //   cambio_de_asistente            → utils/avisoCambioDeAsistente.js (notificarCoordinador + push
 //                                    a la Familia), pedido por routes/panelGuardias.js
 //   emergencia_en_guardia          → routes/appAsistentes.js (notificarCoordinador)
+//   ausencia_avisada_con_tiempo    → utils/revisarAusenciasAvisadas.js (notificarCoordinador)
+//   ausencia_de_golpe              → utils/revisarAusenciasAvisadas.js (notificarCoordinador)
 // No hay ningún otro evento emitido. El vencimiento de documentos tiene un solo evento genérico,
 // `vencimiento_documento_asistente`, y no uno por tipo de documento, porque qué documentos se le
 // piden a un Asistente lo define el catálogo de cada Prestadora.
@@ -59,6 +61,25 @@ export const CATALOGO_AVISOS = [
     evento: 'guardia_sin_cubrir',
     descripcion: 'Una guardia próxima sigue sin Asistente asignado',
     admite_whatsapp: true,
+    admite_familia: false,
+  },
+  {
+    evento: 'ausencia_avisada_con_tiempo',
+    descripcion: 'Un Asistente avisó que falta, con margen para conseguir reemplazo',
+    admite_whatsapp: true,
+    // No le llega a la Familia. Todavía no le pasó nada a su Paciente: hay tiempo de sobra para
+    // conseguir a alguien, y avisarle sería alarmarla por un problema que probablemente no llegue
+    // a existir. Si el turno igual queda sin nadie, el aviso que sale es otro.
+    admite_familia: false,
+  },
+  {
+    evento: 'ausencia_de_golpe',
+    descripcion: 'Un Asistente falta a un turno que empieza enseguida',
+    admite_whatsapp: true,
+    // Tiene su propio evento, y no es el de arriba con otro texto. Son dos trabajos distintos:
+    // uno es una tarea para cuando se pueda, el otro es un turno que hay que tapar ahora. Con un
+    // solo evento la Prestadora tendría que apagar los dos juntos, y el que no se puede apagar es
+    // justamente éste.
     admite_familia: false,
   },
   {

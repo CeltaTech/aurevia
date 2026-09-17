@@ -6,17 +6,20 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { TiposAsistenteTab } from './TiposAsistenteTab';
+import { AusenciasTab } from './AusenciasTab';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { con } from '../../lib/textos';
 
 /* Cómo es el plantel: qué tipos de Asistente existen —con sus tareas y su
-   matrícula— y qué documentación se les exige. */
+   matrícula—, qué documentación se les exige y con cuánta anticipación una falta se
+   considera avisada con tiempo. */
 export function ConfiguracionAsistentes() {
   return (
     <>
       <TiposAsistenteTab />
       <TabDocumentos />
+      <AusenciasTab />
     </>
   );
 }

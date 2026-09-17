@@ -50,6 +50,16 @@ const DATOS = {
     asistenteNuevo: 'Rita Solano',
     turnos: [{ fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'] }],
   },
+  ausencia_avisada_con_tiempo: {
+    asistente: 'Rita Solano', fechaInicio: '2026-10-07', fechaFin: '2026-10-14',
+    fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
+    turnos: 3, yaEmpezo: false, horas: 72, veces: 1,
+  },
+  ausencia_de_golpe: {
+    asistente: 'Rita Solano', fechaInicio: '2026-10-07', fechaFin: null,
+    fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena', 'Aníbal'],
+    turnos: 1, yaEmpezo: false, horas: 2, veces: 2,
+  },
   guardia_sin_cubrir: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
     yaEmpezo: false, horas: 5,

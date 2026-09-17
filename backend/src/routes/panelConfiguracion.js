@@ -20,6 +20,14 @@ import {
   revisarRegla,
   soloLoQueCorreDeLaRegla,
 } from '../utils/equipoDelPaciente.js';
+// Con alias porque las tres funciones de configuración se llaman igual en los dos archivos: el
+// molde es el mismo a propósito, y renombrarlas en el original para que no choquen acá escondería
+// que son la misma clase de cosa.
+import {
+  reglaDeAvisoDe,
+  revisarRegla as revisarReglaDeAviso,
+  soloLoQueCorreDeLaRegla as soloLoQueCorreDelAviso,
+} from '../utils/avisoDeAusencia.js';
 import { darDeAltaEnMeta, traerEstadosDeMeta } from '../utils/plantillasWhatsapp.js';
 import { redactarPlantillaWhatsapp, corregirPlantillaWhatsapp } from '../utils/iaPlantillasWhatsapp.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
@@ -561,6 +569,44 @@ panelConfiguracionRouter.put('/equipo-paciente', async (req, res) => {
   }
 
   const { error } = await supabase.from('configuracion_equipo_paciente').upsert(
+    {
+      prestadora_id: req.usuarioPanel.prestadoraId,
+      regla: corridos,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'prestadora_id' }
+  );
+  if (error) return responderError(res, error);
+  res.json({ ok: true });
+});
+
+// --- Con cuánta anticipación una ausencia se considera avisada con tiempo ---
+//
+// De acá sale si una falta le llega a la Coordinadora como tarea o como alarma. Es la misma forma
+// que la configuración del equipo: se guarda solamente lo que esta Prestadora corrió, y la
+// pantalla recibe además los valores que están rigiendo.
+
+panelConfiguracionRouter.get('/ausencias', async (req, res) => {
+  const { data, error } = await supabase
+    .from('configuracion_ausencias')
+    .select('regla')
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .maybeSingle();
+  if (error) return responderError(res, error);
+
+  // Que la fila no exista no es un error: es la configuración de fábrica.
+  const corrido = data?.regla ?? {};
+  res.json({ configuracion: { regla: reglaDeAvisoDe(corrido), corridos: corrido } });
+});
+
+panelConfiguracionRouter.put('/ausencias', async (req, res) => {
+  const corridos = soloLoQueCorreDelAviso(req.body?.regla);
+  const revision = revisarReglaDeAviso(corridos);
+  if (!revision.ok) {
+    return res.status(400).json({ error: `El valor de «${revision.clave}» está fuera de lo permitido` });
+  }
+
+  const { error } = await supabase.from('configuracion_ausencias').upsert(
     {
       prestadora_id: req.usuarioPanel.prestadoraId,
       regla: corridos,

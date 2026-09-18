@@ -79,19 +79,44 @@ export function Padron() {
     return (codigo) => porCodigo.get(codigo) ?? '';
   }, [documentos.porClase]);
 
-  const filtradas = useMemo(() => {
+  // Cómo se nombra cada renglón. La persona física por apellido y nombre; la jurídica por su razón
+  // social entera, que no se parte en dos. Está acá, en un solo lugar, porque lo usan el título de
+  // la tarjeta, la búsqueda y el renglón del Apoderado.
+  const comoSeLlama = useCallback(
+    (fila) => (fila?.clase === 'juridica' ? fila.nombre : `${fila?.apellido ?? ''}, ${fila?.nombre ?? ''}`),
+    [],
+  );
+
+  // El Apoderado es otro Legajo de este mismo Padrón, así que su nombre ya está cargado y no hace
+  // falta volver a pedirlo.
+  const nombrePorId = useMemo(
+    () => new Map(filas.map((fila) => [fila.id, comoSeLlama(fila)])),
+    [filas, comoSeLlama],
+  );
+
+  // La búsqueda primero, la clase después, y por separado: así se puede decir cuántas hay de cada
+  // clase entre lo que se está mirando. Contar sobre el total diría siempre lo mismo, y contar
+  // después del filtro de clase diría cero en las otras dos posiciones.
+  const buscadas = useMemo(() => {
     const buscado = f.busqueda.trim().toLowerCase();
-    return filas.filter((fila) => {
-      if (f.clase && fila.clase !== f.clase) return false;
-      if (!buscado) return true;
-      const nombreEntero = `${fila.apellido ?? ''} ${fila.nombre ?? ''}`.toLowerCase();
-      return (
-        nombreEntero.includes(buscado)
-        || String(fila.numero_legajo).includes(buscado)
-        || (fila.documento_numero ?? '').toLowerCase().includes(buscado)
-      );
-    });
-  }, [filas, f]);
+    if (!buscado) return filas;
+    return filas.filter((fila) => (
+      `${fila.apellido ?? ''} ${fila.nombre ?? ''}`.toLowerCase().includes(buscado)
+      || String(fila.numero_legajo).includes(buscado)
+      || (fila.documento_numero ?? '').toLowerCase().includes(buscado)
+    ));
+  }, [filas, f.busqueda]);
+
+  const cuantas = useMemo(() => ({
+    todas: buscadas.length,
+    fisica: buscadas.filter((fila) => fila.clase === 'fisica').length,
+    juridica: buscadas.filter((fila) => fila.clase === 'juridica').length,
+  }), [buscadas]);
+
+  const filtradas = useMemo(
+    () => (f.clase ? buscadas.filter((fila) => fila.clase === f.clase) : buscadas),
+    [buscadas, f.clase],
+  );
 
   return (
     <div>
@@ -107,9 +132,12 @@ export function Padron() {
           onChange={(e) => set('busqueda', e.target.value)}
         />
         <select value={f.clase} onChange={(e) => set('clase', e.target.value)} aria-label={t.padron.clase}>
-          <option value="">{t.padron.filtro_clase_todas}</option>
-          <option value="fisica">{t.padron.clase_fisica}</option>
-          <option value="juridica">{t.padron.clase_juridica}</option>
+          {/* Cada posición dice cuántas hay: así se sabe si vale la pena cambiar de filtro antes
+              de cambiarlo, y que no hay ninguna empresa cargada deja de ser algo que se descubre
+              recién al elegir esa posición y ver la lista vacía. */}
+          <option value="">{t.padron.filtro_clase_todas} ({cuantas.todas})</option>
+          <option value="fisica">{t.padron.clase_fisica} ({cuantas.fisica})</option>
+          <option value="juridica">{t.padron.clase_juridica} ({cuantas.juridica})</option>
         </select>
         {puedeEditar && <Button onClick={() => setEnEdicion('nuevo')}>{t.padron.nuevo_titulo}</Button>}
       </div>
@@ -145,21 +173,33 @@ export function Padron() {
         <div className="lista-tarjetas">
           {filtradas.map((fila) => (
             <div className="lista-tarjeta" key={fila.id}>
+              {/* La tarjeta muestra lo que le corresponde a su clase. Las dos comparten la lista,
+                  porque contratan y pagan igual, pero no son la misma cosa: una entidad tiene razón
+                  social, clave fiscal y alguien que firma por ella; una persona tiene apellido,
+                  nombre y documento, y se representa sola. */}
               <div className="lista-tarjeta-header">
                 <div>
-                  <p className="lista-tarjeta-titulo">
-                    {fila.clase === 'juridica' ? fila.nombre : `${fila.apellido}, ${fila.nombre}`}
-                  </p>
+                  <p className="lista-tarjeta-titulo">{comoSeLlama(fila)}</p>
                   <p className="lista-tarjeta-subtitulo">
                     {fila.documento_tipo
                       ? `${siglaDeTipo(fila.documento_tipo)} ${fila.documento_numero}`
                       : t.padron.sin_documento}
                   </p>
                 </div>
-                <span className="badge">{t.padron.numero}: {fila.numero_legajo}</span>
+                <div className="lista-tarjeta-etiquetas">
+                  <span className="badge badge-info">
+                    {fila.clase === 'juridica' ? t.padron.clase_juridica : t.padron.clase_fisica}
+                  </span>
+                  <span className="badge">{t.padron.numero}: {fila.numero_legajo}</span>
+                </div>
               </div>
               <div className="lista-tarjeta-meta">
-                <span><strong>{t.padron.clase}:</strong> {fila.clase === 'juridica' ? t.padron.clase_juridica : t.padron.clase_fisica}</span>
+                {fila.clase === 'juridica' && (
+                  <span>
+                    <strong>{t.padron.apoderado}:</strong>{' '}
+                    {nombrePorId.get(fila.apoderado_legajo_id) || t.padron.apoderado_sin_elegir}
+                  </span>
+                )}
                 <span><strong>{t.padron.telefono}:</strong> {fila.telefono || '—'}</span>
                 <span><strong>{t.padron.email}:</strong> {fila.email || '—'}</span>
                 <span>

@@ -97,6 +97,8 @@ export function EstadoDelPagador({ familiaId, puedeRegistrar }) {
 
   const {
     pagador,
+    apoderado,
+    faltaApoderado,
     definido,
     firmadoPorOtro,
     consentimientoPendiente,
@@ -125,9 +127,21 @@ export function EstadoDelPagador({ familiaId, puedeRegistrar }) {
 
           {firmadoPorOtro && <Alert variant="warning">{textos.firmado_por_otro}</Alert>}
 
+          {/* Una entidad no firma con la mano: firma por ella su Apoderado. Que no lo tenga
+              configurado no impide armar el documento, pero saldría sin decir qué persona lo firma,
+              y eso se avisa antes y no cuando el papel ya salió. Se arregla en el Legajo de la
+              entidad, que es donde el Apoderado vive. */}
+          {faltaApoderado && <Alert variant="warning">{textos.falta_apoderado}</Alert>}
+
           <dl className="panel-detalle-lista">
             <dt>{textos.quien_paga}</dt>
             <dd>{pagador.nombre}</dd>
+            {apoderado && (
+              <>
+                <dt>{textos.quien_firma}</dt>
+                <dd>{apoderado.nombre}</dd>
+              </>
+            )}
             {consentimientoCerrado && (
               <>
                 <dt>{textos.firmado_el}</dt>

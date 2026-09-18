@@ -113,6 +113,11 @@ function ElTextoQueFirma() {
           <p className="panel-explicacion">
             {t.configuracion.consentimiento_pagador_marcadores} {datos.marcadores.join('  ')}
           </p>
+          {/* Uno de los marcadores no se comporta como los demás, y quien escriba su propio texto
+              no tiene cómo adivinarlo. */}
+          <p className="panel-explicacion">
+            {t.configuracion.consentimiento_pagador_marcador_apoderado}
+          </p>
 
           <Button onClick={guardar} disabled={guardando}>
             {guardando ? t.comun.guardando : t.comun.guardar}

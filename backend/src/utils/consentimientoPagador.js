@@ -59,7 +59,7 @@ async function legajo(legajoId) {
   if (!legajoId) return null;
   const { data } = await supabase
     .from('legajos')
-    .select('id, nombre_visible, documento_tipo, documento_numero')
+    .select('id, nombre_visible, clase, documento_tipo, documento_numero, apoderado_legajo_id')
     .eq('id', legajoId)
     .maybeSingle();
   if (!data) return null;
@@ -67,10 +67,24 @@ async function legajo(legajoId) {
   return {
     id: data.id,
     nombre: data.nombre_visible,
+    clase: data.clase,
+    apoderadoLegajoId: data.apoderado_legajo_id,
     documento: data.documento_numero
       ? `${data.documento_tipo} ${data.documento_numero}`
       : null,
   };
+}
+
+// Quién firma de puño y letra. Una persona física firma ella misma; una entidad no tiene mano, y
+// por ella firma su Apoderado, que es quien tiene poder legal para obligarla y está anotado en su
+// Legajo.
+//
+// Devuelve nulo cuando paga una persona física, y también cuando paga una entidad que todavía no
+// tiene Apoderado configurado. Ese segundo caso no rompe nada: el documento se arma igual y la
+// pantalla avisa que falta. No bloquear es la regla, acá como en todo lo demás.
+async function apoderadoDe(pagador) {
+  if (pagador?.clase !== 'juridica' || !pagador.apoderadoLegajoId) return null;
+  return legajo(pagador.apoderadoLegajoId);
 }
 
 // Arma el documento con lo de esta contratación, lo guarda tal cual y lo deja esperando firma.
@@ -88,10 +102,11 @@ export async function crearConsentimiento({ familiaId, prestadoraId, cargadoPor 
     throw new ErrorConMotivo('no_encontrado', 'El Legajo del Pagador no existe');
   }
 
-  const [{ cuerpo, idioma }, { data: prestadora }, cliente] = await Promise.all([
+  const [{ cuerpo, idioma }, { data: prestadora }, cliente, apoderado] = await Promise.all([
     cuerpoVigente({ prestadoraId }),
     supabase.from('prestadoras').select('nombre_fantasia').eq('id', prestadoraId).maybeSingle(),
     nombreDeLaContratacion(familiaId),
+    apoderadoDe(pagador),
   ]);
 
   const texto = textoDelConsentimiento({
@@ -99,6 +114,7 @@ export async function crearConsentimiento({ familiaId, prestadoraId, cargadoPor 
     prestadora: { nombre: prestadora?.nombre_fantasia },
     pagador,
     cliente: { nombre: cliente },
+    apoderado,
   });
 
   // El anterior se anula antes de insertar el nuevo, o el índice único de la base rechaza la
@@ -117,12 +133,16 @@ export async function crearConsentimiento({ familiaId, prestadoraId, cargadoPor 
       familia_id: familiaId,
       pagador_legajo_id: pagador.id,
       pagador_nombre: pagador.nombre,
+      // Quién firmó por la entidad se copia acá el día que se arma, igual que el nombre de quien
+      // paga: si mañana la entidad cambia de apoderado, el papel sigue diciendo quién lo firmó.
+      firmante_legajo_id: apoderado?.id ?? null,
+      firmante_nombre: apoderado?.nombre ?? null,
       documento_texto: texto,
       documento_huella: huellaDelDocumento(texto),
       documento_idioma: idioma,
       cargado_por: cargadoPor,
     })
-    .select('id, estado, documento_texto, documento_huella, documento_idioma, pagador_nombre, created_at')
+    .select('id, estado, documento_texto, documento_huella, documento_idioma, pagador_nombre, firmante_nombre, created_at')
     .single();
   if (error) throw new Error(error.message);
 
@@ -208,7 +228,7 @@ export async function estadoDelPagador({ familiaId, prestadoraId }) {
       .from('consentimientos_pagador')
       // El texto viene entero: la pantalla lo muestra tal como se guardó, y armarlo de nuevo para
       // mostrarlo daría otro documento el día que la Prestadora cambie su modelo.
-      .select('id, estado, pagador_legajo_id, pagador_nombre, documento_texto, documento_idioma, archivo_firmado_url, cerrado_como, cerrado_en, created_at')
+      .select('id, estado, pagador_legajo_id, pagador_nombre, firmante_nombre, documento_texto, documento_idioma, archivo_firmado_url, cerrado_como, cerrado_en, created_at')
       .eq('familia_id', familiaId)
       .in('estado', ['pendiente_firma', 'cerrado'])
       .order('created_at', { ascending: false }),
@@ -225,8 +245,16 @@ export async function estadoDelPagador({ familiaId, prestadoraId }) {
     cerrado && familia.pagador_legajo_id && cerrado.pagador_legajo_id !== familia.pagador_legajo_id,
   );
 
+  // Si paga una entidad, quien firma es su Apoderado. Que no lo tenga configurado no impide nada
+  // —el documento se arma igual—, pero saldría sin decir qué persona lo firma, y eso se avisa
+  // antes y no después.
+  const apoderado = await apoderadoDe(pagador);
+  const faltaApoderado = Boolean(pagador && pagador.clase === 'juridica' && !apoderado);
+
   return {
     pagador,
+    apoderado,
+    faltaApoderado,
     // Definido quiere decir las tres cosas: hay Legajo elegido, hay consentimiento cerrado, y lo
     // firmó justamente quien hoy figura como Pagador.
     definido: Boolean(familia.pagador_legajo_id && cerrado && !firmadoPorOtro),

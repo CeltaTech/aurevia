@@ -686,6 +686,14 @@ h2 {
   gap: 0.75rem;
 }
 
+/* Las etiquetas de la esquina, cuando son más de una. Se apilan y bajan solas si no entran. */
+.lista-tarjeta-etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
 .lista-tarjeta-titulo {
   font-weight: 600;
   color: var(--texto-titulo);

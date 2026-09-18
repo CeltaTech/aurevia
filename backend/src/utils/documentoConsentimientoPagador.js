@@ -26,7 +26,14 @@ const SEPARADOR = '-'.repeat(72);
 // Los marcadores que se reemplazan en el cuerpo, sea el modelo de fábrica o el que cargó la
 // Prestadora. Están acá, en un solo lugar, porque la pantalla de Configuración los tiene que
 // mostrar para que quien escriba su propio texto sepa cuáles puede usar.
-export const MARCADORES = ['{{prestadora}}', '{{pagador}}', '{{documento}}', '{{cliente}}', '{{fecha}}'];
+export const MARCADORES = ['{{prestadora}}', '{{pagador}}', '{{documento}}', '{{cliente}}', '{{apoderado}}', '{{fecha}}'];
+
+// `{{apoderado}}` no se comporta como los demás, y por eso está nombrado aparte. Una entidad no
+// firma con la mano: firma por ella su Apoderado, que es quien tiene poder legal para obligarla.
+// Cuando quien paga es una persona física no hay nadie en el medio, y entonces el renglón donde
+// está el marcador se saca entero. Dejarlo con una raya diría que falta un dato, cuando lo que
+// pasa es que ahí no corresponde ninguno.
+const MARCADOR_APODERADO = '{{apoderado}}';
 
 // El modelo que trae el producto. Dice lo mínimo que hace a la obligación: quién se obliga, a qué,
 // por el servicio de quién, y que puede dejar de estar obligado avisando. No fija plazos, importes
@@ -38,6 +45,7 @@ export const MODELO_DE_FABRICA = [
   'Prestadora: {{prestadora}}',
   'Quien se obliga: {{pagador}}',
   'Documento: {{documento}}',
+  'Firma en su representación: {{apoderado}}',
   'Servicio contratado para: {{cliente}}',
   'Fecha: {{fecha}}',
   '',
@@ -75,8 +83,10 @@ function fechaLegible(fecha) {
  * `cuerpo` es el que cargó la Prestadora, o el modelo de fábrica si no cargó ninguno. Lo que falte
  * queda como raya: un marcador sin dato se ve, y verlo es lo que hace que alguien lo complete. Un
  * marcador desconocido se deja como está, porque borrarlo escondería el error de quien lo escribió.
+ *
+ * `apoderado` es la excepción: sin él, el renglón entero desaparece. Ver arriba.
  */
-export function textoDelConsentimiento({ cuerpo, prestadora, pagador, cliente, fecha }) {
+export function textoDelConsentimiento({ cuerpo, prestadora, pagador, cliente, apoderado, fecha }) {
   const valores = {
     '{{prestadora}}': prestadora?.nombre || '—',
     '{{pagador}}': pagador?.nombre || '—',
@@ -86,6 +96,16 @@ export function textoDelConsentimiento({ cuerpo, prestadora, pagador, cliente, f
   };
 
   let texto = cuerpo ?? MODELO_DE_FABRICA;
+
+  if (apoderado?.nombre) {
+    valores[MARCADOR_APODERADO] = apoderado.nombre;
+  } else {
+    texto = texto
+      .split('\n')
+      .filter((renglon) => !renglon.includes(MARCADOR_APODERADO))
+      .join('\n');
+  }
+
   for (const [marcador, valor] of Object.entries(valores)) {
     texto = texto.split(marcador).join(valor);
   }

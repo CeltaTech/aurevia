@@ -29,6 +29,7 @@ export function SelectorDeLegajo({
   name,
   deshabilitado = false,
   permitirAlta = true,
+  clase = null,
 }) {
   const { t } = useLocale();
   const [filas, setFilas] = useState([]);
@@ -42,10 +43,17 @@ export function SelectorDeLegajo({
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
-    const { data, error: errorConsulta } = await supabase
+    // `clase` acota la lista cuando el casillero admite una sola: el Apoderado de una entidad es
+    // una persona de carne y hueso, y ofrecer ahí otra entidad sería ofrecer algo que la base
+    // rechaza. Sin `clase` se ofrecen las dos, que es lo corriente, porque contrata y paga
+    // cualquiera de las dos.
+    let consulta = supabase
       .from('legajos')
       .select('id, numero_legajo, nombre_visible, documento_numero')
       .order('nombre_visible', { ascending: true });
+    if (clase) consulta = consulta.eq('clase', clase);
+
+    const { data, error: errorConsulta } = await consulta;
 
     if (errorConsulta) {
       setError(mensajeDeError(errorConsulta, t));
@@ -55,7 +63,7 @@ export function SelectorDeLegajo({
 
     setFilas(data ?? []);
     setEstado(data && data.length > 0 ? 'listo' : 'vacio');
-  }, [t]);
+  }, [t, clase]);
 
   useEffect(() => {
     recargar();
@@ -126,6 +134,7 @@ export function SelectorDeLegajo({
       {dandoDeAlta && (
         <LegajoModal
           legajo={null}
+          claseInicial={clase}
           prestadoraId={prestadoraId}
           tiposDeDocumento={documentos.porClase}
           onClose={() => setDandoDeAlta(false)}

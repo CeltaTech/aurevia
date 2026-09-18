@@ -29,6 +29,7 @@ import { Solicitudes } from './pages/Solicitudes';
 import { Asistentes } from './pages/Asistentes';
 import { AsistenteDetalle } from './pages/asistentes/AsistenteDetalle';
 import { Familias } from './pages/Familias';
+import { Padron } from './pages/Padron';
 import { FamiliaDetalle } from './pages/familias/FamiliaDetalle';
 import { Servicios } from './pages/Servicios';
 import { ServicioDetalle } from './pages/servicios/ServicioDetalle';
@@ -150,6 +151,11 @@ function App() {
                     <Route path="solicitudes" element={<Solicitudes />} />
                     <Route path="asistentes" element={<Asistentes />} />
                     <Route path="asistentes/:id" element={<AsistenteDetalle />} />
+                    {/* El Padrón de la Prestadora. Sin candado de modalidad: con las dos hay
+                        personas que contratan, que pagan y que reciben el cuidado, y todas se
+                        cargan una sola vez acá. Quién lo ve y quién lo escribe lo decide la
+                        base con sus políticas. */}
+                    <Route path="padron" element={<Padron />} />
                     <Route path="familias" element={<Familias />} />
                     <Route path="familias/:id" element={<FamiliaDetalle />} />
                     <Route path="servicios" element={<Servicios />} />

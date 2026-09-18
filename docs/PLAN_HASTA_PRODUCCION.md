@@ -9,7 +9,7 @@
 
 ---
 
-## El padrón de Clientes
+## El Padrón
 
 **1.** Hacer la lista de Clientes de la Prestadora: una ficha por persona o por entidad, con
 nombre, apellido, datos fiscales, domicilio partido, teléfono y correo, y con su número de cliente
@@ -18,7 +18,7 @@ renglón de la solicitud que originó la Familia, y su nombre se teclea de nuevo
 necesita. Una entidad —obra social, prepaga, cualquier financiador— entra en esta misma lista.
 
 **2.** Que la contratación anote sus tres roles apuntando a esa lista: quien contrata, para quién
-se contrata y quién paga. Los tres pueden ser la misma ficha, y se anotan aparte igual. La Familia
+se contrata y quién paga. Los tres pueden ser el mismo Legajo, y se anotan aparte igual. La Familia
 deja de guardar el nombre del Pagador escrito a mano y pasa a guardar cuál es.
 
 **3.** Sumar el consentimiento del Pagador a la obligación de pagar, con el mismo molde que los
@@ -27,10 +27,10 @@ esa firma no hay Pagador definido**, y la pantalla lo muestra: al elegir el Paga
 consentimiento y su documentación están, sin tener que ir a buscarlos a otro lado. No bloquea:
 avisa.
 
-**4.** Cambiar por listas los casilleros que hoy se teclean y nombran algo que ya tiene ficha: el
+**4.** Cambiar por listas los casilleros que hoy se teclean y nombran algo que ya tiene Legajo: el
 Pagador en la Familia, la obra social del Paciente, el nombre que se copia al registrar lo que hay
 que cobrar, y el familiar que figura en la pantalla de continuidad. Cada lista con buscador, y con
-la posibilidad de dar de alta la ficha desde ahí mismo.
+la posibilidad de dar de alta el Legajo desde ahí mismo.
 
 **5.** No hay nada que convertir: **nunca nadie usó la aplicación y no hay datos reales**, así que
 estos cambios no arrastran ninguna migración de datos cargados. Se comprueba contra la base antes

@@ -122,6 +122,10 @@ export function Layout() {
     {
       titulo: t.nav.grupo_clientes,
       enlaces: [
+        // El Padrón va primero del grupo porque es de donde salen las personas que después se
+        // nombran en todo lo demás. Se ve con las dos modalidades, y el candado es el mismo que
+        // aplica la base.
+        { a: '/padron', texto: t.nav.padron, ver: esAdmin || puede('ver_padron') },
         { a: '/familias', texto: t.nav.familias, ver: directa },
         // Esta pantalla es la plata del Marketplace —suscripciones, importes, cobros en
         // efectivo y canje del QR—, así que lleva el mismo candado que las de dinero de la

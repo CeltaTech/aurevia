@@ -1109,6 +1109,33 @@ VALUES ('a3000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-1111111
        ('a3000000-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222',
         'intravenosa', 'enfermeria');
 
+-- El Padrón de cada Prestadora. Personas inventadas, como todo lo de acá.
+--
+-- HACEN FALTA DE LAS DOS PRESTADORAS. La prueba de aislamiento entra como administradora de cada
+-- una y comprueba que ninguna consulta devuelva una fila ajena. Con la tabla vacía esa prueba pasa
+-- siempre y no prueba nada.
+--
+-- EL NÚMERO DE LEGAJO NO SE SIEMBRA: lo pone la base sola, en orden, y rechaza que alguien lo
+-- elija. Cada Prestadora empieza por el uno.
+--
+-- LA MISMA PERSONA EN LAS DOS. Ramiro Pérez está en el Padrón de las dos Prestadoras, con el mismo
+-- documento, porque nada lo impide: cada Padrón es de su Prestadora. Es además el caso que muestra
+-- para qué sirve un Legajo: la misma persona contrata en un lado y con el tiempo puede necesitar
+-- cuidados en el otro, y sigue siendo un solo Legajo en cada Padrón.
+INSERT INTO public.legajos
+  (prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, calle, numero, lugar_id, telefono, email)
+VALUES
+  ('11111111-1111-4111-8111-111111111111', 'fisica', 'Ramiro', 'Pérez', 'dni', '20111222',
+   'Calle Inventada', '742', 'a1000000-0000-4000-8000-000000000001', '+54 11 4000-0101', 'ramiro.perez@ejemplo.invalido'),
+  ('11111111-1111-4111-8111-111111111111', 'fisica', 'Teresa', 'Ibáñez', 'dni', '5333444',
+   'Pasaje Imaginario', '18', 'a1000000-0000-4000-8000-000000000002', '+54 11 4000-0102', NULL),
+  ('11111111-1111-4111-8111-111111111111', 'juridica', 'Mutual del Ejemplo', NULL, 'cuit', '30-99999999-7',
+   'Avenida Ficticia', '1200', 'a1000000-0000-4000-8000-000000000003', '+54 11 4000-0103', 'contacto@mutual.invalido'),
+  ('22222222-2222-4222-8222-222222222222', 'fisica', 'Ramiro', 'Pérez', 'dni', '20111222',
+   'Diagonal Supuesta', '55', 'a2000000-0000-4000-8000-000000000001', '+54 221 400-0101', NULL),
+  ('22222222-2222-4222-8222-222222222222', 'fisica', 'Olga', 'Salvatierra', 'le', '2777888',
+   'Calle Figurada', '900', 'a2000000-0000-4000-8000-000000000001', '+54 221 400-0102', NULL);
+
 
 -- ----------------------------------------------------------------------------
 -- 9. Limpieza y aviso final

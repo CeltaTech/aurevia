@@ -137,14 +137,14 @@ administración.
 **Cada Prestadora con lo suyo, sin mezclar.** Una conexión con un software de facturación o de
 cobranzas es de una Prestadora, con su propia credencial, y nunca alcanza los datos de otra.
 
-**Toda la información de los Clientes de la Prestadora vive en un solo lugar, y de ahí se nutre
-todo el que la consuma.** Un Cliente puede ser una Familia, una obra social, una prepaga o lo que
-sea, y en los cuatro casos se guarda una sola vez, con todo lo que se sabe de él: quién es, cómo se
+**Toda la información de los Clientes de la Prestadora vive en un solo lugar —el Padrón— y de ahí
+se nutre todo el que la consuma.** Un Cliente puede ser una Familia, una obra social, una prepaga o
+lo que sea, y en los cuatro casos se guarda una sola vez, con todo lo que se sabe de él: quién es, cómo se
 lo ubica, qué servicio recibe y cómo figura ante el organismo fiscal. Nada de eso se guarda por
 segunda vez en otra pantalla, en otra tabla ni en el software de otro.
 
 **Se lo cita todas las veces que haga falta; se lo copia ninguna.** Una obra social puede estar
-nombrada en cien fichas, y en las cien es la misma: lo que cada una guarda es cuál, no cómo se
+nombrada en cien Legajos, y en los cien es la misma: lo que cada uno guarda es cuál, no cómo se
 llama. El nombre escrito a mano en cada lugar termina siempre en datos que se contradicen entre
 sí, y entonces no hay forma de saber cuál vale. **Y no hay excepción.** Que un comprobante emitido
 conserve los datos del día que se emitió es asunto de quien lo emite —el software de facturación o
@@ -172,32 +172,32 @@ financiador exija, completa y firmada. Eso tiene que estar listo el día que se 
 Familia; de ahí en más el cobro es asunto de créditos y cobranzas, que **sólo le informa a Careonys
 en qué situación están los pagos** —al día, vencido hace tantos días— y nada más.
 
-**La persona se guarda una sola vez, y los roles la citan.** El rol es una anotación que apunta a
-una ficha de persona, nunca una copia de sus datos ni una ficha nueva. Si la misma persona
-contrata, recibe el cuidado y paga, hay una ficha y tres anotaciones.
+**La Persona se guarda una sola vez, y los roles la citan.** El rol es una anotación que apunta a
+un Legajo, nunca una copia de sus datos ni un Legajo nuevo. Si la misma Persona contrata, recibe el
+cuidado y paga, hay un Legajo y tres anotaciones.
 
-**Una ficha de persona o de entidad no se borra nunca.** Que termine el Servicio a un Paciente da
-de baja el Servicio, no la ficha. La ficha queda, con el historial de cómo se comportó esa persona
-o esa entidad en cada rol que desempeñó. Con quien dejó de ser Cliente se vuelve a cruzar: como
-Pagador de otra contratación, como familiar de otro Paciente, como financiador. Ese historial es
-justamente lo que se pierde el día que alguien borra la ficha «porque ya no está activa».
+**Un Legajo no se borra nunca.** Que termine el Servicio a un Paciente da de baja el Servicio, no
+el Legajo. El Legajo queda, con el historial de cómo se comportó esa Persona en cada rol que
+desempeñó. Con quien dejó de ser Cliente se vuelve a cruzar: como Pagador de otra contratación,
+como familiar de otro Paciente, como financiador. Ese historial es justamente lo que se pierde el
+día que alguien borra el Legajo «porque ya no está activa».
 
 **Rol nunca significa permisos.** Un rol dice qué papel cumple alguien en una contratación. Quién
 puede ver o hacer qué cosa es otra cosa, se llama de otra manera y se guarda en otro lado.
 
 **Un casillero que nombra algo que existe en otro lado es una lista, y nunca texto libre.** Si lo
-que se escribe ahí es el nombre de una persona, de una obra social o de una localidad que ya tiene
-ficha, el casillero ofrece esas fichas y se elige una. **Un nombre tecleado crea una entidad que no
+que se escribe ahí es el nombre de una Persona, de una obra social o de una localidad que ya está
+cargada, el casillero ofrece esa lista y se elige una. **Un nombre tecleado crea una entidad que no
 existe**: se parece a la de al lado, no es la misma para el sistema, y nadie se entera. La lista
-puede tener buscador y puede permitir dar de alta una ficha nueva desde ahí mismo, pero lo que
+puede tener buscador y puede permitir dar de alta un Legajo nuevo desde ahí mismo, pero lo que
 queda guardado es cuál, no cómo se llama.
 
 **El nombre visible de la Familia se calcula al mostrarlo, y no se guarda.** Se arma con el
 apellido y los nombres del Paciente; cuando hay más de uno, **queda el más antiguo al que se le
 esté brindando servicio**. Si aparece otra Familia con ese mismo apellido y nombres, se le agrega
-la localidad o el barrio. Si aun así siguen siendo dos, se le antepone el número de cliente. **El
-número de cliente es otra cosa**: es único, no se reasigna nunca a nadie más, y es lo que usan el
-sistema y los documentos. El nombre visible es para la pantalla.
+la localidad o el barrio. Si aun así siguen siendo dos, se le antepone el número de legajo. **El
+número de legajo es otra cosa**: es único dentro de la Prestadora, no se reasigna nunca a nadie
+más, y es lo que usan el sistema y los documentos. El nombre visible es para la pantalla.
 
 **Las funciones internas de la base no viven en un esquema publicado.** Las que usan las políticas
 de RLS están en el esquema `interno`, que queda afuera de la lista `schemas` de

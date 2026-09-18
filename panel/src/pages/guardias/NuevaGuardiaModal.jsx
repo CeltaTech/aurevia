@@ -393,13 +393,6 @@ export function NuevaGuardiaModal({ onClose, onCreada, inicial = {} }) {
               <option key={s.id} value={s.id}>{s.etiqueta || s.id}</option>
             ))}
           </FormField>
-          <p className="panel-explicacion">
-            {pacienteIds.length === 0
-              ? t.guardias.nueva_guardia.servicio_elegir_paciente
-              : serviciosDisponibles.length === 0
-                ? t.guardias.nueva_guardia.servicio_sin_ninguno
-                : t.guardias.nueva_guardia.servicio_ayuda}
-          </p>
 
           <FormField
             label={t.guardias.nueva_guardia.modalidad}
@@ -493,7 +486,6 @@ export function NuevaGuardiaModal({ onClose, onCreada, inicial = {} }) {
                 value={vigenteHasta}
                 onChange={(e) => setVigenteHasta(e.target.value)}
               />
-              <p className="panel-explicacion">{t.guardias.nueva_guardia.vigente_hasta_ayuda}</p>
             </>
           )}
 

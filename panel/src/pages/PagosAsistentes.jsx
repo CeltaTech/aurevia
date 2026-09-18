@@ -545,7 +545,6 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
                     name="liquidacion_referencia_pago"
                     value={pago.referencia_pago}
                     onChange={(e) => setPago({ ...pago, referencia_pago: e.target.value })}
-                    ayuda={t.pagos_asistentes.pagar_referencia_ayuda}
                   />
                 </div>
               )}
@@ -711,7 +710,7 @@ function ConceptoModal({ concepto, onCerrar, onGuardado }) {
   const { t } = useLocale();
   const prestadoraId = usePrestadoraActual();
   const moneda = useMonedaActual();
-  const { filas: escalas, estado: estadoEscalas } = useEscalasLegales(prestadoraId);
+  const { filas: escalas } = useEscalasLegales(prestadoraId);
 
   const [datos, setDatos] = useState({
     nombre: concepto.nombre ?? '',
@@ -828,7 +827,6 @@ function ConceptoModal({ concepto, onCerrar, onGuardado }) {
             value={moneda ?? ''}
             readOnly
             disabled
-            ayuda={t.pagos_asistentes.concepto_moneda_ayuda}
           />
         )}
 
@@ -841,11 +839,6 @@ function ConceptoModal({ concepto, onCerrar, onGuardado }) {
               value={datos.escala_tipo}
               onChange={(e) => cambiar('escala_tipo', e.target.value)}
               required
-              ayuda={
-                estadoEscalas === 'listo' && tiposDeEscala.length === 0
-                  ? t.pagos_asistentes.concepto_sin_escalas
-                  : t.pagos_asistentes.concepto_escala_ayuda
-              }
             >
               <option value="">{t.comun.seleccionar}</option>
               {tiposDeEscala.map((tipo) => (
@@ -880,7 +873,6 @@ function ConceptoModal({ concepto, onCerrar, onGuardado }) {
           type="number"
           value={datos.orden}
           onChange={(e) => cambiar('orden', e.target.value)}
-          ayuda={t.pagos_asistentes.concepto_orden_ayuda}
         />
 
         <div className="panel-modal-acciones">

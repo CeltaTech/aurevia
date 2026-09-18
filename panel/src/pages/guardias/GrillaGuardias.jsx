@@ -419,10 +419,6 @@ export function GrillaGuardias({
       ? `12rem repeat(${HORAS_DEL_DIA}, minmax(2.5rem, 1fr))`
       : `12rem repeat(${diasVisibles.length}, minmax(9rem, 1fr))`;
 
-  const ayuda = [t.guardias.vista_ayuda, t.guardias[`zoom_ayuda_${zoomActivo}`]]
-    .filter(Boolean)
-    .join(' · ');
-
   const controles = (
     <>
       <div className="grilla-controles">
@@ -486,7 +482,6 @@ export function GrillaGuardias({
           </div>
         )}
       </div>
-      <p className="grilla-ayuda">{ayuda}</p>
     </>
   );
 

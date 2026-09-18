@@ -327,7 +327,6 @@ export function Facturacion() {
           {veElEstadoDeCuenta && (
             <>
           <h2>{t.facturacion.estados_de_cuenta_titulo}</h2>
-          <p className="panel-explicacion">{t.facturacion.estados_de_cuenta_ayuda}</p>
           <EstadoLista
             estado={estado}
             error={error}
@@ -850,7 +849,6 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
                     required
                     rows={2}
                     value={motivo}
-                    ayuda={t.facturacion.anular_motivo_ayuda}
                     error={motivoTocado && motivo.trim() === '' ? t.facturacion.falta_motivo : undefined}
                     onChange={(e) => {
                       setMotivo(e.target.value);
@@ -876,7 +874,6 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
               ) : formulario === 'facturado' ? (
                 <>
                   <h3>{t.facturacion.facturado_titulo}</h3>
-                  <p className="panel-explicacion">{t.facturacion.facturado_ayuda}</p>
                   <FormField
                     label={t.facturacion.campo_monto_facturado}
                     name="monto_facturado"
@@ -885,7 +882,6 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
                     min="0"
                     step="0.01"
                     value={facturado.monto_facturado}
-                    ayuda={t.facturacion.campo_monto_facturado_ayuda}
                     error={
                       facturado.monto_facturado !== '' && loQueFaltaEnLoFacturado === 'monto_facturado'
                         ? t.facturacion.monto_invalido
@@ -898,14 +894,12 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
                     name="comprobante_tipo"
                     required
                     value={facturado.comprobante_tipo}
-                    ayuda={t.facturacion.campo_comprobante_tipo_ayuda}
                     onChange={(e) => setFacturado({ ...facturado, comprobante_tipo: e.target.value })}
                   />
                   <FormField
                     label={t.facturacion.campo_comprobante_numero}
                     name="comprobante_numero"
                     value={facturado.comprobante_numero}
-                    ayuda={t.facturacion.campo_comprobante_numero_ayuda}
                     onChange={(e) => setFacturado({ ...facturado, comprobante_numero: e.target.value })}
                   />
                   <FormField
@@ -913,7 +907,6 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
                     name="fecha_vencimiento_facturado"
                     type="date"
                     value={facturado.fecha_vencimiento}
-                    ayuda={t.facturacion.campo_vencimiento_ayuda}
                     onChange={(e) => setFacturado({ ...facturado, fecha_vencimiento: e.target.value })}
                   />
                   <div className="panel-modal-acciones">
@@ -928,7 +921,6 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
               ) : formulario === 'correccion' ? (
                 <>
                   <h3>{t.facturacion.correccion_titulo}</h3>
-                  <p className="panel-explicacion">{t.facturacion.correccion_ayuda}</p>
                   <FormField
                     label={t.facturacion.campo_sentido}
                     name="sentido"
@@ -951,7 +943,6 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
                     min="0"
                     step="0.01"
                     value={correccion.monto}
-                    ayuda={t.facturacion.campo_correccion_monto_ayuda}
                     error={
                       correccion.monto !== '' && loQueFaltaEnLaCorreccion === 'monto'
                         ? t.facturacion.monto_invalido
@@ -964,14 +955,12 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
                     name="correccion_comprobante_tipo"
                     required
                     value={correccion.comprobante_tipo}
-                    ayuda={t.facturacion.campo_comprobante_tipo_ayuda}
                     onChange={(e) => setCorreccion({ ...correccion, comprobante_tipo: e.target.value })}
                   />
                   <FormField
                     label={t.facturacion.campo_comprobante_numero}
                     name="correccion_comprobante_numero"
                     value={correccion.comprobante_numero}
-                    ayuda={t.facturacion.campo_comprobante_numero_ayuda}
                     onChange={(e) => setCorreccion({ ...correccion, comprobante_numero: e.target.value })}
                   />
                   <FormField
@@ -981,7 +970,6 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
                     required
                     rows={2}
                     value={correccion.motivo}
-                    ayuda={t.facturacion.campo_correccion_motivo_ayuda}
                     onChange={(e) => setCorreccion({ ...correccion, motivo: e.target.value })}
                   />
                   <div className="panel-modal-acciones">
@@ -1004,7 +992,6 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
                     min="0"
                     step="0.01"
                     value={cobro.monto}
-                    ayuda={t.facturacion.campo_monto_ayuda}
                     error={cobro.monto !== '' && loQueFalta ? t.facturacion.monto_invalido : undefined}
                     onChange={(e) => setCobro({ ...cobro, monto: e.target.value })}
                   />
@@ -1014,7 +1001,6 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
                     type="date"
                     required
                     value={cobro.fecha_cobro}
-                    ayuda={t.facturacion.campo_fecha_ayuda}
                     onChange={(e) => setCobro({ ...cobro, fecha_cobro: e.target.value })}
                   />
                   <FormField
@@ -1035,7 +1021,6 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
                     label={t.facturacion.campo_referencia}
                     name="referencia_externa"
                     value={cobro.referencia_externa}
-                    ayuda={t.facturacion.campo_referencia_ayuda}
                     onChange={(e) => setCobro({ ...cobro, referencia_externa: e.target.value })}
                   />
                   <FormField

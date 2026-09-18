@@ -283,7 +283,6 @@ export function FamiliaDetalle() {
             min="0"
             max={PLAZO_MAXIMO_EN_DIAS}
             value={formContacto.dias_hasta_el_vencimiento}
-            ayuda={t.familias.plazo_de_pago_ayuda}
             onChange={(e) => setCampoContacto('dias_hasta_el_vencimiento', e.target.value)}
             disabled={!puedeEditarFamilia}
           />
@@ -295,7 +294,6 @@ export function FamiliaDetalle() {
             name="financiador_tipo"
             type="select"
             value={formContacto.financiador_tipo}
-            ayuda={t.familias.financiador_ayuda}
             onChange={(e) => setCampoContacto('financiador_tipo', e.target.value)}
             disabled={!puedeEditarFamilia}
           >
@@ -312,10 +310,8 @@ export function FamiliaDetalle() {
           <SelectorDeLegajo
             name="pagador_legajo_id"
             label={t.familias.pagador_legajo}
-            ayuda={t.familias.pagador_legajo_ayuda}
             valor={formContacto.pagador_legajo_id}
             alElegir={(legajoId) => setCampoContacto('pagador_legajo_id', legajoId)}
-            prestadoraId={familia.prestadora_id}
             deshabilitado={!puedeEditarFamilia}
           />
           {/* Elegir el Legajo no convierte a nadie en Pagador: lo convierte haber firmado la

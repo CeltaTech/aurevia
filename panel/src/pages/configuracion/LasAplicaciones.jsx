@@ -114,7 +114,6 @@ export function ConfiguracionAplicaciones() {
                     name={interruptor.clave}
                     type="checkbox"
                     checked={elegido[interruptor.clave] ?? interruptor.de_fabrica}
-                    ayuda={t.configuracion[`visibilidad_${interruptor.clave}_ayuda`] || interruptor.ayuda}
                     onChange={(e) => cambiar(interruptor.clave, e.target.checked)}
                   />
                 ))}

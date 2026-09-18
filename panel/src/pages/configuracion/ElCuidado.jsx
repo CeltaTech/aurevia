@@ -442,7 +442,6 @@ function TabServiciosMotivosCierre() {
               type="checkbox"
               checked={pideDetalleNuevo}
               onChange={(e) => setPideDetalleNuevo(e.target.checked)}
-              ayuda={t.configuracion.motivos_cierre_pide_detalle_ayuda}
             />
             <div className="panel-modal-acciones">
               <Button variant="secondary" onClick={() => setCreandoNuevo(false)} disabled={guardando}>{t.comun.cancelar}</Button>

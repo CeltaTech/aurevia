@@ -289,10 +289,8 @@ function RegistrarFamiliarQueSeQuedo({ guardiaId, origen, incidenteId, onClose, 
         <SelectorDeLegajo
           name="familiar_legajo_id"
           label={t.continuidad.resolver_familiar_legajo}
-          ayuda={t.continuidad.resolver_familiar_legajo_ayuda}
           valor={familiarLegajoId}
           alElegir={setFamiliarLegajoId}
-          prestadoraId={prestadoraId}
           clase="fisica"
         />
         <FormField

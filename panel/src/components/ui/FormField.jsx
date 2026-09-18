@@ -1,16 +1,13 @@
-// `ayuda` es la línea chica debajo del campo: explica qué se espera ahí antes de que el
-// usuario se equivoque, en vez de corregirlo después con un mensaje de error.
-export function FormField({ label, name, type = 'text', required, children, error, ayuda, ...rest }) {
+// Un casillero se explica solo: lleva su etiqueta y nada más. Debajo no va ninguna línea de
+// explicación — quien trabaja no necesita que le cuenten qué hace el sistema.
+export function FormField({ label, name, type = 'text', required, children, error, ...rest }) {
   const fieldId = `field-${name}`;
-  // La ayuda y el error se cuelgan del campo con `aria-describedby`, y el campo que falló se
-  // marca con `aria-invalid`. Sin eso, un lector de pantalla lee la caja y su etiqueta y nada
-  // más: la explicación de qué se esperaba y el motivo del rechazo quedan dos renglones más
-  // abajo, sueltos, y quien no ve la pantalla no tiene cómo saber que hablan de ese campo.
-  const ayudaId = `${fieldId}-ayuda`;
+  // El error se cuelga del campo con `aria-describedby`, y el campo que falló se marca con
+  // `aria-invalid`. Sin eso, quien no ve la pantalla escucha la caja y su etiqueta y nada más: el
+  // motivo del rechazo queda un renglón más abajo, suelto, sin nada que lo ate a ese campo.
   const errorId = `${fieldId}-error`;
-  const descrito = [ayuda ? ayudaId : null, error ? errorId : null].filter(Boolean).join(' ');
   const accesibilidad = {
-    'aria-describedby': descrito || undefined,
+    'aria-describedby': error ? errorId : undefined,
     'aria-invalid': error ? 'true' : undefined,
   };
 
@@ -19,7 +16,6 @@ export function FormField({ label, name, type = 'text', required, children, erro
       <div className="form-field">
         <label htmlFor={fieldId}>{label}{required && <span className="required">*</span>}</label>
         <textarea id={fieldId} name={name} required={required} {...accesibilidad} {...rest} />
-        {ayuda && <small className="form-ayuda" id={ayudaId}>{ayuda}</small>}
         {error && <span className="form-error" id={errorId}>{error}</span>}
       </div>
     );
@@ -32,7 +28,6 @@ export function FormField({ label, name, type = 'text', required, children, erro
         <select id={fieldId} name={name} required={required} {...accesibilidad} {...rest}>
           {children}
         </select>
-        {ayuda && <small className="form-ayuda" id={ayudaId}>{ayuda}</small>}
         {error && <span className="form-error" id={errorId}>{error}</span>}
       </div>
     );
@@ -45,7 +40,6 @@ export function FormField({ label, name, type = 'text', required, children, erro
           <input id={fieldId} name={name} type="checkbox" required={required} {...accesibilidad} {...rest} />
           {label}{required && <span className="required">*</span>}
         </label>
-        {ayuda && <small className="form-ayuda" id={ayudaId}>{ayuda}</small>}
         {error && <span className="form-error" id={errorId}>{error}</span>}
       </div>
     );
@@ -55,7 +49,6 @@ export function FormField({ label, name, type = 'text', required, children, erro
     <div className="form-field">
       <label htmlFor={fieldId}>{label}{required && <span className="required">*</span>}</label>
       <input id={fieldId} name={name} type={type} required={required} {...accesibilidad} {...rest} />
-      {ayuda && <small className="form-ayuda" id={ayudaId}>{ayuda}</small>}
       {error && <span className="form-error" id={errorId}>{error}</span>}
     </div>
   );

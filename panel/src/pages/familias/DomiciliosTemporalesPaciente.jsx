@@ -333,7 +333,6 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
                   step="any"
                   value={lng}
                   onChange={(e) => setLng(e.target.value)}
-                  ayuda={t.domicilios_temporales.ayuda_coordenadas}
                   required
                 />
                 <FormField
@@ -358,7 +357,6 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
                   value={fechaFin}
                   min={fechaInicio}
                   onChange={(e) => setFechaFin(e.target.value)}
-                  ayuda={t.domicilios_temporales.ayuda_fecha_fin}
                 />
                 <div className="panel-modal-acciones">
                   <Button

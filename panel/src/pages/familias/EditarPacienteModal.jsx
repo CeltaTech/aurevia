@@ -69,10 +69,8 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
           <SelectorDeLegajo
             name="obra_social_legajo_id"
             label={t.familias.editar_paciente.obra_social}
-            ayuda={t.familias.editar_paciente.obra_social_ayuda}
             valor={obraSocialLegajoId}
             alElegir={setObraSocialLegajoId}
-            prestadoraId={paciente.prestadora_id}
             clase="juridica"
             deshabilitado={guardando}
           />

@@ -107,7 +107,6 @@ export function PagoAsistentesTab() {
               name="prorratear_monto_fijo"
               type="checkbox"
               checked={regla.prorratear_monto_fijo}
-              ayuda={t.configuracion.pago_asistentes_prorratear_ayuda}
               onChange={(e) => cambiar('prorratear_monto_fijo', e.target.checked)}
             />
 
@@ -119,11 +118,6 @@ export function PagoAsistentesTab() {
               name="frecuencia_cada_cuanto"
               type="select"
               value={frecuencia.cada_cuanto}
-              ayuda={
-                frecuencia.cada_cuanto === FRECUENCIAS.QUINCENA
-                  ? t.configuracion.frecuencia_pago_quincena_ayuda
-                  : t.configuracion.frecuencia_pago_cada_cuanto_ayuda
-              }
               onChange={(e) => cambiarFrecuencia('cada_cuanto', e.target.value)}
             >
               {FRECUENCIAS_POSIBLES.map((cual) => (
@@ -141,7 +135,6 @@ export function PagoAsistentesTab() {
                 name="frecuencia_dia_de_corte"
                 type="select"
                 value={frecuencia.dia_de_corte}
-                ayuda={t.configuracion.frecuencia_pago_dia_de_corte_ayuda}
                 onChange={(e) => cambiarFrecuencia('dia_de_corte', Number(e.target.value))}
               >
                 {[1, 2, 3, 4, 5, 6, 7].map((dia) => (
@@ -159,7 +152,6 @@ export function PagoAsistentesTab() {
               min={FRECUENCIA_QUE_SE_PUEDE_TOCAR.dias_hasta_el_pago.minimo}
               max={FRECUENCIA_QUE_SE_PUEDE_TOCAR.dias_hasta_el_pago.maximo}
               value={frecuencia.dias_hasta_el_pago}
-              ayuda={t.configuracion.frecuencia_pago_dias_hasta_el_pago_ayuda}
               onChange={(e) => cambiarDiasHastaElPago(e.target.value)}
             />
 

@@ -146,13 +146,6 @@ h2 {
   font-size: 0.85rem;
 }
 
-/* La línea chica debajo de un campo: explica qué se espera ahí antes de que alguien se
-   equivoque, en vez de corregirlo después con un mensaje en rojo. */
-.form-ayuda {
-  color: var(--texto-secundario);
-  font-size: 0.85rem;
-}
-
 /* ---------- Alertas ---------- */
 
 .alert {
@@ -1954,12 +1947,6 @@ button.panel-kpi-card[aria-pressed='true'] {
   font-size: 0.85rem;
   color: var(--texto-secundario);
   text-transform: capitalize;
-}
-
-.grilla-ayuda {
-  font-size: 0.8rem;
-  color: var(--texto-secundario);
-  margin: 0 0 0.75rem;
 }
 
 /* --- La grilla --- */

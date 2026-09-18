@@ -508,7 +508,6 @@ export function AusenciasCoberturaTab({ asistente }) {
         name="avisada_en"
         type="datetime-local"
         value={nueva.avisada_en}
-        ayuda={t.asistentes.ausencias.ayuda_avisada_en}
         onChange={(e) => setNueva((f) => ({ ...f, avisada_en: e.target.value }))}
       />
       <FormField label={t.comun.nota_interna} name="observaciones" type="textarea" value={nueva.observaciones} onChange={(e) => setNueva((f) => ({ ...f, observaciones: e.target.value }))} />

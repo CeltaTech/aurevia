@@ -186,12 +186,6 @@ export function Padron() {
                       : t.padron.sin_documento}
                   </p>
                 </div>
-                <div className="lista-tarjeta-etiquetas">
-                  <span className="badge badge-info">
-                    {fila.clase === 'juridica' ? t.padron.clase_juridica : t.padron.clase_fisica}
-                  </span>
-                  <span className="badge">{t.padron.numero}: {fila.numero_legajo}</span>
-                </div>
               </div>
               <div className="lista-tarjeta-meta">
                 {fila.clase === 'juridica' && (
@@ -209,7 +203,7 @@ export function Padron() {
               </div>
               {puedeEditar && (
                 <div className="lista-tarjeta-acciones">
-                  <Button variant="secondary" onClick={() => setEnEdicion(fila)}>{t.padron.corregir_titulo}</Button>
+                  <Button variant="secondary" onClick={() => setEnEdicion(fila)}>{t.comun.editar}</Button>
                 </div>
               )}
             </div>

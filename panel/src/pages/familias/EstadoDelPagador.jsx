@@ -386,7 +386,6 @@ function RegistrarFirmaDelPagadorModal({ familiaId, consentimientoId, onClose, o
           name="papel_firmado_pagador"
           type="file"
           accept="application/pdf,image/jpeg,image/png"
-          ayuda={textos.papel_archivo_ayuda}
           onChange={(e) => setArchivo(e.target.files?.[0] || null)}
         />
 
@@ -446,7 +445,6 @@ function CargarPapelDelPagadorModal({ familiaId, papel, onClose, onCargado }) {
           name="papel_del_financiador"
           type="file"
           accept="application/pdf,image/jpeg,image/png"
-          ayuda={textos.papel_archivo_obligatorio_ayuda}
           onChange={(e) => setArchivo(e.target.files?.[0] || null)}
         />
 
@@ -456,7 +454,6 @@ function CargarPapelDelPagadorModal({ familiaId, papel, onClose, onCargado }) {
             name="vencimiento_del_papel"
             type="date"
             value={vencimiento}
-            ayuda={textos.papel_vencimiento_ayuda}
             onChange={(e) => setVencimiento(e.target.value)}
           />
         )}

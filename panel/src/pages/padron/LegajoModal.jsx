@@ -8,9 +8,6 @@ import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio';
 import { DOMICILIO_VACIO, partesDesdeFila, partesParaGuardar } from '../../lib/partesDeDomicilio';
-/* Los dos se nombran entre sí, y está bien: el selector puede abrir este formulario para dar de
-   alta, y este formulario usa el selector para elegir al Apoderado. No se hace infinito porque el
-   Apoderado es siempre una persona física, y una persona física no tiene Apoderado. */
 import { SelectorDeLegajo } from '../../components/padron/SelectorDeLegajo';
 
 /* El alta y la corrección de un Legajo.
@@ -33,12 +30,12 @@ import { SelectorDeLegajo } from '../../components/padron/SelectorDeLegajo';
    NO HAY BOTÓN DE BORRAR, y tampoco lo va a haber. Un Legajo queda con el historial de cómo se
    comportó esa persona en cada rol que desempeñó, y con quien dejó de ser Cliente se vuelve a
    cruzar. La base también lo rechaza, por si alguna pantalla lo intentara igual. */
-export function LegajoModal({ legajo, prestadoraId, tiposDeDocumento, onClose, onGuardado, claseInicial = null }) {
+export function LegajoModal({ legajo, prestadoraId, tiposDeDocumento, onClose, onGuardado }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const corrigiendo = Boolean(legajo);
 
-  const [clase, setClase] = useState(legajo?.clase ?? claseInicial ?? 'fisica');
+  const [clase, setClase] = useState(legajo?.clase ?? 'fisica');
   const [nombre, setNombre] = useState(legajo?.nombre ?? '');
   const [apellido, setApellido] = useState(legajo?.apellido ?? '');
   const [documentoTipo, setDocumentoTipo] = useState(legajo?.documento_tipo ?? '');
@@ -105,7 +102,7 @@ export function LegajoModal({ legajo, prestadoraId, tiposDeDocumento, onClose, o
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
-        <h2 id={modal.idTitulo}>{corrigiendo ? t.padron.corregir_titulo : t.padron.nuevo_titulo}</h2>
+        <h2 id={modal.idTitulo}>{corrigiendo ? t.comun.editar : t.padron.nuevo_titulo}</h2>
 
         {error && <Alert variant="error">{error}</Alert>}
 
@@ -118,7 +115,6 @@ export function LegajoModal({ legajo, prestadoraId, tiposDeDocumento, onClose, o
             value={clase}
             onChange={(e) => cambiarClase(e.target.value)}
             disabled={guardando}
-            ayuda={t.padron.clase_ayuda}
           >
             <option value="fisica">{t.padron.clase_fisica}</option>
             <option value="juridica">{t.padron.clase_juridica}</option>
@@ -179,10 +175,8 @@ export function LegajoModal({ legajo, prestadoraId, tiposDeDocumento, onClose, o
             <SelectorDeLegajo
               name="apoderado_legajo_id"
               label={t.padron.apoderado}
-              ayuda={t.padron.apoderado_ayuda}
               valor={apoderado}
               alElegir={setApoderado}
-              prestadoraId={prestadoraId}
               clase="fisica"
               deshabilitado={guardando}
             />

@@ -143,7 +143,6 @@ export function FacturacionFamiliasTab() {
             min="0"
             max={PLAZO_MAXIMO_EN_DIAS}
             value={dias}
-            ayuda={t.configuracion.facturacion_familias_dias_ayuda}
             error={!revisado.ok ? t.configuracion.facturacion_familias_fuera_de_borde : undefined}
             onChange={(e) => {
               setDias(e.target.value);
@@ -155,7 +154,6 @@ export function FacturacionFamiliasTab() {
             name="sigue_la_cobranza"
             type="checkbox"
             checked={sigue}
-            ayuda={t.configuracion.cobranza_sigue_ayuda}
             onChange={(e) => {
               setSigue(e.target.checked);
               setGuardado(false);
@@ -178,7 +176,6 @@ export function FacturacionFamiliasTab() {
                 name="direccion_del_aviso_de_facturacion"
                 value={`${import.meta.env.VITE_API_URL}/api/avisos-de-facturacion/${prestadoraId}`}
                 readOnly
-                ayuda={t.configuracion.facturacion_aviso_direccion_ayuda}
               />
             )}
             <Alert variant="info">
@@ -191,7 +188,6 @@ export function FacturacionFamiliasTab() {
               name="secreto_del_aviso_de_facturacion"
               type="password"
               value={secretoDeFacturacion}
-              ayuda={t.configuracion.facturacion_aviso_secreto_ayuda}
               onChange={(e) => setSecretoDeFacturacion(e.target.value)}
             />
             <Button
@@ -215,7 +211,6 @@ export function FacturacionFamiliasTab() {
                   name="direccion_del_aviso"
                   value={`${import.meta.env.VITE_API_URL}/api/avisos-de-cobranza/${prestadoraId}`}
                   readOnly
-                  ayuda={t.configuracion.cobranza_aviso_direccion_ayuda}
                 />
               )}
               <Alert variant="info">
@@ -228,7 +223,6 @@ export function FacturacionFamiliasTab() {
                 name="secreto_del_aviso"
                 type="password"
                 value={secreto}
-                ayuda={t.configuracion.cobranza_aviso_secreto_ayuda}
                 onChange={(e) => setSecreto(e.target.value)}
               />
               <Button

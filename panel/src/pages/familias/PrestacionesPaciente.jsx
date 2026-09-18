@@ -736,7 +736,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                   type="select"
                   value={servicioId}
                   onChange={(e) => setServicioId(e.target.value)}
-                  ayuda={t.prestaciones.servicio_ayuda}
                   required
                 >
                   <option value="">—</option>
@@ -813,7 +812,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                   type="date"
                   value={vigenteHasta}
                   onChange={(e) => setVigenteHasta(e.target.value)}
-                  ayuda={t.prestaciones.vigente_hasta_ayuda}
                 />
 
                 <FormField label={t.comun.nota_interna} name="nota" type="textarea" value={nota} onChange={(e) => setNota(e.target.value)} />

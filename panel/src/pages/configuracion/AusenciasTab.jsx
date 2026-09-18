@@ -84,7 +84,6 @@ export function AusenciasTab() {
               min={REGLA_QUE_SE_PUEDE_TOCAR.horas_para_considerarla_con_tiempo.minimo}
               max={REGLA_QUE_SE_PUEDE_TOCAR.horas_para_considerarla_con_tiempo.maximo}
               value={regla.horas_para_considerarla_con_tiempo}
-              ayuda={t.configuracion.ausencias_horas_con_tiempo_ayuda}
               onChange={(e) => cambiar('horas_para_considerarla_con_tiempo', e.target.value)}
             />
             <FormField
@@ -94,7 +93,6 @@ export function AusenciasTab() {
               min={REGLA_QUE_SE_PUEDE_TOCAR.horas_entre_avisos.minimo}
               max={REGLA_QUE_SE_PUEDE_TOCAR.horas_entre_avisos.maximo}
               value={regla.horas_entre_avisos}
-              ayuda={t.configuracion.ausencias_horas_entre_avisos_ayuda}
               onChange={(e) => cambiar('horas_entre_avisos', e.target.value)}
             />
             <Button onClick={guardar} disabled={guardando || !completos}>

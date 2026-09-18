@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { supabase } from '../../lib/supabaseClient';
-import { useTiposDeDocumento } from '../../hooks/useTiposDeDocumento';
-import { Button } from '../ui/Button';
 import { FormField } from '../ui/FormField';
 import { Alert } from '../ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
-import { LegajoModal } from '../../pages/padron/LegajoModal';
 
 /* El casillero que nombra a una Persona del Padrón.
    ==========================================================================
@@ -15,20 +12,16 @@ import { LegajoModal } from '../../pages/padron/LegajoModal';
    no existe: la misma obra social escrita en cien fichas son cien financiadores distintos, y uno
    mal tipeado no se cruza nunca con el bueno.
 
-   Y SE PUEDE DAR DE ALTA DESDE ACÁ, sin salir de lo que se estaba haciendo. Si obligara a ir al
-   Padrón, volver y retomar, quien trabaja terminaría pidiendo un casillero libre otra vez.
+   ACÁ SE ELIGE Y NADA MÁS. Un Legajo nuevo se carga desde el Padrón, con el botón que lo dice.
 
    CÓMO SE LLAMA CADA PERSONA LO DICE LA BASE, en una sola columna calculada, para que todas las
    pantallas digan lo mismo. */
 export function SelectorDeLegajo({
   valor,
   alElegir,
-  prestadoraId,
   label,
-  ayuda,
   name,
   deshabilitado = false,
-  permitirAlta = true,
   clase = null,
 }) {
   const { t } = useLocale();
@@ -36,9 +29,6 @@ export function SelectorDeLegajo({
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [busqueda, setBusqueda] = useState('');
-  const [dandoDeAlta, setDandoDeAlta] = useState(false);
-
-  const documentos = useTiposDeDocumento(prestadoraId);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -82,12 +72,6 @@ export function SelectorDeLegajo({
     ));
   }, [filas, busqueda, valor]);
 
-  function alGuardarElNuevo(nuevo) {
-    setDandoDeAlta(false);
-    recargar();
-    if (nuevo?.id) alElegir(nuevo.id);
-  }
-
   return (
     <>
       {error && <Alert variant="error">{error}</Alert>}
@@ -107,7 +91,6 @@ export function SelectorDeLegajo({
         name={name}
         type="select"
         value={valor ?? ''}
-        ayuda={ayuda}
         onChange={(e) => alElegir(e.target.value || null)}
         disabled={deshabilitado || estado === 'cargando' || estado === 'error'}
       >
@@ -122,25 +105,6 @@ export function SelectorDeLegajo({
       </FormField>
 
       {estado === 'vacio' && <p className="panel-explicacion">{t.padron.selector_vacio}</p>}
-
-      {permitirAlta && (
-        <p className="panel-explicacion">
-          <Button variant="secondary" type="button" onClick={() => setDandoDeAlta(true)} disabled={deshabilitado}>
-            {t.padron.selector_agregar}
-          </Button>
-        </p>
-      )}
-
-      {dandoDeAlta && (
-        <LegajoModal
-          legajo={null}
-          claseInicial={clase}
-          prestadoraId={prestadoraId}
-          tiposDeDocumento={documentos.porClase}
-          onClose={() => setDandoDeAlta(false)}
-          onGuardado={alGuardarElNuevo}
-        />
-      )}
     </>
   );
 }

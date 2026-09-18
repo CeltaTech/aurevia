@@ -240,7 +240,6 @@ function CerrarGuardiaModal({ guardia, usuario, confirmarDestructivo, onClose, o
           required
           rows={3}
           value={motivo}
-          ayuda={t.guardias_sin_cerrar.motivo_ayuda}
           placeholder={t.guardias_sin_cerrar.motivo_placeholder}
           onChange={(e) => setMotivo(e.target.value)}
         />

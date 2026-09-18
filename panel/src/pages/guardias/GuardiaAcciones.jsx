@@ -429,7 +429,6 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
               name="aviso_previo_texto"
               type="textarea"
               rows={3}
-              ayuda={t.guardias.detalle.aviso_previo_texto_ayuda}
               value={avisoPrevioTexto}
               onChange={(e) => setAvisoPrevioTexto(e.target.value)}
             />

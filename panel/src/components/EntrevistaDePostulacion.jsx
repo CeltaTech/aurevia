@@ -169,7 +169,6 @@ export function EntrevistaDePostulacion({ postulacionId }) {
             label={tr.cuando}
             name="agendada_para"
             type="datetime-local"
-            ayuda={tr.cuando_ayuda}
             value={cuando}
             onChange={(e) => setCuando(e.target.value)}
           />
@@ -178,7 +177,6 @@ export function EntrevistaDePostulacion({ postulacionId }) {
             label={tr.observaciones}
             name="observaciones_entrevista"
             type="textarea"
-            ayuda={tr.observaciones_ayuda}
             value={observaciones}
             onChange={(e) => setObservaciones(e.target.value)}
           />

@@ -44,7 +44,6 @@ export function ElegirUnLugar({ lugares, zonas, estado, valor, onChange, label, 
       onChange={(e) => onChange(e.target.value || null)}
       disabled={deshabilitado || cargando || sinLista}
       error={error}
-      ayuda={sinLista ? t.comun.domicilio_lugar_sin_lista : undefined}
     >
       <option value="">{t.comun.domicilio_lugar_ninguno}</option>
       {grupos.map((grupo) => (

@@ -115,7 +115,6 @@ export function DescansosDeLaGuardia({ guardiaId }) {
       <FormField
         label={tr.nota}
         name="descanso_nota"
-        ayuda={tr.nota_ayuda}
         value={nota}
         onChange={(e) => setNota(e.target.value)}
       />

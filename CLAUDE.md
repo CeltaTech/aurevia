@@ -192,6 +192,13 @@ existe**: se parece a la de al lado, no es la misma para el sistema, y nadie se 
 puede tener buscador y puede permitir dar de alta un Legajo nuevo desde ahí mismo, pero lo que
 queda guardado es cuál, no cómo se llama.
 
+**Un Legajo nuevo se carga desde el Padrón, con el botón que lo dice.** Un casillero que elige del
+Padrón sólo elige: no da de alta. Y el botón que guarda una corrección dice guardar, porque ahí se
+están cambiando datos de algo que ya existe; agregar es otra cosa y tiene su propio botón.
+
+**El número de Legajo no se muestra en las fichas.** No es dato que sirva para reconocer a nadie, y
+menos todavía como etiqueta de anuncio.
+
 **El nombre visible de la Familia se calcula al mostrarlo, y no se guarda.** Se arma con el
 apellido y los nombres del Paciente; cuando hay más de uno, **queda el más antiguo al que se le
 esté brindando servicio**. Si aparece otra Familia con ese mismo apellido y nombres, se le agrega

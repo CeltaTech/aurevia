@@ -101,7 +101,6 @@ function ElTextoQueFirma() {
             type="textarea"
             rows={20}
             value={cuerpo}
-            ayuda={t.configuracion.consentimiento_pagador_cuerpo_ayuda}
             onChange={(e) => {
               setCuerpo(e.target.value);
               setGuardado(false);
@@ -327,7 +326,6 @@ function NuevoPapelDelPagador({ onClose, onCreado }) {
           name="papel_pagador_financiador"
           type="select"
           value={financiador}
-          ayuda={t.configuracion.papeles_pagador_financiador_ayuda}
           onChange={(e) => setFinanciador(e.target.value)}
         >
           <option value="">{t.configuracion.papeles_pagador_todos_los_financiadores}</option>
@@ -343,7 +341,6 @@ function NuevoPapelDelPagador({ onClose, onCreado }) {
           name="papel_pagador_vencimiento"
           type="checkbox"
           checked={requiereVencimiento}
-          ayuda={t.configuracion.papeles_pagador_vencimiento_ayuda}
           onChange={(e) => setRequiereVencimiento(e.target.checked)}
         />
 

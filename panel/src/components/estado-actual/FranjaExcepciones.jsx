@@ -62,7 +62,6 @@ export function FranjaExcepciones({ guardias, ctx, excepcionActiva, onElegir }) 
   return (
     <section>
       <h2>{t.estado_actual.franja_titulo}</h2>
-      <p className="panel-explicacion">{t.estado_actual.franja_ayuda}</p>
 
       <div className="estado-actual-franja">
         {/* Se muestran los seis SIEMPRE, incluso los que dan cero. Si el contador desapareciera

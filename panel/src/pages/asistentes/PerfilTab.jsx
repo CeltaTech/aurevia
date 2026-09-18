@@ -361,7 +361,7 @@ export function PerfilTab({ asistente, onActualizado }) {
               carga la ficha. Se muestra el valor de la unidad elegida y no los cuatro, porque
               cuatro casillas de importe al lado invitan a llenar la que no se usa, y un valor
               cargado que no se paga es una pregunta cada vez que alguien abre la ficha. */}
-          <FormField label={t.asistentes.unidad_medicion} name="unidad_medicion" type="select" value={form.unidad_medicion} ayuda={t.asistentes.unidad_medicion_ayuda} onChange={(e) => set('unidad_medicion', e.target.value)}>
+          <FormField label={t.asistentes.unidad_medicion} name="unidad_medicion" type="select" value={form.unidad_medicion} onChange={(e) => set('unidad_medicion', e.target.value)}>
             {UNIDADES_POSIBLES.map((unidad) => (
               <option key={unidad} value={unidad}>{t.asistentes[`unidad_${unidad}`]}</option>
             ))}
@@ -378,7 +378,7 @@ export function PerfilTab({ asistente, onActualizado }) {
           {/* Se pregunta siempre, y no sólo a quien cobra por hora: una guardia con horas de más
               se paga igual midan el trabajo como lo midan. Vacío quiere decir que no está
               cargado, y entonces la liquidación avisa en vez de estimarlo. */}
-          <FormField label={t.asistentes.valor_hora_extra} name="valor_hora_extra" type="number" value={form.valor_hora_extra} ayuda={t.asistentes.valor_hora_extra_ayuda} onChange={(e) => set('valor_hora_extra', e.target.value)} />
+          <FormField label={t.asistentes.valor_hora_extra} name="valor_hora_extra" type="number" value={form.valor_hora_extra} onChange={(e) => set('valor_hora_extra', e.target.value)} />
 
           <FormField label={t.asistentes.horas_semanales} name="horas_semanales" type="number" value={form.horas_semanales} onChange={(e) => set('horas_semanales', e.target.value)} />
 
@@ -391,7 +391,6 @@ export function PerfilTab({ asistente, onActualizado }) {
             name="frecuencia_propia"
             type="checkbox"
             checked={form.frecuencia_propia}
-            ayuda={t.asistentes.frecuencia_pago_propia_ayuda}
             onChange={(e) => set('frecuencia_propia', e.target.checked)}
           />
 
@@ -434,7 +433,6 @@ export function PerfilTab({ asistente, onActualizado }) {
                 min={FRECUENCIA_QUE_SE_PUEDE_TOCAR.dias_hasta_el_pago.minimo}
                 max={FRECUENCIA_QUE_SE_PUEDE_TOCAR.dias_hasta_el_pago.maximo}
                 value={form.frecuencia.dias_hasta_el_pago}
-                ayuda={t.asistentes.frecuencia_pago_dias_hasta_el_pago_ayuda}
                 onChange={(e) =>
                   setFrecuencia('dias_hasta_el_pago', e.target.value === '' ? '' : Number(e.target.value))
                 }

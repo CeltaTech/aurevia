@@ -220,7 +220,6 @@ export function Prestadoras() {
 
           <FormField
             label={t.prestadoras.campo_nombre_fantasia}
-            ayuda={t.prestadoras.campo_nombre_fantasia_ayuda}
             name="nombre_fantasia"
             required
             value={campos.nombre_fantasia}
@@ -229,7 +228,6 @@ export function Prestadoras() {
 
           <FormField
             label={t.prestadoras.campo_razon_social}
-            ayuda={t.prestadoras.campo_razon_social_ayuda}
             name="razon_social"
             required
             value={campos.razon_social}
@@ -238,7 +236,6 @@ export function Prestadoras() {
 
           <FormField
             label={t.prestadoras.campo_identificacion_fiscal}
-            ayuda={t.prestadoras.campo_identificacion_fiscal_ayuda}
             name="identificacion_fiscal"
             value={campos.identificacion_fiscal}
             onChange={(e) => cambiarCampo('identificacion_fiscal', e.target.value)}
@@ -260,7 +257,6 @@ export function Prestadoras() {
 
           <FormField
             label={t.prestadoras.campo_email_respuestas}
-            ayuda={t.prestadoras.campo_email_respuestas_ayuda}
             name="email_respuestas"
             type="email"
             required
@@ -285,7 +281,6 @@ export function Prestadoras() {
 
           <FormField
             label={t.prestadoras.campo_admin_email}
-            ayuda={t.prestadoras.campo_admin_email_ayuda}
             name="admin_email"
             type="email"
             required

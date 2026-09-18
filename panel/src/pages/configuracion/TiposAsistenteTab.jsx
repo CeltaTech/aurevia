@@ -513,7 +513,6 @@ function NuevoTipoModal({ prestadoraId, onClose, onCreado }) {
               onChange={(e) => setTipoMatricula(e.target.value)}
               required
             />
-            <p className="panel-explicacion">{t.configuracion.tipos_tipo_matricula_ayuda}</p>
           </>
         )}
         <div className="panel-modal-acciones">

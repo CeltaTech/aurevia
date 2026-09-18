@@ -196,7 +196,6 @@ function TabNotificaciones() {
                         <input
                           type="checkbox"
                           checked={fila.notificar_familia || false}
-                          title={t.configuracion.notificaciones_notificar_familia_ayuda}
                           onChange={(e) => set(fila.evento, 'notificar_familia', e.target.checked)}
                           aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.notificaciones_col_notificar_familia, nombre: nombreEvento })}
                         />
@@ -366,7 +365,6 @@ function TabAlertasIA() {
               name="palabras_clave"
               value={(form.palabras_clave ?? []).join(', ')}
               placeholder={t.configuracion.alertas_ia_palabras_clave_placeholder}
-              ayuda={t.configuracion.alertas_ia_palabras_clave_ayuda}
               onChange={(e) => set('palabras_clave', e.target.value.split(',').map((p) => p.trim()).filter(Boolean))}
             />
             <FormField
@@ -374,7 +372,6 @@ function TabAlertasIA() {
               name="reportes_a_analizar"
               type="number"
               value={form.reportes_a_analizar ?? ''}
-              ayuda={t.configuracion.alertas_ia_reportes_a_analizar_ayuda}
               onChange={(e) => set('reportes_a_analizar', e.target.value)}
             />
             <p className="panel-explicacion">{t.configuracion.alertas_ia_roja_siempre_coordinador}</p>
@@ -493,7 +490,6 @@ function TabCorreoDeLaPrestadora() {
               name="email_respuestas"
               type="email"
               value={casilla}
-              ayuda={t.configuracion.correo_respuestas_ayuda}
               onChange={(e) => {
                 setCasilla(e.target.value);
                 setGuardado(false);
@@ -828,7 +824,6 @@ function TabWhatsappCredenciales() {
               type="password"
               value={appSecret}
               onChange={(e) => setAppSecret(e.target.value)}
-              ayuda={t.configuracion.whatsapp_app_secret_ayuda}
             />
             <FormField
               label={form.verify_token_cargado ? t.configuracion.whatsapp_verify_token_reemplazar : t.configuracion.whatsapp_verify_token_cargar}
@@ -836,7 +831,6 @@ function TabWhatsappCredenciales() {
               type="password"
               value={verifyToken}
               onChange={(e) => setVerifyToken(e.target.value)}
-              ayuda={t.configuracion.whatsapp_verify_token_ayuda}
             />
             {/* La dirección que hay que pegar en el panel de Meta. Es distinta para cada
                 Prestadora —el identificador va adentro—, y esa es justamente la razón por la
@@ -847,7 +841,6 @@ function TabWhatsappCredenciales() {
               name="direccion_webhook"
               value={`${DIRECCION_DEL_MOTOR}/api/whatsapp-webhook/${form.prestadora_id}`}
               readOnly
-              ayuda={t.configuracion.whatsapp_direccion_webhook_ayuda}
             />
             {/* Sin los dos secretos cargados, el motor rechaza todo lo que entre por esa
                 dirección. Es el comportamiento correcto, pero desde afuera se ve como que
@@ -1411,7 +1404,6 @@ function TabWhatsappEscaladaCoordinador() {
               type="number"
               value={form.minutos_antes_todos_los_coordinadores ?? ''}
               onChange={(e) => set('minutos_antes_todos_los_coordinadores', e.target.value)}
-              ayuda={t.configuracion.whatsapp_escalada_minutos_todos_los_coordinadores_ayuda}
             />
             <FormField
               label={t.configuracion.whatsapp_escalada_minutos_administracion}
@@ -1419,7 +1411,6 @@ function TabWhatsappEscaladaCoordinador() {
               type="number"
               value={form.minutos_antes_administracion ?? ''}
               onChange={(e) => set('minutos_antes_administracion', e.target.value)}
-              ayuda={t.configuracion.whatsapp_escalada_minutos_administracion_ayuda}
             />
             <EscaladaEnOrden form={form} />
             <FormField
@@ -1514,7 +1505,6 @@ function CuantoDuraTomarUnaAlarma() {
             min={borde.minimo}
             max={borde.maximo}
             value={minutos}
-            ayuda={con(t.configuracion.tomar_alarma_minutos_ayuda, { minimo: borde.minimo, maximo: borde.maximo })}
             onChange={(e) => {
               setMinutos(e.target.value);
               setGuardado(false);

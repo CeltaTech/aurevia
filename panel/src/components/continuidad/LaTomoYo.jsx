@@ -33,7 +33,6 @@ export function LaTomoYo({ tipo, referenciaId, tomaDe, tomar, soltar, trabajando
         variant="secondary"
         onClick={() => tomar(tipo, referenciaId, usuario?.id)}
         disabled={ocupado || !usuario?.id}
-        title={t.continuidad.la_tomo_yo_ayuda}
       >
         {t.continuidad.la_tomo_yo}
       </Button>

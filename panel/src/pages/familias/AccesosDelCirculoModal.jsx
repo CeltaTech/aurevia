@@ -152,15 +152,6 @@ export function AccesosDelCirculoModal({ familiaId, miembros, puedeEditar, usuar
                 name={`${miembro.usuarioId}-${acceso.clave}`}
                 type="checkbox"
                 label={acceso.descripcion}
-                ayuda={
-                  acceso.topado ? (
-                    <>
-                      {acceso.ayuda} <strong>{t.familias.circulo.accesos_topado}</strong>
-                    </>
-                  ) : (
-                    acceso.ayuda
-                  )
-                }
                 checked={elegido[miembro.usuarioId]?.[acceso.clave] ?? false}
                 disabled={acceso.topado || !puedeEditar || guardando}
                 onChange={(e) => cambiar(miembro.usuarioId, acceso.clave, e.target.checked)}
@@ -272,7 +263,6 @@ export function RegistrarPapelFirmadoModal({ familiaId, instruccionId, onClose, 
           name="papel_firmado"
           type="file"
           accept="application/pdf,image/jpeg,image/png"
-          ayuda={t.familias.circulo.papel_archivo_ayuda}
           onChange={(e) => setArchivo(e.target.files?.[0] || null)}
         />
 

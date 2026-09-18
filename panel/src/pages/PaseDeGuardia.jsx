@@ -80,7 +80,6 @@ function CerrarSinComprobar({ fila, onCerrado, onClose }) {
           type="textarea"
           value={nota}
           onChange={(e) => setNota(e.target.value)}
-          ayuda={t.pase_de_guardia.cerrar_nota_ayuda}
         />
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>

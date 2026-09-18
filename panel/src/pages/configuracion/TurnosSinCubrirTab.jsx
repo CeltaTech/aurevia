@@ -87,7 +87,6 @@ export function TurnosSinCubrirTab() {
               min={REGLA_QUE_SE_PUEDE_TOCAR.horas_para_abrirlo.minimo}
               max={REGLA_QUE_SE_PUEDE_TOCAR.horas_para_abrirlo.maximo}
               value={regla.horas_para_abrirlo}
-              ayuda={t.configuracion.turnos_sin_cubrir_horas_para_abrirlo_ayuda}
               onChange={(e) => cambiar('horas_para_abrirlo', e.target.value)}
             />
             <FormField
@@ -97,7 +96,6 @@ export function TurnosSinCubrirTab() {
               min={REGLA_QUE_SE_PUEDE_TOCAR.horas_entre_recordatorios.minimo}
               max={REGLA_QUE_SE_PUEDE_TOCAR.horas_entre_recordatorios.maximo}
               value={regla.horas_entre_recordatorios}
-              ayuda={t.configuracion.turnos_sin_cubrir_horas_entre_recordatorios_ayuda}
               onChange={(e) => cambiar('horas_entre_recordatorios', e.target.value)}
             />
             <Button onClick={guardar} disabled={guardando || !completos}>

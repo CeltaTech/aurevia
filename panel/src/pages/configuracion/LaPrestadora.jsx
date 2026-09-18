@@ -525,7 +525,6 @@ function TabPasarela() {
                             type="password"
                             value={secretoFirma}
                             onChange={(e) => setSecretoFirma(e.target.value)}
-                            ayuda={t.configuracion.pasarela_secreto_firma_ayuda}
                           />
                         )}
                         <Button onClick={() => activar(fila.proveedor)} disabled={accionEnCurso === fila.proveedor}>
@@ -543,7 +542,6 @@ function TabPasarela() {
                           type="password"
                           value={secretoFirma}
                           onChange={(e) => setSecretoFirma(e.target.value)}
-                          ayuda={t.configuracion.pasarela_secreto_firma_ayuda}
                         />
                         <Button
                           onClick={() => guardarSecretoFirma(fila.proveedor)}

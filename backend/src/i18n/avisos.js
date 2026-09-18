@@ -254,7 +254,7 @@ const ES = {
 
   activacion_cuenta: (d) => ({
     asunto: `Activación de la cuenta en ${d.empresa}`,
-    texto: `Hola ${d.nombre},\n\nYa está creada la cuenta en ${d.empresa}. Para poder entrar desde el celular hace falta activarla.\n\nSe activa acá (el link vence en ${d.dias} días):\n${d.link}\n\nSi no esperaba este correo, puede ignorarlo.${d.conMarcaDelProducto ? `\n\n—\nCon la tecnología de ${d.producto}` : ''}`,
+    texto: `Hola ${d.nombre},\n\nYa está creada la cuenta en ${d.empresa}. Para poder entrar hace falta activarla.\n\nSe activa acá (el link vence en ${d.dias} días):\n${d.link}\n\nSi no esperaba este correo, puede ignorarlo.${d.conMarcaDelProducto ? `\n\n—\nCon la tecnología de ${d.producto}` : ''}`,
   }),
 
   estado_postulacion: (d) => ({
@@ -548,7 +548,7 @@ const EN = {
 
   activacion_cuenta: (d) => ({
     asunto: `Activate your ${d.empresa} account`,
-    texto: `Hi ${d.nombre},\n\nYour ${d.empresa} account has been created. To sign in from your phone you need to activate it.\n\nActivate it here (this link expires in ${d.dias} days):\n${d.link}\n\nIf you were not expecting this email, you can ignore it.${d.conMarcaDelProducto ? `\n\n—\nPowered by ${d.producto}` : ''}`,
+    texto: `Hi ${d.nombre},\n\nYour ${d.empresa} account has been created. To sign in you need to activate it.\n\nActivate it here (this link expires in ${d.dias} days):\n${d.link}\n\nIf you were not expecting this email, you can ignore it.${d.conMarcaDelProducto ? `\n\n—\nPowered by ${d.producto}` : ''}`,
   }),
 
   estado_postulacion: (d) => ({
@@ -828,7 +828,7 @@ const PT = {
 
   activacion_cuenta: (d) => ({
     asunto: `Ativação da conta na ${d.empresa}`,
-    texto: `Olá ${d.nombre},\n\nA conta na ${d.empresa} já está criada. Para acessar pelo celular é preciso ativá-la.\n\nA ativação é feita aqui (o link expira em ${d.dias} dias):\n${d.link}\n\nSe não esperava este email, pode ignorá-lo.${d.conMarcaDelProducto ? `\n\n—\nCom a tecnologia de ${d.producto}` : ''}`,
+    texto: `Olá ${d.nombre},\n\nA conta na ${d.empresa} já está criada. Para acessar é preciso ativá-la.\n\nA ativação é feita aqui (o link expira em ${d.dias} dias):\n${d.link}\n\nSe não esperava este email, pode ignorá-lo.${d.conMarcaDelProducto ? `\n\n—\nCom a tecnologia de ${d.producto}` : ''}`,
   }),
 
   estado_postulacion: (d) => ({

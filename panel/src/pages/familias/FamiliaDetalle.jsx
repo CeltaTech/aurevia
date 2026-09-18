@@ -17,6 +17,7 @@ import { MonitoreoVitalesPaciente } from './MonitoreoVitalesPaciente';
 import { DomiciliosTemporalesPaciente } from './DomiciliosTemporalesPaciente';
 import { EquipoDelPaciente } from './EquipoDelPaciente';
 import { InvitarCirculoModal } from './InvitarCirculoModal';
+import { SelectorDeLegajo } from '../../components/padron/SelectorDeLegajo';
 import {
   AlertasDeLaFamilia,
   GuardiasActivasDeLaFamilia,
@@ -104,7 +105,7 @@ export function FamiliaDetalle() {
     setError(null);
     const { data, error: errorConsulta } = await supabase
       .from('familias')
-      .select('id, plan, dias_hasta_el_vencimiento, financiador_tipo, financiador_nombre, solicitud_id, created_at, solicitudes!familias_solicitud_id_fkey(nombre, telefono, email, localidad), pacientes(*)')
+      .select('id, plan, dias_hasta_el_vencimiento, financiador_tipo, pagador_legajo_id, prestadora_id, solicitud_id, created_at, solicitudes!familias_solicitud_id_fkey(nombre, telefono, email, localidad), pacientes(*)')
       .eq('id', id)
       .single();
 
@@ -126,7 +127,7 @@ export function FamiliaDetalle() {
           ? ''
           : String(data.dias_hasta_el_vencimiento),
       financiador_tipo: data.financiador_tipo || '',
-      financiador_nombre: data.financiador_nombre || '',
+      pagador_legajo_id: data.pagador_legajo_id || null,
     });
     setEstado('listo');
   }, [id, t]);
@@ -207,7 +208,7 @@ export function FamiliaDetalle() {
       nombre, telefono, email, localidad, plan,
       dias_hasta_el_vencimiento: dias,
       financiador_tipo: financiadorTipo,
-      financiador_nombre: financiadorNombre,
+      pagador_legajo_id: pagadorLegajoId,
     } = formContacto;
     // Vacío es «no se acordó nada distinto», y entonces rige el plazo de la Prestadora. No es
     // cero, que sería «paga el mismo día»: por eso se guarda vacío y no un número.
@@ -222,15 +223,15 @@ export function FamiliaDetalle() {
         ? supabase.from('solicitudes').update({ nombre, telefono, email, localidad }).eq('id', familia.solicitud_id)
         : Promise.resolve({ error: null }),
       // El financiador vacío se guarda vacío y no como «familia»: los dos quieren decir lo mismo,
-      // y guardar uno de los dos sería inventar una decisión que nadie tomó. El nombre sólo tiene
-      // sentido cuando paga otro, así que con la Familia se limpia.
+      // y guardar uno de los dos sería inventar una decisión que nadie tomó. El Legajo del Pagador
+      // sólo tiene sentido cuando paga otro, así que con la Familia se limpia.
       supabase.from('familias').update({
         plan,
         dias_hasta_el_vencimiento: plazo.valor,
         financiador_tipo: financiadorTipo || null,
-        financiador_nombre:
+        pagador_legajo_id:
           financiadorTipo && financiadorTipo !== FINANCIADORES.FAMILIA
-            ? (financiadorNombre || '').trim() || null
+            ? pagadorLegajoId || null
             : null,
       }).eq('id', familia.id),
     ]);
@@ -298,14 +299,17 @@ export function FamiliaDetalle() {
               <option key={f} value={f}>{traducirValor(t.familias, `financiador_${f}`)}</option>
             ))}
           </FormField>
+          {/* Quién paga se elige del Padrón y no se teclea: un nombre escrito a mano crea un ente
+              nuevo que no existe, y la misma obra social terminaría escrita de cien maneras. */}
           {formContacto.financiador_tipo !== '' && formContacto.financiador_tipo !== FINANCIADORES.FAMILIA && (
-            <FormField
-              label={t.familias.financiador_nombre}
-              name="financiador_nombre"
-              value={formContacto.financiador_nombre}
-              ayuda={t.familias.financiador_nombre_ayuda}
-              onChange={(e) => setCampoContacto('financiador_nombre', e.target.value)}
-              disabled={!puedeEditarFamilia}
+            <SelectorDeLegajo
+              name="pagador_legajo_id"
+              label={t.familias.pagador_legajo}
+              ayuda={t.familias.pagador_legajo_ayuda}
+              valor={formContacto.pagador_legajo_id}
+              alElegir={(legajoId) => setCampoContacto('pagador_legajo_id', legajoId)}
+              prestadoraId={familia.prestadora_id}
+              deshabilitado={!puedeEditarFamilia}
             />
           )}
           <dl className="panel-detalle-lista">

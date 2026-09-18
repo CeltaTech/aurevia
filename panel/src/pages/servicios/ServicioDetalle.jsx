@@ -21,6 +21,9 @@ export function ServicioDetalle() {
   const navigate = useNavigate();
   const [servicio, setServicio] = useState(null);
   const [contactos, setContactos] = useState(new Map());
+  // Cómo se llama quien firmó la contratación. `null` es que el Servicio viene de antes del Padrón
+  // y no lo dice.
+  const [contratante, setContratante] = useState(null);
   const [prestaciones, setPrestaciones] = useState([]);
   const [guardias, setGuardias] = useState([]);
   const [nombresPaciente, setNombresPaciente] = useState({});
@@ -37,7 +40,9 @@ export function ServicioDetalle() {
       // Quién contrató sale de `tipo_contratante` y `contratante_id`; sus datos de contacto vienen
       // en una consulta aparte, porque esas dos columnas no apuntan siempre a la misma tabla y sin
       // clave foránea la base no sabe anidarlos. De dónde salen lo decide `contactosDeClientes`.
-      .select('id, etiqueta, estado, created_at, tipo_contratante, contratante_id')
+      // Y quién firmó la contratación es un Legajo del Padrón, que sí es una sola tabla: ése se
+      // trae aparte, por su nombre visible.
+      .select('id, etiqueta, estado, created_at, tipo_contratante, contratante_id, contratante_legajo_id')
       .eq('id', id)
       .single();
 
@@ -84,6 +89,17 @@ export function ServicioDetalle() {
         : Promise.resolve({ data: [] }),
       contactosDeClientes(supabase, [s]),
     ]);
+
+    if (s.contratante_legajo_id) {
+      const { data: legajo } = await supabase
+        .from('legajos')
+        .select('nombre_visible')
+        .eq('id', s.contratante_legajo_id)
+        .maybeSingle();
+      setContratante(legajo?.nombre_visible ?? null);
+    } else {
+      setContratante(null);
+    }
 
     setServicio(s);
     setContactos(mapaContactos);
@@ -164,6 +180,9 @@ export function ServicioDetalle() {
         <p><strong>{contacto?.nombre || '—'}</strong></p>
         <p>{contacto?.localidad || '—'}</p>
         <p>{contacto?.telefono || '—'} · {contacto?.email || '—'}</p>
+        {/* Quién firmó la contratación. Es sobre él que pesan la responsabilidad legal y
+            comercial, y puede no ser nadie de la Familia. */}
+        <p><strong>{t.servicios.detalle.contratado_por}:</strong> {contratante || '—'}</p>
         {cliente.ruta && (
           <Button variant="secondary" onClick={() => navigate(cliente.ruta)}>
             {t.servicios.detalle.cliente_ver_ficha}

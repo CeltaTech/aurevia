@@ -321,16 +321,46 @@ INSERT INTO public.datos_reservados_asistente (
 
 
 -- ----------------------------------------------------------------------------
+-- 3.b El Padrón de la Prestadora de prueba
+--
+--     Personas inventadas, como todo lo de acá. Va antes que las Familias porque
+--     la contratación las cita: un Servicio no se da de alta sin decir cuál
+--     Legajo lo contrató.
+--
+--     EL NÚMERO DE LEGAJO NO SE SIEMBRA: lo pone la base sola, en orden, y
+--     rechaza que alguien lo elija. Cada Prestadora empieza por el uno.
+--
+--     LA MISMA PERSONA EN LAS DOS PRESTADORAS. Ramiro Pérez también está en el
+--     Padrón de la segunda, con el mismo documento, porque nada lo impide: cada
+--     Padrón es de su Prestadora.
+-- ----------------------------------------------------------------------------
+
+INSERT INTO public.legajos
+  (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, calle, numero, lugar_id, telefono, email)
+VALUES
+  ('c0000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'fisica', 'Ramiro', 'Pérez', 'dni', '20111222',
+   'Calle Inventada', '742', 'a1000000-0000-4000-8000-000000000001', '+54 11 4000-0101', 'ramiro.perez@ejemplo.invalido'),
+  ('c0000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'fisica', 'Teresa', 'Ibáñez', 'dni', '5333444',
+   'Pasaje Imaginario', '18', 'a1000000-0000-4000-8000-000000000002', '+54 11 4000-0102', NULL),
+  ('c0000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'juridica', 'Mutual del Ejemplo', NULL, 'cuit', '30-99999999-7',
+   'Avenida Ficticia', '1200', 'a1000000-0000-4000-8000-000000000003', '+54 11 4000-0103', 'contacto@mutual.invalido');
+
+
+-- ----------------------------------------------------------------------------
 -- 4. Tres Familias, cada una con su Paciente y su Servicio
 --
 --    El Servicio es el concepto de arriba: de él cuelgan las guardias. Una
 --    Familia sin Servicio no tendría de dónde colgarlas.
 -- ----------------------------------------------------------------------------
 
-INSERT INTO public.familias (id, prestadora_id, plan) VALUES
-  ('40000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'directo'),
-  ('40000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'directo'),
-  ('40000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'marketplace');
+-- Quién paga es un Legajo del Padrón, y `financiador_tipo` dice de qué clase es.
+-- Vacío en los dos quiere decir que paga la Familia por sí misma, que es el caso
+-- de la primera. La tercera muestra el caso que da sentido al Padrón: Ramiro
+-- Pérez contrató para una Familia y además paga por otra, y es un solo Legajo.
+INSERT INTO public.familias (id, prestadora_id, plan, financiador_tipo, pagador_legajo_id) VALUES
+  ('40000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'directo', NULL, NULL),
+  ('40000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'directo', 'obra_social', 'c0000000-0000-4000-8000-000000000003'),
+  ('40000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'marketplace', 'otro', 'c0000000-0000-4000-8000-000000000001');
 
 -- El nombre, el teléfono y la localidad de una Familia NO están en `familias`:
 -- están en la Solicitud con la que entró, y `familias.solicitud_id` es el que la
@@ -435,13 +465,15 @@ INSERT INTO public.pacientes (
    ARRAY['EPOC'], 'II',
    'Av. Siempreviva 742, CABA', -34.6037, -58.3816, 'Obra Social de Prueba', 'OSP-0004');
 
--- Quién contrata el Servicio son dos columnas y no una: `tipo_contratante` dice de qué clase es
--- el Cliente y `contratante_id` cuál. Hoy el único tipo que la base acepta es `familia`, pero se
--- nombra igual, porque el día que haya otro estos datos de ejemplo no van a tener que cambiar.
-INSERT INTO public.servicios (id, prestadora_id, tipo_contratante, contratante_id, etiqueta, estado) VALUES
-  ('60000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'familia', '40000000-0000-4000-8000-000000000001', 'Acompañamiento diurno de Elena',   'vigente'),
-  ('60000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'familia', '40000000-0000-4000-8000-000000000002', 'Cuidado de mañana de Héctor',      'vigente'),
-  ('60000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'familia', '40000000-0000-4000-8000-000000000003', 'Cuidado permanente de Rosa',       'vigente');
+-- Para quién se contrata el Servicio son dos columnas y no una: `tipo_contratante` dice de qué
+-- clase es el Cliente y `contratante_id` cuál. Hoy el único tipo que la base acepta es `familia`,
+-- pero se nombra igual, porque el día que haya otro estos datos de ejemplo no van a tener que
+-- cambiar. Y `contratante_legajo_id` dice quién firmó: un Legajo del Padrón, que es sobre quien
+-- pesan la responsabilidad legal y comercial.
+INSERT INTO public.servicios (id, prestadora_id, tipo_contratante, contratante_id, contratante_legajo_id, etiqueta, estado) VALUES
+  ('60000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'familia', '40000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000001', 'Acompañamiento diurno de Elena',   'vigente'),
+  ('60000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'familia', '40000000-0000-4000-8000-000000000002', 'c0000000-0000-4000-8000-000000000002', 'Cuidado de mañana de Héctor',      'vigente'),
+  ('60000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'familia', '40000000-0000-4000-8000-000000000003', 'c0000000-0000-4000-8000-000000000002', 'Cuidado permanente de Rosa',       'vigente');
 
 -- La Lista de Precios es el catálogo: lo que la Prestadora ofrece y a cuánto.
 -- No es lo vendido. Lo vendido son las prestaciones de más abajo, que guardan el
@@ -946,6 +978,16 @@ INSERT INTO public.asistente_lugares (asistente_id, lugar_id, prestadora_id) VAL
 INSERT INTO public.usuario_lugares (usuario_id, lugar_id, prestadora_id) VALUES
   ('50000000-0000-4000-8000-000000000002', 'a2000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222');
 
+-- El Padrón de esta Prestadora. Va antes que su Familia y su Servicio, por el mismo
+-- motivo que en la otra: la contratación cita un Legajo.
+INSERT INTO public.legajos
+  (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, calle, numero, lugar_id, telefono, email)
+VALUES
+  ('c0000000-0000-4000-8000-000000000011', '22222222-2222-4222-8222-222222222222', 'fisica', 'Ramiro', 'Pérez', 'dni', '20111222',
+   'Diagonal Supuesta', '55', 'a2000000-0000-4000-8000-000000000001', '+54 221 400-0101', NULL),
+  ('c0000000-0000-4000-8000-000000000012', '22222222-2222-4222-8222-222222222222', 'fisica', 'Olga', 'Salvatierra', 'le', '2777888',
+   'Calle Figurada', '900', 'a2000000-0000-4000-8000-000000000001', '+54 221 400-0102', NULL);
+
 INSERT INTO public.familias (id, prestadora_id)
 VALUES ('50000000-0000-4000-8000-000000000004', '22222222-2222-4222-8222-222222222222');
 
@@ -955,9 +997,10 @@ INSERT INTO public.pacientes (id, nombre, prestadora_id, familia_id)
 VALUES ('60000000-0000-4000-8000-000000000001', 'Rosa Ríos', '22222222-2222-4222-8222-222222222222',
         '50000000-0000-4000-8000-000000000004');
 
-INSERT INTO public.servicios (id, prestadora_id, tipo_contratante, contratante_id, etiqueta)
+INSERT INTO public.servicios (id, prestadora_id, tipo_contratante, contratante_id, contratante_legajo_id, etiqueta)
 VALUES ('70000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222',
-        'familia', '50000000-0000-4000-8000-000000000004', 'Cuidado diurno Ríos');
+        'familia', '50000000-0000-4000-8000-000000000004',
+        'c0000000-0000-4000-8000-000000000012', 'Cuidado diurno Ríos');
 
 -- Con Asistente asignado, por el mismo motivo que el Paciente lleva Familia: un
 -- Asistente sin Guardias no ve nada, y una prueba contra la nada no prueba nada.
@@ -1108,33 +1151,6 @@ VALUES ('a3000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-1111111
         'intravenosa', 'enfermeria'),
        ('a3000000-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222',
         'intravenosa', 'enfermeria');
-
--- El Padrón de cada Prestadora. Personas inventadas, como todo lo de acá.
---
--- HACEN FALTA DE LAS DOS PRESTADORAS. La prueba de aislamiento entra como administradora de cada
--- una y comprueba que ninguna consulta devuelva una fila ajena. Con la tabla vacía esa prueba pasa
--- siempre y no prueba nada.
---
--- EL NÚMERO DE LEGAJO NO SE SIEMBRA: lo pone la base sola, en orden, y rechaza que alguien lo
--- elija. Cada Prestadora empieza por el uno.
---
--- LA MISMA PERSONA EN LAS DOS. Ramiro Pérez está en el Padrón de las dos Prestadoras, con el mismo
--- documento, porque nada lo impide: cada Padrón es de su Prestadora. Es además el caso que muestra
--- para qué sirve un Legajo: la misma persona contrata en un lado y con el tiempo puede necesitar
--- cuidados en el otro, y sigue siendo un solo Legajo en cada Padrón.
-INSERT INTO public.legajos
-  (prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, calle, numero, lugar_id, telefono, email)
-VALUES
-  ('11111111-1111-4111-8111-111111111111', 'fisica', 'Ramiro', 'Pérez', 'dni', '20111222',
-   'Calle Inventada', '742', 'a1000000-0000-4000-8000-000000000001', '+54 11 4000-0101', 'ramiro.perez@ejemplo.invalido'),
-  ('11111111-1111-4111-8111-111111111111', 'fisica', 'Teresa', 'Ibáñez', 'dni', '5333444',
-   'Pasaje Imaginario', '18', 'a1000000-0000-4000-8000-000000000002', '+54 11 4000-0102', NULL),
-  ('11111111-1111-4111-8111-111111111111', 'juridica', 'Mutual del Ejemplo', NULL, 'cuit', '30-99999999-7',
-   'Avenida Ficticia', '1200', 'a1000000-0000-4000-8000-000000000003', '+54 11 4000-0103', 'contacto@mutual.invalido'),
-  ('22222222-2222-4222-8222-222222222222', 'fisica', 'Ramiro', 'Pérez', 'dni', '20111222',
-   'Diagonal Supuesta', '55', 'a2000000-0000-4000-8000-000000000001', '+54 221 400-0101', NULL),
-  ('22222222-2222-4222-8222-222222222222', 'fisica', 'Olga', 'Salvatierra', 'le', '2777888',
-   'Calle Figurada', '900', 'a2000000-0000-4000-8000-000000000001', '+54 221 400-0102', NULL);
 
 
 -- ----------------------------------------------------------------------------

@@ -392,10 +392,24 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
 
   const { data: familias, error: errorFamilias } = await supabase
     .from('familias')
-    .select('id, dias_hasta_el_vencimiento, financiador_tipo, financiador_nombre, pacientes(id, nombre)')
+    .select('id, dias_hasta_el_vencimiento, financiador_tipo, pagador_legajo_id, pacientes(id, nombre)')
     .eq('prestadora_id', prestadoraId)
     .is('deleted_at', null);
   if (errorFamilias) return responderError(res, errorFamilias);
+
+  // Quién paga es un Legajo del Padrón. Su nombre se busca acá una sola vez, y de acá sale la
+  // copia que se lleva cada factura.
+  const pagadorIds = [...new Set((familias || []).map((f) => f.pagador_legajo_id).filter(Boolean))];
+  const nombresDePagadores = new Map();
+  if (pagadorIds.length > 0) {
+    const { data: pagadores, error: errorPagadores } = await supabase
+      .from('legajos')
+      .select('id, nombre_visible')
+      .eq('prestadora_id', prestadoraId)
+      .in('id', pagadorIds);
+    if (errorPagadores) return responderError(res, errorPagadores);
+    for (const p of pagadores || []) nombresDePagadores.set(p.id, p.nombre_visible);
+  }
 
   const pacientes = (familias || []).flatMap((f) => f.pacientes || []);
   const pacienteIds = pacientes.map((p) => p.id);
@@ -502,7 +516,7 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
         // sí misma, las viejas tienen que seguir diciendo a quién se le reclamaron. Vacío en la
         // ficha se guarda vacío, que quiere decir la Familia.
         financiador_tipo: familia.financiador_tipo ?? null,
-        financiador_nombre: familia.financiador_nombre ?? null,
+        financiador_nombre: nombresDePagadores.get(familia.pagador_legajo_id) ?? null,
       })
       .select('id')
       .single();

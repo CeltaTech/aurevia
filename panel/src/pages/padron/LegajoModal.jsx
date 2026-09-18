@@ -74,11 +74,14 @@ export function LegajoModal({ legajo, prestadoraId, tiposDeDocumento, onClose, o
       // Se escribe derecho contra la base: quién puede cargar y corregir lo decide la política.
       // La Prestadora va en el alta y la política comprueba que sea la de quien está trabajando;
       // en la corrección no viaja, porque un Legajo no cambia de Prestadora.
-      const { error: errorGuardar } = corrigiendo
-        ? await supabase.from('legajos').update(fila).eq('id', legajo.id)
-        : await supabase.from('legajos').insert({ ...fila, prestadora_id: prestadoraId });
+      //
+      // Y vuelve la fila guardada, porque quien abrió este formulario desde otro casillero
+      // necesita saber cuál Legajo quedó cargado para señalarlo ahí mismo.
+      const { data: guardado, error: errorGuardar } = corrigiendo
+        ? await supabase.from('legajos').update(fila).eq('id', legajo.id).select('id, nombre_visible').single()
+        : await supabase.from('legajos').insert({ ...fila, prestadora_id: prestadoraId }).select('id, nombre_visible').single();
       if (errorGuardar) throw errorGuardar;
-      onGuardado();
+      onGuardado(guardado);
     } catch (err) {
       setError(mensajeDeError(err, t));
     } finally {

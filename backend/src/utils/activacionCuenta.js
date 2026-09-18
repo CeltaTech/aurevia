@@ -66,7 +66,7 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
     producto: IDENTIDAD.nombre,
     conMarcaDelProducto: !!marca?.mostrarMarcaProducto,
   });
-  await enviarEmail({ to: email, asunto: textos.asunto, texto: textos.texto });
+  await enviarEmail({ to: email, asunto: textos.asunto, texto: textos.texto, formato: textos.html });
 }
 
 // Usado tanto por el alta inicial como por "Reenviar invitación" (token vencido o extraviado).

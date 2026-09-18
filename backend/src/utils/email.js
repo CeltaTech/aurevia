@@ -81,7 +81,7 @@ function remitenteComoTexto(from) {
 
 function transporteDelDespachante(clave) {
   return {
-    async sendMail({ from, to, subject, text, replyTo }) {
+    async sendMail({ from, to, subject, text, html, replyTo }) {
       const respuesta = await fetch(RESEND_ENVIO_URL, {
         method: 'POST',
         headers: {
@@ -93,6 +93,9 @@ function transporteDelDespachante(clave) {
           to: to.split(',').map((direccion) => direccion.trim()),
           subject,
           text,
+          // El texto va siempre, y el formato sólo cuando el aviso lo trae. Los dos juntos son el
+          // mismo correo en dos versiones: cada programa de correo muestra la que sabe leer.
+          ...(html ? { html } : {}),
           ...(replyTo ? { reply_to: replyTo } : {}),
         }),
       });
@@ -278,7 +281,9 @@ export async function enviarEmailCoordinador({ evento, prestadoraId, asunto, tex
 
 export { configuracionEvento };
 
-export async function enviarEmail({ to, asunto, texto, prestadoraId }) {
+// `formato` es opcional: el aviso que lo trae sale en las dos versiones —texto y formato—, y el
+// que no, sale como salía. nodemailer y el despachante lo entienden igual.
+export async function enviarEmail({ to, asunto, texto, formato = null, prestadoraId }) {
   if (!hayMedioDeEnvio()) return;
   const { transporter, from } = await crearTransporterPara(prestadoraId);
   await despachar({
@@ -290,6 +295,7 @@ export async function enviarEmail({ to, asunto, texto, prestadoraId }) {
       to,
       subject: asunto,
       text: texto,
+      ...(formato ? { html: formato } : {}),
     },
   });
 }

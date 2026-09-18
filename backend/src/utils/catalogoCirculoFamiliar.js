@@ -51,7 +51,7 @@ export const CATALOGO_CIRCULO_FAMILIAR = [
   },
   {
     clave: 'circulo_ficha_del_paciente',
-    descripcion: 'Ver la ficha del Paciente',
+    descripcion: 'Ver los datos del Paciente',
     ayuda: 'Los datos de la persona cuidada, incluidas sus patologías si la Prestadora las muestra. Negarla deja ver que el Paciente existe y nada más.',
     de_fabrica: true,
     interruptor: null,

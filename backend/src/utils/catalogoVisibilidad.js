@@ -57,7 +57,7 @@ export const CATALOGO_VISIBILIDAD = [
   {
     clave: 'familia_patologias_del_paciente',
     app: 'familias',
-    descripcion: 'Ver las patologías del Paciente en su ficha',
+    descripcion: 'Ver las patologías del Paciente entre sus datos',
     ayuda: 'Dato clínico. Hay Prestadoras que prefieren que esa conversación la tenga el Coordinador por teléfono y no una pantalla.',
     de_fabrica: true,
   },
@@ -115,7 +115,7 @@ export const CATALOGO_VISIBILIDAD = [
   {
     clave: 'asistente_patologias_del_paciente',
     app: 'asistentes',
-    descripcion: 'Ver las patologías del Paciente en la ficha de la guardia',
+    descripcion: 'Ver las patologías del Paciente en el detalle de la guardia',
     ayuda: 'Dato clínico. Hay Prestadoras que solo lo entregan a los tipos de Asistente con matrícula, y prefieren que no viaje al teléfono de nadie.',
     de_fabrica: true,
   },

@@ -176,6 +176,12 @@ en qué situación están los pagos** —al día, vencido hace tantos días— y
 una ficha de persona, nunca una copia de sus datos ni una ficha nueva. Si la misma persona
 contrata, recibe el cuidado y paga, hay una ficha y tres anotaciones.
 
+**Una ficha de persona o de entidad no se borra nunca.** Que termine el Servicio a un Paciente da
+de baja el Servicio, no la ficha. La ficha queda, con el historial de cómo se comportó esa persona
+o esa entidad en cada rol que desempeñó. Con quien dejó de ser Cliente se vuelve a cruzar: como
+Pagador de otra contratación, como familiar de otro Paciente, como financiador. Ese historial es
+justamente lo que se pierde el día que alguien borra la ficha «porque ya no está activa».
+
 **Rol nunca significa permisos.** Un rol dice qué papel cumple alguien en una contratación. Quién
 puede ver o hacer qué cosa es otra cosa, se llama de otra manera y se guarda en otro lado.
 

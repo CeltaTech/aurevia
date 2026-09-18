@@ -23,6 +23,7 @@ const ACCESO = '33333333-3333-3333-3333-333333333333';
 const OTRO_ACCESO = '55555555-5555-5555-5555-555555555555';
 const FAMILIA = '11111111-1111-1111-1111-111111111111';
 const PACIENTE = '22222222-2222-2222-2222-222222222222';
+const PRESTADORA = '44444444-4444-4444-4444-444444444444';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba pisa lo que necesita cambiar. */
 const respuestas = new Map();
@@ -102,6 +103,7 @@ function accesoPorCobrarse(cambios = {}) {
     id: ACCESO,
     familia_id: FAMILIA,
     paciente_id: PACIENTE,
+    prestadora_id: PRESTADORA,
     importe: '4500.00',
     moneda: 'ARS',
     gratis_hasta: corrido(2),
@@ -121,6 +123,12 @@ beforeEach(() => {
   anotados = [];
   respuestas.clear();
   respuestas.set('PATCH /rest/v1/accesos_marketplace', []);
+  // Con cuántos días de anticipación se avisa lo elige la Prestadora: la ventana de la consulta
+  // sale de la más larga que haya configurada, y después cada acceso se mide contra la suya.
+  respuestas.set('GET /rest/v1/configuracion_cobro_marketplace', [
+    { dias_de_aviso_antes_del_cobro: 3, dias_de_gracia_por_cobro_rechazado: 7, dias_de_vida_del_cupon: 10 },
+  ]);
+  respuestas.set('GET /rest/v1/prestadoras', [{ pais: 'AR' }]);
 });
 
 describe('a quién se le avisa', () => {

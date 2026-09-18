@@ -47,11 +47,7 @@ import { supabase } from '../db/connection.js';
 import { obtenerAdaptador, armaCobroPorPeriodo } from '../pasarelas/index.js';
 import { cargarContactosEnElSaldo } from './contactosMarketplace.js';
 import { sumarDias } from './fechas.js';
-
-/** Cuántos días vive el cupón de una red de cobranza extrabancaria. Quien decide hasta cuándo se
- *  puede pagar es este producto, no la red: un cupón sin vencimiento se paga tres meses tarde y el
- *  período ya está cerrado. */
-const DIAS_DE_VENCIMIENTO_DEL_CUPON = 10;
+import { memoriaDePlazos, plazosDeLaPrestadora } from './plazosDeCobroMarketplace.js';
 
 /**
  * Le pide a cada riel de período el cobro de los períodos que ya vencieron. Corre una vez por día
@@ -85,10 +81,13 @@ export async function armarCobrosDelPeriodo() {
   // La credencial es una por Prestadora y riel, y sale de la caja fuerte con una llamada cada
   // vez. Se leen una sola vez por combinación y no una por acceso.
   const credenciales = new Map();
+  // Hasta cuándo se puede pagar un cupón lo eligió la Prestadora. Se lee una vez por Prestadora
+  // y no una por acceso, como la credencial.
+  const plazos = memoriaDePlazos();
 
   for (const acceso of porArmar) {
     try {
-      await armarUnCobro(acceso, credenciales);
+      await armarUnCobro(acceso, credenciales, plazos);
     } catch (falla) {
       // Ni el identificador de la Familia ni el texto crudo del proveedor: lo primero es dato de
       // una persona y lo segundo puede nombrar la cuenta de cobro (`celtatech\CLAUDE.md` §6).
@@ -100,7 +99,7 @@ export async function armarCobrosDelPeriodo() {
   }
 }
 
-async function armarUnCobro(acceso, credenciales) {
+async function armarUnCobro(acceso, credenciales, plazos) {
   const periodo = acceso.proximo_cobro;
 
   // ¿Ya tiene un cobro de este período que no está fallido? Entonces no hay nada que armar: o
@@ -123,6 +122,11 @@ async function armarUnCobro(acceso, credenciales) {
     throw new Error('sin credencial guardada para este riel');
   }
 
+  const plazosDeEsta = await plazosDeLaPrestadora(acceso.prestadora_id, plazos);
+  if (!plazosDeEsta) {
+    throw new Error('sin los plazos de cobro de esta Prestadora');
+  }
+
   const adaptador = obtenerAdaptador(acceso.proveedor);
   const armado = await adaptador.armarCobroDelPeriodo({
     credencial,
@@ -130,7 +134,7 @@ async function armarUnCobro(acceso, credenciales) {
     // La referencia que se le da al proveedor identifica el período, no el acceso: es lo que
     // permite que dos períodos de la misma Familia no se confundan cuando vuelven los avisos.
     referencia: `${acceso.id}:${periodo}`,
-    vencimiento: sumarDias(periodo, DIAS_DE_VENCIMIENTO_DEL_CUPON),
+    vencimiento: sumarDias(periodo, plazosDeEsta.dias_de_vida_del_cupon),
   });
 
   const { error: errorInsertar } = await supabase.from('cobros_marketplace').insert({

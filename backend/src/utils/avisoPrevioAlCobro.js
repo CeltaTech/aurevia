@@ -11,9 +11,13 @@
    enciende y apaga según cómo trabaja. Éste no es de ésos: lo exige el §3.2 y es lo que separa un
    cobro anunciado de uno silencioso. Un aviso obligatorio que se pueda apagar no es obligatorio.
 
-   CUÁNDO AVISA. Unos días antes de la fecha del primer cobro, y también el mismo día si hasta
+   CUÁNDO AVISA. Con la anticipación que eligió la Prestadora, y también el mismo día si hasta
    entonces no se pudo. Después de esa fecha no avisa: el cobro ya salió, y decirle a alguien que
    «va a cobrarse» algo que ya se cobró no es un aviso previo, es ruido.
+
+   LA ANTICIPACIÓN ES DE CADA PRESTADORA, y por eso la consulta se abre por la más larga que haya
+   configurada y después cada acceso se mide contra el plazo de la suya
+   (`plazosDeCobroMarketplace.js`). Una sola consulta para todas, como antes.
 
    A QUIÉN NO LE AVISA. A quien ya se dio de baja durante el período gratuito. Ahí no viene ningún
    cobro, que es justamente lo que la baja consigue, y avisarle uno lo asustaría sin motivo.
@@ -32,13 +36,7 @@ import { sumarDias } from './fechas.js';
 import { enDia, importeConMoneda } from './comoSeDiceEnUnAviso.js';
 import { aviso } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
-
-/** Con cuántos días de anticipación se avisa. Lo decide este producto, no la Prestadora: es el
- *  resguardo del §3.2 y no una preferencia de cómo trabaja cada una. Tres días alcanzan para darse
- *  de baja sin apuro —la baja es de un clic— y son pocos como para que el aviso llegue cuando el
- *  cobro todavía se recuerda. Mismo criterio que `DIAS_DE_VENCIMIENTO_DEL_CUPON` en
- *  `cobrosMarketplace.js`. */
-const DIAS_DE_AVISO_PREVIO = 3;
+import { memoriaDePlazos, plazosDeLaPrestadora, elPlazoDeAvisoMasLargo } from './plazosDeCobroMarketplace.js';
 
 /**
  * Avisa a las Familias cuyo período gratuito está por terminar. Corre una vez por día
@@ -54,7 +52,10 @@ const DIAS_DE_AVISO_PREVIO = 3;
  */
 export async function avisarElPrimerCobroQueViene({ avisar = enviarPushFamilia } = {}) {
   const hoy = new Date().toISOString().slice(0, 10);
-  const hastaCuando = sumarDias(hoy, DIAS_DE_AVISO_PREVIO);
+  const plazoMasLargo = await elPlazoDeAvisoMasLargo();
+  // Sin ninguna Prestadora configurada no hay a quién avisarle, y sin plazo no se inventa uno.
+  if (!plazoMasLargo) return { avisados: 0 };
+  const hastaCuando = sumarDias(hoy, plazoMasLargo);
 
   const { data: accesos, error } = await supabase
     .from('accesos_marketplace')
@@ -71,8 +72,14 @@ export async function avisarElPrimerCobroQueViene({ avisar = enviarPushFamilia }
     return { avisados: 0 };
   }
 
+  const memoria = memoriaDePlazos();
   let avisados = 0;
   for (const acceso of accesos ?? []) {
+    // La ventana de arriba es la más ancha de todas. Ésta es la de esta Prestadora.
+    const plazos = await plazosDeLaPrestadora(acceso.prestadora_id, memoria);
+    if (!plazos) continue;
+    if (acceso.gratis_hasta > sumarDias(hoy, plazos.dias_de_aviso_antes_del_cobro)) continue;
+
     let salio = false;
     try {
       salio = await avisar(acceso.familia_id, textoDelAviso(acceso, await idiomaDeLaPrestadora(acceso.prestadora_id)));

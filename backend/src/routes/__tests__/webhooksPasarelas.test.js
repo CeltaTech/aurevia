@@ -167,8 +167,13 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/accesos_marketplace', (_cuerpo, url) =>
     url.includes('referencia_externa=eq.')
       ? []
-      : [{ id: ACCESO, estado: 'vigente', gracia_hasta: null, proximo_cobro: PERIODO, formas_de_cobro_marketplace: CADA_MES }]
+      : [{ id: ACCESO, prestadora_id: PRESTADORA, estado: 'vigente', gracia_hasta: null, proximo_cobro: PERIODO, formas_de_cobro_marketplace: CADA_MES }]
   );
+  // Cuántos días dura la gracia lo elige la Prestadora, así que abrirla se lo pregunta a la base.
+  respuestas.set('GET /rest/v1/configuracion_cobro_marketplace', () => [
+    { dias_de_aviso_antes_del_cobro: 3, dias_de_gracia_por_cobro_rechazado: 7, dias_de_vida_del_cupon: 10 },
+  ]);
+  respuestas.set('GET /rest/v1/prestadoras', () => [{ pais: 'AR' }]);
   // Los tres rieles sin esquema publicado miran un secreto de ambiente cuando la Prestadora no
   // cargó el suyo. La máquina donde corre esto puede tenerlo puesto, así que cada prueba
   // arranca sin ninguno y lo pone la que quiera probarlo.
@@ -557,7 +562,7 @@ function sinCobroYConAcceso({ proximoCobro = PERIODO } = {}) {
   respuestas.set('GET /rest/v1/accesos_marketplace', (_cuerpo, url) =>
     url.includes('referencia_externa=eq.')
       ? [{ id: ACCESO, importe: MONTO_MENSUAL, proximo_cobro: proximoCobro }]
-      : [{ id: ACCESO, estado: 'vigente', gracia_hasta: null, proximo_cobro: proximoCobro, formas_de_cobro_marketplace: CADA_MES }]
+      : [{ id: ACCESO, prestadora_id: PRESTADORA, estado: 'vigente', gracia_hasta: null, proximo_cobro: proximoCobro, formas_de_cobro_marketplace: CADA_MES }]
   );
 }
 

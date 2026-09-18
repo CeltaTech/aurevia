@@ -122,6 +122,11 @@ beforeEach(() => {
   pedidosAlProveedor = [];
   rechazaElProveedor = false;
   respuestas.clear();
+  // Hasta cuándo se puede pagar un cupón lo elige la Prestadora. Diez días es el valor con el
+  // que nace su configuración.
+  respuestas.set('GET /rest/v1/configuracion_cobro_marketplace', [
+    { dias_de_aviso_antes_del_cobro: 3, dias_de_gracia_por_cobro_rechazado: 7, dias_de_vida_del_cupon: 10 },
+  ]);
 });
 
 /** Un acceso esperando cobrar el período de la prueba. */

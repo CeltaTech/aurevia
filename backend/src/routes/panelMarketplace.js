@@ -384,6 +384,83 @@ panelMarketplaceRouter.patch('/formas-de-cobro/:id', soloAdministracion, soloAdm
 });
 
 // ============================================================================
+// Los plazos del cobro — con cuánto se avisa, cuánto dura la gracia y cuánto vive el cupón.
+// Los tres estaban escritos en el motor y son decisiones comerciales de cara a la Familia, así
+// que los elige la Prestadora. Mismo candado que la forma de cobro, por el mismo motivo.
+// ============================================================================
+
+const CAMPOS_DE_LOS_PLAZOS =
+  'dias_de_aviso_antes_del_cobro, dias_de_gracia_por_cobro_rechazado, dias_de_vida_del_cupon';
+
+/** Los tres son días enteros y ninguno baja de uno: el aviso previo y la gracia son resguardos
+ *  obligatorios de toda forma que se renueva sola, y cero es apagarlos. Hacia arriba no hay
+ *  borde. Falla cerrado: lo que no se entiende es un rechazo, nunca un valor por omisión. */
+function plazosValidados(cuerpo) {
+  const valores = {};
+  for (const campo of [
+    'dias_de_aviso_antes_del_cobro',
+    'dias_de_gracia_por_cobro_rechazado',
+    'dias_de_vida_del_cupon',
+  ]) {
+    // El campo que no viene se omite: la fila conserva lo que la Prestadora había configurado.
+    if (cuerpo[campo] === undefined) continue;
+    const dias = enteroOInvalido(cuerpo[campo]);
+    if (Number.isNaN(dias) || dias === null || dias < 1) {
+      throw new ErrorConMotivo('plazo_invalido', `Plazo fuera de rango en ${campo}: ${cuerpo[campo]}`);
+    }
+    valores[campo] = dias;
+  }
+  return valores;
+}
+
+panelMarketplaceRouter.get('/plazos-de-cobro', soloAdministracion, async (req, res) => {
+  const { data, error } = await supabase
+    .from('configuracion_cobro_marketplace')
+    .select(CAMPOS_DE_LOS_PLAZOS)
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .maybeSingle();
+  if (error) return responderError(res, error);
+
+  // Toda Prestadora nace con esta fila. Si igual faltara, se le pide a la misma función que usa
+  // el alta y se vuelve a leer: lo que el formulario muestra es lo que el motor va a usar.
+  if (!data) {
+    const { error: errorSiembra } = await supabase.rpc('sembrar_configuracion_prestadora', {
+      p_prestadora_id: req.usuarioPanel.prestadoraId,
+    });
+    if (errorSiembra) return responderError(res, errorSiembra);
+
+    const { data: recien, error: errorRelectura } = await supabase
+      .from('configuracion_cobro_marketplace')
+      .select(CAMPOS_DE_LOS_PLAZOS)
+      .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+      .maybeSingle();
+    if (errorRelectura) return responderError(res, errorRelectura);
+    return res.json({ plazos: recien });
+  }
+
+  res.json({ plazos: data });
+});
+
+panelMarketplaceRouter.patch('/plazos-de-cobro', soloAdministracion, soloAdminArmaLaFormaDeCobro, async (req, res) => {
+  let valores;
+  try {
+    valores = plazosValidados(req.body || {});
+  } catch (error) {
+    return responderError(res, error, 400);
+  }
+
+  const { data, error } = await supabase
+    .from('configuracion_cobro_marketplace')
+    .update({ ...valores, updated_at: new Date().toISOString() })
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .select(CAMPOS_DE_LOS_PLAZOS)
+    .single();
+  if (error) return responderError(res, error);
+
+  res.json({ plazos: data });
+});
+
+// ============================================================================
 // Accesos y cobros
 // ============================================================================
 

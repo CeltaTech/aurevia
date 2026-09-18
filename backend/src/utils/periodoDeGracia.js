@@ -40,12 +40,7 @@ import { sumarDias } from './fechas.js';
 import { enDia, importeConMoneda } from './comoSeDiceEnUnAviso.js';
 import { aviso } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
-
-/** Cuántos días dura la gracia. Lo decide este producto y no la Prestadora: es el resguardo del
- *  §3.2, o sea un piso, no una preferencia de cómo trabaja cada una. Siete días cubren el fin de
- *  semana largo y el cambio de tarjeta, y son pocos como para que el acceso no quede meses sin
- *  pagar. Mismo criterio que `DIAS_DE_AVISO_PREVIO` en `avisoPrevioAlCobro.js`. */
-const DIAS_DE_GRACIA = 7;
+import { plazosDeLaPrestadora } from './plazosDeCobroMarketplace.js';
 
 /**
  * Un cobro no entró. Abre la gracia si no había ninguna abierta, y le avisa a la Familia. No
@@ -76,7 +71,15 @@ export async function abrirElPeriodoDeGracia({ accesoId, avisar = enviarPushFami
   // Ya hay una gracia corriendo. El aviso de este reintento no la mueve ni vuelve a avisar.
   if (acceso.gracia_hasta) return { abierta: false, gracia_hasta: acceso.gracia_hasta };
 
-  const graciaHasta = sumarDias(new Date().toISOString().slice(0, 10), DIAS_DE_GRACIA);
+  // Cuántos días dura la gracia lo eligió la Prestadora. Sin ese dato no se abre ninguna: una
+  // gracia de largo inventado suspendería el acceso el día que no le toca.
+  const plazos = await plazosDeLaPrestadora(acceso.prestadora_id);
+  if (!plazos) return { abierta: false, gracia_hasta: null };
+
+  const graciaHasta = sumarDias(
+    new Date().toISOString().slice(0, 10),
+    plazos.dias_de_gracia_por_cobro_rechazado
+  );
 
   const { data: guardados, error: errorGuardar } = await supabase
     .from('accesos_marketplace')

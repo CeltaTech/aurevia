@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { supabase } from '../db/connection.js';
+import { correoDe } from './correoDeUnaPersona.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import { enviarEmail } from './email.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
@@ -72,14 +73,19 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
 export async function reenviarActivacionCuenta(usuarioId) {
   const { data: usuario, error: errorUsuario } = await supabase
     .from('usuarios')
-    .select('email, nombre, rol, prestadora_id')
+    .select('nombre, rol, prestadora_id')
     .eq('id', usuarioId)
     .single();
   if (errorUsuario || !usuario) throw new Error('Cuenta no encontrada');
 
+  // El correo no está en `usuarios` — ver `correoDeUnaPersona.js`. Sin él no hay a dónde mandar
+  // la invitación, y decirlo así es distinto de decir que la cuenta no existe.
+  const email = await correoDe(usuarioId);
+  if (!email) throw new Error('La cuenta no tiene correo');
+
   await invitarActivacionCuenta({
     usuarioId,
-    email: usuario.email,
+    email,
     nombre: usuario.nombre,
     rol: usuario.rol,
     prestadoraId: usuario.prestadora_id,

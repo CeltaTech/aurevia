@@ -32,6 +32,7 @@ import {
 import { isoBase64URL } from '@simplewebauthn/server/helpers';
 
 import { supabase } from '../db/connection.js';
+import { correoDe } from '../utils/correoDeUnaPersona.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
@@ -197,22 +198,25 @@ llaveDelDispositivoRouter.post('/entrar', async (req, res) => {
       .update({ contador: contadorNuevo, ultimo_uso_en: new Date().toISOString() })
       .eq('id', llave.id);
 
+    // El rol sale de la ficha y el correo de la cuenta: son dos tablas distintas, porque
+    // `usuarios` no guarda el correo (ver `correoDeUnaPersona.js`).
     const { data: persona } = await supabase
       .from('usuarios')
-      .select('email, rol')
+      .select('rol')
       .eq('id', llave.usuario_id)
       .maybeSingle();
-    if (!persona?.email || persona.rol !== rol) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
+    const email = await correoDe(llave.usuario_id);
+    if (!email || persona?.rol !== rol) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
 
     const { data: pase, error: errorPase } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
-      email: persona.email,
+      email,
     });
     if (errorPase || !pase?.properties?.hashed_token) {
       throw new Error(errorPase?.message || 'no se pudo emitir el pase de entrada');
     }
 
-    res.json({ email: persona.email, pase: pase.properties.hashed_token });
+    res.json({ email, pase: pase.properties.hashed_token });
   } catch (err) {
     if (err instanceof ErrorConMotivo) return responderError(res, err);
     console.error('Error al entrar con llave:', err.message);
@@ -277,10 +281,11 @@ export function routerDeLlavesConSesion(rol) {
 
       const { data: perfil } = await supabase
         .from('usuarios')
-        .select('email, nombre')
+        .select('nombre')
         .eq('id', persona.id)
         .maybeSingle();
-      if (!perfil?.email) throw new ErrorConMotivo('faltan_datos');
+      const correo = await correoDe(persona.id);
+      if (!correo) throw new ErrorConMotivo('faltan_datos');
 
       const { data: yaTiene } = await supabase
         .from('llaves_de_dispositivo')
@@ -292,8 +297,8 @@ export function routerDeLlavesConSesion(rol) {
         rpName: IDENTIDAD.nombre,
         rpID: parteConfiable,
         userID: new TextEncoder().encode(persona.id),
-        userName: perfil.email,
-        userDisplayName: perfil.nombre || perfil.email,
+        userName: correo,
+        userDisplayName: perfil?.nombre || correo,
         attestationType: 'none',
         // Que el mismo teléfono no quede con dos llaves para la misma persona: no sumaría nada y
         // la pantalla mostraría dos renglones que nadie sabe distinguir.

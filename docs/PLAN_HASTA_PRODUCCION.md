@@ -282,10 +282,24 @@ documento no hay aviso; la mecánica se construye igual, porque no depende de ni
 
 ---
 
+## Cómo están escritos los correos
+
+Cada aviso es una función que devuelve el asunto y el texto ya armados, escritos enteros en los
+tres idiomas. No hay plantillas con huecos ni ningún editor: la redacción vive en el código, en
+`backend/src/i18n/avisos.js`, y cambiarla es cambiar ese archivo y publicar. Sólo el de activación
+de cuenta sale además con formato; los demás son texto pelado.
+
+**74.** Repasar la redacción de los avisos que salen por correo, los tres idiomas de cada uno.
+Condición de cierre: que cada uno se entienda leyéndolo una sola vez. Cuando esto se haga, va
+junto con el paso de mover los mensajes del sistema a una tabla editable desde afuera, que ya
+está decidido para después de la fusión con el Marketplace.
+
+---
+
 ## Cierre
 
-**74. Usted** — El documento de roles generado desde la base: ¿para quién es, interno de CeltaTech o manual para la Prestadora?
+**75. Usted** — El documento de roles generado desde la base: ¿para quién es, interno de CeltaTech o manual para la Prestadora?
 
-**75.** Generarlo.
+**76.** Generarlo.
 
-**76.** Correr las pruebas y publicar.
+**77.** Correr las pruebas y publicar.

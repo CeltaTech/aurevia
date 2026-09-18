@@ -1,6 +1,6 @@
 # PLAN HASTA PRODUCCIÓN — Careonys
 
-**Una sola lista, del 1 al 75, en orden.** Se hace el 1, después el 2, y así hasta el final.
+**Una sola lista, del 1 al 73, en orden.** Se hace el 1, después el 2, y así hasta el final.
 
 - Los pasos que empiezan con **Usted** los contesta o los hace el Desarrollador. Los demás los hago yo.
 - **Un paso terminado se borra de este archivo.** No se marca como hecho: se saca.
@@ -128,65 +128,61 @@ De las especialidades de esta pantalla no queda nada por hacer: `asistentes.espe
 
 ## Configuración que todavía está escrita en el código
 
-**31. Usted** — Los otros nueve valores fijos que quedan, de a uno: se los muestro con su archivo y su renglón y se contesta cuál va a configuración y cuál se queda.
+**31. Usted** — ¿Cooperativa como tercera modalidad de vínculo?
 
-**32.** Mover los que corresponda.
+**32.** Construirla: migración que abra tres CHECK, filas de conceptos y fórmulas de cese.
 
-**33. Usted** — ¿Cooperativa como tercera modalidad de vínculo?
+**33. Usted** — Nivel de complejidad: ¿qué significa cada uno de los tres? ¿Condiciona qué tipo de Asistente se admite? Hoy se carga y se edita, y el cálculo de candidatos no lo mira.
 
-**34.** Construirla: migración que abra tres CHECK, filas de conceptos y fórmulas de cese.
+**34.** Que el cálculo de candidatos lo use.
 
-**35. Usted** — Nivel de complejidad: ¿qué significa cada uno de los tres? ¿Condiciona qué tipo de Asistente se admite? Hoy se carga y se edita, y el cálculo de candidatos no lo mira.
+**35. Usted** — Verificar matrícula: ¿alcanza con mirar el archivo, o hay que comprobar contra el registro del colegio profesional? La mitad técnica está construida.
 
-**36.** Que el cálculo de candidatos lo use.
+**36.** Construir la verificación según lo contestado.
 
-**37. Usted** — Verificar matrícula: ¿alcanza con mirar el archivo, o hay que comprobar contra el registro del colegio profesional? La mitad técnica está construida.
+**37. Usted** — Accesibilidad: el código está hecho, falta la respuesta legal. `docs/legal/argentina.md` no la menciona.
 
-**38.** Construir la verificación según lo contestado.
+**38. Usted** — El Certificado de Aptitud impreso: ¿qué lleva? Hoy la pantalla genera el código de barras y ahí termina.
 
-**39. Usted** — Accesibilidad: el código está hecho, falta la respuesta legal. `docs/legal/argentina.md` no la menciona.
-
-**40. Usted** — El Certificado de Aptitud impreso: ¿qué lleva? Hoy la pantalla genera el código de barras y ahí termina.
-
-**41.** Armarlo, y agregar la subida del certificado a un depósito de archivos, creado por migración con sus políticas. Hoy sólo se guardan fechas.
+**39.** Armarlo, y agregar la subida del certificado a un depósito de archivos, creado por migración con sus políticas. Hoy sólo se guardan fechas.
 
 ---
 
 ## Datos personales
 
-**42. Usted** — Protección de datos personales: el texto lo tiene que dar el Desarrollador. `docs/legal/argentina.md` tiene ocho secciones y ninguna es de esto. Sin documento no hay aviso.
+**40. Usted** — Protección de datos personales: el texto lo tiene que dar el Desarrollador. `docs/legal/argentina.md` tiene ocho secciones y ninguna es de esto. Sin documento no hay aviso.
 
-**43.** El aviso, y qué se hace con los datos de un Servicio cerrado hace años, que hoy no se purgan nunca.
+**41.** El aviso, y qué se hace con los datos de un Servicio cerrado hace años, que hoy no se purgan nunca.
 
-**44. Usted** — La ubicación de las personas: cuatro preguntas para el profesional legal. En los 21 archivos de `docs/legal/` no aparece ni una vez «ubicación», «GPS» ni la ley 25.326. El registro del consentimiento está construido; los textos sembrados son de relleno. **Mientras no haya respuesta, el seguimiento no se enciende con nadie real.**
+**42. Usted** — La ubicación de las personas: cuatro preguntas para el profesional legal. En los 21 archivos de `docs/legal/` no aparece ni una vez «ubicación», «GPS» ni la ley 25.326. El registro del consentimiento está construido; los textos sembrados son de relleno. **Mientras no haya respuesta, el seguimiento no se enciende con nadie real.**
 
-**45.** Sembrar los textos reales y encender el seguimiento y el aviso de demora en el trayecto.
+**43.** Sembrar los textos reales y encender el seguimiento y el aviso de demora en el trayecto.
 
 ---
 
 ## Respaldo, continuidad y secretos
 
-**46. Usted** — El alta del gestor de contraseñas, y completar las cinco filas en blanco de `celtatech/docs/CUENTAS.md`.
+**44. Usted** — El alta del gestor de contraseñas, y completar las cinco filas en blanco de `celtatech/docs/CUENTAS.md`.
 
-**47.** Rotar clave por clave lo que corresponda, decidiéndolo de a una. Si se rota la clave secreta de Supabase, se actualiza en Railway en el mismo acto. Entra acá la clave de servicio de Supabase que estuvo escrita en texto plano en la configuración de permisos de la máquina: los comandos que la llevaban adentro ya se borraron, pero la clave en sí se rota el día de la liberación, no antes. Y entran también las contraseñas de las cuentas de demostración y de prueba creadas en la nube: **cuatro** scripts las tenían escritas adentro, así que quedaron a la vista de cualquiera que abriera el repositorio. Ninguno las lleva ya —las cuatro entran por el entorno—, pero las cuentas que nacieron con ellas siguen teniéndolas: las de la Prestadora de demostración, las de la demostración de continuidad de guardia, las de la prueba de cierre de Servicio y las que quedaron sin borrar de la prueba del escaneo del Asistente.
+**45.** Rotar clave por clave lo que corresponda, decidiéndolo de a una. Si se rota la clave secreta de Supabase, se actualiza en Railway en el mismo acto. Entra acá la clave de servicio de Supabase que estuvo escrita en texto plano en la configuración de permisos de la máquina: los comandos que la llevaban adentro ya se borraron, pero la clave en sí se rota el día de la liberación, no antes. Y entran también las contraseñas de las cuentas de demostración y de prueba creadas en la nube: **cuatro** scripts las tenían escritas adentro, así que quedaron a la vista de cualquiera que abriera el repositorio. Ninguno las lleva ya —las cuatro entran por el entorno—, pero las cuentas que nacieron con ellas siguen teniéndolas: las de la Prestadora de demostración, las de la demostración de continuidad de guardia, las de la prueba de cierre de Servicio y las que quedaron sin borrar de la prueba del escaneo del Asistente.
 
-**48. Usted** — Cargar en los secretos del repositorio `SUPABASE_SERVICE_ROLE_KEY`, con el mismo valor que ya tiene Railway. Es lo único que le falta al respaldo de archivos para empezar a correr: el volcado entra por la conexión directa a la base, pero los archivos se bajan del almacenamiento y eso pide la llave de servicio. Se carga en GitHub → Settings → Secrets and variables → Actions → New repository secret. **No lo escriba acá.** Hasta que exista, el respaldo diario sube el volcado y falla al llegar a los archivos, que es lo correcto: prefiero que avise a que haga de cuenta que respaldó.
+**46. Usted** — Cargar en los secretos del repositorio `SUPABASE_SERVICE_ROLE_KEY`, con el mismo valor que ya tiene Railway. Es lo único que le falta al respaldo de archivos para empezar a correr: el volcado entra por la conexión directa a la base, pero los archivos se bajan del almacenamiento y eso pide la llave de servicio. Se carga en GitHub → Settings → Secrets and variables → Actions → New repository secret. **No lo escriba acá.** Hasta que exista, el respaldo diario sube el volcado y falla al llegar a los archivos, que es lo correcto: prefiero que avise a que haga de cuenta que respaldó.
 
-**49. Usted** — Correr `node scripts/probar_restauracion.mjs` desde `backend/`, con Docker encendido y las variables del respaldo diario más las de la base de producción cargadas en el entorno. Baja el último respaldo, lo restaura en una base efímera, compara las tablas, las filas y los archivos del espejo contra lo que hay hoy, y borra todo al terminar. Le toca a usted porque pide las llaves del bucket y de la base, que viven en la caja fuerte. La prueba anterior verificó 30 tablas de un esquema que hoy tiene 105 y no tocó ningún archivo, porque todavía no se respaldaban. **Si contesta `no_probado`, no salió mal: quiere decir que todo coincidió y no había nada cargado que comparar**, y entonces hay que repetirla con datos de prueba.
+**47. Usted** — Correr `node scripts/probar_restauracion.mjs` desde `backend/`, con Docker encendido y las variables del respaldo diario más las de la base de producción cargadas en el entorno. Baja el último respaldo, lo restaura en una base efímera, compara las tablas, las filas y los archivos del espejo contra lo que hay hoy, y borra todo al terminar. Le toca a usted porque pide las llaves del bucket y de la base, que viven en la caja fuerte. La prueba anterior verificó 30 tablas de un esquema que hoy tiene 105 y no tocó ningún archivo, porque todavía no se respaldaban. **Si contesta `no_probado`, no salió mal: quiere decir que todo coincidió y no había nada cargado que comparar**, y entonces hay que repetirla con datos de prueba.
 
-**50. Usted** — Los dominios se renovaron en julio de 2026 y vencen en julio de 2027, y esa fecha hoy no está en ningún calendario: `celtatech.com` y `careonys.com` en Cloudflare, y `celtatech.com.ar` y `celtatech.net.ar` en NIC Argentina. Poner un recordatorio un mes antes de cada uno y, donde el registrador lo permita, dejar la renovación automática encendida — NIC Argentina no la tiene, así que ésos son los dos que de verdad dependen del recordatorio. Un dominio vencido no se cae despacio: deja de resolver, y con él se van las pantallas, el correo de la empresa y la entrada a las cuentas que se registraron con ese correo.
+**48. Usted** — Los dominios se renovaron en julio de 2026 y vencen en julio de 2027, y esa fecha hoy no está en ningún calendario: `celtatech.com` y `careonys.com` en Cloudflare, y `celtatech.com.ar` y `celtatech.net.ar` en NIC Argentina. Poner un recordatorio un mes antes de cada uno y, donde el registrador lo permita, dejar la renovación automática encendida — NIC Argentina no la tiene, así que ésos son los dos que de verdad dependen del recordatorio. Un dominio vencido no se cae despacio: deja de resolver, y con él se van las pantallas, el correo de la empresa y la entrada a las cuentas que se registraron con ese correo.
 
 ---
 
 ## Marca y dominio por Prestadora
 
-**51. Usted** — El remitente ya está resuelto: cada Prestadora manda desde su propia dirección bajo `careonys.com` (`docs/MARCA.md`, sección 0). Queda la dirección web: ¿cada Prestadora entra por una suya —`cuidardelsur.careonys.com`—, o todas por la misma? ¿Y qué ve una Familia que tiene dos Servicios de modalidades distintas?
+**49. Usted** — El remitente ya está resuelto: cada Prestadora manda desde su propia dirección bajo `careonys.com` (`docs/MARCA.md`, sección 0). Queda la dirección web: ¿cada Prestadora entra por una suya —`cuidardelsur.careonys.com`—, o todas por la misma? ¿Y qué ve una Familia que tiene dos Servicios de modalidades distintas?
 
-**52.** Que la pantalla de ingreso muestre la marca de la Prestadora y no la del producto.
+**50.** Que la pantalla de ingreso muestre la marca de la Prestadora y no la del producto.
 
-**53.** Que la conversación quede guardada adentro del producto, según lo que se conteste sobre el botón de contacto de «Asistente Asignado», más arriba en esta misma lista. Hasta que el Panel no tenga un hilo de dos puntas, lo que se hablan la Familia y el Asistente en prestación directa se va a WhatsApp y no queda adentro de ningún lado. El chat interno ya está construido entero —hilos, mensajes, tapado del contacto, pantallas en las dos aplicaciones, aviso al celular y videollamada—, pero **sólo funciona donde la Prestadora pone Asistentes disponibles para que la Familia elija**: exige una Familia y un Asistente que se hayan encontrado ahí. En prestación directa no hay hilo, y hacia la Prestadora tampoco: el único canal con el Panel va en un solo sentido, del Panel al Asistente, y no hay dónde guardar lo que contesta.
+**51.** Que la conversación quede guardada adentro del producto, según lo que se conteste sobre el botón de contacto de «Asistente Asignado», más arriba en esta misma lista. Hasta que el Panel no tenga un hilo de dos puntas, lo que se hablan la Familia y el Asistente en prestación directa se va a WhatsApp y no queda adentro de ningún lado. El chat interno ya está construido entero —hilos, mensajes, tapado del contacto, pantallas en las dos aplicaciones, aviso al celular y videollamada—, pero **sólo funciona donde la Prestadora pone Asistentes disponibles para que la Familia elija**: exige una Familia y un Asistente que se hayan encontrado ahí. En prestación directa no hay hilo, y hacia la Prestadora tampoco: el único canal con el Panel va en un solo sentido, del Panel al Asistente, y no hay dónde guardar lo que contesta.
 
-**54.** Dominio propio, si va.
+**52.** Dominio propio, si va.
 
 ---
 
@@ -194,37 +190,37 @@ De las especialidades de esta pantalla no queda nada por hacer: `asistentes.espe
 
 **Sacar el nombre viejo `aurevia` de adentro del producto se decide en el momento de la fusión con el Marketplace**, según lo que convenga en ese análisis. Está medido y no se pierde: nadie usó nunca la aplicación y todos los datos cargados son inventados, así que reconstruir la base los reescribe sin mudanza. Lo que cuesta igual, se haga cuando se haga, son cinco nombres de afuera: el nombre del proyecto local, el servicio donde corre el motor con su dirección, y los dos depósitos de respaldo. El repositorio ya se llama `careonys`.
 
-**55. Usted** — ¿Dónde corre un módulo y contra qué base? Hoy `Modulos\` está vacía. **Facturación y créditos y cobranzas ya están decididas como software aparte del que Careonys se sirve**, así que esto no decide si salen, sino dónde corren el día que existan. También decide si con eso se cierran sin construir los adaptadores de pasarela.
+**53. Usted** — ¿Dónde corre un módulo y contra qué base? Hoy `Modulos\` está vacía. **Facturación y créditos y cobranzas ya están decididas como software aparte del que Careonys se sirve**, así que esto no decide si salen, sino dónde corren el día que existan. También decide si con eso se cierran sin construir los adaptadores de pasarela.
 
-**56.** Sacar la facturación y la cobranza a un módulo, cuando haya dónde correrlo.
+**54.** Sacar la facturación y la cobranza a un módulo, cuando haya dónde correrlo.
 
 ---
 
 ## Decisiones que no traban nada empezado
 
-**57. Usted** — Subcontratación: no existe ninguna tabla de Empresa subcontratada y el Panel no la ofrece a propósito. La precondición era no abrirla hasta que una Prestadora real lo pida. ¿Sigue valiendo?
+**55. Usted** — Subcontratación: no existe ninguna tabla de Empresa subcontratada y el Panel no la ofrece a propósito. La precondición era no abrirla hasta que una Prestadora real lo pida. ¿Sigue valiendo?
 
-**58. Usted** — Un tercero que sólo mira: ¿cómo entra un financiador que sólo consulta? Un cuarto rol, un Coordinador de sólo lectura desde el catálogo de permisos, o no se hace.
+**56. Usted** — Un tercero que sólo mira: ¿cómo entra un financiador que sólo consulta? Un cuarto rol, un Coordinador de sólo lectura desde el catálogo de permisos, o no se hace.
 
-**59. Usted** — ¿Careonys va a atender establecimientos donde conviven Pacientes de Familias distintas — una residencia, un geriátrico? Si es más adelante, alcanza con dejarlo dicho.
+**57. Usted** — ¿Careonys va a atender establecimientos donde conviven Pacientes de Familias distintas — una residencia, un geriátrico? Si es más adelante, alcanza con dejarlo dicho.
 
-**60. Usted** — ¿Diez pedidos por minuto y por persona es el número? El contador compartido hace falta el día que el motor se reparta en varios servicios; hoy corre en uno solo.
+**58. Usted** — ¿Diez pedidos por minuto y por persona es el número? El contador compartido hace falta el día que el motor se reparta en varios servicios; hoy corre en uno solo.
 
-**61. Usted** — ¿Los idiomas siguen en un archivo o pasan a la base? De esto depende si sumar un idioma es una publicación o una carga de datos.
+**59. Usted** — ¿Los idiomas siguen en un archivo o pasan a la base? De esto depende si sumar un idioma es una publicación o una carga de datos.
 
-**62. Usted** — El puntaje interno de calidad del Asistente, que sólo ve el Admin: ¿sigue en pie ahora que existen las estrellas que pone la Familia? Si sigue, faltan dos respuestas: qué lo compone, y la garantía de que ninguna acción automática dependa de él. El lugar donde iría ya está hecho (`datos_reservados_asistente` y su permiso).
+**60. Usted** — El puntaje interno de calidad del Asistente, que sólo ve el Admin: ¿sigue en pie ahora que existen las estrellas que pone la Familia? Si sigue, faltan dos respuestas: qué lo compone, y la garantía de que ninguna acción automática dependa de él. El lugar donde iría ya está hecho (`datos_reservados_asistente` y su permiso).
 
-**63. Usted** — El alta y la baja de Prestadoras: el Marketplace expone una puerta firmada para que CeltaTech dé de alta y de baja clientes; Careonys no tiene nada parecido. ¿Se construye la misma, o se siguen dando de alta a mano?
+**61. Usted** — El alta y la baja de Prestadoras: el Marketplace expone una puerta firmada para que CeltaTech dé de alta y de baja clientes; Careonys no tiene nada parecido. ¿Se construye la misma, o se siguen dando de alta a mano?
 
-**64. Usted** — El acompañamiento online: ¿prestación más, o guardia sin domicilio? Si es guardia, hay que decidir qué reemplaza al fichaje por ubicación.
+**62. Usted** — El acompañamiento online: ¿prestación más, o guardia sin domicilio? Si es guardia, hay que decidir qué reemplaza al fichaje por ubicación.
 
-**65. Usted** — El «Gestor del cuidado»: ¿rol nuevo, variante de Coordinador, o entrada en el catálogo de permisos por Prestadora? La tercera no rompe la regla de los tres roles de Panel; las dos primeras sí. Hoy el Coordinador se asigna por guardia, no por Familia.
+**63. Usted** — El «Gestor del cuidado»: ¿rol nuevo, variante de Coordinador, o entrada en el catálogo de permisos por Prestadora? La tercera no rompe la regla de los tres roles de Panel; las dos primeras sí. Hoy el Coordinador se asigna por guardia, no por Familia.
 
-**66. Usted** — Cursos para familias: ¿va o no va?
+**64. Usted** — Cursos para familias: ¿va o no va?
 
-**67. Usted** — La regla de los archivos dice «nunca público» y hay un depósito público construido (`marca-prestadoras`); los otros cinco son privados. ¿La regla admite la excepción, o se cierra el depósito?
+**65. Usted** — La regla de los archivos dice «nunca público» y hay un depósito público construido (`marca-prestadoras`); los otros cinco son privados. ¿La regla admite la excepción, o se cierra el depósito?
 
-**68. Usted** — La categoría de convenio del Asistente se teclea a mano, y de ella depende su
+**66. Usted** — La categoría de convenio del Asistente se teclea a mano, y de ella depende su
 remuneración básica. El convenio tiene sus categorías definidas y no las inventa la Prestadora,
 así que tecleadas quedan escritas distinto en cada ficha: no se puede saber cuántos Asistentes hay
 en cada una, ni aplicarle un cambio de escala a todos los de una categoría de una sola vez, y un
@@ -237,9 +233,9 @@ liquidaciones que ya salieron.
 
 ## El sitio web
 
-**69. Usted** — ¿Se autoriza construir `careonys.com` según `docs/PRD_01_Sitio_Web.md`? El PRD ya está entero. Hoy `sitio-web/` es una página que dice «En construcción».
+**67. Usted** — ¿Se autoriza construir `careonys.com` según `docs/PRD_01_Sitio_Web.md`? El PRD ya está entero. Hoy `sitio-web/` es una página que dice «En construcción».
 
-**70.** Construirlo.
+**68.** Construirlo.
 
 ---
 
@@ -260,7 +256,7 @@ para el tratamiento de dato biométrico, la accesibilidad, la protección de dat
 cuatro preguntas sobre la ubicación de las personas. Los pasos que dependen de ellas dicen qué se
 construye igual mientras tanto.
 
-**71. Usted** — Las escalas legales: la validación, y los dos valores que el código usa y no
+**69. Usted** — Las escalas legales: la validación, y los dos valores que el código usa y no
 existen (`piso_minimo_indemnizacion` y `fraccion_computable_antiguedad`). En el mismo viaje va el
 texto del aviso sobre el abandono de persona: ninguno de los veintiún documentos de `docs/legal/`
 lo menciona —lo único parecido es el abandono de *trabajo*, art. 244 LCT, en
@@ -276,7 +272,7 @@ tres idiomas. No hay plantillas con huecos ni ningún editor: la redacción vive
 `backend/src/i18n/avisos.js`, y cambiarla es cambiar ese archivo y publicar. Sólo el de activación
 de cuenta sale además con formato; los demás son texto pelado.
 
-**72.** Repasar la redacción de los avisos que salen por correo, los tres idiomas de cada uno.
+**70.** Repasar la redacción de los avisos que salen por correo, los tres idiomas de cada uno.
 Condición de cierre: que cada uno se entienda leyéndolo una sola vez. Cuando esto se haga, va
 junto con el paso de mover los mensajes del sistema a una tabla editable desde afuera, que ya
 está decidido para después de la fusión con el Marketplace.
@@ -285,8 +281,8 @@ está decidido para después de la fusión con el Marketplace.
 
 ## Cierre
 
-**73. Usted** — El documento de roles generado desde la base: ¿para quién es, interno de CeltaTech o manual para la Prestadora?
+**71. Usted** — El documento de roles generado desde la base: ¿para quién es, interno de CeltaTech o manual para la Prestadora?
 
-**74.** Generarlo.
+**72.** Generarlo.
 
-**75.** Correr las pruebas y publicar.
+**73.** Correr las pruebas y publicar.

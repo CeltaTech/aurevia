@@ -1958,20 +1958,13 @@ panelConfiguracionRouter.patch('/modalidades/:modalidad', async (req, res) => {
 // --- Escalada a Coordinador: respaldo + intervalos de insistencia según premura
 //     (punto 5 de docs/PRD_06_WhatsApp_IA.md) ---
 
-// Lo que vale mientras la Prestadora todavía no guardó su propia configuración. No es una
-// decisión que se tome acá: es el mismo valor con el que la base crea la columna (migración
-// 20260822200000). Si se cambia allá, se cambia acá — es el precio de que el formulario pueda
-// mostrar algo antes de que exista la fila.
-const MINUTOS_GRACIA_CIERRE_POR_DEFECTO = 15;
+// NINGÚN VALOR DE ARRANQUE SE ESCRIBE ACÁ. Los que valen mientras la Prestadora no tocó nada
+// son los `DEFAULT` de cada columna, y esa es la única fuente. Si la fila llegara a faltar se
+// la pide a la base, que la crea con esos mismos valores; copiarlos acá haría que el formulario
+// prometa un número y el motor use otro apenas alguien cambie la migración.
+// Lo que sí vive acá son los dos bordes de lo que se puede guardar.
 const MINUTOS_DE_UN_DIA = 24 * 60;
-const HORAS_ANTES_DE_ESCALAR_POR_DEFECTO = 4;
 const HORAS_DE_TRES_DIAS = 72;
-// Los mismos números que trae la base cuando nadie tocó nada
-// (`20260917100000_la_alarma_que_nadie_atiende_sube_de_escalon.sql`). Están acá porque la fila
-// puede no existir todavía, y lo que se le muestra a quien configura tiene que ser lo que va a
-// pasar de verdad si no toca nada.
-const MINUTOS_ANTES_DE_TODOS_POR_DEFECTO = 45;
-const MINUTOS_ANTES_DE_ADMINISTRACION_POR_DEFECTO = 90;
 
 panelConfiguracionRouter.get('/escalada-coordinador', async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
@@ -1988,25 +1981,27 @@ panelConfiguracionRouter.get('/escalada-coordinador', async (req, res) => {
   ]);
   if (error) return responderError(res, error);
   if (errorCoordinadores) return responderError(res, errorCoordinadores);
-  res.json({
-    coordinadores: coordinadores || [],
-    escalada: data || {
-      prestadora_id: prestadoraId,
-      coordinador_backup_id: null,
-      minutos_antes_backup: 15,
-      umbrales_premura: [
-        { maximo_minutos: 60, intervalo_minutos: 10 },
-        { maximo_minutos: 240, intervalo_minutos: 30 },
-        { maximo_minutos: null, intervalo_minutos: 60 },
-      ],
-      fase_automatica_activa: false,
-      minutos_antes_fase_automatica: 120,
-      minutos_gracia_cierre_guardia: MINUTOS_GRACIA_CIERRE_POR_DEFECTO,
-      horas_antes_aviso_grave_sin_cerrar: HORAS_ANTES_DE_ESCALAR_POR_DEFECTO,
-      minutos_antes_todos_los_coordinadores: MINUTOS_ANTES_DE_TODOS_POR_DEFECTO,
-      minutos_antes_administracion: MINUTOS_ANTES_DE_ADMINISTRACION_POR_DEFECTO,
-    },
-  });
+
+  // Toda Prestadora nace con esta fila: la crea un disparador del alta, y las que existían
+  // antes quedaron completadas (`20260819183000_prestadora_nueva_nace_configurada.sql`). Si
+  // igual faltara, se la pide a la misma función que usa el alta y se vuelve a leer. Así lo
+  // que el formulario muestra es lo que la base va a usar de verdad, y no una copia.
+  let escalada = data;
+  if (!escalada) {
+    const { error: errorSiembra } = await supabase.rpc('sembrar_configuracion_prestadora', {
+      p_prestadora_id: prestadoraId,
+    });
+    if (errorSiembra) return responderError(res, errorSiembra);
+    const { data: recien, error: errorRelectura } = await supabase
+      .from('configuracion_escalada_coordinador')
+      .select('*')
+      .eq('prestadora_id', prestadoraId)
+      .maybeSingle();
+    if (errorRelectura) return responderError(res, errorRelectura);
+    escalada = recien;
+  }
+
+  res.json({ coordinadores: coordinadores || [], escalada });
 });
 
 panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
@@ -2075,9 +2070,16 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
       umbrales_premura,
       fase_automatica_activa,
       minutos_antes_fase_automatica,
-      minutos_gracia_cierre_guardia: minutos_gracia_cierre_guardia ?? MINUTOS_GRACIA_CIERRE_POR_DEFECTO,
-      horas_antes_aviso_grave_sin_cerrar:
-        horas_antes_aviso_grave_sin_cerrar ?? HORAS_ANTES_DE_ESCALAR_POR_DEFECTO,
+      // Sin valor no se pisa nada: el campo que no viene se omite, así que la fila que ya
+      // existe conserva lo que la Prestadora había configurado y la que se crea toma el
+      // `DEFAULT` de la columna. Antes acá se forzaba un número escrito en este archivo, que
+      // borraba en silencio una configuración guardada.
+      ...(minutos_gracia_cierre_guardia === undefined
+        ? {}
+        : { minutos_gracia_cierre_guardia }),
+      ...(horas_antes_aviso_grave_sin_cerrar === undefined
+        ? {}
+        : { horas_antes_aviso_grave_sin_cerrar }),
       minutos_antes_todos_los_coordinadores: enMinutosOApagado(minutos_antes_todos_los_coordinadores),
       minutos_antes_administracion: enMinutosOApagado(minutos_antes_administracion),
       updated_at: new Date().toISOString(),

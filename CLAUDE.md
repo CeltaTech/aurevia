@@ -195,9 +195,9 @@ queda guardado es cuál, no cómo se llama.
 **El nombre visible de la Familia se calcula al mostrarlo, y no se guarda.** Se arma con el
 apellido y los nombres del Paciente; cuando hay más de uno, **queda el más antiguo al que se le
 esté brindando servicio**. Si aparece otra Familia con ese mismo apellido y nombres, se le agrega
-la localidad o el barrio. Si aun así siguen siendo dos, se le antepone el número de legajo. **El
-número de legajo es otra cosa**: es único dentro de la Prestadora, no se reasigna nunca a nadie
-más, y es lo que usan el sistema y los documentos. El nombre visible es para la pantalla.
+la localidad o el barrio. Si aun así siguen siendo dos, se le antepone el número de cliente. **El
+número de cliente es otra cosa**: es único, no se reasigna nunca a nadie más, y es lo que usan el
+sistema y los documentos. El nombre visible es para la pantalla.
 
 **Las funciones internas de la base no viven en un esquema publicado.** Las que usan las políticas
 de RLS están en el esquema `interno`, que queda afuera de la lista `schemas` de

@@ -194,7 +194,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
             {dondeHoy && (
               <div className="panel-resultado-calculo">
                 <Alert variant="info">
-                  {dondeHoy.es_temporal ? t.domicilios_temporales.hoy_temporal : t.domicilios_temporales.hoy_ficha}
+                  {dondeHoy.es_temporal ? t.domicilios_temporales.hoy_temporal : t.domicilios_temporales.hoy_habitual}
                 </Alert>
                 <dl className="panel-detalle-lista">
                   <dt>{t.domicilios_temporales.col_domicilio}</dt>

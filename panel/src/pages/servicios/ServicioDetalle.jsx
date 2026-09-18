@@ -185,7 +185,7 @@ export function ServicioDetalle() {
         <p><strong>{t.servicios.detalle.contratado_por}:</strong> {contratante || '—'}</p>
         {cliente.ruta && (
           <Button variant="secondary" onClick={() => navigate(cliente.ruta)}>
-            {t.servicios.detalle.cliente_ver_ficha}
+            {t.servicios.detalle.cliente_ver}
           </Button>
         )}
       </section>

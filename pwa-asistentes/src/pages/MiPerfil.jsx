@@ -97,7 +97,7 @@ export default function MiPerfil() {
 
       {/* La foto que ven las Familias. Va arriba de todo y sólo si hay: un recuadro vacío con la
           silueta de nadie no informa nada, y en un teléfono ocupa la pantalla entera. Se mira y
-          no se cambia —la carga la Prestadora, igual que el resto de la ficha—. */}
+          no se cambia —la carga la Prestadora, igual que el resto de sus datos—. */}
       {perfil.foto_url && (
         <img
           src={perfil.foto_url}

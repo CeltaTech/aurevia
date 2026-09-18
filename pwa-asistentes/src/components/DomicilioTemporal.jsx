@@ -1,9 +1,9 @@
-// Cuando el Paciente no está en el domicilio de su ficha.
+// Cuando el Paciente no está en su domicilio habitual.
 //
-// El Paciente tiene una sola dirección cargada, la de su ficha, y hay temporadas en que no
+// El Paciente tiene una sola dirección cargada, la habitual, y hay temporadas en que no
 // está ahí: el verano en la casa de un hijo, una internación, una mudanza mientras arreglan el
 // departamento. El motor resuelve eso solo — en `domicilio`, `lat` y `lng` manda la dirección
-// del día de esa guardia, la temporal si hay una vigente y si no la de la ficha — y agrega dos
+// del día de esa guardia, la temporal si hay una vigente y si no la habitual — y agrega dos
 // campos para poder decirlo:
 //
 //   domicilio_es_temporal   sí o no
@@ -15,7 +15,7 @@
 //
 // CUANDO NO HAY NADA QUE DECIR NO SE DIBUJA NADA. Si la Prestadora tiene apagado el
 // interruptor `asistente_domicilio_del_paciente`, el Paciente llega sin `domicilio` y por lo
-// tanto sin estos dos campos; lo mismo pasa con una ficha sin dirección cargada. En los dos
+// tanto sin estos dos campos; lo mismo pasa con un Paciente sin dirección cargada. En los dos
 // casos acá no hay dirección, y la pantalla queda como estaba en vez de mostrar un cartel
 // vacío.
 //

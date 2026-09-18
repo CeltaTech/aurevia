@@ -39,7 +39,7 @@ export const api = {
   // al arrancar y esto lo mira quien entró a Mi Perfil.
   papeles: () => pedido('/perfil/papeles'),
   // El interruptor de disponibilidad. No lleva el identificador de nadie: la sesión decide sobre
-  // qué ficha se escribe, y lo que vuelve es lo que quedó guardado, no lo que se mandó.
+  // en quién se escribe, y lo que vuelve es lo que quedó guardado, no lo que se mandó.
   cambiarDisponibilidad: (disponible) =>
     pedido('/perfil/disponibilidad', { method: 'PATCH', body: JSON.stringify({ disponible }) }),
   misGuardias: () => pedido('/guardias'),
@@ -91,7 +91,7 @@ export const api = {
   retirarConsentimiento: (clave, motivo) =>
     pedido('/consentimientos/retirar', { method: 'POST', body: JSON.stringify({ clave, motivo }) }),
   // La Matrícula. Se carga en un solo envío —datos y archivo juntos— porque un
-  // archivo sin su ficha es un papel suelto que nadie va a mirar.
+  // archivo sin su dueño es un papel suelto que nadie va a mirar.
   matricula: () => pedido('/matricula'),
   cargarMatricula: ({ numeroMatricula, vigenteDesde, vigenteHasta, archivo }) => {
     const formData = new FormData();

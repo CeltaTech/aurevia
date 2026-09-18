@@ -48,7 +48,7 @@ export default function MisPacientes() {
           <div className="guardia-card-paciente">{p.nombre}</div>
           <div className="guardia-card-detalle">{p.domicilio || '—'}</div>
           {/* Cuando el Paciente está pasando una temporada en otro lado, la dirección de arriba
-              es la de ahora y no la de su ficha. Sin este renglón se leen igual. */}
+              es la de ahora y no la habitual. Sin este renglón se leen igual. */}
           <DomicilioTemporal paciente={p} t={t} />
         </Link>
       ))}

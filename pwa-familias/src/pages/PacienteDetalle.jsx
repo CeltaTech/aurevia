@@ -111,7 +111,7 @@ export default function PacienteDetalle() {
         {t.paciente.domicilio}: <EnlaceAlMapa lugar={paciente} t={t} />
       </p>
       {/* La dirección de arriba es la de hoy: mientras dura una estadía en otro lado, es esa y
-          no la de la ficha. Acá se dice cuando ese es el caso, con el motivo que cargó la
+          no la habitual. Acá se dice cuando ese es el caso, con el motivo que cargó la
           Prestadora. */}
       <DomicilioTemporal paciente={paciente} t={t} />
 

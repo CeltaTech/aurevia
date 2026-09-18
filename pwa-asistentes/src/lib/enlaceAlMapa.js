@@ -34,7 +34,7 @@ export function esAparatoDeApple(agente) {
  * `lugar` es un Paciente, o cualquier objeto con `domicilio`, `lat` y `lng` — lo que devuelve
  * `domiciliosDeLaGuardia` sirve tal cual. Devolver null y no una cadena vacía es a propósito:
  * quien llama tiene que poder dibujar el domicilio sin enlace, que es lo que corresponde cuando
- * la Prestadora apagó el dato o cuando la ficha todavía no tiene dirección.
+ * la Prestadora apagó el dato o cuando todavía no hay dirección cargada.
  */
 export function enlaceAlMapa(lugar, agente = typeof navigator === 'undefined' ? '' : navigator.userAgent) {
   const texto = typeof lugar?.domicilio === 'string' ? lugar.domicilio.trim() : '';

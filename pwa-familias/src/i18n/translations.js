@@ -177,7 +177,7 @@ export const T = {
       titulo: 'Mis Pacientes',
       sin_pacientes: 'Todavía no hay Pacientes vinculados a esta cuenta.',
     },
-    // El aviso de que el Paciente estos días no está en el domicilio de su ficha. Lo dibuja
+    // El aviso de que el Paciente estos días no está en su domicilio habitual. Lo dibuja
     // components/DomicilioTemporal.jsx, que es el mismo archivo en las dos aplicaciones, así
     // que estas dos claves existen igual en la del Asistente.
     domicilio: {
@@ -525,7 +525,7 @@ export const T = {
     // se lee al revés en la segunda columna.
     circulo: {
       circulo_reportes: 'Los reportes de cada guardia',
-      circulo_ficha_del_paciente: 'La ficha del Paciente',
+      circulo_ficha_del_paciente: 'Los datos del Paciente',
       circulo_medicacion: 'La medicación vigente',
       circulo_guardias: 'La agenda de guardias',
       circulo_ubicacion_en_vivo: 'El recorrido del Asistente en el mapa, durante la guardia',
@@ -1434,7 +1434,7 @@ export const T = {
     },
     circulo: {
       circulo_reportes: 'Os relatórios de cada plantão',
-      circulo_ficha_del_paciente: 'A ficha do Paciente',
+      circulo_ficha_del_paciente: 'Os dados do Paciente',
       circulo_medicacion: 'A medicação vigente',
       circulo_guardias: 'A agenda de plantões',
       circulo_ubicacion_en_vivo: 'O percurso do Assistente no mapa, durante o plantão',

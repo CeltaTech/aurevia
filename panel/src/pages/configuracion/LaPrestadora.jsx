@@ -14,6 +14,7 @@ import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { FacturacionFamiliasTab } from './FacturacionFamiliasTab';
+import { ConsentimientoPagadorTab } from './ConsentimientoPagadorTab';
 import { TabLugares } from './LosLugares';
 
 /* Quién es la Prestadora y cómo trabaja: su nombre y sus datos, las modalidades
@@ -32,6 +33,7 @@ export function ConfiguracionPrestadora() {
       <TabZonas />
       <TabLugares />
       <FacturacionFamiliasTab />
+      <ConsentimientoPagadorTab />
       {tieneModalidad('marketplace') && <TabPasarela />}
     </>
   );

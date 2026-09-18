@@ -30,6 +30,15 @@ import {
   ultimaInstruccionCerrada,
   cerrarConPapelFirmado,
 } from '../utils/instruccionesCirculo.js';
+import {
+  DEPOSITO_PAGADOR,
+  anularPendiente,
+  cerrarConPapelFirmado as cerrarConsentimientoPagador,
+  crearConsentimiento,
+  estadoDelPagador,
+  guardarPapel,
+  rutaDelArchivo,
+} from '../utils/consentimientoPagador.js';
 
 export const panelCuentasRouter = Router();
 
@@ -445,6 +454,209 @@ panelCuentasRouter.get('/familia/:familiaId/circulo/instruccion/:instruccionId/p
   if (error) {
     return responderError(res, error);
   }
+
+  res.json({ url: data.signedUrl });
+});
+
+// ============================================================================
+// El Pagador firma su obligación de pagar
+// ============================================================================
+//
+// Apuntar un Legajo como Pagador no lo convierte en Pagador: lo que lo convierte es que haya
+// asumido la obligación y lo haya firmado. Estas rutas son lo que la pantalla de la Familia usa
+// para mostrarlo ahí mismo, al lado de donde se lo elige, y para cargar la firma y los papeles.
+//
+// LEER NO ES ESCRIBIR. El estado lo alcanza quien edita la Familia, porque saber si firmó hace
+// falta para trabajar. Hacerlo firmar pide el permiso propio, que nace reservado al Admin.
+
+const DEPOSITO_DEL_PAGADOR = DEPOSITO_PAGADOR;
+
+// La Familia de este pedido, ya acotada a la Prestadora de quien pregunta. Estaba escrito igual en
+// cada ruta del círculo; de acá para abajo va una sola vez.
+async function familiaDelPedido(req) {
+  let query = supabase.from('familias').select('id, prestadora_id').eq('id', req.params.familiaId);
+  query = acotarAPrestadora(query, req.usuarioPanel);
+  const { data } = await query.maybeSingle();
+  return data ?? null;
+}
+
+panelCuentasRouter.get('/familia/:familiaId/pagador', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_familia'), async (req, res) => {
+  const familia = await familiaDelPedido(req);
+  if (!familia) return res.status(404).json({ error: 'Familia no encontrada' });
+
+  try {
+    res.json(await estadoDelPagador({ familiaId: familia.id, prestadoraId: familia.prestadora_id }));
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+// Arma el documento y lo deja esperando firma. El texto es el que la Prestadora configuró, o el
+// modelo que trae el producto si no configuró ninguno.
+panelCuentasRouter.post('/familia/:familiaId/pagador/consentimiento', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('registrar_consentimiento_pagador'), async (req, res) => {
+  const familia = await familiaDelPedido(req);
+  if (!familia) return res.status(404).json({ error: 'Familia no encontrada' });
+
+  try {
+    const consentimiento = await crearConsentimiento({
+      familiaId: familia.id,
+      prestadoraId: familia.prestadora_id,
+      cargadoPor: req.usuarioPanel.id,
+    });
+    res.json({ ok: true, consentimiento });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+// Se cargó por error, o cambió el Pagador y todavía no se sabe cuál es el nuevo. Lo cerrado no se
+// anula nunca: ya lo firmó alguien.
+panelCuentasRouter.post('/familia/:familiaId/pagador/consentimiento/:consentimientoId/anular', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('registrar_consentimiento_pagador'), async (req, res) => {
+  const familia = await familiaDelPedido(req);
+  if (!familia) return res.status(404).json({ error: 'Familia no encontrada' });
+
+  try {
+    await anularPendiente({
+      consentimientoId: req.params.consentimientoId,
+      prestadoraId: familia.prestadora_id,
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+// La hoja firmada. Depósito privado y ruta empezando por la Prestadora, que es lo que exige su
+// política.
+panelCuentasRouter.post(
+  '/familia/:familiaId/pagador/consentimiento/:consentimientoId/papel',
+  requiereRolPanel,
+  exigirOrganizacionActiva,
+  requierePermiso('registrar_consentimiento_pagador'),
+  subirPapelFirmado.single('archivo'),
+  manejarErrorDeArchivo,
+  async (req, res) => {
+    const familia = await familiaDelPedido(req);
+    if (!familia) return res.status(404).json({ error: 'Familia no encontrada' });
+
+    // El archivo es opcional, igual que en la instrucción del círculo: lo que cierra esto es que
+    // la Prestadora declare que se firmó, y hay Prestadoras que archivan el papel afuera del
+    // sistema. Exigirlo dejaría firmas reales sin poder registrarse, que es peor.
+    let ruta = null;
+    if (req.file) {
+      ruta = rutaDelArchivo({
+        prestadoraId: familia.prestadora_id,
+        familiaId: familia.id,
+        nombre: `consentimiento-${req.params.consentimientoId}`,
+        extension: extensionDeArchivo(req.file.mimetype),
+      });
+      const { error: errorSubida } = await supabase.storage
+        .from(DEPOSITO_DEL_PAGADOR)
+        .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
+      if (errorSubida) return responderError(res, errorSubida);
+    }
+
+    try {
+      await cerrarConsentimientoPagador({
+        consentimientoId: req.params.consentimientoId,
+        prestadoraId: familia.prestadora_id,
+        archivoUrl: ruta,
+      });
+      res.json({ ok: true });
+    } catch (error) {
+      responderError(res, error);
+    }
+  },
+);
+
+// Volver a ver la hoja firmada. Nunca dirección pública: se firma por un minuto, igual que el resto
+// de los archivos del producto.
+panelCuentasRouter.get('/familia/:familiaId/pagador/consentimiento/:consentimientoId/papel', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_familia'), async (req, res) => {
+  const familia = await familiaDelPedido(req);
+  if (!familia) return res.status(404).json({ error: 'Familia no encontrada' });
+
+  const { data: consentimiento } = await supabase
+    .from('consentimientos_pagador')
+    .select('archivo_firmado_url')
+    .eq('id', req.params.consentimientoId)
+    .eq('familia_id', familia.id)
+    .maybeSingle();
+
+  if (!consentimiento?.archivo_firmado_url) {
+    return res.status(404).json({ error: 'No hay hoja firmada guardada' });
+  }
+
+  const { data, error } = await supabase.storage
+    .from(DEPOSITO_DEL_PAGADOR)
+    .createSignedUrl(consentimiento.archivo_firmado_url, 60);
+  if (error) return responderError(res, error);
+
+  res.json({ url: data.signedUrl });
+});
+
+// Los papeles que exige el financiador. Son aparte de la firma: que falte uno no invalida lo
+// firmado, y que esté la firma no completa los papeles.
+panelCuentasRouter.post(
+  '/familia/:familiaId/pagador/papel/:tipoDocumentoId',
+  requiereRolPanel,
+  exigirOrganizacionActiva,
+  requierePermiso('registrar_consentimiento_pagador'),
+  subirPapelFirmado.single('archivo'),
+  manejarErrorDeArchivo,
+  async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Archivo faltante o de tipo no permitido (solo PDF, JPG o PNG, hasta 10 MB)' });
+    }
+
+    const familia = await familiaDelPedido(req);
+    if (!familia) return res.status(404).json({ error: 'Familia no encontrada' });
+
+    const ruta = rutaDelArchivo({
+      prestadoraId: familia.prestadora_id,
+      familiaId: familia.id,
+      nombre: `papel-${req.params.tipoDocumentoId}`,
+      extension: extensionDeArchivo(req.file.mimetype),
+    });
+    const { error: errorSubida } = await supabase.storage
+      .from(DEPOSITO_DEL_PAGADOR)
+      .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
+    if (errorSubida) return responderError(res, errorSubida);
+
+    try {
+      await guardarPapel({
+        familiaId: familia.id,
+        prestadoraId: familia.prestadora_id,
+        tipoDocumentoId: req.params.tipoDocumentoId,
+        archivoUrl: ruta,
+        fechaVencimiento: req.body?.fechaVencimiento,
+        cargadoPor: req.usuarioPanel.id,
+      });
+      res.json({ ok: true });
+    } catch (error) {
+      responderError(res, error);
+    }
+  },
+);
+
+panelCuentasRouter.get('/familia/:familiaId/pagador/papel/:documentoId/archivo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_familia'), async (req, res) => {
+  const familia = await familiaDelPedido(req);
+  if (!familia) return res.status(404).json({ error: 'Familia no encontrada' });
+
+  const { data: documento } = await supabase
+    .from('documentos_pagador')
+    .select('archivo_url')
+    .eq('id', req.params.documentoId)
+    .eq('familia_id', familia.id)
+    .maybeSingle();
+
+  if (!documento?.archivo_url) {
+    return res.status(404).json({ error: 'No hay archivo guardado' });
+  }
+
+  const { data, error } = await supabase.storage
+    .from(DEPOSITO_DEL_PAGADOR)
+    .createSignedUrl(documento.archivo_url, 60);
+  if (error) return responderError(res, error);
 
   res.json({ url: data.signedUrl });
 });

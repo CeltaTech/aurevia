@@ -149,6 +149,12 @@ const ESTADO_POR_MOTIVO = {
   nombre_de_prestadora_repetido: 409,
   pais_sin_moneda: 409,
   correo_invalido: 400,
+  // El consentimiento del Pagador. Los dos son 409 por lo mismo que el correo ya tomado: el pedido
+  // está bien armado y choca con el estado de las cosas. Sin Pagador elegido no hay a quién hacerle
+  // firmar nada, y lo que ya se firmó no se anula. Si cayeran en 500 la pantalla diría "algo falló
+  // de nuestro lado" cuando no falló nada de este lado.
+  sin_pagador: 409,
+  ya_cerrado: 409,
   // Y el postulante que llega a deshora no recibe ningún error: llegar temprano no es equivocarse.
   // La puerta pública le contesta bien, con el cuándo y con en qué momento está, y la pantalla le
   // dice si tiene que volver más tarde o si la entrevista ya pasó.

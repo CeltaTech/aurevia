@@ -67,6 +67,12 @@ import {
   MINUTOS_CODIGO_DE_LA_PRESTADORA_MINIMO,
   MINUTOS_CODIGO_DE_LA_PRESTADORA_MAXIMO,
 } from '../utils/comprobacionDePresencia.js';
+import { cuerpoVigente } from '../utils/consentimientoPagador.js';
+import {
+  IDIOMA_DEL_DOCUMENTO,
+  MARCADORES,
+  MODELO_DE_FABRICA,
+} from '../utils/documentoConsentimientoPagador.js';
 
 export const panelConfiguracionRouter = Router();
 
@@ -2077,5 +2083,117 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
       updated_at: new Date().toISOString(),
     });
   if (error) return responderError(res, error);
+  res.json({ ok: true });
+});
+
+// ============================================================================
+// El consentimiento del Pagador: el texto y los papeles que se exigen
+// ============================================================================
+//
+// EL TEXTO ES DE LA PRESTADORA. Es un documento hacia un tercero suyo, así que lo escribe, lo
+// adopta o lo reemplaza ella. El producto le entrega un modelo a título de sugerencia y nada más:
+// mientras no cargue ninguno rige ese modelo, y por eso la pantalla dice de dónde salió el texto
+// que está viendo. Sin fila, no se guarda una copia por Prestadora: así, el día que el modelo
+// mejore, ninguna queda con la versión vieja sin haber decidido nada.
+
+panelConfiguracionRouter.get('/consentimiento-pagador', async (req, res) => {
+  try {
+    const vigente = await cuerpoVigente({ prestadoraId: req.usuarioPanel.prestadoraId });
+    // Los marcadores se devuelven para que quien escriba el suyo sepa cuáles puede usar. Salen del
+    // mismo archivo que los reemplaza, para que la lista no se despegue de lo que de verdad anda.
+    res.json({ ...vigente, marcadores: MARCADORES, modeloDelProducto: MODELO_DE_FABRICA });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+panelConfiguracionRouter.put('/consentimiento-pagador', async (req, res) => {
+  const { cuerpo, idioma } = req.body || {};
+
+  // Vaciarlo es volver al modelo del producto, no dejar a la Prestadora sin texto: se borra la
+  // fila y vuelve a regir el modelo.
+  if (!String(cuerpo ?? '').trim()) {
+    const { error } = await supabase
+      .from('textos_consentimiento_pagador')
+      .delete()
+      .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+      .eq('idioma', idioma || IDIOMA_DEL_DOCUMENTO);
+    if (error) return responderError(res, error);
+    return res.json({ ok: true, esDelProducto: true });
+  }
+
+  const { error } = await supabase
+    .from('textos_consentimiento_pagador')
+    .upsert({
+      prestadora_id: req.usuarioPanel.prestadoraId,
+      idioma: idioma || IDIOMA_DEL_DOCUMENTO,
+      cuerpo,
+      actualizado_por: req.usuarioPanel.id,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'prestadora_id,idioma' });
+  if (error) return responderError(res, error);
+  res.json({ ok: true, esDelProducto: false });
+});
+
+// Qué papeles exige cada financiador. El producto no siembra ninguno: eso lo sabe la Prestadora
+// que trabaja con ese financiador, y adivinarlo desde acá sería inventar un requisito que nadie
+// pidió. Vacío quiere decir «no se exige ninguno», y es una respuesta válida.
+panelConfiguracionRouter.get('/documentos-pagador', async (req, res) => {
+  let query = supabase
+    .from('tipos_documento_pagador')
+    .select('id, nombre, financiador_tipo, requiere_vencimiento, activo')
+    .order('nombre');
+  query = acotarAPrestadora(query, req.usuarioPanel);
+  const { data, error } = await query;
+  if (error) return responderError(res, error);
+  res.json({ tipos: data ?? [] });
+});
+
+panelConfiguracionRouter.post('/documentos-pagador', async (req, res) => {
+  const { nombre, financiador_tipo, requiere_vencimiento } = req.body || {};
+  if (!String(nombre ?? '').trim()) {
+    return res.status(400).json({ error: 'Falta el nombre del documento' });
+  }
+
+  const { data, error } = await supabase
+    .from('tipos_documento_pagador')
+    .insert({
+      prestadora_id: req.usuarioPanel.prestadoraId,
+      nombre: String(nombre).trim(),
+      // Vacío es «a todos los financiadores», y así se guarda: nulo.
+      financiador_tipo: financiador_tipo || null,
+      requiere_vencimiento: Boolean(requiere_vencimiento),
+    })
+    .select('id')
+    .single();
+  if (error) return responderError(res, error);
+  res.json({ ok: true, id: data.id });
+});
+
+panelConfiguracionRouter.patch('/documentos-pagador/:id', async (req, res) => {
+  const { nombre, financiador_tipo, requiere_vencimiento, activo } = req.body || {};
+
+  const cambios = {};
+  if (nombre !== undefined) cambios.nombre = String(nombre).trim();
+  if (financiador_tipo !== undefined) cambios.financiador_tipo = financiador_tipo || null;
+  if (requiere_vencimiento !== undefined) cambios.requiere_vencimiento = Boolean(requiere_vencimiento);
+  if (activo !== undefined) cambios.activo = Boolean(activo);
+
+  let query = supabase.from('tipos_documento_pagador').update(cambios).eq('id', req.params.id);
+  query = acotarAPrestadora(query, req.usuarioPanel);
+  const { data, error } = await query.select('id');
+  if (error) return responderError(res, error);
+  if (!data?.length) return res.status(404).json({ error: 'Ese documento no existe' });
+  res.json({ ok: true });
+});
+
+// No se borra: se apaga. Un tipo borrado se llevaría puestos los papeles ya cargados con él, y lo
+// que se quiso decir es «esto ya no se pide más», no «esto nunca se pidió».
+panelConfiguracionRouter.delete('/documentos-pagador/:id', async (req, res) => {
+  let query = supabase.from('tipos_documento_pagador').update({ activo: false }).eq('id', req.params.id);
+  query = acotarAPrestadora(query, req.usuarioPanel);
+  const { data, error } = await query.select('id');
+  if (error) return responderError(res, error);
+  if (!data?.length) return res.status(404).json({ error: 'Ese documento no existe' });
   res.json({ ok: true });
 });

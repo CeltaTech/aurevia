@@ -67,7 +67,7 @@ de personas —glosario, riesgo legal, marca de la Prestadora, datos sensibles, 
 
 **La identidad del producto sale de `src/config/identidadProducto.js`.** Marcador `{{producto}}` /
 `{{productoCorto}}` en traducciones y HTML, `IDENTIDAD.nombre` en código. Lo que **persiste** —base
-IndexedDB, prefijo de respaldo, clave de entitlement— usa `IDENTIDAD.codigo`. Ese archivo existe
+IndexedDB, prefijo de respaldo— usa `IDENTIDAD.codigo`. Ese archivo existe
 cinco veces, una por unidad desplegable, y `scripts/verificar_identidad.mjs` corta el push si las
 cinco no coinciden o si el nombre está escrito a mano.
 

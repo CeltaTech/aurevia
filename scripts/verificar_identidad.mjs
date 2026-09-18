@@ -83,13 +83,13 @@ function esLineaDeComentario(linea) {
   return INICIOS_DE_COMENTARIO.some((inicio) => limpia.startsWith(inicio));
 }
 
-// Las claves de entitlement (`aurevia.marca.personalizada`) son identificadores
-// guardados: se nombran una vez y no se renombran nunca, ni aunque la marca
-// cambie (CLAUDE.md §7, regla 13, y la excepción escrita en el glosario, §4).
-// En JavaScript se arman con IDENTIDAD.codigo; en un archivo .sql no se puede,
-// porque una migración no importa código. Ahí van escritas, y este chequeo las
-// deja pasar: lo que persigue es la marca visible en una pantalla, no un
-// identificador que ya está guardado adentro de datos que existen.
+// Las migraciones viejas tienen escritas claves que arrancan con el código del
+// producto —`aurevia.algo.algo`—, y una migración aplicada no se edita nunca.
+// Este chequeo las deja pasar: lo que persigue es la marca visible en una
+// pantalla, no un identificador que ya quedó escrito en el historial.
+//
+// El producto ya no tiene ningún sistema de funciones contratadas, y no lo va a
+// tener: qué contrató cada cliente es de CeltaTech.
 const CLAVE_DE_ENTITLEMENT = new RegExp(`\\b${IDENTIDAD.codigo}(\\.[a-z0-9_]+)+`, 'gi');
 
 function sinClavesDeEntitlement(linea, rutaRelativa) {

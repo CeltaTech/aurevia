@@ -38,7 +38,7 @@ async function cuantosPacientesPorGuardia(guardiaIds) {
 async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde, periodoHasta }) {
   const { data: paciente, error: errorPaciente } = await supabase
     .from('pacientes')
-    .select('id, nombre, obra_social, numero_afiliado, familia_id')
+    .select('id, nombre, obra_social_legajo_id, numero_afiliado, familia_id')
     .eq('id', pacienteId)
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
@@ -47,6 +47,21 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
   // decía «en esta Prestadora», o sea que distinguía «no existe» de «existe pero es de otra».
   // El motivo contesta lo mismo en los dos casos.
   if (!paciente) throw new ErrorConMotivo('paciente_no_encontrado', `paciente ${pacienteId}`);
+
+  // Cómo se llama la obra social no está copiado en el Paciente: el Paciente guarda cuál Legajo
+  // del Padrón es, y el nombre se busca acá, al armar el informe. Si el Paciente no tiene
+  // ninguna, no hay nada que buscar y el informe sale con el renglón vacío, como antes.
+  let obraSocialNombre = null;
+  if (paciente.obra_social_legajo_id) {
+    const { data: legajo, error: errorLegajo } = await supabase
+      .from('legajos')
+      .select('nombre_visible')
+      .eq('id', paciente.obra_social_legajo_id)
+      .eq('prestadora_id', prestadoraId)
+      .maybeSingle();
+    if (errorLegajo) throw new Error(errorLegajo.message);
+    obraSocialNombre = legajo?.nombre_visible ?? null;
+  }
 
   // Las guardias de este Paciente salen de la lista de Pacientes de cada guardia, no de la
   // columna vieja `guardias.paciente_id`: esa columna guarda UNO solo, así que en una guardia
@@ -122,7 +137,7 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
   }
 
   return {
-    paciente: { nombre: paciente.nombre, obra_social: paciente.obra_social, numero_afiliado: paciente.numero_afiliado },
+    paciente: { nombre: paciente.nombre, obra_social: obraSocialNombre, numero_afiliado: paciente.numero_afiliado },
     familia_id: paciente.familia_id,
     tipo,
     periodo_desde: periodoDesde,

@@ -7,6 +7,7 @@ import { Alert } from '../../components/ui/Alert';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio';
 import { partesDesdeFila, partesParaGuardar } from '../../lib/partesDeDomicilio';
+import { SelectorDeLegajo } from '../../components/padron/SelectorDeLegajo';
 
 export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
   const modal = useModalAccesible(onClose);
@@ -16,7 +17,7 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
   const [domicilio, setDomicilio] = useState(partesDesdeFila(paciente));
   const [nivelComplejidad, setNivelComplejidad] = useState(paciente.nivel_complejidad || '');
   const [patologias, setPatologias] = useState((paciente.patologias || []).join(', '));
-  const [obraSocial, setObraSocial] = useState(paciente.obra_social || '');
+  const [obraSocialLegajoId, setObraSocialLegajoId] = useState(paciente.obra_social_legajo_id || null);
   const [numeroAfiliado, setNumeroAfiliado] = useState(paciente.numero_afiliado || '');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
@@ -33,7 +34,7 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
         ...partesParaGuardar(domicilio),
         nivel_complejidad: nivelComplejidad || null,
         patologias: patologias.split(',').map((p) => p.trim()).filter(Boolean),
-        obra_social: obraSocial || null,
+        obra_social_legajo_id: obraSocialLegajoId || null,
         numero_afiliado: numeroAfiliado || null,
       })
       .eq('id', paciente.id);
@@ -63,7 +64,18 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
             <option value="III">III</option>
           </FormField>
           <FormField label={t.familias.editar_paciente.patologias} name="patologias" value={patologias} onChange={(e) => setPatologias(e.target.value)} />
-          <FormField label={t.familias.editar_paciente.obra_social} name="obra_social" value={obraSocial} onChange={(e) => setObraSocial(e.target.value)} />
+          {/* La obra social se elige del Padrón, donde es una Persona jurídica. Escrita a mano,
+              la misma obra social en cien fichas serían cien financiadores distintos. */}
+          <SelectorDeLegajo
+            name="obra_social_legajo_id"
+            label={t.familias.editar_paciente.obra_social}
+            ayuda={t.familias.editar_paciente.obra_social_ayuda}
+            valor={obraSocialLegajoId}
+            alElegir={setObraSocialLegajoId}
+            prestadoraId={paciente.prestadora_id}
+            clase="juridica"
+            deshabilitado={guardando}
+          />
           <FormField label={t.familias.editar_paciente.numero_afiliado} name="numero_afiliado" value={numeroAfiliado} onChange={(e) => setNumeroAfiliado(e.target.value)} />
 
           <div className="panel-modal-acciones">

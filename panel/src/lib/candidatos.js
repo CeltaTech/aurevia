@@ -42,7 +42,7 @@
 // ----------------------------------------------------------------------------
 //
 // "La autorización de la Obra Social está agotada."
-// Ese dato no existe todavía en ningún lado. `pacientes.obra_social` es el nombre de la obra
+// Ese dato no existe todavía en ningún lado. El Paciente guarda cuál Legajo del Padrón es su obra
 // social, no un cupo de horas autorizadas ni un saldo. Haría falta guardar la autorización
 // (período, horas o guardias autorizadas, consumidas) para poder avisarlo.
 //

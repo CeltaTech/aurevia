@@ -61,7 +61,6 @@ export const ORIGENES_POSIBLES = Object.values(ORIGENES);
 /** Lo más largo que puede escribirse en una nota o en un nombre. */
 export const LARGOS = {
   quien_consintio: 200,
-  familiar_nombre: 200,
   nota: 2000,
   motivo: 2000,
 };
@@ -70,6 +69,13 @@ function textoUsable(valor, maximo) {
   if (typeof valor !== 'string') return false;
   const limpio = valor.trim();
   return limpio.length > 0 && limpio.length <= maximo;
+}
+
+const FORMA_DE_IDENTIFICADOR = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Falla cerrado: lo que no tiene forma de identificador no señala ningún Legajo.
+function identificadorUsable(valor) {
+  return typeof valor === 'string' && FORMA_DE_IDENTIFICADOR.test(valor.trim());
 }
 
 function momento(valor) {
@@ -108,10 +114,13 @@ export function revisarConsentimiento(datos) {
  *
  * El motivo no se pide. El familiar no tiene que justificar por qué se quedó en su propia casa; si
  * hay algo que dejar escrito, se escribe, y si no, no.
+ *
+ * Quién se quedó se elige del Padrón y se guarda cuál Legajo es, nunca su nombre tecleado. Que sea
+ * una Persona física lo comprueba además la base, al dar de alta.
  */
 export function revisarFamiliarQueSeQuedo(datos) {
-  if (!textoUsable(datos?.familiar_nombre, LARGOS.familiar_nombre)) {
-    return { ok: false, campo: 'familiar_nombre' };
+  if (!identificadorUsable(datos?.familiar_legajo_id)) {
+    return { ok: false, campo: 'familiar_legajo_id' };
   }
   if (!ORIGENES_POSIBLES.includes(datos?.origen)) return { ok: false, campo: 'origen' };
 

@@ -438,17 +438,19 @@ INSERT INTO public.permisos_circulo_familiar (familia_id, usuario_id, clave, per
 
 INSERT INTO public.pacientes (
   id, prestadora_id, familia_id, nombre, fecha_nacimiento, patologias,
-  nivel_complejidad, domicilio, lat, lng, obra_social, numero_afiliado
+  nivel_complejidad, domicilio, lat, lng, obra_social_legajo_id, numero_afiliado
 ) VALUES
   ('50000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
    '40000000-0000-4000-8000-000000000001', 'Elena Gómez', '1938-04-12',
    ARRAY['Hipertensión', 'Artrosis'], 'II',
-   'Av. Siempreviva 742, CABA', -34.6037, -58.3816, 'Obra Social de Prueba', 'OSP-0001'),
+   -- La obra social no se teclea: se cita el Legajo de la Mutual del Ejemplo, que ya está en el
+   -- Padrón de arriba. El número de afiliado sí es un dato de esta persona en esa obra social.
+   'Av. Siempreviva 742, CABA', -34.6037, -58.3816, 'c0000000-0000-4000-8000-000000000003', 'OSP-0001'),
 
   ('50000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111',
    '40000000-0000-4000-8000-000000000002', 'Héctor López', '1942-11-03',
    ARRAY['Diabetes tipo 2'], 'I',
-   'Calle Falsa 123, Zona Norte', -34.5000, -58.5200, 'Obra Social de Prueba', 'OSP-0002'),
+   'Calle Falsa 123, Zona Norte', -34.5000, -58.5200, 'c0000000-0000-4000-8000-000000000003', 'OSP-0002'),
 
   ('50000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111',
    '40000000-0000-4000-8000-000000000003', 'Rosa Morales', '1935-07-25',
@@ -463,7 +465,7 @@ INSERT INTO public.pacientes (
   ('50000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111',
    '40000000-0000-4000-8000-000000000001', 'Alberto Gómez', '1936-09-30',
    ARRAY['EPOC'], 'II',
-   'Av. Siempreviva 742, CABA', -34.6037, -58.3816, 'Obra Social de Prueba', 'OSP-0004');
+   'Av. Siempreviva 742, CABA', -34.6037, -58.3816, 'c0000000-0000-4000-8000-000000000003', 'OSP-0004');
 
 -- Para quién se contrata el Servicio son dos columnas y no una: `tipo_contratante` dice de qué
 -- clase es el Cliente y `contratante_id` cuál. Hoy el único tipo que la base acepta es `familia`,

@@ -62,9 +62,9 @@ export default function Layout() {
       </header>
       <main className="app-content">
         <Outlet context={{ avisarOfertas: setOfertasAbiertas }} />
-        {/* La única mención del producto en toda la aplicación, y al pie. Se apaga si la
-            Prestadora tiene contratada esa función (`CLAUDE.md` §7, regla 1). */}
-        {marca.mostrarMarcaProducto && <p className="marca-del-producto">{t.marca.con_tecnologia_de}</p>}
+        {/* La única mención del producto en toda la aplicación, y al pie. Va siempre: es el
+            crédito de quién hizo el software, no una función que se venda. */}
+        <p className="marca-del-producto">{t.marca.con_tecnologia_de}</p>
       </main>
       {/* La barra de abajo lleva nombre: sin él, un lector de pantalla anuncia tres enlaces
           sueltos en vez de una zona por la que se puede saltar de una vez. */}

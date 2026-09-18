@@ -30,7 +30,7 @@ import { api } from '../lib/api';
 import { guardarMarca } from '../lib/marcaGuardada';
 import { useAuth } from './AuthContext';
 
-const MARCA_VACIA = { nombre: null, logoUrl: null, mostrarMarcaProducto: true };
+const MARCA_VACIA = { nombre: null, logoUrl: null };
 const CONTACTO_VACIO = { telefono: null, whatsapp: null, email: null };
 const PERFIL_VACIO = { marca: MARCA_VACIA, contacto: CONTACTO_VACIO, visibilidad: null, marketplace: false };
 

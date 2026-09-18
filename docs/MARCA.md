@@ -28,8 +28,8 @@ la marca **principal** la pone la Prestadora, nunca `identidadProducto.js`.
 qué hace la industria. No es marca blanca total: la marca de la Prestadora va primera y
 grande, y el producto queda en una línea discreta al pie, *"con la tecnología de
 {{producto}}"*. Esa línea es el **único** lugar donde la marca del producto puede aparecer
-ante una Familia o un Asistente, y se apaga con el entitlement `aurevia.marca.personalizada`
-— o sea que quitarla es una función paga, como en la mayoría del software vertical.
+ante una Familia o un Asistente, y **va siempre**: es el crédito de quién hizo el software, no
+una función que se venda. El producto no pregunta qué contrató nadie.
 
 **Cada Prestadora manda desde su propia dirección de correo, bajo el dominio del producto.** Al
 dar de alta una Prestadora se le crea `[prestadora]@careonys.com`, y de ahí salen todos sus

@@ -51,8 +51,8 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
 
   // Este correo lo recibe una Familia o un Asistente, y para ellos la empresa es la Prestadora: es
   // a quien llamaron, con quien firmaron y de quien esperan un correo. Por eso el nombre que va
-  // adelante es el de ella, no el del producto. El producto queda en la línea del pie, que se
-  // apaga si la Prestadora no tiene contratada esa función.
+  // adelante es el de ella, no el del producto. El producto queda en la línea del pie, que va
+  // siempre.
   //
   // Si la marca llegara vacía se usa el nombre del producto: es preferible un correo que dice
   // Careonys a uno que dice «Activación de la cuenta en undefined».
@@ -64,7 +64,6 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
     dias: DIAS_VALIDEZ_TOKEN,
     empresa: marca?.nombre || IDENTIDAD.nombre,
     producto: IDENTIDAD.nombre,
-    conMarcaDelProducto: !!marca?.mostrarMarcaProducto,
   });
   await enviarEmail({ to: email, asunto: textos.asunto, texto: textos.texto, formato: textos.html });
 }

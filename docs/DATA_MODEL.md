@@ -41,9 +41,7 @@ CREATE TABLE prestadoras (
 `logo_url TEXT`, opcional. Es la marca que ven la Familia y el Asistente. Si está vacía, las
 pantallas muestran el nombre de la Prestadora escrito. Los archivos viven en el depósito
 `marca-prestadoras`, público para leer y cerrado para escribir, con una carpeta por
-Prestadora llamada como su identificador. La misma migración deja la función
-`prestadora_oculta_marca_producto(UUID)`, que es el único lugar que contesta si esa
-Prestadora contrató apagar la línea del producto al pie. Contrato completo en `docs/MARCA.md` §0.
+Prestadora llamada como su identificador. Contrato completo en `docs/MARCA.md` §0.
 
 Cada prestadora licenciataria del software es un tenant aislado. La única fila real hoy es
 datos de prueba/desarrollo con id `874f54d7-4383-4d54-8b9f-f51d02f0dd11` (nombre `Prestadora

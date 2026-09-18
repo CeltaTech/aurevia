@@ -52,12 +52,10 @@
   Importación, Informes de obra social, Usuarios del Panel, Prestadoras (solo
   admin_plataforma/superadmin), Admin_plataforma (solo admin_plataforma), Configuración,
   Auditoría. Es el inventario real sobre el que se reorganiza — no una lista teórica.
-- Ya existe un mecanismo de activación de funciones por Prestadora que resuelve el mismo
-  problema de fondo ("¿qué le muestro a esta Prestadora?"): `catalogo_modulos` /
-  `plan_modulos` / `prestadora_modulos`, construido para planes y add-ons
-  ya construido. CLAUDE.md exige no duplicar un patrón de
-  decisión que ya tiene un punto único de verdad — ver §5 más abajo, donde se propone
-  reusar ese mismo mecanismo para las modalidades en vez de construir un toggle paralelo.
+- **No existe ningún mecanismo de activación de funciones por lo que cada Prestadora contrató, y
+  no lo va a haber.** El producto no restringe por razones comerciales: quién tiene qué es de
+  CeltaTech (`celtatech/CLAUDE.md` §2). Lo que sí decide qué se le muestra a cada Prestadora es
+  su **modalidad de trabajo**, que es cosa distinta y vive en `prestadora_modalidades`.
 
 ## 2. Esquema rearmado — 4 grupos de navegación
 
@@ -152,8 +150,8 @@ reales encontrados, ninguno resuelto por este documento — todos requieren una 
 antes de programar:
 
 1. **Resuelto (2026-07-24) — tabla propia de modalidades.** Se evaluaron dos opciones: (a)
-   reusar `catalogo_modulos`/`prestadora_modulos` tratando cada modalidad como un módulo más,
-   o (b) una tabla nueva dedicada solo a modalidades. Se descartó (a): la regla 12 de
+   tratar cada modalidad como un módulo contratado más, o (b) una tabla nueva dedicada solo a
+   modalidades. Se descartó (a): la regla 12 de
    `CLAUDE.md` §7 exige que una misma **decisión** no quede resuelta en más de un lugar sin un
    punto único de verdad — no exige que conceptos distintos compartan tabla. "Modalidad de
    negocio activa" y "función/módulo activado por plan o add-on" son decisiones distintas
@@ -203,8 +201,6 @@ antes de programar:
 
 ## 4. Fuera de alcance de este documento (explícito, para no generar expectativa)
 
-- No se diseñó el modelo de datos de "modalidad activa" (tabla nueva vs. reuso de
-  `prestadora_modulos`) — es la pregunta 1 de §3, todavía abierta.
 - No se diseñaron las pantallas nuevas de marketplace (cobro, calificaciones, auditoría de
   advertencias) más allá de nombrarlas como necesarias en el Grupo 3.
 - No se tocó ningún archivo de `panel/src`, `backend/src` ni ninguna migración de Supabase.
@@ -215,8 +211,8 @@ antes de programar:
 ## 5. Estado de este documento
 
 **Aprobado por el Desarrollador el 2026-07-24.** Los 8 puntos de §3 quedaron todos resueltos:
-tabla propia `prestadora_modalidades` como punto único de verdad de la modalidad activa (no
-se reusa `catalogo_modulos`, por no ser la misma decisión — regla 12 de `CLAUDE.md` §7);
+tabla propia `prestadora_modalidades` como punto único de verdad de la modalidad activa (no se
+cuelga de lo que cada Prestadora haya contratado, por no ser la misma decisión);
 ninguna modalidad activada por defecto al alta, el onboarding suma un paso explícito de
 elección; Facturación de marketplace en pantalla propia (Grupo 3), separada de la de
 prestación directa; Informes de obra social y Lista de precios confirmados exclusivos de

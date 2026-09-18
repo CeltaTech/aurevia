@@ -88,7 +88,7 @@ const DATOS = {
   codigo_instruccion_circulo: { codigo: '123456', minutos: 10, remite: 'Cuidados del Sur' },
   activacion_cuenta: {
     nombre: 'Elena', link: 'https://ejemplo/activar', dias: 7,
-    empresa: 'Cuidados del Sur', producto: IDENTIDAD.nombre, conMarcaDelProducto: true,
+    empresa: 'Cuidados del Sur', producto: IDENTIDAD.nombre,
   },
   estado_postulacion: { empresa: 'Cuidados del Sur', nombre: 'Marta', estado: 'aprobado' },
   nueva_postulacion_asistente: {

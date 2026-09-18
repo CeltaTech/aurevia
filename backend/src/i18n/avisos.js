@@ -283,14 +283,14 @@ const ES = {
 
   activacion_cuenta: (d) => ({
     asunto: `Active su cuenta en ${d.empresa}`,
-    texto: `Hola ${d.nombre},\n\nSu cuenta en ${d.empresa} ya está creada. Falta un paso: elegir su contraseña.\n\nSe activa acá:\n${d.link}\n\nEl enlace vence en ${d.dias} días. Si no esperaba este correo, puede ignorarlo.${d.conMarcaDelProducto ? `\n\n—\nCon la tecnología de ${d.producto}` : ''}`,
+    texto: `Hola ${d.nombre},\n\nSu cuenta en ${d.empresa} ya está creada. Falta un paso: elegir su contraseña.\n\nSe activa acá:\n${d.link}\n\nEl enlace vence en ${d.dias} días. Si no esperaba este correo, puede ignorarlo.\n\n—\nCon la tecnología de ${d.producto}`,
     html: correoConBoton({
       saludo: `Hola ${d.nombre},`,
       cuerpo: `Su cuenta en ${d.empresa} ya está creada. Falta un paso: elegir su contraseña.`,
       boton: 'Activar mi cuenta',
       link: d.link,
       pieDeAviso: `El enlace vence en ${d.dias} días. Si no esperaba este correo, puede ignorarlo.`,
-      marca: d.conMarcaDelProducto ? `Con la tecnología de ${d.producto}` : null,
+      marca: `Con la tecnología de ${d.producto}`,
     }),
   }),
 
@@ -585,14 +585,14 @@ const EN = {
 
   activacion_cuenta: (d) => ({
     asunto: `Activate your ${d.empresa} account`,
-    texto: `Hi ${d.nombre},\n\nYour ${d.empresa} account has been created. One step left: choose your password.\n\nActivate it here:\n${d.link}\n\nThe link expires in ${d.dias} days. If you were not expecting this email, you can ignore it.${d.conMarcaDelProducto ? `\n\n—\nPowered by ${d.producto}` : ''}`,
+    texto: `Hi ${d.nombre},\n\nYour ${d.empresa} account has been created. One step left: choose your password.\n\nActivate it here:\n${d.link}\n\nThe link expires in ${d.dias} days. If you were not expecting this email, you can ignore it.\n\n—\nPowered by ${d.producto}`,
     html: correoConBoton({
       saludo: `Hi ${d.nombre},`,
       cuerpo: `Your ${d.empresa} account has been created. One step left: choose your password.`,
       boton: 'Activate my account',
       link: d.link,
       pieDeAviso: `The link expires in ${d.dias} days. If you were not expecting this email, you can ignore it.`,
-      marca: d.conMarcaDelProducto ? `Powered by ${d.producto}` : null,
+      marca: `Powered by ${d.producto}`,
     }),
   }),
 
@@ -873,14 +873,14 @@ const PT = {
 
   activacion_cuenta: (d) => ({
     asunto: `Ative a sua conta na ${d.empresa}`,
-    texto: `Olá ${d.nombre},\n\nA sua conta na ${d.empresa} já está criada. Falta um passo: escolher a sua senha.\n\nA ativação é feita aqui:\n${d.link}\n\nO link expira em ${d.dias} dias. Se não esperava este email, pode ignorá-lo.${d.conMarcaDelProducto ? `\n\n—\nCom a tecnologia de ${d.producto}` : ''}`,
+    texto: `Olá ${d.nombre},\n\nA sua conta na ${d.empresa} já está criada. Falta um passo: escolher a sua senha.\n\nA ativação é feita aqui:\n${d.link}\n\nO link expira em ${d.dias} dias. Se não esperava este email, pode ignorá-lo.\n\n—\nCom a tecnologia de ${d.producto}`,
     html: correoConBoton({
       saludo: `Olá ${d.nombre},`,
       cuerpo: `A sua conta na ${d.empresa} já está criada. Falta um passo: escolher a sua senha.`,
       boton: 'Ativar a minha conta',
       link: d.link,
       pieDeAviso: `O link expira em ${d.dias} dias. Se não esperava este email, pode ignorá-lo.`,
-      marca: d.conMarcaDelProducto ? `Com a tecnologia de ${d.producto}` : null,
+      marca: `Com a tecnologia de ${d.producto}`,
     }),
   }),
 

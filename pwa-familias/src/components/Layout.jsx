@@ -28,9 +28,9 @@ export default function Layout() {
       </header>
       <main className="app-content">
         <Outlet />
-        {/* La única mención del producto en toda la aplicación, y al pie. Se apaga si la
-            Prestadora tiene contratada esa función (`CLAUDE.md` §7, regla 1). */}
-        {marca.mostrarMarcaProducto && <p className="marca-del-producto">{t.marca.con_tecnologia_de}</p>}
+        {/* La única mención del producto en toda la aplicación, y al pie. Va siempre: es el
+            crédito de quién hizo el software, no una función que se venda. */}
+        <p className="marca-del-producto">{t.marca.con_tecnologia_de}</p>
       </main>
       {/* La zona de navegación lleva nombre: sin él, un lector de pantalla anuncia "navegación"
           a secas, y si mañana hay dos zonas de navegación en la misma pantalla no hay forma de

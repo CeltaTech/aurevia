@@ -28,14 +28,10 @@
 //      tiempo de ejecución.
 //
 // `codigo` es la única excepción: NO se cambia nunca. Es la clave técnica con la
-// que CeltaTech identifica al producto y con la que se arman las claves de
-// entitlements (`aurevia.pacientes.activos_max`) — por eso siguen diciendo
+// que CeltaTech identifica al producto, y con ella se arman el nombre de la base
+// local del teléfono y el prefijo de los respaldos — por eso sigue diciendo
 // `aurevia` aunque la marca ya sea Careonys. Renombrar la marca no toca un
-// solo dato guardado. Ver celtatech/docs/PLAN_SEPARACION_CELTATECH.md, Etapa 0.5.
-//
-// A partir de la Etapa 3 la fuente de verdad de estos valores pasa a ser CeltaTech y
-// se replican por el mismo canal que los entitlements. Hasta entonces esta config
-// ES la fuente de verdad. Los puntos de consumo no cambian cuando eso pase.
+// solo dato guardado.
 //
 // ===========================================================================
 // LO QUE ESTE ARCHIVO NO ES: LA MARCA DE LA PRESTADORA
@@ -61,9 +57,9 @@
 //
 // El modelo es CO-BRANDING (decidido por el Desarrollador el 2026-07-27, no
 // marca blanca total): el producto sí aparece ante una Familia, pero solo en
-// una línea discreta al pie —"con la tecnología de {{producto}}"— que se apaga
-// con el entitlement `aurevia.marca.personalizada`. Ese es el ÚNICO uso
-// admitido de IDENTIDAD en una superficie de Familia o de Asistente.
+// una línea discreta al pie —"con la tecnología de {{producto}}"—, que va
+// siempre y no se consulta contra nada. Ese es el ÚNICO uso admitido de
+// IDENTIDAD en una superficie de Familia o de Asistente.
 //
 // Hoy eso NO se cumple: las dos PWA muestran el nombre del producto como marca
 // principal en su encabezado y en las notificaciones push, y el email de
@@ -81,8 +77,9 @@
 export const IDENTIDAD = {
   // Clave técnica inmutable. Nunca se renombra ni se traduce (ver cabecera).
   // Sigue diciendo 'aurevia' a propósito, aunque la marca hoy sea Careonys: es
-  // justamente lo que este campo promete. Cambiarlo invalidaría todas las claves
-  // de entitlements ya guardadas (`aurevia.pacientes.activos_max`).
+  // justamente lo que este campo promete. Cambiarlo invalidaría la base local del
+  // teléfono —se perderían los datos que están esperando para subir— y el prefijo
+  // de los respaldos ya hechos.
   codigo: 'aurevia',
 
   // Nombre comercial completo. Resuelve el marcador {{producto}}.

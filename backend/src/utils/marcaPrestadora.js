@@ -13,20 +13,20 @@
 
 import { supabase } from '../db/connection.js';
 
-// Devuelve el nombre visible, el logo y si va la línea del producto al pie.
+// Devuelve el nombre visible y el logo de la Prestadora.
 //
-// `mostrarMarcaProducto` es lo que decide si al pie se lee "con la tecnología
-// de Careonys". Se muestra siempre, salvo que la Prestadora tenga contratada
-// la función que la apaga; quien contesta esa pregunta es una sola función de
-// la base, `prestadora_oculta_marca_producto`.
+// La línea del pie —"con la tecnología de Careonys"— va siempre y no se
+// pregunta. Es el crédito de quién hizo el software, no una función que se
+// venda: algo tiene que decir ahí, y quien no contrató el producto ni siquiera
+// tiene acceso a estas pantallas.
 //
 // Si la Prestadora no aparece —cosa que no debería pasar, pero pasa cuando un
-// dato quedó a medio cargar— se devuelve la marca vacía y la línea encendida.
-// El encabezado se queda sin nombre por un rato; lo que no puede pasar es que
-// una pantalla se caiga por esto.
+// dato quedó a medio cargar— se devuelve la marca vacía. El encabezado se queda
+// sin nombre por un rato; lo que no puede pasar es que una pantalla se caiga por
+// esto.
 export async function marcaDeLaPrestadora(prestadoraId) {
   if (!prestadoraId) {
-    return { nombre: null, logoUrl: null, mostrarMarcaProducto: true };
+    return { nombre: null, logoUrl: null };
   }
 
   const { data: prestadora } = await supabase
@@ -35,13 +35,8 @@ export async function marcaDeLaPrestadora(prestadoraId) {
     .eq('id', prestadoraId)
     .maybeSingle();
 
-  const { data: oculta } = await supabase.rpc('prestadora_oculta_marca_producto', {
-    p_prestadora_id: prestadoraId,
-  });
-
   return {
     nombre: prestadora?.nombre_fantasia ?? null,
     logoUrl: prestadora?.logo_url ?? null,
-    mostrarMarcaProducto: oculta !== true,
   };
 }

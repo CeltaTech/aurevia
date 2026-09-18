@@ -72,8 +72,7 @@ cinco veces, una por unidad desplegable, y `scripts/verificar_identidad.mjs` cor
 cinco no coinciden o si el nombre está escrito a mano.
 
 **El `codigo: 'aurevia'` no se toca por ahora.** Es identificador guardado, no marca: con él se
-arman las claves de entitlement (`aurevia.pacientes.activos_max`), la base local del teléfono y el
-prefijo de los respaldos. **Cambiarlo se evalúa en el momento de la fusión con el Marketplace**, y
+arman la base local del teléfono y el prefijo de los respaldos. **Cambiarlo se evalúa en el momento de la fusión con el Marketplace**, y
 hasta entonces queda como está. Ver la excepción del glosario, §4.
 
 **Dónde vive la marca de la Prestadora.** En las dos aplicaciones, `src/context/PerfilContext.jsx`
@@ -81,9 +80,9 @@ la pide una vez a `/perfil` y la entrega con `useMarca()` (`nombre`, `logoUrl`,
 `mostrarMarcaProducto`); el aviso al celular la lee de `src/lib/marcaGuardada.js`, porque el
 trabajador de fondo no tiene sesión; del lado del motor la arma
 `backend/src/utils/marcaPrestadora.js` con `prestadoras.nombre_fantasia` y `prestadoras.logo_url`.
-La línea al pie —*«con la tecnología de {{producto}}»*— depende del entitlement
-`aurevia.marca.personalizada` y es el **único** uso de `IDENTIDAD` en una superficie de Familia o
-Asistente. Excepción abierta: la pantalla de ingreso, donde todavía no se sabe de qué Prestadora
+La línea al pie —*«con la tecnología de {{producto}}»*— **va siempre** y es el **único** uso de
+`IDENTIDAD` en una superficie de Familia o Asistente. **El producto no consulta qué contrató
+ninguna Prestadora**, acá ni en ningún otro lado: eso es de CeltaTech (`celtatech/CLAUDE.md` §2). Excepción abierta: la pantalla de ingreso, donde todavía no se sabe de qué Prestadora
 se trata (pendiente #141). Detalle en `docs/MARCA.md` §0.
 
 **El trato se le dice al modelo una sola vez**, en `backend/src/utils/tratoIA.js`. Ningún prompt

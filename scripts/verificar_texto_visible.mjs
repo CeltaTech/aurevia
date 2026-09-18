@@ -352,8 +352,6 @@ const TEXTOS_DE_LA_PLATAFORMA = [
   { tabla: 'advertencias_legales', señal: "jurisdiccion || ' / ' || funcion_clave", columnas: ['texto_advertencia'] },
   // Lo que lee y acepta un Asistente o una Familia antes de que se active algo.
   { tabla: 'textos_consentimiento', señal: "jurisdiccion || ' / ' || clave || ' / ' || idioma", columnas: ['titulo', 'cuerpo'] },
-  // Los módulos del producto, tal como se ven en el Panel.
-  { tabla: 'catalogo_modulos', señal: 'key', columnas: ['nombre', 'descripcion'] },
   // De acá para abajo, solo el catálogo general: `prestadora_id` vacío.
   { tabla: 'tipos_asistente', señal: 'clave', columnas: ['nombre', 'descripcion'], soloGeneral: true },
   { tabla: 'tareas_tipo_asistente', señal: 'clave', columnas: ['texto'], soloGeneral: true },

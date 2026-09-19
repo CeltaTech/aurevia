@@ -15,6 +15,7 @@ import { advertenciaVigente, advertenciasVigentes, registrarAviso } from '../uti
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { darDeAltaEnPasarela, MOTIVO_ALTA } from '../utils/altaEnPasarela.js';
 import { registrarCobroExitoso } from '../utils/cobrosMarketplace.js';
+import { cuentasDeLasFichas } from '../utils/cuentaDeLaFicha.js';
 
 export const panelMarketplaceRouter = Router();
 
@@ -480,13 +481,13 @@ panelMarketplaceRouter.get('/accesos', soloAdministracion, async (req, res) => {
   const pacienteIds = [...new Set(data.map((s) => s.paciente_id).filter(Boolean))];
   const asistenteIds = [...new Set(data.map((s) => s.asistente_id).filter(Boolean))];
 
-  const [{ data: usuariosFamilia }, { data: pacientes }, { data: asistentes }] = await Promise.all([
-    familiaIds.length ? supabase.from('usuarios').select('id, nombre').in('id', familiaIds) : { data: [] },
+  const [cuentasFamilia, { data: pacientes }, { data: asistentes }] = await Promise.all([
+    cuentasDeLasFichas('familias', familiaIds, 'nombre'),
     pacienteIds.length ? supabase.from('pacientes').select('id, nombre').in('id', pacienteIds) : { data: [] },
     asistenteIds.length ? supabase.from('asistentes').select('id, nombre').in('id', asistenteIds) : { data: [] },
   ]);
 
-  const nombreFamilia = new Map((usuariosFamilia || []).map((u) => [u.id, u.nombre]));
+  const nombreFamilia = new Map([...cuentasFamilia].map(([id, datos]) => [id, datos?.nombre ?? null]));
   const nombrePaciente = new Map((pacientes || []).map((p) => [p.id, p.nombre]));
   const nombreAsistente = new Map((asistentes || []).map((a) => [a.id, a.nombre]));
 

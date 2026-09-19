@@ -27,7 +27,9 @@ import { huellaDelCodigo } from '../../utils/codigoDeUnSoloUso.js';
 import { olvidarPedidos } from '../../middleware/topeDePedidos.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-const USUARIO = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'; // usuarios.id === asistentes.id === auth.uid()
+const USUARIO = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'; // la cuenta: usuarios.id === auth.uid()
+// El Legajo de esa persona en esta Prestadora, que es otro número que el de la cuenta.
+const LEGAJO = 'bbbbbbbb-bbbb-bbbb-bbbb-b0000000000b';
 const GUARDIA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 const PACIENTE = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
 const FAMILIA = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
@@ -173,10 +175,16 @@ function intentosSumados() {
 }
 
 // Cómo se ve desde afuera que salió el aviso de cobertura: para armarlo, el motor va a buscar el
-// nombre del Asistente a `asistentes`, y en el camino de un check-in no lo consulta nadie más. El
-// push en sí no se puede observar acá —sin claves VAPID no sale— y por eso se mira su antesala.
+// nombre del Asistente a `asistentes`. El push en sí no se puede observar acá —sin claves VAPID no
+// sale— y por eso se mira su antesala.
+//
+// Se mira el `select` y no la tabla, porque todo pedido con sesión pasa antes por el middleware,
+// que consulta esa misma tabla para saber cuál es el Legajo de quien entró.
 function avisoDeCoberturaArmado() {
-  return llamadas.some((l) => l.clave === 'GET /rest/v1/asistentes');
+  return llamadas.some(
+    (l) => l.clave === 'GET /rest/v1/asistentes'
+      && (new URL(l.url, 'http://interno').searchParams.get('select') ?? '').includes('nombre')
+  );
 }
 
 beforeEach(() => {
@@ -196,7 +204,7 @@ beforeEach(() => {
   guardiaActual = {
     id: GUARDIA,
     prestadora_id: PRESTADORA,
-    asistente_id: USUARIO,
+    asistente_id: LEGAJO,
     paciente_id: PACIENTE,
     fecha: '2026-09-09',
     hora_inicio: '08:00',
@@ -214,7 +222,13 @@ beforeEach(() => {
   respuestas.set('PATCH /rest/v1/guardias', () => [{ id: GUARDIA }]);
   respuestas.set('GET /rest/v1/guardia_pacientes', guardiaPacientesRespuesta);
   respuestas.set('GET /rest/v1/pacientes', () => [{ id: PACIENTE, familia_id: FAMILIA }]);
-  respuestas.set('GET /rest/v1/asistentes', () => [{ nombre: 'Asistente de prueba' }]);
+  // Dos consultas distintas a la misma tabla: la del middleware, que busca el Legajo por la
+  // cuenta, y la del nombre, que arma el aviso. Se reparten por el `select`.
+  respuestas.set('GET /rest/v1/asistentes', ({ url }) => {
+    const select = new URL(url, 'http://interno').searchParams.get('select') ?? '';
+    if (!select.includes('nombre')) return [{ id: LEGAJO, prestadora_id: PRESTADORA }];
+    return [{ id: LEGAJO, nombre: 'Asistente de prueba' }];
+  });
   respuestas.set('GET /rest/v1/configuracion_ausencia_automatica', () => []);
   respuestas.set('POST /rest/v1/rpc/domicilios_de_pacientes_en', () => []);
   respuestas.set('POST /rest/v1/mensajes_asistente', () => []);
@@ -270,7 +284,7 @@ describe('check-in — el piso, que no se negocia: la guardia nunca se traba', (
       const [fila] = comprobacionesGuardadas();
       assert.equal(fila.guardia_id, GUARDIA);
       assert.equal(fila.prestadora_id, PRESTADORA);
-      assert.equal(fila.asistente_id, USUARIO);
+      assert.equal(fila.asistente_id, LEGAJO);
       assert.equal(fila.momento, 'checkin');
       assert.equal(fila.estado, 'sin_comprobar');
       assert.equal(fila.medio, null);
@@ -454,7 +468,7 @@ describe('el código que se muestra en pantalla', () => {
     const guardado = llamadas.find((l) => l.clave === 'POST /rest/v1/codigos_de_presencia');
     const fila = Array.isArray(guardado.cuerpo) ? guardado.cuerpo[0] : guardado.cuerpo;
     assert.equal(fila.sujeto_tipo, 'asistente');
-    assert.equal(fila.sujeto_id, USUARIO);
+    assert.equal(fila.sujeto_id, LEGAJO);
     assert.equal(fila.prestadora_id, PRESTADORA);
     assert.equal(fila.codigo_huella, huellaDelCodigo(cuerpo.codigo));
     assert.equal(JSON.stringify(fila).includes(cuerpo.codigo), false, 'el código nunca se guarda en claro');

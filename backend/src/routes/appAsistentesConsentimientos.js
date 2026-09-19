@@ -36,7 +36,7 @@ async function contextoDelAsistente(usuarioAsistente) {
   const { data: asistente } = await supabase
     .from('asistentes')
     .select('id, prestadora_id, tipo_vinculo')
-    .eq('id', usuarioAsistente.id)
+    .eq('id', usuarioAsistente.asistenteId)
     .eq('prestadora_id', usuarioAsistente.prestadoraId)
     .maybeSingle();
   if (!asistente) return null;
@@ -228,7 +228,7 @@ appAsistentesConsentimientosRouter.post('/retirar', requiereRolAsistente, async 
     return res.status(400).json({ error: 'Consentimiento desconocido' });
   }
 
-  const viva = await decisionViva(req.usuarioAsistente.prestadoraId, req.usuarioAsistente.id, clave);
+  const viva = await decisionViva(req.usuarioAsistente.prestadoraId, req.usuarioAsistente.asistenteId, clave);
   if (!viva || viva.decision !== 'otorgado') {
     return res.status(409).json({ error: 'No hay un consentimiento vigente para retirar' });
   }

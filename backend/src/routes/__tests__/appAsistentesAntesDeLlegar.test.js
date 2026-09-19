@@ -36,6 +36,8 @@ import {
 const PRESTADORA = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const OTRA_PRESTADORA = '99999999-9999-9999-9999-999999999999';
 const USUARIO = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+// El Legajo de esa persona en esta Prestadora, que es otro número que el de la cuenta.
+const LEGAJO = 'bbbbbbbb-bbbb-bbbb-bbbb-b0000000000b';
 const OTRO_ASISTENTE = '88888888-8888-8888-8888-888888888888';
 const GUARDIA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 const GUARDIA_DE_OTRA_PRESTADORA = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
@@ -119,7 +121,7 @@ function guardiaDePrueba(extra = {}) {
   return {
     id: GUARDIA,
     prestadora_id: PRESTADORA,
-    asistente_id: USUARIO,
+    asistente_id: LEGAJO,
     paciente_id: PACIENTE,
     fecha: '2026-09-09',
     hora_inicio: '14:00',
@@ -181,6 +183,8 @@ beforeEach(() => {
 
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'asistente', prestadora_id: PRESTADORA }]);
+  // El Legajo con el que entra la sesión: lo busca el middleware por la cuenta y la Prestadora.
+  respuestas.set('GET /rest/v1/asistentes', () => [{ id: LEGAJO, prestadora_id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/guardias', ({ url }) => filaQuePasaLosFiltros(url, guardiasEnLaBase));
   respuestas.set('PATCH /rest/v1/guardias', () => []);
   respuestas.set('GET /rest/v1/alertas_tempranas_guardia', ({ url }) =>

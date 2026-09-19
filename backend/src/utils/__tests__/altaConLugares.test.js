@@ -23,6 +23,9 @@ import { createServer } from 'node:http';
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const QUIEN_LLAMA = '22222222-2222-2222-2222-222222222222';
 const NUEVA_CUENTA = '33333333-3333-3333-3333-333333333333';
+// El Legajo que la base le da a la ficha nueva. Es a propósito otro número que el de la cuenta: la
+// misma persona puede tener otro Legajo en otra Prestadora, colgando de esta misma cuenta.
+const NUEVO_LEGAJO = '44444444-4444-4444-4444-444444444444';
 const LUGAR = '55555555-5555-5555-5555-555555555555';
 const OTRO_LUGAR = '66666666-6666-6666-6666-666666666666';
 
@@ -121,7 +124,7 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/usuario_lugares', () => []);
   respuestas.set('DELETE /rest/v1/asistente_lugares', () => []);
   respuestas.set('POST /rest/v1/asistente_lugares', () => []);
-  respuestas.set('POST /rest/v1/asistentes', () => []);
+  respuestas.set('POST /rest/v1/asistentes', () => [{ id: NUEVO_LEGAJO }]);
   respuestas.set('DELETE /rest/v1/asistentes', () => []);
   respuestas.set('DELETE /rest/v1/verificaciones_asistente', () => []);
   respuestas.set('DELETE /rest/v1/referencias_laborales_asistente', () => []);
@@ -142,8 +145,8 @@ describe('el alta de una Asistente', () => {
     });
 
     assert.deepEqual(loEscritoEn('asistente_lugares'), [
-      { asistente_id: NUEVA_CUENTA, lugar_id: LUGAR, prestadora_id: PRESTADORA },
-      { asistente_id: NUEVA_CUENTA, lugar_id: OTRO_LUGAR, prestadora_id: PRESTADORA },
+      { asistente_id: NUEVO_LEGAJO, lugar_id: LUGAR, prestadora_id: PRESTADORA },
+      { asistente_id: NUEVO_LEGAJO, lugar_id: OTRO_LUGAR, prestadora_id: PRESTADORA },
     ]);
   });
 

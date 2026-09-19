@@ -80,7 +80,7 @@ async function estadoDelAsistente(prestadoraId, asistenteId) {
 // ---------------------------------------------------------------------------
 
 appAsistentesMatriculaRouter.get('/', requiereRolAsistente, async (req, res) => {
-  const estado = await estadoDelAsistente(req.usuarioAsistente.prestadoraId, req.usuarioAsistente.id);
+  const estado = await estadoDelAsistente(req.usuarioAsistente.prestadoraId, req.usuarioAsistente.asistenteId);
 
   // Con cuántos días de anticipación avisa esta Prestadora. Es el mismo número
   // que usa para los demás papeles que vencen: dos ventanas distintas para la
@@ -95,7 +95,7 @@ appAsistentesMatriculaRouter.get('/', requiereRolAsistente, async (req, res) => 
     .from('matriculas_asistente')
     .select('id, tipo, numero_matricula, vigente_desde, vigente_hasta, archivo_url, verificada_at, cargada_por_el_asistente, created_at')
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
-    .eq('asistente_id', req.usuarioAsistente.id)
+    .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .order('vigente_desde', { ascending: false });
   if (error) return responderError(res, error);
 
@@ -128,7 +128,7 @@ appAsistentesMatriculaRouter.post(
   async (req, res) => {
     const { numeroMatricula, vigenteDesde, vigenteHasta } = req.body;
 
-    const estado = await estadoDelAsistente(req.usuarioAsistente.prestadoraId, req.usuarioAsistente.id);
+    const estado = await estadoDelAsistente(req.usuarioAsistente.prestadoraId, req.usuarioAsistente.asistenteId);
     // El tipo no lo elige el Asistente: lo dice su tipo de Asistente en el
     // catálogo. Dejarlo elegir sería dejarlo cargar la Matrícula equivocada y
     // seguir trabado sin entender por qué.
@@ -142,7 +142,7 @@ appAsistentesMatriculaRouter.post(
     const { data: asistente } = await supabase
       .from('asistentes')
       .select('id, prestadora_id')
-      .eq('id', req.usuarioAsistente.id)
+      .eq('id', req.usuarioAsistente.asistenteId)
       .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
       .maybeSingle();
     if (!asistente) return res.status(404).json({ error: 'Asistente no encontrado' });
@@ -171,7 +171,7 @@ appAsistentesMatriculaRouter.post(
     if (error) return responderError(res, error);
 
     res.json({
-      estado: await estadoDelAsistente(req.usuarioAsistente.prestadoraId, req.usuarioAsistente.id),
+      estado: await estadoDelAsistente(req.usuarioAsistente.prestadoraId, req.usuarioAsistente.asistenteId),
     });
   }
 );
@@ -189,7 +189,7 @@ appAsistentesMatriculaRouter.get('/archivo-url', requiereRolAsistente, async (re
   // que arma la ruta al subirlo. Separadas, la comprobación y la construcción se despegan sin
   // que nadie lo note, y lo que queda abierto es un enlace firmado a un archivo ajeno.
   const ruta = req.query.ruta;
-  if (!esRutaDeMatriculaDe(ruta, req.usuarioAsistente.prestadoraId, req.usuarioAsistente.id)) {
+  if (!esRutaDeMatriculaDe(ruta, req.usuarioAsistente.prestadoraId, req.usuarioAsistente.asistenteId)) {
     return res.status(400).json({ error: 'Ruta de archivo inválida' });
   }
 

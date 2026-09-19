@@ -28,10 +28,14 @@ export async function requiereRolFamilia(req, res, next) {
   // El usuario logueado puede ser el titular de la cuenta (fila propia en `familias`) o
   // alguien invitado al círculo de cuidado (fila en `miembros_familia`, Fase 5) — se
   // resuelve acá una sola vez, no en cada ruta de appFamilias.js.
+  //
+  // Y se busca por la cuenta y acotado a la Prestadora de la sesión, porque la misma persona
+  // puede tener otro Legajo en otra Prestadora: la cuenta es una y los Legajos son varios.
   const { data: titular } = await supabase
     .from('familias')
     .select('id')
-    .eq('id', userData.user.id)
+    .eq('usuario_id', userData.user.id)
+    .eq('prestadora_id', perfil.prestadora_id)
     .maybeSingle();
 
   let familiaId = titular?.id ?? null;
@@ -39,8 +43,9 @@ export async function requiereRolFamilia(req, res, next) {
   if (!familiaId) {
     const { data: miembro } = await supabase
       .from('miembros_familia')
-      .select('familia_id')
+      .select('familia_id, familias!inner(prestadora_id)')
       .eq('usuario_id', userData.user.id)
+      .eq('familias.prestadora_id', perfil.prestadora_id)
       .maybeSingle();
 
     familiaId = miembro?.familia_id ?? null;

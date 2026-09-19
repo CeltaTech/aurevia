@@ -27,6 +27,25 @@ export async function requiereRolAsistente(req, res, next) {
     return res.status(403).json({ error: 'Rol sin permiso' });
   }
 
-  req.usuarioAsistente = { id: userData.user.id, prestadoraId: perfil.prestadora_id };
+  // Dos números distintos, y hace falta tener los dos a mano. `id` es la persona —con qué entra,
+  // cómo se llama—; `asistenteId` es lo suyo en esta Prestadora, con su antigüedad, sus lugares y
+  // sus matrículas. La misma persona puede tener otro en otra Prestadora, y por eso se busca
+  // acotado a la Prestadora de esta sesión.
+  const { data: ficha, error: errorFicha } = await supabase
+    .from('asistentes')
+    .select('id')
+    .eq('usuario_id', userData.user.id)
+    .eq('prestadora_id', perfil.prestadora_id)
+    .maybeSingle();
+
+  if (errorFicha || !ficha) {
+    return res.status(403).json({ error: 'Rol sin permiso' });
+  }
+
+  req.usuarioAsistente = {
+    id: userData.user.id,
+    asistenteId: ficha.id,
+    prestadoraId: perfil.prestadora_id,
+  };
   next();
 }

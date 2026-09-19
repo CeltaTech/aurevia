@@ -50,6 +50,7 @@ import { FUENTE_AVISO_DEMORA_ASISTENTE } from '../utils/fuentesAlertaTemprana.js
 import { notificarCoordinador } from '../utils/whatsapp.js';
 import { aviso } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
+import { cuentasDeLasFichas } from '../utils/cuentaDeLaFicha.js';
 
 export const appAsistentesRouter = Router();
 
@@ -95,7 +96,7 @@ async function guardiaDelAsistente(guardiaId, usuarioAsistente) {
     .from('guardias')
     .select('id, prestadora_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
     .eq('id', guardiaId)
-    .eq('asistente_id', usuarioAsistente.id)
+    .eq('asistente_id', usuarioAsistente.asistenteId)
     .eq('prestadora_id', usuarioAsistente.prestadoraId)
     .maybeSingle();
   return data;
@@ -212,7 +213,7 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   const { data: perfil, error } = await supabase
     .from('asistentes')
     .select('id, nombre, telefono, email, foto_url, tipo_asistente_id, estado, tipo_vinculo, qr_token, canales, disponible_para_ofertas, disponibilidad_cambiada_en, tipos_asistente(id, clave, nombre, prestadora_id)')
-    .eq('id', req.usuarioAsistente.id)
+    .eq('id', req.usuarioAsistente.asistenteId)
     .single();
   if (error || !perfil) {
     return res.status(404).json({ error: 'Perfil no encontrado' });
@@ -226,7 +227,7 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
     .from('certificados')
     .select('activo, fecha_emision, fecha_vencimiento')
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
-    .eq('asistente_id', req.usuarioAsistente.id)
+    .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .order('fecha_emision', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -273,7 +274,7 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
 // cuál (`celtatech/CLAUDE.md` §6); el dueño de la carpeta necesita saber qué le falta para ir a
 // buscarlo. La sesión decide de quién es la carpeta: el identificador no viaja en el pedido.
 appAsistentesRouter.get('/perfil/papeles', requiereRolAsistente, async (req, res) => {
-  const asistenteId = req.usuarioAsistente.id;
+  const asistenteId = req.usuarioAsistente.asistenteId;
   const prestadoraId = req.usuarioAsistente.prestadoraId;
 
   const [{ data: tiposExigidos }, { data: documentos }, { data: certificado }, { data: prestadora }] =
@@ -336,7 +337,7 @@ appAsistentesRouter.patch('/perfil/disponibilidad', requiereRolAsistente, async 
   const { data: guardada, error } = await supabase
     .from('asistentes')
     .update({ disponible_para_ofertas: disponible, disponibilidad_cambiada_en: new Date().toISOString() })
-    .eq('id', req.usuarioAsistente.id)
+    .eq('id', req.usuarioAsistente.asistenteId)
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .select('disponible_para_ofertas, disponibilidad_cambiada_en');
   if (error) return responderError(res, error);
@@ -365,7 +366,7 @@ appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
   const { data, error } = await supabase
     .from('guardias')
     .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
-    .eq('asistente_id', req.usuarioAsistente.id)
+    .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .order('fecha', { ascending: false })
     .order('hora_inicio', { ascending: false })
@@ -389,7 +390,7 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
     .from('guardias')
     .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
     .eq('id', req.params.id)
-    .eq('asistente_id', req.usuarioAsistente.id)
+    .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .maybeSingle();
 
@@ -434,7 +435,7 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
   const { data: quienEs } = await supabase
     .from('asistentes')
     .select('tipo_asistente_id')
-    .eq('id', req.usuarioAsistente.id)
+    .eq('id', req.usuarioAsistente.asistenteId)
     .maybeSingle();
 
   const { tipo, tareas } = await tipoConSusTareas(
@@ -1360,7 +1361,8 @@ appAsistentesRouter.get('/codigo-de-presencia', requiereRolAsistente, async (req
     const { codigo, segundos, expiraEn } = await codigoParaMostrar({
       prestadoraId: req.usuarioAsistente.prestadoraId,
       sujetoTipo: 'asistente',
-      sujetoId: req.usuarioAsistente.id,
+      // El Legajo, porque del otro lado se lo compara contra `guardias.asistente_id`.
+      sujetoId: req.usuarioAsistente.asistenteId,
     });
     res.json({ codigo, segundos, expiraEn });
   } catch (e) {
@@ -1489,7 +1491,7 @@ appAsistentesRouter.post('/push/suscribir', requiereRolAsistente, async (req, re
   const { error } = await guardarSuscripcionPush({
     prestadoraId: req.usuarioAsistente.prestadoraId,
     rol: 'asistente',
-    usuarioId: req.usuarioAsistente.id,
+    usuarioId: req.usuarioAsistente.asistenteId,
     endpoint,
     keys,
     userAgent: req.headers['user-agent'],
@@ -1515,7 +1517,7 @@ appAsistentesRouter.delete('/push/suscribir', requiereRolAsistente, async (req, 
     .delete()
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('endpoint', endpoint)
-    .eq('asistente_id', req.usuarioAsistente.id);
+    .eq('asistente_id', req.usuarioAsistente.asistenteId);
   if (error) {
     return responderError(res, error);
   }
@@ -1538,7 +1540,7 @@ appAsistentesRouter.get('/calificaciones', requiereRolAsistente, async (req, res
     .from('calificaciones_asistente')
     .select('id, estrellas, comentario, visible_publica, descargo_asistente, descargo_en, created_at')
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
-    .eq('asistente_id', req.usuarioAsistente.id)
+    .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .order('created_at', { ascending: false });
   if (error) return responderError(res, error);
   res.json({ calificaciones: data });
@@ -1557,7 +1559,7 @@ appAsistentesRouter.patch('/calificaciones/:id/descargo', requiereRolAsistente, 
     .select('id, descargo_asistente')
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('id', req.params.id)
-    .eq('asistente_id', req.usuarioAsistente.id)
+    .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .maybeSingle();
 
   if (!calificacion) {
@@ -1578,7 +1580,7 @@ appAsistentesRouter.patch('/calificaciones/:id/descargo', requiereRolAsistente, 
     .from('calificaciones_asistente')
     .update({ descargo_asistente: descargo.trim(), descargo_en: new Date().toISOString() })
     .eq('id', req.params.id)
-    .eq('asistente_id', req.usuarioAsistente.id)
+    .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .select('id');
   if (error) return responderError(res, error);
   if (!guardada?.length) {
@@ -1612,7 +1614,7 @@ async function conversacionDelAsistente(req) {
     .select('id, prestadora_id, familia_id, asistente_id, ultimo_mensaje_at, sala_videollamada, sala_abierta_at')
     .eq('id', req.params.id)
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
-    .eq('asistente_id', req.usuarioAsistente.id)
+    .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .maybeSingle();
 
   if (!data) throw new ErrorConMotivo('no_encontrado');
@@ -1626,11 +1628,11 @@ async function exigeMarketplace(req) {
   }
 }
 
-/** Cómo se llama la Familia del otro lado. El nombre vive en `usuarios`, porque `familias`
- *  guarda la cuenta y no la persona. */
+/** Cómo se llama la Familia del otro lado. El nombre es de la persona, así que sale de la cuenta
+ *  de la que cuelga ese Legajo. */
 async function nombreDeLaFamilia(familiaId) {
-  const { data } = await supabase.from('usuarios').select('nombre').eq('id', familiaId).maybeSingle();
-  return data?.nombre || '';
+  const cuentas = await cuentasDeLasFichas('familias', [familiaId], 'nombre');
+  return cuentas.get(familiaId)?.nombre || '';
 }
 
 appAsistentesRouter.get('/marketplace/conversaciones', requiereRolAsistente, async (req, res) => {
@@ -1640,16 +1642,14 @@ appAsistentesRouter.get('/marketplace/conversaciones', requiereRolAsistente, asy
       .from('conversaciones_marketplace')
       .select('id, familia_id, ultimo_mensaje_at')
       .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
-      .eq('asistente_id', req.usuarioAsistente.id)
+      .eq('asistente_id', req.usuarioAsistente.asistenteId)
       .order('ultimo_mensaje_at', { ascending: false, nullsFirst: false });
     if (error) return responderError(res, error);
 
     const hilos = data || [];
     // Los nombres y los mensajes sin leer, en una consulta cada cosa para toda la lista.
-    const [{ data: personas }, { data: sinLeer }] = await Promise.all([
-      hilos.length
-        ? supabase.from('usuarios').select('id, nombre').in('id', hilos.map((c) => c.familia_id))
-        : Promise.resolve({ data: [] }),
+    const [personas, { data: sinLeer }] = await Promise.all([
+      cuentasDeLasFichas('familias', hilos.map((c) => c.familia_id), 'nombre'),
       hilos.length
         ? supabase
             .from('mensajes_marketplace')
@@ -1660,7 +1660,7 @@ appAsistentesRouter.get('/marketplace/conversaciones', requiereRolAsistente, asy
         : Promise.resolve({ data: [] }),
     ]);
 
-    const nombres = new Map((personas || []).map((p) => [p.id, p.nombre || '']));
+    const nombres = new Map([...personas].map(([fichaId, datos]) => [fichaId, datos?.nombre || '']));
     const cuenta = new Map();
     for (const m of sinLeer || []) cuenta.set(m.conversacion_id, (cuenta.get(m.conversacion_id) || 0) + 1);
 

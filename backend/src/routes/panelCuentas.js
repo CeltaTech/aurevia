@@ -11,8 +11,8 @@ import {
   revocarMiembroCirculo,
   validarTipoAsistente,
   deshacerAlta,
-  FILAS_DE_UN_ASISTENTE,
-  FILAS_DE_UNA_FAMILIA,
+  filasDeUnAsistente,
+  filasDeUnaFamilia,
 } from '../utils/cuentasPanel.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import { APROBADAS, filasDeIncorporacion } from '../utils/etapasDeIncorporacion.js';
@@ -136,9 +136,11 @@ panelCuentasRouter.post('/familia', requiereRolPanel, exigirOrganizacionActiva, 
     localidad: nombreDeSuLugar || solicitud.localidad,
   });
 
+  // La cuenta es la persona; la ficha es su Legajo en esta Prestadora, y la numera la base.
+  let cuentaId;
   let familiaId;
   try {
-    ({ userId: familiaId } = await crearCuentaConPerfil({
+    ({ userId: cuentaId } = await crearCuentaConPerfil({
       email: solicitud.email,
       nombre: solicitud.nombre,
       telefono: solicitud.telefono,
@@ -147,10 +149,13 @@ panelCuentasRouter.post('/familia', requiereRolPanel, exigirOrganizacionActiva, 
       enviarActivacion: true,
     }));
 
-    const { error: errorFamilia } = await supabase
+    const { data: fichaNueva, error: errorFamilia } = await supabase
       .from('familias')
-      .insert({ id: familiaId, solicitud_id: solicitudId, prestadora_id: prestadoraId });
+      .insert({ usuario_id: cuentaId, solicitud_id: solicitudId, prestadora_id: prestadoraId })
+      .select('id')
+      .single();
     if (errorFamilia) throw new Error(errorFamilia.message);
+    familiaId = fichaNueva.id;
 
     const { data: paciente, error: errorPaciente } = await supabase
       .from('pacientes')
@@ -177,7 +182,7 @@ panelCuentasRouter.post('/familia', requiereRolPanel, exigirOrganizacionActiva, 
 
     res.json({ ok: true, familiaId, pacienteId: paciente.id });
   } catch (error) {
-    await deshacerAlta(familiaId, { prestadoraId, filas: FILAS_DE_UNA_FAMILIA });
+    await deshacerAlta(cuentaId, { prestadoraId, filas: filasDeUnaFamilia(familiaId) });
     responderError(res, error);
   }
 });
@@ -232,11 +237,13 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
 
   const prestadoraId = req.usuarioPanel.prestadoraId;
 
+  // La cuenta es la persona; la ficha es lo suyo en esta Prestadora, y la numera la base.
+  let cuentaId;
   let asistenteId;
   try {
     const tipoAsistenteId = await validarTipoAsistente(tipo_asistente_id, prestadoraId);
 
-    ({ userId: asistenteId } = await crearCuentaConPerfil({
+    ({ userId: cuentaId } = await crearCuentaConPerfil({
       email: postulacion.email,
       nombre: postulacion.nombre,
       telefono: postulacion.telefono,
@@ -245,8 +252,8 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
       enviarActivacion: true,
     }));
 
-    const { error: errorAsistente } = await supabase.from('asistentes').insert({
-      id: asistenteId,
+    const { data: fichaNueva, error: errorAsistente } = await supabase.from('asistentes').insert({
+      usuario_id: cuentaId,
       nombre: postulacion.nombre,
       dni: postulacion.dni,
       telefono: postulacion.telefono,
@@ -257,8 +264,9 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
       // parecido crearía una coincidencia que nadie decidió. Se eligen en su ficha, de la lista.
       estado: 'inactivo',
       prestadora_id: prestadoraId,
-    });
+    }).select('id').single();
     if (errorAsistente) throw new Error(errorAsistente.message);
+    asistenteId = fichaNueva.id;
 
     const filasVerificacion = await filasDeIncorporacion(asistenteId, prestadoraId, {
       aprobadas: APROBADAS.LA_PRIMERA,
@@ -303,7 +311,7 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
     // `deshacerAlta` nunca falla: si tropieza lo anota en el registro del servidor y sigue.
     // Así el error que llega a la pantalla es siempre el problema de verdad, y la respuesta
     // se manda siempre — antes, un tropiezo del deshacer dejaba a la pantalla esperando.
-    await deshacerAlta(asistenteId, { prestadoraId, filas: FILAS_DE_UN_ASISTENTE });
+    await deshacerAlta(cuentaId, { prestadoraId, filas: filasDeUnAsistente(asistenteId) });
     responderError(res, error);
   }
 });

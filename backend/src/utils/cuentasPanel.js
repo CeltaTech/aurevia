@@ -9,6 +9,7 @@ import { APROBADAS, filasDeIncorporacion } from './etapasDeIncorporacion.js';
 import { guardarLugaresDe } from './lugaresDeCadaPersona.js';
 import { nombreDelLugar } from './catalogoDeLugares.js';
 import { domicilioEscrito, partesDelDomicilio } from './domicilioEscrito.js';
+import { cuentaDeLaFicha } from './cuentaDeLaFicha.js';
 
 // Comprueba que un tipo de Asistente exista y sea de los que esta Prestadora puede usar:
 // los generales de CeltaTech (`prestadora_id` vacío) o los que creó ella misma. Devuelve el
@@ -351,6 +352,19 @@ export const FILAS_DE_UNA_FAMILIA = [
   { tabla: 'familias' },
 ];
 
+// Las cuatro tablas de arriba cuelgan de la FICHA, no de la cuenta, y desde que la ficha tiene
+// identificador propio esos dos números dejaron de ser el mismo. Por eso el valor con el que se
+// busca se dice acá y no se deja librado al valor por omisión del deshacer, que es el de la
+// cuenta: sin esto la limpieza pasaría por encima sin borrar nada y no se notaría.
+//
+// Sin ficha no hay nada que limpiar de ese lado: el alta se cortó antes de crearla, y lo único
+// que queda es la cuenta, que el deshacer borra igual.
+export const filasDeUnAsistente = (asistenteId) =>
+  asistenteId ? FILAS_DE_UN_ASISTENTE.map((fila) => ({ ...fila, valor: asistenteId })) : [];
+
+export const filasDeUnaFamilia = (familiaId) =>
+  familiaId ? FILAS_DE_UNA_FAMILIA.map((fila) => ({ ...fila, valor: familiaId })) : [];
+
 const FILAS_DE_UN_MIEMBRO_CIRCULO = [
   { tabla: 'permisos_circulo_familiar', columna: 'usuario_id' },
   { tabla: 'miembros_familia', columna: 'usuario_id' },
@@ -400,14 +414,19 @@ export async function crearAsistenteDirecto({
   const domicilioDelAsistente = domicilioEscrito({ ...partes, lugar: nombreDeSuLugar }) || domicilio || null;
   const ubicacion = await coordenadasDeDomicilio({ prestadoraId, direccion: domicilioDelAsistente });
 
+  // Dos identificadores, y ya no son el mismo número. `cuentaId` es la persona —con qué entra,
+  // cómo se llama, qué teléfono tiene—; `asistenteId` es su ficha en esta Prestadora, que la base
+  // numera sola. La misma persona puede tener otra ficha en otra Prestadora, con su propia
+  // antigüedad y sus propias matrículas, colgando de esta misma cuenta.
+  let cuentaId;
   let asistenteId;
   try {
-    ({ userId: asistenteId } = await crearCuentaConPerfil({
+    ({ userId: cuentaId } = await crearCuentaConPerfil({
       email, nombre, telefono, rol: 'asistente', prestadoraId, enviarActivacion: true,
     }));
 
-    const { error: errorAsistente } = await supabase.from('asistentes').insert({
-      id: asistenteId,
+    const { data: fichaNueva, error: errorAsistente } = await supabase.from('asistentes').insert({
+      usuario_id: cuentaId,
       nombre,
       dni: dni || null,
       telefono: telefono || null,
@@ -424,8 +443,9 @@ export async function crearAsistenteDirecto({
       prestadora_id: prestadoraId,
       importacion_id: importacionId || null,
       pendiente_conformidad: Boolean(importacionId),
-    });
+    }).select('id').single();
     if (errorAsistente) throw new Error(errorAsistente.message);
+    asistenteId = fichaNueva.id;
 
     // Dónde acepta trabajar esta persona. Se guarda por la misma función que usa la ficha, para
     // que el alta y la corrección dejen la lista igual. Si alguno de los lugares no es de esta
@@ -459,7 +479,7 @@ export async function crearAsistenteDirecto({
 
     return { asistenteId };
   } catch (error) {
-    await deshacerAlta(asistenteId, { prestadoraId, filas: FILAS_DE_UN_ASISTENTE });
+    await deshacerAlta(cuentaId, { prestadoraId, filas: filasDeUnAsistente(asistenteId) });
     throw error;
   }
 }
@@ -494,12 +514,17 @@ export async function activarVerificacionAltaAsistente(asistenteId, prestadoraId
 // todas las filas que compartan `importacionId` en vez de a una sola fila recién creada.
 // Devuelven `false` si algo quedó sin limpiar, para que la pantalla pueda contar bien
 // cuántas filas se revirtieron de verdad.
-export function revertirAsistenteImportado(asistenteId, prestadoraId) {
-  return deshacerAlta(asistenteId, { prestadoraId, filas: FILAS_DE_UN_ASISTENTE });
+//
+// Reciben el identificador de la FICHA, que es lo que guarda el lote importado, y buscan de qué
+// cuenta cuelga: son dos números distintos desde que la ficha dejó de ser la cuenta.
+export async function revertirAsistenteImportado(asistenteId, prestadoraId) {
+  const cuentaId = await cuentaDeLaFicha('asistentes', asistenteId);
+  return deshacerAlta(cuentaId, { prestadoraId, filas: filasDeUnAsistente(asistenteId) });
 }
 
-export function revertirFamiliaImportada(familiaId, prestadoraId) {
-  return deshacerAlta(familiaId, { prestadoraId, filas: FILAS_DE_UNA_FAMILIA });
+export async function revertirFamiliaImportada(familiaId, prestadoraId) {
+  const cuentaId = await cuentaDeLaFicha('familias', familiaId);
+  return deshacerAlta(cuentaId, { prestadoraId, filas: filasDeUnaFamilia(familiaId) });
 }
 
 // Invita a una persona al círculo de cuidado de una Familia ya existente: crea su cuenta con
@@ -600,6 +625,9 @@ export async function crearFamiliaDirecta({
     localidad: nombreDeSuLugar || localidad,
   });
 
+  // Igual que en el alta de Asistente: la cuenta es la persona y la ficha es su Legajo en esta
+  // Prestadora. La misma persona puede ser Familia en otra sin volver a darse de alta.
+  let cuentaId;
   let familiaId;
   let solicitudId;
   try {
@@ -627,21 +655,24 @@ export async function crearFamiliaDirecta({
     if (errorSolicitud) throw new Error(errorSolicitud.message);
     solicitudId = solicitud.id;
 
-    ({ userId: familiaId } = await crearCuentaConPerfil({
+    ({ userId: cuentaId } = await crearCuentaConPerfil({
       email, nombre: nombreContacto, telefono, rol: 'familia', prestadoraId, enviarActivacion: true,
     }));
 
-    const { error: errorFamilia } = await supabase
+    const { data: fichaNueva, error: errorFamilia } = await supabase
       .from('familias')
       .insert({
-        id: familiaId,
+        usuario_id: cuentaId,
         solicitud_id: solicitudId,
         prestadora_id: prestadoraId,
         plan: plan || null,
         importacion_id: importacionId || null,
         pendiente_conformidad: Boolean(importacionId),
-      });
+      })
+      .select('id')
+      .single();
     if (errorFamilia) throw new Error(errorFamilia.message);
+    familiaId = fichaNueva.id;
 
     const { data: paciente, error: errorPaciente } = await supabase
       .from('pacientes')
@@ -670,11 +701,11 @@ export async function crearFamiliaDirecta({
 
     return { familiaId, pacienteId: paciente.id };
   } catch (error) {
-    await deshacerAlta(familiaId, {
+    await deshacerAlta(cuentaId, {
       prestadoraId,
       // La solicitud se creó antes que la cuenta y no cuelga de ella, así que se limpia por
       // su propio identificador. Va última porque las familias la apuntan.
-      filas: [...FILAS_DE_UNA_FAMILIA, { tabla: 'solicitudes', valor: solicitudId }],
+      filas: [...filasDeUnaFamilia(familiaId), { tabla: 'solicitudes', valor: solicitudId }],
     });
     throw error;
   }

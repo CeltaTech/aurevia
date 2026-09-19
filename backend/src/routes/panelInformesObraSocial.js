@@ -4,6 +4,7 @@ import { supabase } from '../db/connection.js';
 import { requierePermiso } from '../utils/permisos.js';
 import { horasEntre, horasImputadasAlPaciente } from '../utils/horasDeGuardia.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
+import { cuentasDeLasFichas } from '../utils/cuentaDeLaFicha.js';
 
 export const panelInformesObraSocialRouter = Router();
 
@@ -93,14 +94,11 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
   // .filter(Boolean) porque una guardia puede estar sin cubrir: sin este filtro el NULL
   // llega al .in('id', …) contra una columna uuid y la consulta revienta con un 500.
   const asistenteIds = [...new Set(guardias.map((g) => g.asistente_id).filter(Boolean))];
+  // `guardias.asistente_id` es el Legajo, no la cuenta, y el nombre es de la persona: sale de la
+  // cuenta de la que ese Legajo cuelga.
   const nombresAsistente = {};
-  if (asistenteIds.length > 0) {
-    const { data: usuariosAsistentes } = await supabase
-      .from('usuarios')
-      .select('id, nombre')
-      .in('id', asistenteIds);
-    for (const u of usuariosAsistentes || []) nombresAsistente[u.id] = u.nombre;
-  }
+  const cuentas = await cuentasDeLasFichas('asistentes', asistenteIds, 'nombre');
+  for (const [fichaId, datos] of cuentas) nombresAsistente[fichaId] = datos?.nombre ?? '';
 
   // Cada renglón lleva escrito a cuánta gente cubrió ese turno y cuántas horas le tocan a
   // este Paciente. Se muestran las dos cosas juntas a propósito: si el informe dijera

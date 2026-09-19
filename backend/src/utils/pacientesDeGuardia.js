@@ -101,7 +101,7 @@ export async function asistenteAtiendeAlPaciente(pacienteId, usuarioAsistente) {
     .from('guardia_pacientes')
     .select('guardia_id, guardias!inner(asistente_id, prestadora_id)')
     .eq('paciente_id', pacienteId)
-    .eq('guardias.asistente_id', usuarioAsistente.id)
+    .eq('guardias.asistente_id', usuarioAsistente.asistenteId)
     .eq('guardias.prestadora_id', usuarioAsistente.prestadoraId)
     .limit(1)
     .maybeSingle();

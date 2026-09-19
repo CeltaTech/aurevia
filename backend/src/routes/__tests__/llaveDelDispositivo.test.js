@@ -33,6 +33,8 @@ import { createServer } from 'node:http';
 const PRESTADORA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const OTRA_PRESTADORA = '99999999-9999-4999-8999-999999999999';
 const USUARIO = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+// El Legajo de esa persona en esta Prestadora, que es otro número que el de la cuenta.
+const LEGAJO = 'bbbbbbbb-bbbb-4bbb-8bbb-b0000000000b';
 const OTRA_PERSONA = '88888888-8888-4888-8888-888888888888';
 const LLAVE = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const LLAVE_AJENA = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
@@ -190,6 +192,8 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/llaves_de_dispositivo', ({ url }) =>
     filasQuePasanLosFiltros(url, llavesEnLaBase)
   );
+  // El Legajo con el que entra la sesión: lo busca el middleware por la cuenta y la Prestadora.
+  respuestas.set('GET /rest/v1/asistentes', [{ id: LEGAJO, prestadora_id: PRESTADORA }]);
   respuestas.set('POST /rest/v1/desafios_de_llave', []);
 });
 

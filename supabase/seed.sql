@@ -249,30 +249,37 @@ INSERT INTO public.usuario_lugares (usuario_id, lugar_id, prestadora_id) VALUES
 --    esos datos estaban acá cualquiera que podía ver la ficha podía leerlos.
 -- ----------------------------------------------------------------------------
 
+-- El Legajo tiene número propio y `usuario_id` dice de qué cuenta cuelga. Acá los dos coinciden
+-- porque cada una de estas personas está en una sola Prestadora; en cuanto una esté en dos, la
+-- cuenta sigue siendo una y los Legajos son dos.
 INSERT INTO public.asistentes (
-  id, prestadora_id, nombre, telefono, email, especialidades,
+  id, usuario_id, prestadora_id, nombre, telefono, email, especialidades,
   estado, tipo_vinculo, fecha_alta, fecha_baja,
   horas_semanales, dni, canales
 ) VALUES
-  ('30000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+  ('30000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001',
+   '11111111-1111-4111-8111-111111111111',
    'Ana Álvarez', '+54 11 4001-0001', 'ana.asistente@sandbox.local',
    NULL,
    'activo', 'monotributo', CURRENT_DATE - 300, NULL,
    40, '20000001', ARRAY['directa']),
 
-  ('30000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111',
+  ('30000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000002',
+   '11111111-1111-4111-8111-111111111111',
    'Bruno Bianchi', '+54 11 4001-0002', 'bruno.asistente@sandbox.local',
    ARRAY['Acompañamiento terapéutico'],
    'activo', 'dependencia', CURRENT_DATE - 220, NULL,
    40, '20000002', ARRAY['directa', 'marketplace']),
 
-  ('30000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111',
+  ('30000000-0000-4000-8000-000000000003', '30000000-0000-4000-8000-000000000003',
+   '11111111-1111-4111-8111-111111111111',
    'Clara Cabrera', '+54 11 4001-0003', 'clara.asistente@sandbox.local',
    NULL,
    'activo', 'monotributo', CURRENT_DATE - 90, NULL,
    24, '20000003', ARRAY['marketplace']),
 
-  ('30000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111',
+  ('30000000-0000-4000-8000-000000000004', '30000000-0000-4000-8000-000000000004',
+   '11111111-1111-4111-8111-111111111111',
    'Delia Duarte', '+54 11 4001-0004', 'delia.asistente@sandbox.local',
    NULL,
    'cesado', 'monotributo', CURRENT_DATE - 500, CURRENT_DATE - 40,
@@ -357,10 +364,13 @@ VALUES
 -- Vacío en los dos quiere decir que paga la Familia por sí misma, que es el caso
 -- de la primera. La tercera muestra el caso que da sentido al Padrón: Ramiro
 -- Pérez contrató para una Familia y además paga por otra, y es un solo Legajo.
-INSERT INTO public.familias (id, prestadora_id, plan, financiador_tipo, pagador_legajo_id) VALUES
-  ('40000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'directo', NULL, NULL),
-  ('40000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'directo', 'obra_social', 'c0000000-0000-4000-8000-000000000003'),
-  ('40000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'marketplace', 'otro', 'c0000000-0000-4000-8000-000000000001');
+INSERT INTO public.familias (id, usuario_id, prestadora_id, plan, financiador_tipo, pagador_legajo_id) VALUES
+  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001',
+   '11111111-1111-4111-8111-111111111111', 'directo', NULL, NULL),
+  ('40000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002',
+   '11111111-1111-4111-8111-111111111111', 'directo', 'obra_social', 'c0000000-0000-4000-8000-000000000003'),
+  ('40000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000003',
+   '11111111-1111-4111-8111-111111111111', 'marketplace', 'otro', 'c0000000-0000-4000-8000-000000000001');
 
 -- El nombre, el teléfono y la localidad de una Familia NO están en `familias`:
 -- están en la Solicitud con la que entró, y `familias.solicitud_id` es el que la
@@ -968,8 +978,9 @@ INSERT INTO public.usuarios (id, rol, nombre, telefono, prestadora_id)
 SELECT p.id, p.rol, p.nombre, p.telefono, '22222222-2222-4222-8222-222222222222'
 FROM personas p;
 
-INSERT INTO public.asistentes (id, nombre, prestadora_id)
-VALUES ('50000000-0000-4000-8000-000000000003', 'Elena Escobar', '22222222-2222-4222-8222-222222222222');
+INSERT INTO public.asistentes (id, usuario_id, nombre, prestadora_id)
+VALUES ('50000000-0000-4000-8000-000000000003', '50000000-0000-4000-8000-000000000003',
+        'Elena Escobar', '22222222-2222-4222-8222-222222222222');
 
 -- Con lugar cargado de los dos lados, porque el alcance de quien coordina se resuelve cruzándolos:
 -- sin ninguno cargado la respuesta sería «no alcanza» por falta de dato, y una prueba de
@@ -990,8 +1001,9 @@ VALUES
   ('c0000000-0000-4000-8000-000000000012', '22222222-2222-4222-8222-222222222222', 'fisica', 'Olga', 'Salvatierra', 'le', '2777888',
    'Calle Figurada', '900', 'a2000000-0000-4000-8000-000000000001', '+54 221 400-0102', NULL);
 
-INSERT INTO public.familias (id, prestadora_id)
-VALUES ('50000000-0000-4000-8000-000000000004', '22222222-2222-4222-8222-222222222222');
+INSERT INTO public.familias (id, usuario_id, prestadora_id)
+VALUES ('50000000-0000-4000-8000-000000000004', '50000000-0000-4000-8000-000000000004',
+        '22222222-2222-4222-8222-222222222222');
 
 -- Con familia, porque sin ella la aplicación de Familia de esta Prestadora no tiene
 -- nada que leer y la prueba de aislamiento de ese lado no puede fallar.

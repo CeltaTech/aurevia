@@ -22,7 +22,9 @@ import { createServer } from 'node:http';
 import { olvidarPedidos } from '../../middleware/topeDePedidos.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-const USUARIO = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'; // usuarios.id === asistentes.id === auth.uid()
+const USUARIO = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'; // la cuenta: usuarios.id === auth.uid()
+// El Legajo de esa persona en esta Prestadora, que es otro número que el de la cuenta.
+const LEGAJO = 'bbbbbbbb-bbbb-4bbb-8bbb-b0000000000b';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
@@ -80,12 +82,14 @@ beforeEach(() => {
 
   respuestas.set('GET /auth/v1/user', { id: USUARIO, aud: 'authenticated' });
   respuestas.set('GET /rest/v1/usuarios', [{ rol: 'asistente', prestadora_id: PRESTADORA }]);
+  // El Legajo con el que entra la sesión: lo busca el middleware por la cuenta y la Prestadora.
+  respuestas.set('GET /rest/v1/asistentes', [{ id: LEGAJO, prestadora_id: PRESTADORA }]);
 });
 
 describe('la Matrícula que el Asistente ve de sí mismo', () => {
   it('se pide filtrada por la Prestadora de la sesión', async () => {
     respuestas.set('GET /rest/v1/estado_matricula_asistente', [
-      { asistente_id: USUARIO, requiere_matricula: true, tipo_matricula: 'enfermeria',
+      { asistente_id: LEGAJO, requiere_matricula: true, tipo_matricula: 'enfermeria',
         motivo_bloqueo: null, matricula_id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
         vigente_hasta: '2027-01-01', verificada_at: '2026-09-01T10:00:00Z', dias_para_vencer: 108 },
     ]);
@@ -108,7 +112,7 @@ describe('la Matrícula que el Asistente ve de sí mismo', () => {
       urlEstado.includes(`prestadora_id=eq.${PRESTADORA}`),
       'el estado de la Matrícula no lleva el filtro de Prestadora'
     );
-    assert.ok(urlEstado.includes(`asistente_id=eq.${USUARIO}`), urlEstado);
+    assert.ok(urlEstado.includes(`asistente_id=eq.${LEGAJO}`), urlEstado);
 
     const [urlMatriculas] = consultasA('matriculas_asistente');
     assert.ok(urlMatriculas, 'no se consultaron las Matrículas');
@@ -116,6 +120,6 @@ describe('la Matrícula que el Asistente ve de sí mismo', () => {
       urlMatriculas.includes(`prestadora_id=eq.${PRESTADORA}`),
       'la lista de Matrículas no lleva el filtro de Prestadora'
     );
-    assert.ok(urlMatriculas.includes(`asistente_id=eq.${USUARIO}`), urlMatriculas);
+    assert.ok(urlMatriculas.includes(`asistente_id=eq.${LEGAJO}`), urlMatriculas);
   });
 });

@@ -3,6 +3,7 @@ import { notificarCoordinador, avisarPorWhatsapp } from './whatsapp.js';
 import { enviarPushFamilia } from './push.js';
 import { configuracionEvento, enviarEmail } from './email.js';
 import { correoDe } from './correoDeUnaPersona.js';
+import { cuentasDeLasFichas } from './cuentaDeLaFicha.js';
 import { escalonesYaAvisados, escalarSiCorresponde } from './avisosDeEscalon.js';
 import { necesitaNotificar } from './insistencia.js';
 import { correrFaseAutomatica } from './faseAutomaticaRelevo.js';
@@ -483,8 +484,9 @@ async function notificarFamiliaSiCorresponde({ prestadoraId, guardiaEntranteId, 
   }
   if (familiaIds.length === 0) return;
 
-  const { data: usuarios } = await supabase.from('usuarios').select('id, telefono').in('id', familiaIds);
-  const telefonoPorFamilia = new Map((usuarios ?? []).map((u) => [u.id, u.telefono]));
+  // Los identificadores son de Legajo; el teléfono es de la persona y vive en su cuenta.
+  const cuentas = await cuentasDeLasFichas('familias', familiaIds, 'telefono');
+  const telefonoPorFamilia = new Map([...cuentas].map(([id, datos]) => [id, datos?.telefono ?? null]));
 
   const { titulo } = aviso('continuidad_de_guardia', idioma);
 

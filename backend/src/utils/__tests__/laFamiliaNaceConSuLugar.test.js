@@ -30,6 +30,9 @@ import { createServer } from 'node:http';
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const QUIEN_LLAMA = '22222222-2222-2222-2222-222222222222';
 const NUEVA_CUENTA = '33333333-3333-3333-3333-333333333333';
+// El Legajo que la base le da a la Familia nueva. Es a propósito otro número que el de la cuenta:
+// la misma persona puede tener otro Legajo en otra Prestadora, colgando de esta misma cuenta.
+const NUEVO_LEGAJO = '66666666-6666-6666-6666-666666666666';
 const SOLICITUD = '44444444-4444-4444-4444-444444444444';
 const PACIENTE = '77777777-7777-7777-7777-777777777777';
 const LUGAR = '55555555-5555-5555-5555-555555555555';
@@ -135,7 +138,7 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/solicitudes', () => [{ ...solicitudGuardada, id: SOLICITUD }]);
   respuestas.set('PATCH /rest/v1/solicitudes', () => []);
   respuestas.set('DELETE /rest/v1/solicitudes', () => []);
-  respuestas.set('POST /rest/v1/familias', () => []);
+  respuestas.set('POST /rest/v1/familias', () => [{ id: NUEVO_LEGAJO }]);
   respuestas.set('DELETE /rest/v1/familias', () => []);
   respuestas.set('POST /rest/v1/pacientes', () => [{ id: PACIENTE }]);
   respuestas.set('DELETE /rest/v1/pacientes', () => []);

@@ -101,9 +101,9 @@ async function pacienteDeLaFamilia(pacienteId, req) {
 // ============================================================================
 
 appFamiliasRouter.get('/perfil', requiereRolFamilia, async (req, res) => {
-  // Identidad (nombre/teléfono) vive en `usuarios` — igual que el resto de los roles de
-  // login propio (asistentes es la excepción: ahí la tabla de negocio y la de login son la
-  // misma). `familias` solo guarda el plan; el email lo tiene Supabase Auth, no una columna.
+  // Identidad (nombre/teléfono) vive en `usuarios`, que es la cuenta de la persona. El Legajo
+  // —`familias`— guarda lo suyo en esta Prestadora; el email lo tiene Supabase Auth, no una
+  // columna.
   const { data: usuario, error } = await supabase
     .from('usuarios')
     .select('nombre, telefono')

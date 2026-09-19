@@ -25,7 +25,9 @@ import { createServer } from 'node:http';
 import { olvidarPedidos } from '../../middleware/topeDePedidos.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-const USUARIO = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'; // usuarios.id === asistentes.id === auth.uid()
+const USUARIO = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'; // la cuenta: usuarios.id === auth.uid()
+// El Legajo de esa persona en esta Prestadora, que es otro número que el de la cuenta.
+const LEGAJO = 'bbbbbbbb-bbbb-bbbb-bbbb-b0000000000b';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
@@ -122,6 +124,8 @@ beforeEach(() => {
 
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'asistente', prestadora_id: PRESTADORA }]);
+  // El Legajo con el que entra la sesión: lo busca el middleware por la cuenta y la Prestadora.
+  respuestas.set('GET /rest/v1/asistentes', () => [{ id: LEGAJO, prestadora_id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/tipos_documento_asistente', () => tiposExigidos);
   respuestas.set('GET /rest/v1/documentos_asistente', () => documentos);
   respuestas.set('GET /rest/v1/certificados', () => (certificado ? [certificado] : []));
@@ -184,8 +188,8 @@ describe('la carpeta de papeles del Asistente, desde el teléfono', () => {
 
   it('de quién es la carpeta lo decide la sesión, y se pide siempre por ese Asistente', async () => {
     await pedirPapeles();
-    assert.ok(consultasA('documentos_asistente')[0].includes(`asistente_id=eq.${USUARIO}`));
-    assert.ok(consultasA('certificados')[0].includes(`asistente_id=eq.${USUARIO}`));
+    assert.ok(consultasA('documentos_asistente')[0].includes(`asistente_id=eq.${LEGAJO}`));
+    assert.ok(consultasA('certificados')[0].includes(`asistente_id=eq.${LEGAJO}`));
   });
 
   it('sin sesión no hay carpeta', async () => {
@@ -208,7 +212,7 @@ describe('la carpeta de papeles del Asistente, desde el teléfono', () => {
 describe('el Certificado que viaja con el perfil', () => {
   beforeEach(() => {
     respuestas.set('GET /rest/v1/asistentes', () => [
-      { id: USUARIO, nombre: 'Nombre Inventado', telefono: null, email: 'inventado@ejemplo.test',
+      { id: LEGAJO, prestadora_id: PRESTADORA, nombre: 'Nombre Inventado', telefono: null, email: 'inventado@ejemplo.test',
         foto_url: null, tipo_asistente_id: null, estado: 'activo',
         tipo_vinculo: 'monotributo', qr_token: 'x', canales: [],
         disponible_para_ofertas: true, disponibilidad_cambiada_en: null, tipos_asistente: null },
@@ -229,6 +233,6 @@ describe('el Certificado que viaja con el perfil', () => {
       consultas[0].includes(`prestadora_id=eq.${PRESTADORA}`),
       'la consulta del Certificado no lleva el filtro de Prestadora'
     );
-    assert.ok(consultas[0].includes(`asistente_id=eq.${USUARIO}`));
+    assert.ok(consultas[0].includes(`asistente_id=eq.${LEGAJO}`));
   });
 });

@@ -28,6 +28,8 @@ import { createServer } from 'node:http';
 const PRESTADORA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const OTRA_PRESTADORA = '99999999-9999-4999-8999-999999999999';
 const USUARIO = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+// El Legajo de esa persona en esta Prestadora, que es otro número que el de la cuenta.
+const LEGAJO = 'bbbbbbbb-bbbb-4bbb-8bbb-b0000000000b';
 const GUARDIA = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const GUARDIA_DE_OTRA_PRESTADORA = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 const PACIENTE = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
@@ -121,7 +123,7 @@ beforeEach(() => {
     {
       id: GUARDIA,
       prestadora_id: PRESTADORA,
-      asistente_id: USUARIO,
+      asistente_id: LEGAJO,
       paciente_id: PACIENTE,
       fecha: '2026-09-15',
       hora_inicio: '22:00',
@@ -133,7 +135,7 @@ beforeEach(() => {
     {
       id: GUARDIA_DE_OTRA_PRESTADORA,
       prestadora_id: OTRA_PRESTADORA,
-      asistente_id: USUARIO,
+      asistente_id: LEGAJO,
       paciente_id: PACIENTE,
       fecha: '2026-09-15',
       hora_inicio: '22:00',
@@ -155,6 +157,8 @@ beforeEach(() => {
 
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'asistente', prestadora_id: PRESTADORA }]);
+  // El Legajo con el que entra la sesión: lo busca el middleware por la cuenta y la Prestadora.
+  respuestas.set('GET /rest/v1/asistentes', () => [{ id: LEGAJO, prestadora_id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/guardias', ({ url }) => filasQuePasanLosFiltros(url, guardiasEnLaBase));
   respuestas.set('GET /rest/v1/extensiones_de_turno', ({ url }) =>
     filasQuePasanLosFiltros(url, extensionesEnLaBase)
@@ -336,7 +340,6 @@ describe('la extensión que viaja con el turno', () => {
     for (const tabla of [
       'guardia_pacientes',
       'pacientes',
-      'asistentes',
       'reportes',
       'descansos_guardia',
       'tipos_asistente',
@@ -349,6 +352,15 @@ describe('la extensión que viaja con el turno', () => {
     ]) {
       respuestas.set(`GET /rest/v1/${tabla}`, () => []);
     }
+    // `asistentes` no entra en esa lista: todo pedido con sesión pasa antes por el middleware,
+    // que consulta esa tabla para saber cuál es el Legajo de quien entró. Lo que la pantalla del
+    // turno le pregunta a la misma tabla —el nombre— sí se contesta vacío, y las dos consultas se
+    // reparten por el `select`.
+    respuestas.set('GET /rest/v1/asistentes', ({ url }) => {
+      const select = new URL(url, 'http://interno').searchParams.get('select') ?? '';
+      if (select.includes('nombre')) return [];
+      return [{ id: LEGAJO, prestadora_id: PRESTADORA }];
+    });
     respuestas.set('POST /rest/v1/rpc/domicilios_de_pacientes_en', () => []);
   });
 

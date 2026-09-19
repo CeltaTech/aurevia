@@ -24,7 +24,10 @@ import { createServer } from 'node:http';
 import { olvidarPedidos } from '../../middleware/topeDePedidos.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-const USUARIO = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'; // usuarios.id === asistentes.id === auth.uid()
+const USUARIO = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'; // la cuenta: usuarios.id === auth.uid()
+// El Legajo de esa persona en esta Prestadora. Es a propósito otro número que el de la cuenta: si
+// alguna consulta volviera a usar el de la cuenta, estas comprobaciones fallan.
+const LEGAJO = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 const CALIFICACION = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
@@ -91,6 +94,8 @@ beforeEach(() => {
 
   respuestas.set('GET /auth/v1/user', { id: USUARIO, aud: 'authenticated' });
   respuestas.set('GET /rest/v1/usuarios', [{ rol: 'asistente', prestadora_id: PRESTADORA }]);
+  // El Legajo con el que entra la sesión: lo busca el middleware por la cuenta y la Prestadora.
+  respuestas.set('GET /rest/v1/asistentes', [{ id: LEGAJO, prestadora_id: PRESTADORA }]);
 });
 
 describe('las calificaciones que el Asistente ve de sí mismo', () => {
@@ -111,7 +116,7 @@ describe('las calificaciones que el Asistente ve de sí mismo', () => {
       url.includes(`prestadora_id=eq.${PRESTADORA}`),
       'la consulta de las calificaciones no lleva el filtro de Prestadora'
     );
-    assert.ok(url.includes(`asistente_id=eq.${USUARIO}`), url);
+    assert.ok(url.includes(`asistente_id=eq.${LEGAJO}`), url);
   });
 });
 
@@ -132,14 +137,14 @@ describe('la baja del aviso al celular', () => {
       url.includes(`prestadora_id=eq.${PRESTADORA}`),
       'la baja de la suscripción no lleva el filtro de Prestadora'
     );
-    assert.ok(url.includes(`asistente_id=eq.${USUARIO}`), url);
+    assert.ok(url.includes(`asistente_id=eq.${LEGAJO}`), url);
   });
 });
 
 describe('la decisión de consentimiento que ya tomó', () => {
   it('se lee filtrada por la Prestadora de la sesión', async () => {
     respuestas.set('GET /rest/v1/asistentes', [
-      { id: USUARIO, prestadora_id: PRESTADORA, tipo_vinculo: 'monotributo' },
+      { id: LEGAJO, prestadora_id: PRESTADORA, tipo_vinculo: 'monotributo' },
     ]);
     respuestas.set('GET /rest/v1/prestadoras', [{ pais: 'AR' }]);
     respuestas.set('GET /rest/v1/textos_consentimiento', [
@@ -159,6 +164,6 @@ describe('la decisión de consentimiento que ya tomó', () => {
       url.includes(`prestadora_id=eq.${PRESTADORA}`),
       'la lectura del consentimiento no lleva el filtro de Prestadora'
     );
-    assert.ok(url.includes(`asistente_id=eq.${USUARIO}`), url);
+    assert.ok(url.includes(`asistente_id=eq.${LEGAJO}`), url);
   });
 });

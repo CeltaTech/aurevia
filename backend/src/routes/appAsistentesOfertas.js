@@ -120,7 +120,7 @@ appAsistentesOfertasRouter.get('/', requiereRolAsistente, async (req, res) => {
   const { data, error } = await supabase
     .from('ofertas_guardia')
     .select(`id, invitado_at, guardia_id, guardias!inner(${CAMPOS_DE_GUARDIA})`)
-    .eq('asistente_id', req.usuarioAsistente.id)
+    .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .is('respuesta', null)
     .eq('guardias.estado', 'programada')
@@ -187,7 +187,7 @@ appAsistentesOfertasRouter.post('/:id/responder', requiereRolAsistente, async (r
     .from('ofertas_guardia')
     .select(`id, respuesta, guardia_id, guardias(${CAMPOS_DE_GUARDIA})`)
     .eq('id', req.params.id)
-    .eq('asistente_id', req.usuarioAsistente.id)
+    .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .maybeSingle();
 
@@ -207,7 +207,7 @@ appAsistentesOfertasRouter.post('/:id/responder', requiereRolAsistente, async (r
       .from('ofertas_guardia')
       .update({ respuesta: 'rechaza', respuesta_at: new Date().toISOString(), motivo })
       .eq('id', oferta.id)
-      .eq('asistente_id', req.usuarioAsistente.id)
+      .eq('asistente_id', req.usuarioAsistente.asistenteId)
       .is('respuesta', null)
       .select('id');
 
@@ -235,7 +235,7 @@ appAsistentesOfertasRouter.post('/:id/responder', requiereRolAsistente, async (r
   const { data: tomada, error: fallaGuardia } = await supabase
     .from('guardias')
     .update({
-      asistente_id: req.usuarioAsistente.id,
+      asistente_id: req.usuarioAsistente.asistenteId,
       ofrecida_at: null,
       ofrecida_por: null,
       oferta_limite_at: null,
@@ -260,7 +260,7 @@ appAsistentesOfertasRouter.post('/:id/responder', requiereRolAsistente, async (r
     .from('ofertas_guardia')
     .update({ respuesta: 'acepta', respuesta_at: new Date().toISOString() })
     .eq('id', oferta.id)
-    .eq('asistente_id', req.usuarioAsistente.id);
+    .eq('asistente_id', req.usuarioAsistente.asistenteId);
 
   if (fallaOferta) {
     // No debería pasar: lo que la base revisa acá lo acaba de aprobar al asignar la guardia.

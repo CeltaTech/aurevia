@@ -51,14 +51,29 @@ Y se corrige el canje del enlace de activación, que fija la clave antes de marc
 usado y sin que las dos cosas vayan juntas, así que si el segundo paso falla el enlace sigue
 sirviendo (`backend/src/utils/activacionCuenta.js:114-117`).
 
-**3.** Una cuenta en varias Prestadoras. Es regla decidida y hoy es imposible: la tabla de cuentas
-tiene una sola Prestadora por cuenta. La ficha pasa a ser una por Prestadora colgando de la misma
-cuenta, y adentro de una Prestadora el mismo correo no puede aparecer dos veces. Aparte se guarda
-en cuál está parada la sesión, una por vez, **escrita por el servidor después de comprobar la ficha
-y nunca por el pedido**, y comprobada de nuevo cada vez que se lee. Si la persona está en una sola,
-entra derecho; si está en varias, elige. Viaja además el detalle que sostiene todo: **quien resuelve
-o verifica algo tiene que ser de la misma Prestadora que aquello sobre lo que actúa**, atado con
-claves de dos columnas para que lo impida la base y no la pantalla.
+**3.** Una cuenta en varias Prestadoras. **Un Asistente trabaja en varias Prestadoras y una Familia
+contrata con varias.** Es regla decidida y hoy es imposible para los dos por el mismo motivo: hay
+una sola tabla de cuentas para todos, con una sola Prestadora por cuenta, y la ficha del Asistente
+y la de la Familia se identifican con el mismo número que la cuenta, así que una cuenta es una
+ficha. Encima de eso el correo es único en todo el sistema. La ficha pasa a ser una por Prestadora
+colgando de la misma cuenta, y adentro de una Prestadora el mismo correo no puede aparecer dos
+veces. Aparte se guarda en cuál está parada la sesión, una por vez, **escrita por el servidor
+después de comprobar la ficha y nunca por el pedido**, y comprobada de nuevo cada vez que se lee.
+Si la persona está en una sola, entra derecho; si está en varias, elige, y eso vale igual en la
+aplicación de la Familia y en la del Asistente. Viaja además el detalle que sostiene todo: **quien
+resuelve o verifica algo tiene que ser de la misma Prestadora que aquello sobre lo que actúa**,
+atado con claves de dos columnas para que lo impida la base y no la pantalla.
+
+**El aislamiento acá tiene que ser más duro que en el resto del producto, y por eso se prueba
+aparte.** Hasta hoy una cuenta pertenece a una sola Prestadora, así que una fuga se nota; desde
+este paso la misma persona tiene sesión legítima en dos, y cualquier consulta que resuelva la
+Prestadora por otra vía que no sea la sesión comprobada devuelve datos de la otra sin que nada
+falle a la vista. Entonces: **ninguna consulta resuelve la Prestadora por lo que venga en el
+pedido**, ni por la ficha, ni por parecido de correo; **la separación la impone la base**, y los
+filtros de las rutas del motor son la segunda red, no la primera. Y la prueba se hace con una
+persona dada de alta en dos Prestadoras, **con datos cargados en las dos**: parada en una ve todo
+lo suyo de esa y nada de la otra, en las dos direcciones. Una consulta que devuelve vacío no prueba
+nada.
 
 **4.** Las listas de opciones por Prestadora. Es el aporte más grande y lo que destraba
 Reclutamiento. Un registro genérico de dos pisos: la lista que trae el producto y la que agrega

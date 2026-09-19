@@ -24,7 +24,11 @@ import {
   AVISO_TELEFONO_CAMBIADO,
   AVISO_EQUIPO_NUEVO,
 } from '../utils/avisoDeSeguridad.js';
-import { registrarActividad, yaQuedoRegistrado } from '../utils/registroDeActividad.js';
+import {
+  registrarActividad,
+  yaQuedoRegistrado,
+  ACCION_VERIFICACION_DE_TELEFONO,
+} from '../utils/registroDeActividad.js';
 
 // LA SEGURIDAD DE LA PROPIA CUENTA: el teléfono, los equipos y la salida de golpe.
 //
@@ -43,7 +47,6 @@ import { registrarActividad, yaQuedoRegistrado } from '../utils/registroDeActivi
 
 export const panelCuentaSeguraRouter = Router();
 
-const ACCION_VERIFICACION = 'verificacion_de_telefono';
 const ACCION_CAMBIO_DE_TELEFONO = 'cambio_de_telefono';
 const ACCION_EQUIPO_NUEVO = 'entrada_desde_un_equipo_nuevo';
 const ACCION_CERRAR_TODO = 'cierre_de_sesion_de_todos_los_equipos';
@@ -133,7 +136,7 @@ panelCuentaSeguraRouter.post(
         .eq('id', cuenta.id);
       if (error) throw new Error(error.message);
 
-      await registrarActividad(req.usuarioPanel, ACCION_VERIFICACION, {
+      await registrarActividad(req.usuarioPanel, ACCION_VERIFICACION_DE_TELEFONO, {
         tablaAfectada: 'usuarios',
         registroId: cuenta.id,
         detalle: { via: 'whatsapp' },

@@ -13,6 +13,11 @@ import { periodoEnPalabras } from '../lib/fechaEnPalabras';
 // base, de la vista que ya hace esa resta para todo el producto. Acá no se resta nada: una cuenta
 // hecha dos veces son dos respuestas posibles para la misma pregunta, y ésta es justo la pregunta
 // que alguien va a discutir por teléfono.
+//
+// Y DOS DE ESOS TRES PUEDEN NO VENIR. Cuando la cobranza de la Prestadora la lleva otro software,
+// el motor no manda lo que falta ni lo que entró, porque acá dejó de calcularlo. Lo que no viene
+// no se muestra: no se pone un cero ni un guion, que se leerían como si fueran ciertos. Queda un
+// hueco en la pantalla, y así queda hasta que llegue la maqueta.
 export default function Facturas() {
   const { t, locale } = useLocale();
   const [facturas, setFacturas] = useState(undefined);
@@ -52,15 +57,21 @@ export default function Facturas() {
             style={{ display: 'block', textDecoration: 'none' }}
           >
             <div className="guardia-card-paciente">{periodoEnPalabras(f.periodo, locale)}</div>
-            <div className="guardia-card-detalle">
-              {t.facturas.col_saldo}: {formatearImporte(f.saldo, f.moneda, locale)}
-              {' · '}
-              {traducirValor(t.facturas, `estado_${f.estado}`)}
-            </div>
+            {f.saldo !== undefined && (
+              <div className="guardia-card-detalle">
+                {t.facturas.col_saldo}: {formatearImporte(f.saldo, f.moneda, locale)}
+                {' · '}
+                {traducirValor(t.facturas, `estado_${f.estado}`)}
+              </div>
+            )}
             <div className="guardia-card-detalle">
               {t.facturas.col_facturado}: {formatearImporte(f.monto_total, f.moneda, locale)}
-              {' · '}
-              {t.facturas.col_cobrado}: {formatearImporte(f.cobrado, f.moneda, locale)}
+              {f.cobrado !== undefined && (
+                <>
+                  {' · '}
+                  {t.facturas.col_cobrado}: {formatearImporte(f.cobrado, f.moneda, locale)}
+                </>
+              )}
             </div>
           </Link>
         ))

@@ -53,9 +53,23 @@ Se puede repetir cuando se quiera: siempre deja la base igual.
 > quedó cargada hace una semana, "hoy" ya no tiene nada; se vuelve a correr el mismo
 > comando y listo.
 
-**Con quién entrar.** Todas las cuentas usan la contraseña `local-sandbox-2026`. No es
-una credencial de nada: solo existe dentro de una base que corre en esta máquina y que
-se borra entera en cada reset.
+### 3 bis. Ponerles contraseña a las cuentas
+
+Las cuentas nacen **sin contraseña**, y hasta que se les ponga una no entra ninguna. La
+contraseña no está escrita en `supabase/seed.sql` porque eso sería una credencial
+guardada en el repositorio, y `supabase db reset` no le puede pasar variables de
+entorno a ese archivo. Se la pone un paso aparte, parado en `productos/careonys/`:
+
+```bash
+SEED_LOCAL_PASSWORD=<la que quiera> node scripts/poner_la_clave_de_la_siembra.mjs
+```
+
+Se vuelve a correr después de cada `db reset`. Es la misma variable que esperan
+`scripts/probar_aislamiento.mjs`, `scripts/probar_altas_con_sesion.mjs` y
+`scripts/probar_papeles_del_legajo.mjs`, así que conviene dejarla puesta en la ventana
+de línea de comandos con la que se trabaja.
+
+**Con quién entrar.** Todas las cuentas usan esa misma contraseña.
 
 | Rol | Correo |
 |---|---|

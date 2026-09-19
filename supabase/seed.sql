@@ -23,10 +23,23 @@
 -- contraseñas son de fantasía. No hay un solo dato de una persona real, y no
 -- puede haberlo nunca (regla 6 de `CLAUDE.md`).
 --
--- LA CONTRASEÑA. Las diez cuentas entran con `local-sandbox-2026`. No es una
--- credencial: solo existe adentro de una base de datos que corre en la máquina
--- del Desarrollador y que se borra entera con cada `db reset`. **Nunca debe
--- usarse en la nube ni en ningún otro lado.**
+-- LA CONTRASEÑA NO ESTÁ ACÁ, Y LAS CUENTAS NACEN SIN NINGUNA. Una contraseña
+-- escrita en este archivo es una credencial guardada en el repositorio, y eso
+-- no se hace ni para la base local (§6 de `celtatech/CLAUDE.md`). Este archivo
+-- lo corre `supabase db reset`, que no le pasa variables de entorno, así que la
+-- clave no puede entrar por acá: las once cuentas nacen con el casillero de la
+-- contraseña vacío, que ningún resumen puede igualar, y por eso no se entra a
+-- ninguna hasta que se le ponga una.
+--
+-- CÓMO SE LES PONE. Con la base ya sembrada, y parado en la raíz del producto:
+--
+--     SEED_LOCAL_PASSWORD=<la que quiera> node scripts/poner_la_clave_de_la_siembra.mjs
+--
+-- Ese programa lee la variable, se planta si falta, y se la pone a todas las
+-- cuentas de la siembra. Es la misma que después esperan
+-- `scripts/probar_aislamiento.mjs`, `scripts/probar_altas_con_sesion.mjs` y
+-- `scripts/probar_papeles_del_legajo.mjs`. **Nunca debe usarse en la nube ni en
+-- ningún otro lado.**
 --
 -- POR QUÉ LA PRESTADORA SE LLAMA "SANDBOX". Porque es el nombre que el
 -- producto ya tiene reservado para la Organización de prueba (§2 de
@@ -175,7 +188,8 @@ JOIN public.zonas_cobertura z
 --    de la orden, cuando ya están las tres.
 --
 --    Los tres roles del Panel están para comprobar que cada uno ve lo que le
---    corresponde y nada más. Todos entran con la misma contraseña.
+--    corresponde y nada más. Todos entran con la misma contraseña, la que les
+--    ponga después `scripts/poner_la_clave_de_la_siembra.mjs`.
 -- ----------------------------------------------------------------------------
 WITH escritas (id, email, nombre, rol, telefono) AS (
   VALUES
@@ -217,7 +231,7 @@ cuentas_de_ingreso AS (
   )
   SELECT
     '00000000-0000-0000-0000-000000000000', p.id, 'authenticated', 'authenticated', p.correo_de_acceso,
-    extensions.crypt('local-sandbox-2026', extensions.gen_salt('bf')),
+    '',  -- sin contraseña: se la pone `scripts/poner_la_clave_de_la_siembra.mjs`
     now(), now(), now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
     jsonb_build_object('nombre', p.nombre),
@@ -960,7 +974,8 @@ FROM public.zonas_cobertura z
 WHERE z.codigo = 'la_plata' AND z.prestadora_id = '22222222-2222-4222-8222-222222222222';
 
 -- Las cuatro cuentas de la segunda Prestadora, con la misma mecánica de tres
--- tablas que explica el punto 2. Entran con la misma contraseña que el resto.
+-- tablas que explica el punto 2. Nacen sin contraseña, igual que el resto, y la
+-- reciben con el mismo programa.
 WITH escritas (id, email, nombre, rol, telefono) AS (
   VALUES
     ('50000000-0000-4000-8000-000000000001'::uuid, 'admin@sur.local'::text,   'Alicia Administradora Sur'::text, 'admin_prestadora'::text, '+54 221 400-0001'::text),
@@ -988,7 +1003,7 @@ cuentas_de_ingreso AS (
   )
   SELECT
     '00000000-0000-0000-0000-000000000000', p.id, 'authenticated', 'authenticated', p.correo_de_acceso,
-    extensions.crypt('local-sandbox-2026', extensions.gen_salt('bf')),
+    '',  -- sin contraseña: se la pone `scripts/poner_la_clave_de_la_siembra.mjs`
     now(), now(), now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
     jsonb_build_object('nombre', p.nombre),
@@ -1211,7 +1226,8 @@ DO $$
 BEGIN
   RAISE NOTICE '';
   RAISE NOTICE 'Base local sembrada. Dos Prestadoras: Sandbox y Cuidar del Sur.';
-  RAISE NOTICE 'Contraseña de todas las cuentas: local-sandbox-2026';
+  RAISE NOTICE 'Las cuentas nacieron sin contraseña y todavía no entra ninguna.';
+  RAISE NOTICE 'Para ponérsela: SEED_LOCAL_PASSWORD=<la que quiera> node scripts/poner_la_clave_de_la_siembra.mjs';
   RAISE NOTICE 'Los correos de abajo son los que se escriben en la pantalla de ingreso.';
   RAISE NOTICE '  Sandbox, Panel  -> superadmin@sandbox.local / admin@sandbox.local / coordinadora@sandbox.local';
   RAISE NOTICE '  Sandbox, Asistentes -> ana.asistente@sandbox.local (y bruno, clara, delia)';

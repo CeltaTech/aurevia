@@ -120,6 +120,26 @@ const ES = {
     ].join('\n'),
   }),
 
+  // Lo mismo que arriba, contado para la Familia. Dice cuál es la guardia y qué pasó, y nada de
+  // adentro: ni el escalón de la alarma, ni los minutos de la cuenta interna, ni ningún
+  // identificador, ni el nombre de quien estaba asignado. Las claves terminan en `_familia` por lo
+  // mismo que `incidente_relevo_familia`: son dos textos distintos sobre el mismo hecho, y tenerlos
+  // separados es lo que impide que a la Familia le llegue el de adentro.
+  guardia_sin_cerrar_familia: (d) => ({
+    titulo: 'Guardia sin cerrar',
+    cuerpo: `La guardia del ${d.fecha}, de ${d.horaInicio} a ${d.horaFin}, para ${unirNombres(d.pacientes, 'y', 'Paciente sin nombre cargado')} pasó su hora de cierre y todavía figura abierta. Ante cualquier duda, puede comunicarse con el Coordinador.`,
+  }),
+
+  guardia_sin_cerrar_grave_familia: (d) => ({
+    titulo: 'Guardia sin cerrar',
+    cuerpo: `La guardia del ${d.fecha}, de ${d.horaInicio} a ${d.horaFin}, para ${unirNombres(d.pacientes, 'y', 'Paciente sin nombre cargado')} sigue figurando abierta varias horas después de su hora de cierre. Ante cualquier duda, puede comunicarse con el Coordinador.`,
+  }),
+
+  alerta_temprana_guardia_familia: (d) => ({
+    titulo: 'Guardia con un aviso pendiente',
+    cuerpo: `La guardia del ${d.fecha}, de ${d.horaInicio} a ${d.horaFin}, para ${unirNombres(d.pacientes, 'y', 'Paciente sin nombre cargado')} tiene un aviso pendiente de resolver. Ante cualquier duda, puede comunicarse con el Coordinador.`,
+  }),
+
   guardia_sin_cerrar_respaldo: (d) => ({
     texto: `La guardia del ${d.fecha}, de ${d.horaInicio} a ${d.horaFin}, sigue sin cerrarse ${Math.round(d.minutosDeAtraso)} minutos después del plazo.`,
   }),
@@ -489,6 +509,21 @@ const EN = {
     ].join('\n'),
   }),
 
+  guardia_sin_cerrar_familia: (d) => ({
+    titulo: 'Shift not closed',
+    cuerpo: `The shift on ${d.fecha}, from ${d.horaInicio} to ${d.horaFin}, for ${unirNombres(d.pacientes, 'and', 'patient with no name on file')} is past its closing time and is still open. If you have any questions, you can contact the coordinator.`,
+  }),
+
+  guardia_sin_cerrar_grave_familia: (d) => ({
+    titulo: 'Shift not closed',
+    cuerpo: `The shift on ${d.fecha}, from ${d.horaInicio} to ${d.horaFin}, for ${unirNombres(d.pacientes, 'and', 'patient with no name on file')} is still open several hours after its closing time. If you have any questions, you can contact the coordinator.`,
+  }),
+
+  alerta_temprana_guardia_familia: (d) => ({
+    titulo: 'Shift with an open alert',
+    cuerpo: `The shift on ${d.fecha}, from ${d.horaInicio} to ${d.horaFin}, for ${unirNombres(d.pacientes, 'and', 'patient with no name on file')} has an alert that is still open. If you have any questions, you can contact the coordinator.`,
+  }),
+
   guardia_sin_cerrar_respaldo: (d) => ({
     texto: `The shift on ${d.fecha}, from ${d.horaInicio} to ${d.horaFin}, is still open ${Math.round(d.minutosDeAtraso)} minutes past the deadline.`,
   }),
@@ -819,6 +854,21 @@ const PT = {
         ? 'O Assistente registrou a saída, então saiu do domicílio: falta confirmar que ficou tudo feito.'
         : 'O Assistente não registrou a saída, então não há registro de que o plantão tenha terminado nem de quem ficou a cargo do Paciente.',
     ].join('\n'),
+  }),
+
+  guardia_sin_cerrar_familia: (d) => ({
+    titulo: 'Plantão sem encerrar',
+    cuerpo: `O plantão de ${d.fecha}, das ${d.horaInicio} às ${d.horaFin}, para ${unirNombres(d.pacientes, 'e', 'Paciente sem nome cadastrado')} passou da hora de encerramento e ainda consta aberto. Em caso de dúvida, pode entrar em contato com o Coordenador.`,
+  }),
+
+  guardia_sin_cerrar_grave_familia: (d) => ({
+    titulo: 'Plantão sem encerrar',
+    cuerpo: `O plantão de ${d.fecha}, das ${d.horaInicio} às ${d.horaFin}, para ${unirNombres(d.pacientes, 'e', 'Paciente sem nome cadastrado')} continua aberto várias horas depois da hora de encerramento. Em caso de dúvida, pode entrar em contato com o Coordenador.`,
+  }),
+
+  alerta_temprana_guardia_familia: (d) => ({
+    titulo: 'Plantão com um aviso pendente',
+    cuerpo: `O plantão de ${d.fecha}, das ${d.horaInicio} às ${d.horaFin}, para ${unirNombres(d.pacientes, 'e', 'Paciente sem nome cadastrado')} tem um aviso pendente de resolver. Em caso de dúvida, pode entrar em contato com o Coordenador.`,
   }),
 
   guardia_sin_cerrar_respaldo: (d) => ({

@@ -16,6 +16,7 @@
 //        cd backend && DOTENV_CONFIG_PATH=.env.local node -r dotenv/config src/server.js
 //   3. cd backend && SUPABASE_URL=http://127.0.0.1:54621 \
 //        SUPABASE_SERVICE_ROLE_KEY=... SUPABASE_ANON_KEY=... \
+//        SEED_TEST_PASSWORD=<la que quiera> \
 //        node scripts/test_etapa2_sesion_soporte.mjs
 //
 //   (las dos claves las imprime `npx supabase status`)
@@ -47,7 +48,14 @@ const admin = createClient(API_URL, SERVICE_ROLE_KEY);
 const anon = createClient(API_URL, ANON_KEY);
 
 const EMAIL = 'prueba.etapa2@local.celtatech.com';
-const PASSWORD = 'local-dev-1234';
+// La contraseña de la cuenta de prueba entra por el entorno, como cualquier credencial. Escrita
+// acá queda a la vista de cualquiera que abra el repositorio, y si el script se corta antes de
+// borrar lo que creó, la cuenta queda con ella puesta. Sin la variable no arranca.
+const PASSWORD = process.env.SEED_TEST_PASSWORD;
+if (!PASSWORD) {
+  console.error('Falta la variable SEED_TEST_PASSWORD. Es la contraseña con la que nace la cuenta de prueba, y no se escribe en el código.');
+  process.exit(1);
+}
 
 let authUserId, prestadoraId, prestadoraIdB, coladoId;
 const fallos = [];

@@ -28,6 +28,9 @@ export const ACCION_CAMBIO_DE_PERMISOS = 'cambio_de_permisos_de_la_prestadora';
 export const ACCION_BORRADO_DE_DATOS = 'borrado_de_datos';
 export const ACCION_MODIFICACION_CRITICA = 'modificacion_critica';
 export const ACCION_CAMBIO_DE_MONEDA = 'cambio_de_moneda';
+// Se anota desde dos lugares —la pantalla de la cuenta y la activación—, así que el nombre vive
+// acá y no en ninguno de los dos: escrito dos veces, el día que cambie cambiaría en uno solo.
+export const ACCION_VERIFICACION_DE_TELEFONO = 'verificacion_de_telefono';
 
 // Cada cuanto vuelve a anotarse la entrada al Panel de la misma cuenta. La sesion del Panel no
 // pasa por ninguna ruta del motor al abrirse —la clave se valida contra Supabase directamente—,

@@ -27,6 +27,17 @@ const DATOS = {
     pacientes: ['Elena'], asistente: 'Marta', minutosDeAtraso: 300, salidaMarcada: false,
   },
   guardia_sin_cerrar_respaldo: { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', minutosDeAtraso: 90 },
+  // Los tres de la Familia: la guardia y nada más. Ni el Asistente, ni los minutos, ni el
+  // identificador — eso lo comprueba la prueba de más abajo.
+  guardia_sin_cerrar_familia: {
+    fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
+  },
+  guardia_sin_cerrar_grave_familia: {
+    fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
+  },
+  alerta_temprana_guardia_familia: {
+    fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
+  },
   escalada_a_respaldo: {},
   escalada_a_todos_los_coordinadores: { minutos: 45 },
   escalada_a_la_administracion: { minutos: 90 },
@@ -187,6 +198,51 @@ test('los tres idiomas dicen cosas distintas', () => {
 
 test('una clave que no existe se avisa, no se devuelve vacía', () => {
   assert.throws(() => aviso('un_aviso_que_no_existe', 'es-AR'), /un_aviso_que_no_existe/);
+});
+
+// Los tres avisos de guardia que le llegan a la Familia, probados rompiéndolos a propósito.
+const AVISOS_DE_GUARDIA_PARA_LA_FAMILIA = [
+  'guardia_sin_cerrar_familia',
+  'guardia_sin_cerrar_grave_familia',
+  'alerta_temprana_guardia_familia',
+];
+
+test('una guardia sin Pacientes cargados se nombra igual, sin dejar el renglón cortado', () => {
+  for (const idioma of IDIOMAS_DEL_CATALOGO) {
+    for (const clave of AVISOS_DE_GUARDIA_PARA_LA_FAMILIA) {
+      const { cuerpo } = aviso(clave, idioma, { ...DATOS[clave], pacientes: [] });
+      assert.equal(cuerpo.includes('undefined'), false, `${clave} en ${idioma} deja un hueco`);
+      assert.equal(/\s,/.test(cuerpo), false, `${clave} en ${idioma} deja una coma suelta`);
+    }
+  }
+});
+
+test('nada de adentro entra en el texto de la Familia', () => {
+  // El aviso de quien coordina lleva el nombre del Asistente, los minutos de la cuenta interna,
+  // el escalón y el identificador de la guardia. Si alguno se cuela acá, la Familia está viendo
+  // lo que no es suyo.
+  const deAdentro = {
+    fecha: '2026-10-07',
+    horaInicio: '08:00',
+    horaFin: '16:00',
+    pacientes: ['Marta Giménez'],
+    asistente: 'Rocío Paz',
+    minutosDeAtraso: 137,
+    veces: 4,
+    salidaMarcada: false,
+    id: 'guardia-uuid-0001',
+    motivo: 'sin marcar salida',
+  };
+  for (const idioma of IDIOMAS_DEL_CATALOGO) {
+    for (const clave of AVISOS_DE_GUARDIA_PARA_LA_FAMILIA) {
+      const { titulo, cuerpo } = aviso(clave, idioma, deAdentro);
+      assert.ok(cuerpo.includes('Marta Giménez'), `${clave} en ${idioma} no nombra al Paciente`);
+      const texto = `${titulo} ${cuerpo}`;
+      for (const prohibido of ['Rocío Paz', '137', 'guardia-uuid-0001', 'sin marcar salida']) {
+        assert.equal(texto.includes(prohibido), false, `${clave} en ${idioma} filtró ${prohibido}`);
+      }
+    }
+  }
 });
 
 test('normalizarIdioma deja pasar los tres y devuelve el de por defecto para el resto', () => {

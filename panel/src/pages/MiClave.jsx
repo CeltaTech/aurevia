@@ -5,6 +5,9 @@ import { supabase } from '../lib/supabaseClient';
 import { FormField } from '../components/ui/FormField';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
+import { EstadoLista } from '../components/layout/EstadoLista';
+import { TelefonoDeLaCuenta } from '../components/cuenta/TelefonoDeLaCuenta';
+import { useCuentaSegura } from '../components/cuenta/useCuentaSegura';
 import { MINIMO_DE_CARACTERES, claveAceptable } from '../lib/reglaDeClave';
 
 // Donde alguien que ya entró cambia su propia clave.
@@ -16,9 +19,15 @@ import { MINIMO_DE_CARACTERES, claveAceptable } from '../lib/reglaDeClave';
 //
 // No pasa por el motor: la cuenta se cambia contra el servicio de acceso, con la sesión de quien
 // está pidiendo el cambio. Nadie puede cambiar así la de otro.
+// Y ACÁ TAMBIÉN SE OFRECE VERIFICAR EL TELÉFONO, porque es el otro momento en que alguien se
+// ocupa de cómo entra. Es la misma sección que la pantalla de seguridad de la cuenta, escrita
+// una sola vez en `components/cuenta/TelefonoDeLaCuenta.jsx`: no hay un segundo mecanismo, hay
+// un segundo lugar desde donde se llega al mismo. Cambiar la contraseña no depende de esto ni
+// lo espera: quien no verifica nada cambia su contraseña igual.
 export function MiClave() {
   const { t } = useLocale();
   const { session } = useAuth();
+  const cuenta = useCuentaSegura();
   const [actual, setActual] = useState('');
   const [password, setPassword] = useState('');
   const [confirmacion, setConfirmacion] = useState('');
@@ -119,6 +128,12 @@ export function MiClave() {
           {guardando ? t.auth.mi_clave_guardando : t.auth.mi_clave_guardar}
         </Button>
       </form>
+
+      <EstadoLista estado={cuenta.estado} error={cuenta.error} recargar={cuenta.recargar}>
+        {cuenta.datos && (
+          <TelefonoDeLaCuenta datos={cuenta.datos} recargar={cuenta.recargar} />
+        )}
+      </EstadoLista>
     </div>
   );
 }

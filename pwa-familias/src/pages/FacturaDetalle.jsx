@@ -16,6 +16,10 @@ import { periodoEnPalabras, diaEnPalabras } from '../lib/fechaEnPalabras';
 // dio de baja, sacado de la pantalla, queda indistinguible de uno que nunca existió, y quien lo
 // hizo se entera de que no cuenta cuando le reclaman. El motivo de la anulación no viene: ésa es
 // una nota de trabajo de la Prestadora.
+//
+// LO COBRADO, EL SALDO Y EL ESTADO PUEDEN NO VENIR. Con la cobranza en manos de otro software, el
+// motor deja de calcularlos y no los manda. Lo que no viene no se dibuja: un cero o un guion se
+// leen como si fueran ciertos. Los renglones y la fecha siguen, que son datos guardados.
 export default function FacturaDetalle() {
   const { facturaId } = useParams();
   const { t, locale } = useLocale();
@@ -65,12 +69,24 @@ export default function FacturaDetalle() {
       <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '0.5rem 1.5rem' }}>
         <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.facturas.col_facturado}</div>
         <div>{formatearImporte(factura.monto_total, factura.moneda, locale)}</div>
-        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.facturas.col_cobrado}</div>
-        <div>{formatearImporte(factura.cobrado, factura.moneda, locale)}</div>
-        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.facturas.col_saldo}</div>
-        <div>{formatearImporte(factura.saldo, factura.moneda, locale)}</div>
-        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.facturas.col_estado}</div>
-        <div>{traducirValor(t.facturas, `estado_${factura.estado}`)}</div>
+        {factura.cobrado !== undefined && (
+          <>
+            <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.facturas.col_cobrado}</div>
+            <div>{formatearImporte(factura.cobrado, factura.moneda, locale)}</div>
+          </>
+        )}
+        {factura.saldo !== undefined && (
+          <>
+            <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.facturas.col_saldo}</div>
+            <div>{formatearImporte(factura.saldo, factura.moneda, locale)}</div>
+          </>
+        )}
+        {factura.estado !== undefined && (
+          <>
+            <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.facturas.col_estado}</div>
+            <div>{traducirValor(t.facturas, `estado_${factura.estado}`)}</div>
+          </>
+        )}
         <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.facturas.col_emision}</div>
         <div>{diaEnPalabras(factura.fecha_emision, locale)}</div>
         <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.facturas.col_vencimiento}</div>

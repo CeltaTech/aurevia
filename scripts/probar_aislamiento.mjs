@@ -74,9 +74,16 @@ const CONTENEDOR = process.env.CONTENEDOR_BASE || (() => {
   return `supabase_db_${id[1]}`;
 })();
 
-// La contraseña de las cuentas de prueba. No es un secreto: la escribe el
-// propio `seed.sql` y solo sirve contra la base local.
-const CONTRASENA = 'local-sandbox-2026';
+// La contraseña de las cuentas de prueba. No se escribe acá: es la misma que
+// recibió `scripts/poner_la_clave_de_la_siembra.mjs` después de sembrar la base,
+// y entra por la misma variable. Sin ella no hay con qué entrar, así que la
+// prueba no arranca en vez de fallar en la primera cuenta.
+const CONTRASENA = process.env.SEED_LOCAL_PASSWORD;
+if (!CONTRASENA) {
+  console.error('Falta la variable SEED_LOCAL_PASSWORD. Es la contraseña con la que entran las cuentas de la base local, y no se escribe en el código.');
+  console.error('  Se la pone `node scripts/poner_la_clave_de_la_siembra.mjs` con esa misma variable.');
+  process.exit(1);
+}
 
 const PRESTADORA_A = { nombre: 'Sandbox',        sufijo: '@sandbox.local' };
 const PRESTADORA_B = { nombre: 'Cuidar del Sur', sufijo: '@sur.local' };

@@ -140,4 +140,30 @@ export async function activarCuentaConToken(token, passwordNueva) {
     await supabase.from('tokens_activacion_cuenta').update({ usado_en: null }).eq('id', fila.id);
     throw new Error(errorPassword.message);
   }
+
+  // De quién era el enlace. Lo devuelve para lo que sigue en la misma pantalla —ofrecerle
+  // verificar el teléfono—, y no sale de acá hacia el navegador: lo que viaja es si salió el
+  // código, nunca a quién ni a qué número.
+  return { usuarioId: fila.usuario_id };
+}
+
+// De quién es este enlace, **ya usado**.
+//
+// SIRVE PARA UN SOLO PASO Y NO ES UNA CREDENCIAL. Después de activar, la pantalla ofrece
+// verificar el teléfono, y para eso hace falta saber de quién es la cuenta. El enlace alcanza
+// para nombrarla y no alcanza para nada más: quien pide ese paso tiene que escribir además la
+// contraseña que acaba de elegir (`utils/telefonoAlActivar.js`), que es lo que no tiene alguien
+// que se haya quedado con el correo. Sin esa segunda condición, un enlace viejo serviría para
+// colgarle a una cuenta ajena un número propio, y un número verificado recupera la clave.
+//
+// Se exige `usado_en`: sin activar no hay contraseña contra la cual comprobar nada.
+export async function cuentaQueActivoConEsteToken(token) {
+  const { data: fila, error } = await supabase
+    .from('tokens_activacion_cuenta')
+    .select('usuario_id, usado_en')
+    .eq('token', token)
+    .maybeSingle();
+
+  if (error || !fila || !fila.usado_en) throw new ErrorConMotivo('token_invalido');
+  return fila.usuario_id;
 }

@@ -13,7 +13,6 @@ import { reglaDeLaToma, tomadasAhora } from './tomasDeAlarma.js';
 import { TIPOS_DE_ALARMA } from './alarmasTomadas.js';
 import { horasEntre } from './horasDeGuardia.js';
 import { aviso } from '../i18n/avisos.js';
-import { avisoDeGuardiaParaLaFamilia } from '../i18n/avisosDeGuardiaParaLaFamilia.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
 // Insistencia al Coordinador según premura, con coordinador de respaldo si no hay
@@ -155,7 +154,7 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
         evento: 'guardia_sin_cerrar',
         prestadoraId,
         guardiaId: guardia.id,
-        textos: avisoDeGuardiaParaLaFamilia('guardia_sin_cerrar_familia', idioma, datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora, veces)),
+        textos: aviso('guardia_sin_cerrar_familia', idioma, datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora, veces)),
         idioma,
       });
 
@@ -221,7 +220,7 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
         evento: 'guardia_sin_cerrar_grave',
         prestadoraId,
         guardiaId: guardia.id,
-        textos: avisoDeGuardiaParaLaFamilia('guardia_sin_cerrar_grave_familia', idioma, datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora)),
+        textos: aviso('guardia_sin_cerrar_grave_familia', idioma, datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora)),
         idioma,
       });
 
@@ -364,7 +363,7 @@ async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
         evento: 'alerta_temprana_guardia',
         prestadoraId,
         guardiaId: alerta.guardia_id,
-        textos: avisoDeGuardiaParaLaFamilia('alerta_temprana_guardia_familia', idioma, guardia),
+        textos: aviso('alerta_temprana_guardia_familia', idioma, guardia),
         idioma,
       });
 

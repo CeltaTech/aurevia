@@ -4,7 +4,7 @@
  *   npm test --prefix backend
  *
  * ACÁ SE PRUEBA UNA PANTALLA QUE MUESTRA PLATA DE OTROS, así que los casos están escritos por el
- * error que evitan, y son cuatro:
+ * error que evitan, y son cinco:
  *
  *   1. QUE UNA FAMILIA VEA LA FACTURA DE OTRA. El motor entra a la base con la llave de servicio
  *      y se saltea la protección por fila, así que lo único que separa a una Familia de otra son
@@ -15,6 +15,9 @@
  *      dio de baja, sacado de la pantalla, es indistinguible de uno que nunca existió.
  *   4. QUE SE ENTRE POR UNA PUERTA QUE NO ES LA DE SIEMPRE. Las dos que ya existen son el
  *      interruptor de la Prestadora y el acceso que el titular reparte, y esto no agrega ninguna.
+ *   5. QUE HAYA DOS NÚMEROS PARA LA MISMA PREGUNTA. Con un software de cobranzas conectado, cuánto
+ *      debe la Familia lo sabe él; la resta de este lado no se entrega, y tampoco se manda un cero
+ *      en su lugar, que se leería como que no debe nada.
  *
  * Los datos son inventados.
  */
@@ -89,13 +92,18 @@ async function pedir(ruta) {
  *
  * Se prepara como titular por defecto —que ve todo— y cada prueba cambia lo suyo.
  */
-function sesionDeLaFamilia({ visibilidad = null, accesos = null, titular = true } = {}) {
+function sesionDeLaFamilia({ visibilidad = null, accesos = null, titular = true, sigueLaCobranza = true } = {}) {
   respuestas.set('GET /auth/v1/user', { id: USUARIO });
   respuestas.set('GET /rest/v1/usuarios', [{ rol: 'familia', prestadora_id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/familias', titular ? [{ id: FAMILIA }] : []);
   respuestas.set('GET /rest/v1/miembros_familia', titular ? [] : [{ familia_id: FAMILIA }]);
   respuestas.set('GET /rest/v1/configuracion_visibilidad_app', visibilidad ?? []);
   respuestas.set('GET /rest/v1/permisos_circulo_familiar', accesos ?? []);
+  // Quién lleva la cobranza. Sin fila configurada la lleva este sistema, que es como nace.
+  respuestas.set(
+    'GET /rest/v1/configuracion_facturacion_familias',
+    sigueLaCobranza ? [] : [{ regla: { sigue_la_cobranza: false } }]
+  );
 }
 
 const SALDO = {
@@ -211,6 +219,73 @@ describe('el desglose de una factura', () => {
       assert.equal(urls.length, 1, tabla);
       assert.ok(urls[0].includes(`prestadora_id=eq.${PRESTADORA}`), `${tabla}: ${urls[0]}`);
     }
+  });
+});
+
+describe('cuando la cobranza la lleva otro software', () => {
+  /**
+   * Lo que se prueba acá es que no haya un segundo número para la misma pregunta. Con un software
+   * de cobranzas conectado, cuánto debe la Familia lo sabe él; si esta ventanilla entregara igual
+   * la resta de este lado, la contradicción la vería justamente quien paga.
+   *
+   * Y no alcanza con que el número sea cero o vacío: la clave no tiene que estar. Un cero dice que
+   * no debe nada, y eso es una afirmación que este sistema ya no puede hacer.
+   */
+  beforeEach(() => {
+    sesionDeLaFamilia({ sigueLaCobranza: false });
+  });
+
+  it('la lista no trae ni el saldo, ni lo cobrado, ni el estado', async () => {
+    respuestas.set('GET /rest/v1/saldos_familia', [SALDO]);
+
+    const { estado, cuerpo } = await pedir('/facturas');
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.sigue_la_cobranza, false);
+    for (const calculado of ['saldo', 'cobrado', 'estado']) {
+      assert.ok(!(calculado in cuerpo.facturas[0]), `llegó ${calculado}`);
+    }
+  });
+
+  it('y sigue trayendo el período y lo facturado, que son datos guardados', async () => {
+    respuestas.set('GET /rest/v1/saldos_familia', [SALDO]);
+
+    const { cuerpo } = await pedir('/facturas');
+    assert.equal(cuerpo.facturas[0].monto_total, '25000.00');
+    assert.equal(cuerpo.facturas[0].moneda, 'ARS');
+    assert.equal(cuerpo.facturas[0].periodo, '2026-08-01');
+  });
+
+  it('el desglose tampoco los trae', async () => {
+    respuestas.set('GET /rest/v1/saldos_familia', [SALDO]);
+    respuestas.set('GET /rest/v1/facturas_familia_items', []);
+    respuestas.set('GET /rest/v1/cobros_familia', []);
+
+    const { estado, cuerpo } = await pedir(`/facturas/${FACTURA}`);
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.sigue_la_cobranza, false);
+    for (const calculado of ['saldo', 'cobrado', 'estado']) {
+      assert.ok(!(calculado in cuerpo.factura), `llegó ${calculado}`);
+    }
+    assert.equal(cuerpo.factura.monto_total, '25000.00');
+  });
+
+  it('y con el seguimiento acá los tres llegan, que es como se venía trabajando', async () => {
+    sesionDeLaFamilia({ sigueLaCobranza: true });
+    respuestas.set('GET /rest/v1/saldos_familia', [SALDO]);
+
+    const { cuerpo } = await pedir('/facturas');
+    assert.equal(cuerpo.sigue_la_cobranza, true);
+    assert.equal(cuerpo.facturas[0].saldo, '15000.00');
+    assert.equal(cuerpo.facturas[0].cobrado, '10000.00');
+    assert.equal(cuerpo.facturas[0].estado, 'pendiente');
+  });
+
+  it('la pregunta lleva el filtro de Prestadora: no se lee la configuración de otra', async () => {
+    respuestas.set('GET /rest/v1/saldos_familia', []);
+    await pedir('/facturas');
+
+    const [url] = consultasA('configuracion_facturacion_familias');
+    assert.ok(url.includes(`prestadora_id=eq.${PRESTADORA}`), url);
   });
 });
 

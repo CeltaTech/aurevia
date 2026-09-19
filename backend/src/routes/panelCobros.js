@@ -21,6 +21,7 @@ import {
   loFacturadoDeLaFila,
   queHacerConLaFilaFacturada,
 } from '../utils/intercambioDeFacturacion.js';
+import { laCobranzaLaLlevaOtroSoftware } from '../utils/seguimientoDeLaCobranza.js';
 import { anotarLoFacturado, facturaParaAnotar } from '../utils/anotarLoFacturado.js';
 import { armarLosRenglonesDeLaFactura } from '../utils/facturaDelPeriodo.js';
 import { responderError } from '../utils/errorConMotivo.js';
@@ -151,23 +152,6 @@ async function saldoDeLaFactura(prestadoraId, facturaId) {
 // es el último. Y se devuelven sólo las que están restringidas, porque un aviso que levantó una
 // restricción no tiene nada que mostrar.
 // ---------------------------------------------------------------------------------------
-
-/**
- * Si el seguimiento de la cobranza lo lleva otro software.
- *
- * Se pregunta antes de entregar cualquier número calculado. Con un software de cobranzas
- * conectado, el que sabe cuánto debe cada Familia es él, y este sistema deja de calcular: entregar
- * igual la resta de acá daría dos números distintos para la misma pregunta.
- */
-async function laCobranzaLaLlevaOtroSoftware(prestadoraId) {
-  const { data, error } = await supabase
-    .from('configuracion_facturacion_familias')
-    .select('regla')
-    .eq('prestadora_id', prestadoraId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return !sigueLaCobranza(data?.regla);
-}
 
 /**
  * El portero del estado de cuenta.

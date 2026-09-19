@@ -63,7 +63,9 @@ export const api = {
   codigoDePresencia: () => pedido('/codigo-de-presencia'),
   // Las facturas de la Familia. La lista trae la resta ya hecha —lo facturado, lo cobrado y lo
   // que falta— porque esa resta la hace la base en un solo lugar y no se vuelve a hacer acá; el
-  // detalle agrega de qué es cada renglón y qué pagos entraron contra esa factura.
+  // detalle agrega de qué es cada renglón y qué pagos entraron contra esa factura. Cuando la
+  // cobranza de la Prestadora la lleva otro software, lo cobrado, lo que falta y el estado no
+  // vienen: acá se dejó de calcularlos, y la respuesta lo dice en `sigue_la_cobranza`.
   facturas: () => pedido('/facturas'),
   factura: (facturaId) => pedido(`/facturas/${facturaId}`),
   // La vidriera del Marketplace. Los filtros van vacíos cuando no se eligió ninguno, y las

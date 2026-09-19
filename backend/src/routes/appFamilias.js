@@ -19,6 +19,7 @@ import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { llegadaEstimadaDeGuardia } from '../utils/estimarLlegadaDeGuardia.js';
 import { darDeBajaElAcceso } from '../utils/bajaDelAcceso.js';
 import { estadoDocumentalParaLaFamilia } from '../utils/estadoDocumentalParaLaFamilia.js';
+import { laCobranzaLaLlevaOtroSoftware, sinLoQueSeCalculaAca } from '../utils/seguimientoDeLaCobranza.js';
 import {
   COLUMNAS_PERFIL_PUBLICO,
   FUNCION_QUE_HABILITA_EL_ORDEN,
@@ -998,15 +999,28 @@ appFamiliasRouter.get('/qr-cobro/:id', requiereRolFamilia, exigeVisible('familia
 // ENTRA POR LAS DOS PUERTAS QUE YA EXISTEN: el interruptor de la Prestadora
 // —`familia_pagos_y_suscripcion`— y el acceso que el titular reparte —`circulo_dinero`—. Ningún
 // permiso nuevo: quien ya podía ver la cuota del Marketplace es quien puede ver esto.
+//
+// Y CON UN SOFTWARE DE COBRANZAS CONECTADO, ESA RESTA NO SALE DE ACÁ. Si la Prestadora eligió que
+// el seguimiento de la cobranza es de otro software, el que sabe cuánto debe esta Familia es él, y
+// este sistema deja de calcular: lo que se entrega es el período y lo que se facturó —que son
+// datos guardados—, sin el saldo, sin lo cobrado y sin el estado. **No se manda un cero ni un
+// vacío en su lugar**: un cero dice que no debe nada, y eso es una afirmación que acá ya no se
+// puede hacer. La ausencia del dato es la respuesta, y la respuesta lo dice en
+// `sigue_la_cobranza`, con el mismo nombre con el que ya lo dice el Panel.
+//
+// Esto no se contesta con un error, como sí lo hace el Panel: la Familia no configuró nada y no
+// tiene otra pantalla adonde ir, así que su ventanilla sigue abierta con lo que sí se sabe.
 // ============================================================================
+
+/** Lo que se le entrega a la Familia de cada factura. La resta, cuando corresponde, viene adentro. */
+const COLUMNAS_DE_LA_FACTURA =
+  'factura_id, periodo, moneda, monto_total, cobrado, saldo, estado, fecha_emision, fecha_vencimiento';
 
 /** El saldo de una factura de esta Familia, o null. Nunca se busca una factura sin decir de quién es. */
 async function saldoDeLaFamilia(req, facturaId) {
   const { data, error } = await supabase
     .from('saldos_familia')
-    .select(
-      'factura_id, periodo, moneda, monto_total, cobrado, saldo, estado, fecha_emision, fecha_vencimiento'
-    )
+    .select(COLUMNAS_DE_LA_FACTURA)
     .eq('factura_id', facturaId)
     .eq('familia_id', req.usuarioFamilia.familiaId)
     .eq('prestadora_id', req.usuarioFamilia.prestadoraId)
@@ -1016,24 +1030,36 @@ async function saldoDeLaFamilia(req, facturaId) {
 }
 
 appFamiliasRouter.get('/facturas', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), exigeDelCirculo('circulo_dinero'), async (req, res) => {
+  let laLlevaOtro;
+  try {
+    laLlevaOtro = await laCobranzaLaLlevaOtroSoftware(req.usuarioFamilia.prestadoraId);
+  } catch (e) {
+    return responderError(res, e);
+  }
+
   const { data, error } = await supabase
     .from('saldos_familia')
-    .select('factura_id, periodo, moneda, monto_total, cobrado, saldo, estado, fecha_emision, fecha_vencimiento')
+    .select(COLUMNAS_DE_LA_FACTURA)
     .eq('familia_id', req.usuarioFamilia.familiaId)
     .eq('prestadora_id', req.usuarioFamilia.prestadoraId)
     .order('periodo', { ascending: false });
   if (error) return responderError(res, error);
-  res.json({ facturas: data || [] });
+
+  const facturas = laLlevaOtro ? (data || []).map(sinLoQueSeCalculaAca) : data || [];
+  res.json({ facturas, sigue_la_cobranza: !laLlevaOtro });
 });
 
 appFamiliasRouter.get('/facturas/:facturaId', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), exigeDelCirculo('circulo_dinero'), async (req, res) => {
   let factura;
+  let laLlevaOtro;
   try {
+    laLlevaOtro = await laCobranzaLaLlevaOtroSoftware(req.usuarioFamilia.prestadoraId);
     factura = await saldoDeLaFamilia(req, req.params.facturaId);
   } catch (e) {
     return responderError(res, e);
   }
   if (!factura) return res.status(404).json({ error: 'Factura no encontrada' });
+  if (laLlevaOtro) factura = sinLoQueSeCalculaAca(factura);
 
   const { data: renglones, error: errorRenglones } = await supabase
     .from('facturas_familia_items')
@@ -1051,7 +1077,7 @@ appFamiliasRouter.get('/facturas/:facturaId', requiereRolFamilia, exigeVisible('
     .order('fecha_cobro', { ascending: false });
   if (errorCobros) return responderError(res, errorCobros);
 
-  res.json({ factura, renglones: renglones || [], cobros: cobros || [] });
+  res.json({ factura, renglones: renglones || [], cobros: cobros || [], sigue_la_cobranza: !laLlevaOtro });
 });
 
 // ============================================================================

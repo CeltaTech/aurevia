@@ -46,8 +46,15 @@ const CONTENEDOR = process.env.CONTENEDOR_BASE || (() => {
   return `supabase_db_${id[1]}`;
 })();
 
-// Sirve sólo contra la base local de Docker. No es una clave: está escrita en `supabase/seed.sql`.
-const CONTRASENA = 'local-sandbox-2026';
+// La contraseña de las cuentas de la base local. No se escribe acá: es la que
+// recibió `scripts/poner_la_clave_de_la_siembra.mjs` después de sembrar, y entra
+// por la misma variable. Sin ella no hay con qué entrar, así que no arranca.
+const CONTRASENA = process.env.SEED_LOCAL_PASSWORD;
+if (!CONTRASENA) {
+  console.error('Falta la variable SEED_LOCAL_PASSWORD. Es la contraseña con la que entran las cuentas de la base local, y no se escribe en el código.');
+  console.error('  Se la pone `node scripts/poner_la_clave_de_la_siembra.mjs` con esa misma variable.');
+  process.exit(1);
+}
 
 const verde = (t) => `\x1b[32m${t}\x1b[0m`;
 const rojo = (t) => `\x1b[31m${t}\x1b[0m`;

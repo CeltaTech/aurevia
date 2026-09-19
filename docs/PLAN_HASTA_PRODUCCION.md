@@ -38,17 +38,29 @@ a las tres, ya está: las puertas, el aviso por correo y el enlace sirven igual 
 para el Asistente. Faltan las pantallas, y **esperan la maqueta**, porque hasta que llegue no se
 toca apariencia ni recorrido ahí.
 
-**2.** Una cuenta en varias Prestadoras. **Un Asistente trabaja en varias Prestadoras y una Familia
-contrata con varias.** La base ya lo admite: cada Legajo es uno por Prestadora y cuelga de una sola
-cuenta, el mismo correo no puede aparecer dos veces adentro de una Prestadora, quien resuelve o
-verifica algo tiene que ser de la misma Prestadora que aquello sobre lo que actúa, y existe la
-tabla que recuerda en cuál está parada cada sesión.
+**2.** Una cuenta por Prestadora. **Un Asistente trabaja en varias Prestadoras y una Familia
+contrata con varias.** Cada una de esas es **una cuenta distinta, con su propia clave**. El mismo
+correo puede estar en dos Prestadoras y son dos cuentas: usar el correo de siempre no lo obliga a
+nadie a tener una sola cuenta. Adentro de una Prestadora ese correo no se repite.
 
-**Falta que eso se use.** El motor tiene que escribir esa fila —**él, después de comprobar el
-Legajo, y nunca lo que venga en el pedido**— y leerla en cada consulta. Si la persona está en una
-sola Prestadora entra derecho; si está en varias, elige, y eso vale igual en la aplicación de la
-Familia y en la del Asistente. Cuando eso funcione se retira el último escalón que queda: la
-Prestadora guardada en la cuenta, que hoy sigue contestando cuando no hay ninguna elegida.
+**Lo que falta es la pantalla de ingreso.** El modelo ya está: el mismo correo tiene una cuenta
+distinta en cada Prestadora, la base lo impone, y recuperar la clave ya resuelve de cuál se trata
+por la dirección por donde se entró. La pantalla de ingreso todavía no lo hace. **La Prestadora
+sale de la puerta por donde se entró, nunca de lo que venga en el pedido.** En el Panel se hace
+ahora; en las dos aplicaciones de teléfono **espera la maqueta**.
+
+**Y al entrar no se insinúa nada.** Un correo que existe en otra Prestadora se trata igual que uno
+que no existe: el mismo mensaje y la misma demora. Nadie averigua dónde más trabaja una persona
+probando su correo.
+
+**Nunca en dos a la vez.** Para hacer o ver algo en la segunda Prestadora hay que salir de la
+primera y entrar a la otra. No existe ninguna pantalla que muestre las dos juntas, ni una lista con
+una columna que diga de cuál es cada cosa. Estando en una, la otra no existe: ni sus turnos, ni sus
+pacientes, ni sus avisos, ni sus papeles. Al cambiar se descarta todo lo que estaba cargado.
+
+**Y no hay excepción posible.** Con una sesión abierta en una Prestadora no se entra en otra hasta
+cerrar esa. Ninguna situación la habilita. Lo único que se mueve entre Organizaciones es la sesión
+de soporte técnico, que ya tiene su propia forma y tampoco alcanza dos a la vez.
 
 **El aislamiento acá tiene que ser más duro que en el resto del producto, y por eso se prueba
 aparte.** Hasta hoy una cuenta pertenece a una sola Prestadora, así que una fuga se nota; desde
@@ -57,77 +69,9 @@ Prestadora por otra vía que no sea la sesión comprobada devuelve datos de la o
 falle a la vista. Entonces: **ninguna consulta resuelve la Prestadora por lo que venga en el
 pedido**, ni por la ficha, ni por parecido de correo; **la separación la impone la base**, y los
 filtros de las rutas del motor son la segunda red, no la primera. Y la prueba se hace con una
-persona dada de alta en dos Prestadoras, **con datos cargados en las dos**: parada en una ve todo
+persona dada de alta en dos Prestadoras, **con datos cargados en las dos**: entrando en una ve todo
 lo suyo de esa y nada de la otra, en las dos direcciones. Una consulta que devuelve vacío no prueba
 nada.
-
-**3.** Las listas de opciones por Prestadora. Es el aporte más grande y lo que destraba
-Reclutamiento. Un registro genérico de dos pisos: la lista que trae el producto y la que agrega
-cada Prestadora, con los tres idiomas adentro de cada opción y la base rechazando la que venga
-incompleta, más la marca de qué listas admiten opciones propias. Una sola pantalla las edita
-todas. Hoy acá cada lista nueva cuesta una migración, y hay doce tablas de configuración de una
-fila cada una con más de seis mil renglones de pantalla dibujados a mano. **Dos reglas de allá
-están escritas adentro de su pantalla y hay que rehacerlas acá:** desde qué número se ordenan las
-opciones que agrega una Prestadora, y que lo que ella carga queda en un solo idioma.
-
-**4.** Los formularios declarados. Careonys no tiene la pieza: hoy los campos, las validaciones y
-los pasos se escriben pantalla por pantalla. Viene la declaración con tipo, obligatoriedad, largo
-máximo, formatos de archivo aceptados, secciones que se repiten y bajo qué condición un formulario
-pasa a ser obligatorio, más el motor que la dibuja y la valida. **Se deja afuera el renglón de
-ayuda debajo de cada casillero**, que la regla de la empresa no admite.
-
-**5.** Las resoluciones. Hoy acá se pisa el estado sin quién ni cuándo. Pasan a ser una fila nueva
-con motivo obligatorio y firma de quién resolvió.
-
-**6.** El registro de lo que hace la gente de una Prestadora. **Hoy acá no existe, y está así a
-propósito:** sólo se anotan las sesiones de soporte, las advertencias legales y dos casos sueltos.
-La regla de la empresa pide auditar entrada administrativa, cambios de permisos y de membresía,
-borrado de datos, modificaciones críticas y toda acción con consecuencia económica.
-
-**7.** Las reglas de qué no se puede mandar en un mensaje. **La regla ya está escrita y vale para
-todo el desarrollo** —`celtatech/docs/REGLAS_PRODUCTOS_CAREONYS.md` §4—, así que acá queda sólo lo
-que falta construir. Hoy son cuatro expresiones escritas en el código, y el texto se guarda entero
-y se tapa recién al mostrarlo, así que quien llame al motor de otra forma ve todo. Viaja el cuerpo
-de reglas de Match y su forma de guardarlas. **Cuidado al traerla:** allá el único lugar vivo que
-la llama es una pantalla de maqueta, así que la pieza parece muerta y no lo está; el control de
-verdad corre en la base, antes de guardar.
-
-**8.** Los catálogos. Una sola pieza que trae cualquier lista y devuelve siempre los cuatro
-estados, consultando la base primero y cayendo al archivo guardado sólo si la base no contesta.
-Hoy acá hay unas veinte piezas repitiendo lo mismo, y pantallas que se olvidan de usarlas: en
-Postulaciones se toman las zonas y se descartan el estado y el error, así que mientras cargan, o si
-fallan, el filtro se ve igual que si la Prestadora no tuviera ninguna zona.
-
-**9.** Los tres idiomas, tres cosas. Elegir el idioma la primera vez mirando la dirección y
-después el navegador, comparando sólo la primera parte para que portugués de Portugal caiga en
-portugués de Brasil: hoy quien entra por primera vez con el navegador en inglés ve todo en
-castellano. Que una frase que falta avise en vez de dibujarse como un hueco en blanco. Y el
-marcador de la Prestadora en el texto visible, que es el mecanismo del pendiente ya abierto de que
-la pantalla de ingreso muestre la marca de ella y no la del producto. **Va sin la ruta del
-logotipo, que esa pieza arrastra adentro.**
-
-**10.** Los chequeos que corren solos. Que ninguna fecha ni importe lleve el idioma escrito
-adentro —**hoy acá está roto en cinco lugares**, así que la pantalla en inglés muestra las fechas al
-revés—; que toda pantalla que carga datos tenga los cuatro estados y saque su texto del catálogo;
-que ninguna frase esté igual en los tres idiomas; y el corredor que arma la lista mirando la
-carpeta, para que un chequeo nuevo no dependa de que alguien lo anote. **De los de allá, ocho miran
-apariencia y no vienen**, y otros ocho nombran el sitio público adentro y hay que recortarlos.
-
-**11.** La moneda. La pantalla donde la Prestadora la configura y la regla de que no haya importe
-sin moneda. El completado automático al insertar ya está hecho de este lado; falta la pantalla, que
-hoy se promete en un comentario y no existe.
-
-**12.** El aislamiento de la conversación. Que la base impida que un hilo junte a una Familia y a
-un Asistente de dos Prestadoras distintas, con claves de dos columnas —técnica que Careonys ya usa
-en otras tablas, así que acá falta, no es que no se pueda—. Que una sola función decida si el hilo
-es propio, en vez de la misma condición copiada en cuatro políticas. Y que el hilo abierto se
-refresque solo pidiendo nada más lo posterior al último que ya tiene, sin borrar lo leído cuando el
-refresco falla, con botón de volver a intentar, y vaciando lo escrito y sin enviar al cambiar de
-hilo para que no salga hacia otra persona.
-
-**13.** Separar leer de escribir la configuración en la base. Hoy ese control vive sólo en la
-pantalla. Pasan a ser políticas: los catálogos los lee cualquiera, los escribe sólo el personal de
-la Prestadora, y lo de cada Asistente lo escribe además el dueño de su propio legajo.
 
 **14.** Las piezas de las dos aplicaciones de teléfono. **Nada de esto es apariencia ni recorrido,
 así que no espera la maqueta**; lo único que la toca es el aviso de la cola, que se deja escrito y
@@ -155,10 +99,10 @@ sola Prestadora, sin versión y sin dónde queden guardados.
 
 ## La entrada y la recuperación de la clave
 
-**Va acá y no antes por un motivo concreto: la clave es una sola para la persona, aunque trabaje en
-tres Prestadoras.** Entonces una coordinadora que habilita un cambio de clave está abriendo una
-puerta que también da a las otras dos, y eso no se puede resolver hasta que esté hecha una cuenta
-en varias Prestadoras, más arriba en esta lista.
+**Va acá y no antes porque se apoya en la cuenta por Prestadora, más arriba en esta lista.** Cada
+Prestadora donde la persona trabaja es una cuenta con su propia clave, así que la coordinadora que
+habilita un cambio de clave abre una puerta que da a su Prestadora y a ninguna otra. Con una sola
+clave para las tres, esa puerta daba también a las otras dos y esto no se podía hacer.
 
 **Lo decidido, y no se vuelve a discutir:**
 
@@ -247,11 +191,6 @@ acertar con suerte. Lo investigado está en `docs/FACTURADORES_Y_COMO_SE_CONECTA
 software es una pieza aparte** y agregar la segunda no puede obligar a tocar la primera. Las otras
 dos maneras ya están hechas y alcanzan para salir a producción: se anota factura por factura a
 mano, o se baja un archivo con todo lo que falta facturar y se sube el que el software devuelve.
-
-**21.** Que la Prestadora pueda cargar en Configuración la conexión con su software de facturación
-y con el de créditos y cobranzas —cuál es, con qué credencial se entra— sin que ninguna alcance
-los datos de otra Prestadora. La credencial se guarda como secreto y no se vuelve a mostrar, igual
-que el secreto de la firma.
 
 **22.** Que la pantalla de la Familia tampoco muestre un saldo calculado acá cuando la cobranza la
 lleva otro software. En el Panel ya está resuelto; en la aplicación de la Familia sigue mostrando
@@ -418,14 +357,20 @@ piden la base local levantada, o sea Docker encendido.
 
 ## Marca y dominio por Prestadora
 
-**69. Usted** — El remitente ya está resuelto: cada Prestadora manda desde su propia dirección bajo `careonys.com` (`docs/MARCA.md`, sección 0). Queda la dirección web: ¿cada Prestadora entra por una suya —`cuidardelsur.careonys.com`—, o todas por la misma? ¿Y qué ve una Familia que tiene dos Servicios de modalidades distintas? **Ya no decide cómo se reconoce la Prestadora al entrar**: eso lo resuelve el paso de una cuenta en varias Prestadoras, que pregunta cuando hay más de una.
+**Cada Prestadora entra por su propia dirección**, del tipo `cuidardelsur.careonys.com`. Ninguna
+comparte la dirección con otra, y no existe ninguna pantalla donde haya que elegir la Prestadora
+antes de la clave: la dice la dirección. El remitente del correo ya seguía la misma regla
+(`docs/MARCA.md`, sección 0).
 
-**70.** Que la pantalla de ingreso muestre la marca de la Prestadora y no la del producto. El
-mecanismo llega con el marcador de la Prestadora en el texto visible, más arriba en esta lista.
+**70.** Que la pantalla de ingreso muestre la marca de la Prestadora y no la del producto. La
+Prestadora la resuelve la dirección, con el mismo mecanismo que ya usa la recuperación de la clave,
+y el nombre adentro de las frases llega con el marcador de la Prestadora en el texto visible, más
+arriba en esta lista.
 
 **71.** Que la conversación quede guardada adentro del producto, según lo que se conteste sobre el botón de contacto de «Asistente Asignado», más arriba en esta misma lista. Hasta que el Panel no tenga un hilo de dos puntas, lo que se hablan la Familia y el Asistente en prestación directa se va a WhatsApp y no queda adentro de ningún lado. El chat interno ya está construido entero —hilos, mensajes, tapado del contacto, pantallas en las dos aplicaciones, aviso al celular y videollamada—, pero **sólo funciona donde la Prestadora pone Asistentes disponibles para que la Familia elija**: exige una Familia y un Asistente que se hayan encontrado ahí. En prestación directa no hay hilo, y hacia la Prestadora tampoco: el único canal con el Panel va en un solo sentido, del Panel al Asistente, y no hay dónde guardar lo que contesta.
 
-**72.** Dominio propio, si va.
+**72.** La dirección propia de cada Prestadora: que exista, que resuelva y que la pantalla de
+ingreso la lea.
 
 ---
 
@@ -522,10 +467,8 @@ tres idiomas. No hay plantillas con huecos ni ningún editor: la redacción vive
 `backend/src/i18n/avisos.js`, y cambiarla es cambiar ese archivo y publicar.  Sólo el de activación
 de cuenta sale además con formato; los demás son texto pelado.
 
-**91.** Repasar la redacción de los avisos que salen por correo, los tres idiomas de cada uno.
-Condición de cierre: que cada uno se entienda leyéndolo una sola vez. Va junto con mover los
-mensajes del sistema a una tabla editable desde afuera, que ya está decidido y que ahora se puede
-hacer, porque la mudanza deja el mecanismo de catálogos.
+**91.** Mover los mensajes del sistema a una tabla editable desde afuera, que ya está decidido y
+que ahora se puede hacer, porque la mudanza deja el mecanismo de catálogos.
 
 ---
 

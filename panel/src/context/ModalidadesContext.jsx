@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from './AuthContext';
 
@@ -9,38 +9,74 @@ const API_URL = import.meta.env.VITE_API_URL;
 // PRD_08_Dashboard_Modalidades.md, aprobado 2026-07-24). Se carga una vez por sesión, igual
 // que PermisosContext, para que Layout.jsx sepa qué grupos de menú mostrar sin volver a
 // pedirlo pantalla por pantalla.
+//
+// LAS TRES SITUACIONES SE DICEN POR SEPARADO —'cargando', 'error', 'listo'—, por el mismo motivo
+// que en PermisosContext: antes una respuesta que no llegaba bien dejaba la lista
+// vacía y `cargado` en falso para siempre, y quien miraba veía una espera que no terminaba nunca
+// en vez de un error que se puede reintentar.
+//
+// Y `tieneModalidad` contesta que no mientras el estado no sea 'listo': una modalidad que no se
+// pudo resolver no es una modalidad activa.
 export function ModalidadesProvider({ children }) {
   const { usuario } = useAuth();
   const [modalidades, setModalidades] = useState([]);
-  const [cargado, setCargado] = useState(false);
+  const [estado, setEstado] = useState('cargando');
 
-  async function cargar() {
-    if (!usuario) {
-      setModalidades([]);
-      setCargado(false);
-      return;
-    }
-    const { data } = await supabase.auth.getSession();
-    const respuesta = await fetch(`${API_URL}/api/panel/cuentas/modalidades-activas`, {
-      headers: { Authorization: `Bearer ${data.session?.access_token}` },
-    });
-    if (!respuesta.ok) return;
-    const resultado = await respuesta.json();
-    setModalidades(resultado.modalidades || []);
-    setCargado(true);
-  }
+  const cargar = useCallback(
+    async (sigueValiendo = () => true) => {
+      if (!usuario) {
+        if (sigueValiendo()) {
+          setModalidades([]);
+          setEstado('cargando');
+        }
+        return;
+      }
+      if (sigueValiendo()) {
+        setModalidades([]);
+        setEstado('cargando');
+      }
+      try {
+        const { data } = await supabase.auth.getSession();
+        const respuesta = await fetch(`${API_URL}/api/panel/cuentas/modalidades-activas`, {
+          headers: { Authorization: `Bearer ${data.session?.access_token}` },
+        });
+        if (!respuesta.ok) throw new Error('modalidades-activas');
+        const resultado = await respuesta.json();
+        if (!sigueValiendo()) return;
+        setModalidades(resultado.modalidades || []);
+        setEstado('listo');
+      } catch {
+        if (!sigueValiendo()) return;
+        setModalidades([]);
+        setEstado('error');
+      }
+    },
+    [usuario],
+  );
 
   useEffect(() => {
-    cargar();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [usuario]);
+    let activo = true;
+    cargar(() => activo);
+    return () => {
+      activo = false;
+    };
+  }, [cargar]);
 
   function tieneModalidad(modalidad) {
+    if (estado !== 'listo') return false;
     return modalidades.includes(modalidad);
   }
 
   return (
-    <ModalidadesContext.Provider value={{ modalidades, tieneModalidad, cargado, recargar: cargar }}>
+    <ModalidadesContext.Provider
+      value={{
+        modalidades,
+        tieneModalidad,
+        estado,
+        cargado: estado === 'listo',
+        recargar: () => cargar(),
+      }}
+    >
       {children}
     </ModalidadesContext.Provider>
   );

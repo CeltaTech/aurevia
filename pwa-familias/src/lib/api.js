@@ -92,7 +92,10 @@ export const api = {
   // contacto, y por eso sale tapado de acá hasta que esa pareja lo abra. Quien tapa es el motor,
   // una sola vez para las dos puntas.
   conversacionesDelMarketplace: () => pedido('/marketplace/conversaciones'),
-  conversacionDelMarketplace: (id) => pedido(`/marketplace/conversaciones/${id}`),
+  // Con `desde`, el motor contesta nada más lo posterior a ese momento: es el refresco del hilo
+  // abierto, que pide lo que le falta y no vuelve a bajar lo que ya está en pantalla.
+  conversacionDelMarketplace: (id, desde = null) =>
+    pedido(`/marketplace/conversaciones/${id}${desde ? `?desde=${encodeURIComponent(desde)}` : ''}`),
   // La conversación la abre siempre la Familia, desde el perfil público de la persona. Si ya
   // existía, devuelve la misma: no hay dos hilos para la misma pareja.
   abrirConversacionConAsistente: (asistenteId) =>

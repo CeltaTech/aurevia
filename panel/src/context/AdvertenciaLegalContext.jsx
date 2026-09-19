@@ -21,12 +21,26 @@ const AdvertenciaLegalContext = createContext(null);
 // Se usa así:
 //
 //   const { verificarAntesDeActivar } = useAdvertenciaLegal();
-//   const puedeActivar = await verificarAntesDeActivar(prestadoraId, 'ranking_plataforma');
-//   if (puedeActivar) { ...pedirle al motor que la encienda... }
+//   const respuesta = await verificarAntesDeActivar(prestadoraId, 'ranking_plataforma');
+//   if (respuesta === 'error') { ...mostrar que no se pudo y no hacer nada... }
+//   if (respuesta === 'seguir') { ...pedirle al motor que la encienda... }
 //
-// Si la jurisdicción de esa Prestadora no tiene texto escrito para esa función,
-// verificarAntesDeActivar devuelve true de inmediato, sin mostrar nada: si el país no tiene
-// documento, no hay aviso y no se improvisa uno (CLAUDE.md §7).
+// Si la jurisdicción de esa Prestadora no tiene texto escrito para esa función, contesta
+// 'seguir' de inmediato, sin mostrar nada: si el país no tiene documento, no hay aviso y no se
+// improvisa uno (CLAUDE.md §7).
+//
+// LAS TRES RESPUESTAS SON DISTINTAS. Antes eran dos —sí y
+// no— y la consulta que fallaba se contestaba con un sí: la función se encendía sin que nadie
+// hubiera visto la advertencia y sin que nadie se enterara de que no se pudo leer. «No se pudo
+// averiguar» no es «no hay nada que advertir». Ahora son tres:
+//
+//   'seguir'    → no hay advertencia escrita, o la persona la leyó y aceptó.
+//   'cancelado' → la leyó y dijo que no.
+//   'error'     → no se pudo consultar. La pantalla lo dice y no hace la acción; se reintenta.
+//
+// Esto no bloquea por razones legales, que es lo que la regla prohíbe: no se hace la acción
+// porque la consulta falló, igual que no se haría cualquier otra cosa que necesite un dato que
+// no llegó.
 export function AdvertenciaLegalProvider({ children }) {
   const { t } = useLocale();
   const [pendiente, setPendiente] = useState(null); // { texto, prestadoraId, jurisdiccion, funcionClave }
@@ -35,7 +49,7 @@ export function AdvertenciaLegalProvider({ children }) {
   // Va antes de useModalAccesible porque ese hook la recibe: escrita más abajo, la línea que
   // la usa se ejecuta cuando la constante todavía no existe y la pantalla no llega a dibujarse.
   const cancelar = useCallback(() => {
-    resolverRef.current?.(false);
+    resolverRef.current?.('cancelado');
     resolverRef.current = null;
     setPendiente(null);
   }, []);
@@ -47,16 +61,21 @@ export function AdvertenciaLegalProvider({ children }) {
       .from('prestadoras')
       .select('pais')
       .eq('id', prestadoraId)
-      .single();
-    if (errorPrestadora || !prestadora) return true;
+      .maybeSingle();
+    // No se pudo saber de qué país es esta Prestadora, así que tampoco se puede saber si hay
+    // algo que advertirle. Sin fila —`maybeSingle` la devuelve en nulo sin error— es lo mismo:
+    // una Prestadora sin país no tiene documento que consultar.
+    if (errorPrestadora) return 'error';
+    if (!prestadora?.pais) return 'seguir';
 
-    const { data: advertencia } = await supabase
+    const { data: advertencia, error: errorAdvertencia } = await supabase
       .from('advertencias_legales')
       .select('texto_advertencia')
       .eq('jurisdiccion', prestadora.pais)
       .eq('funcion_clave', funcionClave)
       .maybeSingle();
-    if (!advertencia) return true;
+    if (errorAdvertencia) return 'error';
+    if (!advertencia) return 'seguir';
 
     return new Promise((resolve) => {
       resolverRef.current = resolve;
@@ -70,7 +89,7 @@ export function AdvertenciaLegalProvider({ children }) {
   }, []);
 
   const confirmar = useCallback(() => {
-    resolverRef.current?.(true);
+    resolverRef.current?.('seguir');
     resolverRef.current = null;
     setPendiente(null);
   }, []);

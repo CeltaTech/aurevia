@@ -35,7 +35,7 @@ const TOPE = 50;
 const COLUMNAS = 'id, estrellas, comentario, descargo_asistente, descargo_en, visible_publica, created_at';
 
 export function EvaluacionesTab({ asistente }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [datos, setDatos] = useState({ filas: [], tope: false });
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -96,7 +96,7 @@ export function EvaluacionesTab({ asistente }) {
           <tbody>
             {datos.filas.map((c) => (
               <tr key={c.id}>
-                <td>{new Date(c.created_at).toLocaleDateString()}</td>
+                <td>{new Date(c.created_at).toLocaleDateString(locale)}</td>
                 <td>
                   <Estrellas cantidad={c.estrellas} />
                 </td>

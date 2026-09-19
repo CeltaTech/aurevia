@@ -225,6 +225,15 @@ h2 {
   margin-bottom: 1rem;
 }
 
+/* La línea al pie de la pantalla de ingreso: el crédito de quién hizo el software. Va siempre, y
+   discreta, porque la marca principal de esa pantalla es la de la Prestadora. */
+.login-pie {
+  margin-top: 1.5rem;
+  color: var(--texto-secundario);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
 /* ---------- Layout general del panel ---------- */
 
 .panel-layout {

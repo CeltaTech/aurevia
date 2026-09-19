@@ -1,6 +1,11 @@
 import { supabase } from '../db/connection.js';
 import { elRolUsaSegundoFactor, elSegundoFactorEsObligatorio } from '../utils/reglaMfaObligatorio.js';
 import { ROLES_PANEL } from '../utils/roles.js';
+import {
+  faltaRegistrar,
+  registrarBorradoDeDatos,
+  registrarEntradaAlPanel,
+} from '../utils/registroDeActividad.js';
 
 // Ítem D del pendiente #30: tope de 5 min de
 // inactividad dentro de la sesión de soporte técnico — se corta en silencio, sin aviso previo,
@@ -132,6 +137,39 @@ export async function requiereRolPanel(req, res, next) {
     organizacionPropiaId: perfil.prestadora_id,
     dentroDeSesionSoporte,
   };
+
+  // LA ENTRADA ADMINISTRATIVA AL REGISTRO DE ACTIVIDAD.
+  //
+  // El Panel valida la clave contra Supabase directamente, así que la entrada no pasa por
+  // ninguna ruta del motor: el primer pedido que llega con esa cuenta es lo más cerca que se
+  // está de verla entrar, y acá pasan todos. La función se ocupa de que no quede un renglón por
+  // pedido, y de no interrumpir el trabajo si la escritura falla.
+  //
+  // Esto es del registro de la Prestadora, no de la auditoría de soporte técnico: son dos
+  // preguntas distintas y viven en dos tablas distintas, por el motivo escrito en la migración
+  // `20261001110000_registro_de_actividad.sql`.
+  registrarEntradaAlPanel(req.usuarioPanel).catch((error) => {
+    console.error('Error registrando la entrada al Panel:', error.message);
+  });
+
+  // EL BORRADO DE DATOS, PARA TODAS LAS RUTAS A LA VEZ.
+  //
+  // Se anota cualquier borrado del Panel que haya terminado bien, sin importar de qué pantalla
+  // venga: es lo único que asegura que la ruta que se escriba mañana quede registrada sin que
+  // nadie se acuerde de agregarla. Va después de que la respuesta salió, para no anotar un
+  // borrado que en realidad falló.
+  //
+  // Se saltea cuando la propia ruta ya dejó un renglón con mejor nombre: dar de baja una cuenta
+  // del Panel es un cambio de membresía, y decirlo dos veces —una con su nombre y otra como
+  // «borrado»— hace el registro más difícil de leer, no más completo.
+  if (req.method === 'DELETE') {
+    res.on('finish', () => {
+      if (res.statusCode >= 200 && res.statusCode < 300 && faltaRegistrar(res)) {
+        registrarBorradoDeDatos(req.usuarioPanel, req.method, req.originalUrl)
+          .catch((error) => console.error('Error registrando el borrado de datos:', error.message));
+      }
+    });
+  }
 
   // La ruta de sesión de soporte (entrar/salir/renovar) ya audita login/logout/renovación
   // explícitamente (panelSesionTenant.js) — no duplicar acá como "mutacion" genérica.

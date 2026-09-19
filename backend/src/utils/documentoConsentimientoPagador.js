@@ -72,7 +72,7 @@ export const MODELO_DE_FABRICA = [
 ].join('\n');
 
 function fechaLegible(fecha) {
-  return new Intl.DateTimeFormat('es-AR', {
+  return new Intl.DateTimeFormat(IDIOMA_DEL_DOCUMENTO, {
     day: '2-digit', month: '2-digit', year: 'numeric',
   }).format(fecha);
 }

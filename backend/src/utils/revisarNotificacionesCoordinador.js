@@ -13,6 +13,7 @@ import { reglaDeLaToma, tomadasAhora } from './tomasDeAlarma.js';
 import { TIPOS_DE_ALARMA } from './alarmasTomadas.js';
 import { horasEntre } from './horasDeGuardia.js';
 import { aviso } from '../i18n/avisos.js';
+import { avisoDeGuardiaParaLaFamilia } from '../i18n/avisosDeGuardiaParaLaFamilia.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
 // Insistencia al Coordinador según premura, con coordinador de respaldo si no hay
@@ -147,6 +148,17 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
         ...aviso('guardia_sin_cerrar', idioma, datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora, veces)),
       });
 
+      // Y a la Familia, si la Prestadora lo tiene encendido para este evento. La jornada que
+      // quedó abierta le importa a quien está esperando a su Paciente, no solamente a quien
+      // coordina. El texto es el suyo y no lleva nada de adentro.
+      await notificarFamiliaSiCorresponde({
+        evento: 'guardia_sin_cerrar',
+        prestadoraId,
+        guardiaId: guardia.id,
+        textos: avisoDeGuardiaParaLaFamilia('guardia_sin_cerrar_familia', idioma, datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora, veces)),
+        idioma,
+      });
+
       const { error: errorUpdate } = await supabase
         .from('guardias')
         .update({ aviso_sin_cerrar_at: ahora.toISOString(), aviso_sin_cerrar_veces: veces })
@@ -205,6 +217,14 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
         ...aviso('guardia_sin_cerrar_grave', idioma, datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora)),
       });
 
+      await notificarFamiliaSiCorresponde({
+        evento: 'guardia_sin_cerrar_grave',
+        prestadoraId,
+        guardiaId: guardia.id,
+        textos: avisoDeGuardiaParaLaFamilia('guardia_sin_cerrar_grave_familia', idioma, datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora)),
+        idioma,
+      });
+
       const { error: errorGrave } = await supabase
         .from('guardias')
         .update({ aviso_sin_cerrar_grave_at: ahora.toISOString() })
@@ -245,6 +265,44 @@ function datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora, veces) {
   };
 }
 
+// A una persona no se le muestra un identificador de guardia. Las alertas tempranas y los
+// incidentes de relevo guardan el id de la guardia, así que antes de armar los avisos se leen de
+// una sola vez las guardias de toda la vuelta y se dejan listos los mismos datos que ya llevan
+// los avisos de guardia sin cerrar: la fecha, las horas y los Pacientes.
+const GUARDIA_QUE_NO_SE_PUDO_LEER = { fecha: '—', horaInicio: '—', horaFin: '—', pacientes: [] };
+
+async function datosDeLasGuardias(guardiaIds) {
+  const ids = [...new Set((guardiaIds ?? []).filter(Boolean))];
+  const mapa = new Map();
+  if (ids.length === 0) return mapa;
+
+  const { data: guardias, error } = await supabase
+    .from('guardias')
+    .select('id, fecha, hora_inicio, hora_fin, paciente_id')
+    .in('id', ids);
+  if (error) {
+    console.error('Error leyendo las guardias de los avisos:', error.message);
+    return mapa;
+  }
+
+  let pacientesPorGuardia = new Map();
+  try {
+    pacientesPorGuardia = await pacientesDeGuardias(guardias ?? [], 'id, nombre');
+  } catch (err) {
+    console.error('Error leyendo los Pacientes de las guardias de los avisos:', err.message);
+  }
+
+  for (const guardia of guardias ?? []) {
+    mapa.set(guardia.id, {
+      fecha: guardia.fecha,
+      horaInicio: guardia.hora_inicio,
+      horaFin: guardia.hora_fin,
+      pacientes: (pacientesPorGuardia.get(guardia.id) ?? []).map((p) => p.nombre),
+    });
+  }
+  return mapa;
+}
+
 // La fecha de un momento tal como la guarda la base (`2026-08-22`), en hora local.
 // `toISOString()` a secas daría la fecha en UTC, que en horario argentino cambia de día tres
 // horas antes de tiempo.
@@ -280,8 +338,11 @@ async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
     tipo: TIPOS_DE_ALARMA.ALERTA_TEMPRANA,
   });
 
+  const guardias = await datosDeLasGuardias((alertas ?? []).map((a) => a.guardia_id));
+
   for (const alerta of alertas ?? []) {
     if (tomadas.has(alerta.id)) continue;
+    const guardia = guardias.get(alerta.guardia_id) ?? GUARDIA_QUE_NO_SE_PUDO_LEER;
     const minutosPremura = (ahora.getTime() - new Date(alerta.detectado_at).getTime()) / 60_000;
     const intervalo = intervaloParaPremura(umbrales, minutosPremura);
 
@@ -290,11 +351,21 @@ async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
         evento: 'alerta_temprana_guardia',
         prestadoraId,
         ...aviso('alerta_temprana_sin_resolver', idioma, {
-          guardiaId: alerta.guardia_id,
+          ...guardia,
           origen: aviso('origen_de_alerta', idioma, { fuente: alerta.fuente }).texto,
           motivo: alerta.motivo,
           minutos: minutosPremura,
         }),
+      });
+
+      // La salida sin entrada entra por acá: es una alerta temprana de guardia, y a la Familia
+      // le llega diciendo que hay un aviso pendiente, sin el motivo interno ni el origen.
+      await notificarFamiliaSiCorresponde({
+        evento: 'alerta_temprana_guardia',
+        prestadoraId,
+        guardiaId: alerta.guardia_id,
+        textos: avisoDeGuardiaParaLaFamilia('alerta_temprana_guardia_familia', idioma, guardia),
+        idioma,
       });
 
       await supabase
@@ -308,7 +379,7 @@ async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
         backupId,
         prestadoraId,
         idioma,
-        ...aviso('alerta_temprana_respaldo', idioma, { guardiaId: alerta.guardia_id, minutos: minutosPremura }),
+        ...aviso('alerta_temprana_respaldo', idioma, { ...guardia, minutos: minutosPremura }),
       });
       await supabase.from('alertas_tempranas_guardia').update({ backup_notificado_at: ahora.toISOString() }).eq('id', alerta.id);
     }
@@ -324,7 +395,7 @@ async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
       ahora,
       yaSalieron: escalonesQueSalieron,
       texto: aviso('alerta_temprana_respaldo', idioma, {
-        guardiaId: alerta.guardia_id,
+        ...guardia,
         minutos: minutosPremura,
       }).texto,
     });
@@ -365,28 +436,28 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
     tipo: TIPOS_DE_ALARMA.INCIDENTE_RELEVO,
   });
 
+  const guardias = await datosDeLasGuardias((incidentes ?? []).map((i) => i.guardia_entrante_id));
+
   for (const incidente of incidentes ?? []) {
     if (tomadas.has(incidente.id)) continue;
+    const guardia = guardias.get(incidente.guardia_entrante_id) ?? GUARDIA_QUE_NO_SE_PUDO_LEER;
     const minutosPremura = (ahora.getTime() - new Date(incidente.iniciado_at).getTime()) / 60_000;
     const intervalo = intervaloParaPremura(umbrales, minutosPremura);
 
     if (necesitaNotificar({ ultimaNotificacionAt: incidente.ultima_notificacion_at, intervaloMinutos: intervalo, ahora })) {
-      const textos = aviso('incidente_relevo_sin_resolver', idioma, {
-        guardiaId: incidente.guardia_entrante_id,
-        nivel: incidente.nivel_actual,
-        minutos: minutosPremura,
-      });
-
       await notificarCoordinador({
         evento: 'incidente_relevo_sin_resolver',
         prestadoraId,
-        ...textos,
+        ...aviso('incidente_relevo_sin_resolver', idioma, { ...guardia, minutos: minutosPremura }),
       });
 
+      // A la Familia le llega su propio aviso, no el de quien coordina: son dos personas
+      // distintas mirando el mismo hecho, y a la Familia no le corresponde nada de adentro.
       await notificarFamiliaSiCorresponde({
+        evento: 'incidente_relevo_sin_resolver',
         prestadoraId,
-        guardiaEntranteId: incidente.guardia_entrante_id,
-        texto: textos.texto,
+        guardiaId: incidente.guardia_entrante_id,
+        textos: aviso('incidente_relevo_familia', idioma, guardia ?? GUARDIA_QUE_NO_SE_PUDO_LEER),
         idioma,
       });
 
@@ -401,7 +472,7 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
         backupId,
         prestadoraId,
         idioma,
-        ...aviso('incidente_relevo_respaldo', idioma, { guardiaId: incidente.guardia_entrante_id, minutos: minutosPremura }),
+        ...aviso('incidente_relevo_respaldo', idioma, { ...guardia, minutos: minutosPremura }),
       });
       await supabase.from('incidentes_relevo').update({ backup_notificado_at: ahora.toISOString() }).eq('id', incidente.id);
     }
@@ -417,7 +488,7 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
       ahora,
       yaSalieron: escalonesQueSalieron,
       texto: aviso('incidente_relevo_respaldo', idioma, {
-        guardiaId: incidente.guardia_entrante_id,
+        ...guardia,
         minutos: minutosPremura,
       }).texto,
     });
@@ -444,7 +515,7 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
         evento: 'incidente_relevo_sin_resolver',
         prestadoraId,
         ...aviso('incidente_relevo_fase_automatica', idioma, {
-          guardiaId: incidente.guardia_entrante_id,
+          ...guardia,
           minutosUmbral: minutosAntesFaseAutomatica,
           ...loQueSeHizo,
         }),
@@ -460,14 +531,20 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
 // Prestadora decide si su política es avisarle a la Familia o no (algunas prefieren no
 // alarmarla si el incidente se resuelve internamente sin que llegue a necesitar su
 // intervención) — CLAUDE.md §2, "configuración sobre programación".
-async function notificarFamiliaSiCorresponde({ prestadoraId, guardiaEntranteId, texto, idioma }) {
-  const config = await configuracionEvento('incidente_relevo_sin_resolver', prestadoraId);
+//
+// SIRVE A MÁS DE UN EVENTO. La jornada que quedó abierta y la salida sin entrada le importan a la
+// Familia por el mismo motivo que el relevo que no llegó: es su Paciente el que quedó del otro
+// lado. Lo que cambia entre un evento y otro es el texto y qué guardia se mira; a quién se le
+// avisa, por qué canales y con qué condición se decide una sola vez, acá.
+async function notificarFamiliaSiCorresponde({ evento, prestadoraId, guardiaId, textos, idioma }) {
+  const config = await configuracionEvento(evento, prestadoraId);
   if (!config?.notificar_familia) return;
+  if (!textos?.titulo || !textos?.cuerpo) return;
 
   const { data: guardia } = await supabase
     .from('guardias')
     .select('id, paciente_id')
-    .eq('id', guardiaEntranteId)
+    .eq('id', guardiaId)
     .single();
   if (!guardia) return;
 
@@ -479,7 +556,7 @@ async function notificarFamiliaSiCorresponde({ prestadoraId, guardiaEntranteId, 
     const pacientes = await pacientesDeGuardia(guardia, 'id, familia_id');
     familiaIds = [...new Set(pacientes.map((p) => p.familia_id).filter(Boolean))];
   } catch (err) {
-    console.error(`Error leyendo los Pacientes de la guardia ${guardiaEntranteId}:`, err.message);
+    console.error(`Error leyendo los Pacientes de la guardia ${guardiaId}:`, err.message);
     return;
   }
   if (familiaIds.length === 0) return;
@@ -488,23 +565,22 @@ async function notificarFamiliaSiCorresponde({ prestadoraId, guardiaEntranteId, 
   const cuentas = await cuentasDeLasFichas('familias', familiaIds, 'telefono');
   const telefonoPorFamilia = new Map([...cuentas].map(([id, datos]) => [id, datos?.telefono ?? null]));
 
-  const { titulo } = aviso('continuidad_de_guardia', idioma);
+  // El aviso de la Familia es suyo: dice cuál es la guardia y qué pasó, y nada más. Ni el nivel
+  // de escalada, ni los minutos de la cuenta interna, ni ningún identificador. Lo arma quien
+  // llama, con el catálogo del evento que corresponda.
+  const { titulo, cuerpo } = textos;
 
   for (const familiaId of familiaIds) {
-    await enviarPushFamilia(familiaId, {
-      ...aviso('continuidad_de_guardia', idioma),
-      cuerpo: texto,
-      url: '/',
-    });
+    await enviarPushFamilia(familiaId, { titulo, cuerpo, url: '/' });
 
     const telefono = telefonoPorFamilia.get(familiaId);
     if (!telefono) continue;
     try {
-      // Lo empieza la Prestadora, así que sale por la plantilla del aviso, con los mismos dos
-      // valores que le llegan al Coordinador: el título y el cuerpo.
-      await avisarPorWhatsapp({ config, prestadoraId, telefono, valores: [titulo, texto] });
+      // Lo empieza la Prestadora, así que sale por la plantilla del aviso, con los dos valores
+      // del aviso de la Familia: el título y el cuerpo.
+      await avisarPorWhatsapp({ config, prestadoraId, telefono, valores: [titulo, cuerpo] });
     } catch (err) {
-      console.error(`Error enviando WhatsApp a Familia (incidente_relevo_sin_resolver, guardia ${guardiaEntranteId}):`, err.message);
+      console.error(`Error enviando WhatsApp a Familia (${evento}, guardia ${guardiaId}):`, err.message);
     }
   }
 }

@@ -11,6 +11,14 @@ import { guardarLugaresDe } from '../utils/lugaresDeCadaPersona.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { ROLES_PANEL } from '../utils/roles.js';
 import { responderError } from '../utils/errorConMotivo.js';
+import {
+  ACCION_ALTA_DE_CUENTA,
+  ACCION_BAJA_DE_CUENTA,
+  ACCION_CAMBIO_DE_CUENTA,
+  camposQueCambiaron,
+  registrarActividad,
+  yaQuedoRegistrado,
+} from '../utils/registroDeActividad.js';
 
 export const panelUsuariosRouter = Router();
 
@@ -118,6 +126,15 @@ panelUsuariosRouter.post('/', requiereRolPanel, soloAdministracion, async (req, 
       }
     }
 
+    // Un alta de cuenta del Panel es un cambio de membresía: alguien que antes no entraba, ahora
+    // entra, y con un rol. Se anota el rol, que es una clave opaca; la clave temporal no, que es
+    // justamente lo que nunca entra en un registro de auditoría.
+    await registrarActividad(req.usuarioPanel, ACCION_ALTA_DE_CUENTA, {
+      tablaAfectada: 'usuarios',
+      registroId: userId,
+      detalle: { rol_nuevo: rolNuevo },
+    });
+
     res.json({ ok: true, id: userId, passwordTemporal });
   } catch (error) {
     responderError(res, error);
@@ -144,6 +161,16 @@ panelUsuariosRouter.patch('/:id', requiereRolPanel, soloAdministracion, async (r
   if (!modificada?.length) {
     return res.status(404).json({ error: 'No se encontró esa cuenta' });
   }
+
+  // Qué cambió son los nombres de las columnas que se tocaron, nunca sus valores: el nombre y el
+  // teléfono de una persona son dato de contenido y no entran en un registro de auditoría. Para
+  // verlos se mira la cuenta.
+  await registrarActividad(req.usuarioPanel, ACCION_CAMBIO_DE_CUENTA, {
+    tablaAfectada: 'usuarios',
+    registroId: req.params.id,
+    camposCambiados: camposQueCambiaron({ nombre, telefono }),
+  });
+
   res.json({ ok: true });
 });
 
@@ -172,5 +199,16 @@ panelUsuariosRouter.delete('/:id', requiereRolPanel, soloAdministracion, async (
   }
 
   await borrarCuenta(req.params.id, alcance);
+
+  // Una baja de cuenta es a la vez cambio de membresía y borrado de datos, y se anota con el
+  // nombre que más dice de los dos. El renglón queda aunque la cuenta ya no exista: el registro
+  // tiene que sobrevivir a lo que registra.
+  await registrarActividad(req.usuarioPanel, ACCION_BAJA_DE_CUENTA, {
+    tablaAfectada: 'usuarios',
+    registroId: req.params.id,
+    detalle: { rol_anterior: usuario.rol },
+  });
+  yaQuedoRegistrado(res);
+
   res.json({ ok: true });
 });

@@ -10,7 +10,7 @@ import { SolicitudDetalle } from './SolicitudDetalle';
 const ESTADOS = ['nueva', 'en_gestion', 'asignada', 'cancelada', 'completada'];
 
 export function Solicitudes() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { filas, estado, error, recargar } = useSupabaseTable('solicitudes', { orderBy: 'creado_en', ascending: false });
   const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '', estado: '' });
   const [seleccionada, setSeleccionada] = useState(null);
@@ -80,7 +80,7 @@ export function Solicitudes() {
                 <td>{s.localidad}</td>
                 <td>{s.tipo_servicio}</td>
                 <td>{s.modalidad}</td>
-                <td>{new Date(s.creado_en).toLocaleDateString()}</td>
+                <td>{new Date(s.creado_en).toLocaleDateString(locale)}</td>
                 <td>
                   <span className={claseBadge(s.estado || 'nueva')}>
                     {t.solicitudes[`estado_${s.estado || 'nueva'}`]}

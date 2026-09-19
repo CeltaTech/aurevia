@@ -3,6 +3,7 @@ import { useLocale } from '../../i18n/LocaleContext';
 import { useMonedaActual } from '../../hooks/useMonedaActual';
 import { useEscalasLegales } from '../../hooks/useEscalasLegales';
 import { useFormulasCese } from '../../hooks/useFormulasCese';
+import { yaCargo } from '../../hooks/useCatalogo';
 import { resolverEscalasVigentes, resolverFormulasVigentes } from '../../lib/escalasLegales';
 import { formatearImporte } from '../../lib/dinero';
 import { calcularCese } from '../../lib/calcularCese';
@@ -116,7 +117,7 @@ export function SimuladorVinculoTab({ asistente }) {
 
   const estado = estadoEscalas === 'error' || estadoFormulas === 'error'
     ? 'error'
-    : (estadoEscalas === 'listo' && estadoFormulas === 'listo' ? 'listo' : 'cargando');
+    : (yaCargo(estadoEscalas) && yaCargo(estadoFormulas) ? 'listo' : 'cargando');
   const error = errorEscalas ?? errorFormulas;
   const recargar = () => { recargarEscalas(); recargarFormulas(); };
 
@@ -138,7 +139,7 @@ export function SimuladorVinculoTab({ asistente }) {
   // las escalas vigentes hoy. El período es el mes en curso: una proyección se hace con lo que
   // rige ahora, no con lo que regía en un mes cerrado.
   const mensual = useMemo(() => {
-    if (!escalasResueltas || estadoConceptos !== 'listo') return null;
+    if (!escalasResueltas || !yaCargo(estadoConceptos)) return null;
     const escalasPorTipo = escalasPorTipoALaFecha(escalasResueltas);
     const comun = { conceptos, escalasPorTipo, moneda, jurisdiccion, periodo: hoy.slice(0, 7) };
     return Object.fromEntries(
@@ -153,7 +154,7 @@ export function SimuladorVinculoTab({ asistente }) {
   // La cobertura no depende del vínculo —es lo que ya salió pagarle a quien la reemplazó—, así
   // que el mismo número va en las dos columnas y se suma al total de cada una.
   const cobertura = useMemo(
-    () => (estadoCobertura === 'listo'
+    () => (yaCargo(estadoCobertura)
       ? costoMensualDeCobertura({ coberturas, moneda, desde: desdeCobertura, meses: mesesCobertura })
       : null),
     [estadoCobertura, coberturas, moneda, desdeCobertura, mesesCobertura],
@@ -163,7 +164,7 @@ export function SimuladorVinculoTab({ asistente }) {
   // que las tres estén, sigue cargando. Un número a medias acá es peor que la demora.
   const estadoDelBloqueMensual = [estado, estadoConceptos, estadoCobertura].includes('error')
     ? 'error'
-    : ([estado, estadoConceptos, estadoCobertura].every((e) => e === 'listo') ? 'listo' : 'cargando');
+    : ([estado, estadoConceptos, estadoCobertura].every(yaCargo) ? 'listo' : 'cargando');
 
   function celdaMensual(vinculo) {
     const r = mensual?.[vinculo];

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useEscalasLegales } from '../../hooks/useEscalasLegales';
+import { yaCargo } from '../../hooks/useCatalogo';
 import { resolverEscalasVigentes } from '../../lib/escalasLegales';
 import { calcularScoreRiesgo, INDICADORES_RIESGO } from '../../lib/scoreRiesgo';
 import { INDICADORES_DEDUCIDOS, deducirIndicadores, indicadoresParaElPuntaje } from '../../lib/indicadoresDeducidos';
@@ -29,7 +30,9 @@ export function ScoreRiesgoTab({ asistente, onActualizado }) {
   const { t } = useLocale();
   // La Prestadora va sí o sí: sin ella el hook no consulta nada y el estado se queda en
   // "cargando" para siempre —el puntaje da 0 y el botón de guardar nunca se enciende—.
-  const { filas: escalasCrudas, estado } = useEscalasLegales(asistente.prestadora_id);
+  // El error de las escalas se muestra: sin ellas el puntaje no se puede calcular, y callarlo
+  // deja un cero que se lee como «no hay riesgo».
+  const { filas: escalasCrudas, estado, error: errorEscalas } = useEscalasLegales(asistente.prestadora_id);
   // Sólo los que se cargan a mano viven en el estado de la pantalla: los otros tres no se
   // tocan acá, salen de la ficha cada vez que se muestra.
   const [indicadores, setIndicadores] = useState(asistente.indicadores_riesgo ?? {});
@@ -37,7 +40,7 @@ export function ScoreRiesgoTab({ asistente, onActualizado }) {
   const [error, setError] = useState(null);
 
   const hoy = new Date().toISOString().slice(0, 10);
-  const escalasResueltas = estado === 'listo' ? resolverEscalasVigentes(escalasCrudas, hoy) : null;
+  const escalasResueltas = yaCargo(estado) ? resolverEscalasVigentes(escalasCrudas, hoy) : null;
 
   // Tres de los siete indicadores salen de datos que la ficha ya tiene, así que se deducen acá
   // y no se preguntan. Eso es lo que hace que el puntaje se recalcule solo: cambian las horas
@@ -90,6 +93,7 @@ export function ScoreRiesgoTab({ asistente, onActualizado }) {
       <Alert variant="info">{t.asistentes.score.explicacion}</Alert>
       {/* El puntaje sale de pesos que hoy son provisorios: se dice antes de mostrarlo. */}
       <AvisoEscalasProvisorias escalas={escalasCrudas} />
+      {errorEscalas && <Alert variant="error">{errorEscalas}</Alert>}
       {error && <Alert variant="error">{error}</Alert>}
       {advertencias.map((a, i) => <Alert key={i} variant="error">{a}</Alert>)}
 
@@ -132,7 +136,7 @@ export function ScoreRiesgoTab({ asistente, onActualizado }) {
         </p>
       )}
 
-      <Button onClick={guardar} disabled={guardando || estado !== 'listo'}>
+      <Button onClick={guardar} disabled={guardando || !yaCargo(estado)}>
         {guardando ? t.comun.guardando : t.comun.guardar}
       </Button>
     </div>

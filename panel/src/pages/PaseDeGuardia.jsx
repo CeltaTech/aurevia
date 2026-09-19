@@ -33,10 +33,10 @@ import { mensajeDeError } from '../lib/errores';
    en la nota, y la fila queda con quién la cerró y cuándo. No existe un botón de "rechazar"
    porque la llegada ya ocurrió: negarla después no la borra. */
 
-function aLaHora(iso) {
+function aLaHora(iso, locale) {
   if (!iso) return '—';
   const fecha = new Date(iso);
-  return Number.isNaN(fecha.getTime()) ? '—' : fecha.toLocaleString();
+  return Number.isNaN(fecha.getTime()) ? '—' : fecha.toLocaleString(locale);
 }
 
 function horario(fila) {
@@ -93,7 +93,7 @@ function CerrarSinComprobar({ fila, onCerrado, onClose }) {
 }
 
 export function PaseDeGuardia() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { pedidos, estado: estadoPedidos, error: errorPedidos, recargar: recargarPedidos } = usePedidosDeCodigo();
 
   /* Los códigos que se soltaron desde esta pantalla, mientras siga abierta. No se guardan en
@@ -175,7 +175,7 @@ export function PaseDeGuardia() {
                   {t.pase_de_guardia[`momento_${pedido.momento}`] ?? pedido.momento}
                 </span>
                 <div>{horario(pedido)}</div>
-                <div>{t.pase_de_guardia.pedido_desde}: {aLaHora(pedido.pedidoEn)}</div>
+                <div>{t.pase_de_guardia.pedido_desde}: {aLaHora(pedido.pedidoEn, locale)}</div>
                 {pedido.texto ? (
                   <p className="panel-resultado-calculo">{pedido.texto}</p>
                 ) : (
@@ -190,7 +190,7 @@ export function PaseDeGuardia() {
                 )}
                 {!soltado && pedido.codigoVigente && (
                   <div className="panel-guardia-alerta">
-                    {t.pase_de_guardia.codigo_ya_soltado.replace('{hora}', aLaHora(pedido.codigoEmitidoEn))}
+                    {t.pase_de_guardia.codigo_ya_soltado.replace('{hora}', aLaHora(pedido.codigoEmitidoEn, locale))}
                   </div>
                 )}
               </div>
@@ -231,7 +231,7 @@ export function PaseDeGuardia() {
                 {t.pase_de_guardia[`momento_${fila.momento}`] ?? fila.momento}
               </span>
               <div>{horario(fila)}</div>
-              <div>{t.pase_de_guardia.ocurrida_en}: {aLaHora(fila.ocurridaEn)}</div>
+              <div>{t.pase_de_guardia.ocurrida_en}: {aLaHora(fila.ocurridaEn, locale)}</div>
               <div>
                 {t.pase_de_guardia.col_motivo}: {t.pase_de_guardia[`motivo_${fila.motivo}`] ?? fila.motivo}
               </div>

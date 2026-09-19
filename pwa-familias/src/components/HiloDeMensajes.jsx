@@ -15,10 +15,25 @@ import { useEffect, useRef, useState } from 'react';
 // EL AVISO DEL TAPADO NO ES DECORACIÓN. Quien escribe su teléfono y ve tres puntos tiene que
 // entender qué pasó, y sobre todo tiene que saber que lo que el producto no reconoce sí se ve
 // del otro lado. El producto avisa, no bloquea (`celtatech/CLAUDE.md` §7).
+//
+// Y EL AVISO ESTÁ SIEMPRE. Lo que se tapa no se guarda, así que no hay ningún momento en que
+// deje de valer: abrir el contacto de esta persona no destapa nada de lo ya dicho.
+//
+// EL MOTIVO SE LE MUESTRA A QUIEN ESCRIBIÓ, Y NO AL OTRO LADO. Quien puso su número necesita
+// saber por qué quedaron marcas en su mensaje; decirle al que lo recibe qué forma se reconoció es
+// enseñarle cuál probar la próxima vez. El texto sale del catálogo, en los tres idiomas.
+// Qué dice la línea de un mensaje tapado. A quien lo escribió, el motivo del catálogo en su
+// idioma; al otro lado, que se tapó algo y nada más. Sin motivo guardado —una regla que se
+// desactivó después— queda la frase neutra, que siempre alcanza.
+function motivoDelTapado(mensaje, ladoPropio, locale, t) {
+  if (mensaje.lado !== ladoPropio) return t.chat.tapado_en_este_mensaje;
+  return mensaje.motivo_tapado?.[locale] || t.chat.tapado_en_este_mensaje;
+}
+
 export default function HiloDeMensajes({
   mensajes,
   ladoPropio,
-  contactoAbierto,
+  locale,
   videollamada,
   videollamadaDisponible,
   alLlamar,
@@ -64,14 +79,11 @@ export default function HiloDeMensajes({
   return (
     <div className="hilo-de-mensajes">
       {/* Se dice siempre, no sólo cuando ya se tapó algo: quien está por escribir su número
-          tiene que enterarse antes y no después. Cuando el contacto ya está abierto no hay nada
-          que tapar y el aviso desaparece. */}
-      {!contactoAbierto && (
-        <p className="aviso-suave" role="note">
-          {t.chat.contacto_tapado}
-          {hayAlgoTapado ? ` ${t.chat.contacto_tapado_ya_paso}` : ''}
-        </p>
-      )}
+          tiene que enterarse antes y no después. */}
+      <p className="aviso-suave" role="note">
+        {t.chat.contacto_tapado}
+        {hayAlgoTapado ? ` ${t.chat.contacto_tapado_ya_paso}` : ''}
+      </p>
 
       {/* La videollamada sólo aparece donde la Prestadora dijo dónde se hacen las suyas. Sin eso
           no hay proveedor, y un botón que no lleva a ningún lado es peor que no tenerlo. */}
@@ -102,8 +114,8 @@ export default function HiloDeMensajes({
                 {m.automatico ? t.chat.avisos[m.cuerpo] || t.chat.sin_mensajes : m.cuerpo}
               </p>
               <p className="mensaje-cuando">
-                {new Date(m.created_at).toLocaleString()}
-                {m.tapado && ` · ${t.chat.tapado_en_este_mensaje}`}
+                {new Date(m.created_at).toLocaleString(locale)}
+                {m.tapado && ` · ${motivoDelTapado(m, ladoPropio, locale, t)}`}
               </p>
             </li>
           ))}

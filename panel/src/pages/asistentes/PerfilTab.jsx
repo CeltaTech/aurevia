@@ -41,7 +41,7 @@ import { errorDeLaRespuesta, mensajeDeError } from '../../lib/errores';
 const API_URL = import.meta.env.VITE_API_URL;
 
 export function PerfilTab({ asistente, onActualizado }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { usuario } = useAuth();
   const { empresa } = useEmpresa();
   const esAdmin = esAdminOSuperior(usuario?.rol);
@@ -291,7 +291,7 @@ export function PerfilTab({ asistente, onActualizado }) {
 
       <dl className="panel-detalle-lista">
         <dt>{t.asistentes.fecha_alta}</dt>
-        <dd>{new Date(asistente.fecha_alta).toLocaleDateString()}</dd>
+        <dd>{new Date(asistente.fecha_alta).toLocaleDateString(locale)}</dd>
       </dl>
 
       <FormField

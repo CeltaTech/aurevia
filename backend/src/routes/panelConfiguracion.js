@@ -5,6 +5,11 @@ import { supabase } from '../db/connection.js';
 import { accionesDePermisos } from '../utils/permisos.js';
 import { exigirAdministracion, exigirAdminDePrestadora } from '../middleware/exigirAdministracion.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
+import {
+  ACCION_CAMBIO_DE_MONEDA,
+  ACCION_CAMBIO_DE_PERMISOS,
+  registrarActividad,
+} from '../utils/registroDeActividad.js';
 import { avisoDelCatalogo, mezclarAvisosConCatalogo, sePuedeApagar, VALORES_POR_DEFECTO_AVISO } from '../utils/catalogoAvisos.js';
 import { cosaDelCatalogo, mezclarVisibilidadConCatalogo } from '../utils/catalogoVisibilidad.js';
 import { LIMITES_ALERTAS_IA, VALORES_POR_DEFECTO_ALERTAS_IA } from '../utils/revisarAlertasIA.js';
@@ -111,6 +116,100 @@ panelConfiguracionRouter.patch('/empresa', async (req, res) => {
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'Esta Prestadora todavía no tiene configuración cargada' });
   res.json({ ok: true });
+});
+
+// --- La moneda en la que trabaja esta Prestadora ---
+//
+// El dato vive en `prestadoras.moneda` y nace del país que se eligió al darla de alta. Desde
+// acá se cambia, que es lo que la columna venía prometiendo desde que se escribió
+// (`supabase/migrations/20260820140000_todo_importe_con_su_moneda.sql`) y todavía no tenía
+// pantalla.
+//
+// QUÉ ALCANZA EL CAMBIO. Sólo a lo que se cargue de acá en adelante: cada importe ya guardado
+// lleva su propia columna `moneda`, completada por el disparador el día que se insertó, y esa
+// no se toca. Un importe anotado en pesos sigue siendo en pesos aunque la Prestadora pase a
+// trabajar en otra moneda, que es justamente para lo que se guarda al lado de cada cifra.
+// Careonys no convierte importes ni guarda cotizaciones (`CLAUDE.md` §6).
+//
+// DE DÓNDE SALE LA LISTA. Del catálogo `monedas_por_pais`, que es el mismo del que sale la
+// moneda al dar de alta una Prestadora. No está escrita en la pantalla ni acá: se amplía
+// agregándole una fila al catálogo.
+
+// Las monedas que el producto conoce, sin repetir y en orden. Un solo punto de verdad para las
+// dos rutas de abajo: la que muestra la lista y la que comprueba lo que se eligió.
+async function monedasDelCatalogo() {
+  const { data, error } = await supabase.from('monedas_por_pais').select('moneda');
+  if (error) throw error;
+  return [...new Set((data ?? []).map((fila) => fila.moneda))].sort();
+}
+
+panelConfiguracionRouter.get('/moneda', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('prestadoras')
+      .select('moneda')
+      .eq('id', req.usuarioPanel.prestadoraId)
+      .single();
+    if (error) throw error;
+
+    const monedas = await monedasDelCatalogo();
+
+    // La que está guardada va en la lista aunque el catálogo ya no la tenga: si no, la pantalla
+    // mostraría el casillero vacío y el primer guardado cambiaría la moneda sin que nadie lo
+    // pidiera.
+    if (data.moneda && !monedas.includes(data.moneda)) monedas.push(data.moneda);
+
+    res.json({ moneda: data.moneda, monedas: monedas.sort() });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+panelConfiguracionRouter.patch('/moneda', async (req, res) => {
+  try {
+    const moneda = String(req.body?.moneda ?? '').trim().toUpperCase();
+    if (!moneda) {
+      return responderError(res, new ErrorConMotivo('faltan_datos', 'cambio de moneda sin moneda'));
+    }
+
+    // Se comprueba contra el catálogo antes de escribir. Sin esto, una moneda inventada la
+    // rechazaría el dominio `moneda_iso` de la base, y ese error nombra el dominio y la columna.
+    const monedas = await monedasDelCatalogo();
+    if (!monedas.includes(moneda)) {
+      return responderError(res, new ErrorConMotivo('moneda_desconocida', `moneda ${moneda} fuera del catálogo`));
+    }
+
+    // Cuál era la moneda antes, leída antes de pisarla: sin esto el registro puede decir que se
+    // cambió la moneda pero no de cuál a cuál, y la mitad de «qué cambió» se pierde.
+    const { data: antes } = await supabase
+      .from('prestadoras')
+      .select('moneda')
+      .eq('id', req.usuarioPanel.prestadoraId)
+      .maybeSingle();
+
+    const { data, error } = await supabase
+      .from('prestadoras')
+      .update({ moneda })
+      .eq('id', req.usuarioPanel.prestadoraId)
+      .select('moneda');
+    if (error) throw error;
+    if (!data?.length) return responderError(res, new ErrorConMotivo('no_encontrado', 'la Prestadora de la sesión no existe'));
+
+    // Cambiar la moneda de una Prestadora tiene consecuencia económica sobre todo lo que se
+    // cargue de ahí en adelante, así que queda registrado: quién, cuándo, y de qué moneda a qué
+    // moneda. **Ningún importe.** El código de la moneda no es un importe: dice en qué se
+    // trabaja, no cuánto.
+    await registrarActividad(req.usuarioPanel, ACCION_CAMBIO_DE_MONEDA, {
+      tablaAfectada: 'prestadoras',
+      registroId: req.usuarioPanel.prestadoraId,
+      camposCambiados: ['moneda'],
+      detalle: { moneda_anterior: antes?.moneda ?? null, moneda_nueva: data[0].moneda },
+    });
+
+    res.json({ moneda: data[0].moneda });
+  } catch (error) {
+    responderError(res, error);
+  }
 });
 
 // --- Zonas de cobertura ---
@@ -1052,6 +1151,137 @@ panelConfiguracionRouter.put(
   }
 );
 
+// --- Con qué software de afuera se conecta la Prestadora ---
+//
+// Dos conexiones: la de facturación y la de créditos y cobranzas. Careonys no hace ninguna de las
+// dos tareas —son software aparte, comprado por la Prestadora— y esto no es más que la libreta
+// donde ella anota cuál es el suyo y con qué credencial se entra.
+//
+// De la credencial sale de acá si está cargada o no, y nada más. Ni el texto, ni la referencia a
+// la caja fuerte: la primera no vuelve a salir nunca, y la segunda al navegador no le sirve para
+// nada mientras que sí sirve para terminar en un registro donde no tendría que estar. Para
+// cambiarla se escribe una nueva, que reemplaza a la anterior.
+
+const CLASES_DE_SOFTWARE_EXTERNO = ['facturacion', 'creditos_y_cobranzas'];
+
+panelConfiguracionRouter.get('/software-externo', async (req, res) => {
+  try {
+    // Con qué software se puede conectar sale de la base, no de la pantalla: sumar uno es una
+    // fila, no una versión nueva del producto.
+    const { data: catalogo, error: errorDelCatalogo } = await supabase
+      .from('catalogo_software_externo')
+      .select('clave, clase, nombre')
+      .eq('activo', true)
+      .order('clase')
+      .order('orden');
+    if (errorDelCatalogo) throw errorDelCatalogo;
+
+    const { data: conexiones, error } = await supabase
+      .from('conexiones_con_software_externo')
+      .select('clase, software, credencial_secret_id')
+      .eq('prestadora_id', req.usuarioPanel.prestadoraId);
+    if (error) throw error;
+
+    res.json({
+      catalogo: catalogo ?? [],
+      conexiones: CLASES_DE_SOFTWARE_EXTERNO.map((clase) => {
+        const fila = (conexiones ?? []).find((una) => una.clase === clase);
+        return {
+          clase,
+          software: fila?.software ?? null,
+          credencial_cargada: !!fila?.credencial_secret_id,
+        };
+      }),
+    });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+// La credencial es de la Prestadora, y Superadmin es un rol técnico de CeltaTech: se le suma el
+// mismo candado que a las claves de WhatsApp y a los secretos de firma. Sumar un candado nunca
+// abre nada.
+const soloAdminParaElSoftwareExterno = exigirAdminDePrestadora(
+  'La credencial del software de afuera es de la Prestadora: solo Admin puede cargarla'
+);
+
+panelConfiguracionRouter.put(
+  '/software-externo/:clase',
+  soloAdminParaElSoftwareExterno,
+  async (req, res) => {
+    try {
+      const clase = String(req.params.clase ?? '');
+      if (!CLASES_DE_SOFTWARE_EXTERNO.includes(clase)) {
+        return responderError(res, new ErrorConMotivo('no_encontrado', `clase de software ${clase}`));
+      }
+
+      const software = String(req.body?.software ?? '').trim();
+      if (!software) {
+        return responderError(res, new ErrorConMotivo('faltan_datos', 'conexión sin software elegido'));
+      }
+
+      // Se comprueba contra el catálogo y contra la clase: un facturador no puede quedar anotado
+      // como el software de cobranzas. La base lo impide igual con la clave foránea; esto es para
+      // contestar con un mensaje del catálogo en vez de con un error de la base.
+      const { data: delCatalogo, error: errorDelCatalogo } = await supabase
+        .from('catalogo_software_externo')
+        .select('clave')
+        .eq('clave', software)
+        .eq('clase', clase)
+        .eq('activo', true)
+        .maybeSingle();
+      if (errorDelCatalogo) throw errorDelCatalogo;
+      if (!delCatalogo) {
+        return responderError(res, new ErrorConMotivo('software_desconocido', `software ${software} fuera del catálogo`));
+      }
+
+      const credencial = String(req.body?.credencial ?? '').trim();
+
+      const { data: antes, error: errorDeLaLectura } = await supabase
+        .from('conexiones_con_software_externo')
+        .select('software, credencial_secret_id')
+        .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+        .eq('clase', clase)
+        .maybeSingle();
+      if (errorDeLaLectura) throw errorDeLaLectura;
+
+      // Cambiar de software deja sin valor la credencial anterior, que es la llave de otra puerta:
+      // la de la base la borra al cambiar. Por eso, si se cambia, hay que traer una nueva, o la
+      // conexión queda anotada y muerta sin que nadie se entere.
+      const cambiaElSoftware = antes?.software !== software;
+      if (!credencial && (cambiaElSoftware || !antes?.credencial_secret_id)) {
+        return responderError(res, new ErrorConMotivo('credencial_requerida', 'conexión sin credencial'));
+      }
+
+      const { error } = await supabase.rpc('guardar_conexion_con_software_externo', {
+        p_prestadora_id: req.usuarioPanel.prestadoraId,
+        p_clase: clase,
+        p_software: software,
+        // Vacío quiere decir «no se toca la que hay». Va como nulo para que la función de la base
+        // no tenga que adivinar si una cadena vacía es una credencial.
+        p_credencial: credencial || null,
+      });
+      if (error) throw error;
+
+      // Qué se cambió, nunca con qué: en el registro no entra ninguna credencial.
+      await registrarActividad(req.usuarioPanel, ACCION_MODIFICACION_CRITICA, {
+        tablaAfectada: 'conexiones_con_software_externo',
+        registroId: req.usuarioPanel.prestadoraId,
+        camposCambiados: credencial ? ['software', 'credencial'] : ['software'],
+        detalle: {
+          clase_de_software: clase,
+          software_anterior: antes?.software ?? null,
+          software_nuevo: software,
+        },
+      });
+
+      res.json({ ok: true });
+    } catch (error) {
+      responderError(res, error);
+    }
+  }
+);
+
 // --- WhatsApp: credenciales de Meta Cloud API (Supabase Vault, ver
 //     supabase/migrations/ — el token nunca vuelve a
 //     mostrarse en el Panel una vez guardado) ---
@@ -1786,6 +2016,15 @@ panelConfiguracionRouter.patch('/permisos/:accion', async (req, res) => {
   if (!['solo_admin', 'admin_y_coordinador'].includes(alcance)) {
     return res.status(400).json({ error: 'Alcance inválido' });
   }
+  // Cuál era el alcance antes, leído antes de pisarlo. Puede no haber fila: ahí el alcance que
+  // regía era el de fábrica del catálogo, y eso se anota tal cual.
+  const { data: antes } = await supabase
+    .from('permisos_prestadora')
+    .select('alcance')
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .eq('accion', accion)
+    .maybeSingle();
+
   const { error } = await supabase.from('permisos_prestadora').upsert(
     {
       prestadora_id: req.usuarioPanel.prestadoraId,
@@ -1799,6 +2038,21 @@ panelConfiguracionRouter.patch('/permisos/:accion', async (req, res) => {
     { onConflict: 'prestadora_id,accion' }
   );
   if (error) return responderError(res, error);
+
+  // Un cambio de permisos cambia quién puede hacer qué: es de lo que la regla de la empresa pide
+  // auditar sin excepción. Se anota qué permiso y de qué alcance a qué alcance —las tres son
+  // claves opacas—, y qué columnas se tocaron. Quiénes quedaron como excepción no se anotan acá:
+  // son cuentas de personas, y para eso se mira el permiso.
+  await registrarActividad(req.usuarioPanel, ACCION_CAMBIO_DE_PERMISOS, {
+    tablaAfectada: 'permisos_prestadora',
+    camposCambiados: ['alcance', 'excepciones_permitir', 'excepciones_denegar'],
+    detalle: {
+      accion_permiso: accion,
+      alcance_anterior: antes?.alcance ?? null,
+      alcance_nuevo: alcance,
+    },
+  });
+
   res.json({ ok: true });
 });
 

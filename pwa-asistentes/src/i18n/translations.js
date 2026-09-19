@@ -77,12 +77,18 @@ export const T = {
       cargando: 'Cargando…',
       error_generico: 'Ocurrió un error. Conviene volver a intentar.',
       vacio: 'No hay resultados.',
+      // El botón que vuelve a pedir lo que no se pudo traer. Lo que ya está en pantalla se queda
+      // donde está: un intento que falla no borra lo que se leyó.
+      reintentar: 'Volver a intentar',
       guardar: 'Guardar',
       guardando: 'Guardando…',
       cancelar: 'Cancelar',
       confirmar: 'Confirmar',
       volver: 'Volver',
       pendiente_de_enviar: 'Guardado, pendiente de enviar',
+      // Lo que quedó anotado en el teléfono y el motor rechazó. El motivo sale del catálogo de
+      // situaciones y se lee adentro de la guardia, que es donde hay lugar para decirlo entero.
+      no_se_pudo_enviar: 'No se pudo enviar',
     },
     nav: {
       // El chat con la otra punta de Match. Sólo aparece donde la Prestadora ofrece esa
@@ -113,7 +119,7 @@ export const T = {
       // El aviso del tapado dice las dos cosas que hacen falta para no equivocarse: que el dato
       // de contacto no pasa, y que lo que el producto no reconoce sí pasa. El producto avisa, no
       // bloquea.
-      contacto_tapado: 'Los datos de contacto quedan tapados hasta que se abra el contacto de esta persona. Lo que no se reconozca como un dato de contacto se ve del otro lado tal como se escribió.',
+      contacto_tapado: 'Los datos de contacto se tapan al enviar el mensaje y no quedan guardados. Lo que no se reconozca como un dato de contacto se ve del otro lado tal como se escribió.',
       contacto_tapado_ya_paso: 'En esta conversación ya se tapó algo.',
       tapado_en_este_mensaje: 'con datos de contacto tapados',
       escribir: 'Escribir un mensaje',
@@ -242,7 +248,11 @@ export const T = {
       mostrar_mi_codigo: 'Mostrar mi código para el relevo',
       ocultar_mi_codigo: 'Ocultar mi código',
       mi_codigo_explicacion: 'Este código es para que lo lea el Asistente que llega a relevarlo. Se renueva solo cada pocos segundos.',
-      geo_no_disponible: 'No se pudo obtener la ubicación. Hace falta activar el GPS y volver a intentar.',
+      // Los dos fallos de ubicación se dicen distinto, y la clave de cada frase es la clave del
+      // error. Decirle «active el GPS» a quien lo tiene activado y está adentro de un edificio lo
+      // manda a arreglar algo que no está roto.
+      ubicacion_negada: 'La aplicación no tiene permiso para usar la ubicación.',
+      ubicacion_no_disponible: 'No se pudo obtener la ubicación en este momento.',
       cargar_reporte: 'Cargar Reporte Diario',
       cargar_reporte_de: 'Cargar el Reporte Diario de {nombre}',
       un_reporte_por_paciente: 'Cada persona lleva su propio Reporte Diario. Hace falta cargar uno por cada una antes de cerrar la guardia.',
@@ -645,12 +655,14 @@ export const T = {
       cargando: 'Loading…',
       error_generico: 'Something went wrong. Please try again.',
       vacio: 'No results.',
+      reintentar: 'Try again',
       guardar: 'Save',
       guardando: 'Saving…',
       cancelar: 'Cancel',
       confirmar: 'Confirm',
       volver: 'Back',
       pendiente_de_enviar: 'Saved, pending to send',
+      no_se_pudo_enviar: 'Could not be sent',
     },
     nav: {
       mensajes: 'Messages',
@@ -667,7 +679,7 @@ export const T = {
       sin_conversaciones: 'There are no conversations yet.',
       sin_leer_uno: '1 unread message',
       sin_leer: '{n} unread messages',
-      contacto_tapado: 'Contact details stay hidden until this person’s contact is unlocked. Anything not recognised as a contact detail is shown to the other side exactly as written.',
+      contacto_tapado: 'Contact details are hidden when the message is sent and are not stored. Anything not recognised as a contact detail is shown to the other side exactly as written.',
       contacto_tapado_ya_paso: 'Something has already been hidden in this conversation.',
       tapado_en_este_mensaje: 'contact details hidden',
       escribir: 'Write a message',
@@ -783,7 +795,8 @@ export const T = {
       mostrar_mi_codigo: 'Show my code for the handover',
       ocultar_mi_codigo: 'Hide my code',
       mi_codigo_explicacion: 'This code is for the Assistant arriving to take over to read. It renews itself every few seconds.',
-      geo_no_disponible: 'Could not get your location. Turn on GPS and try again.',
+      ubicacion_negada: 'The app does not have permission to use location.',
+      ubicacion_no_disponible: 'The location could not be obtained right now.',
       cargar_reporte: 'Fill Daily Report',
       cargar_reporte_de: "Fill {nombre}'s Daily Report",
       un_reporte_por_paciente: 'Each person has their own Daily Report. File one for each before closing the shift.',
@@ -1138,12 +1151,14 @@ export const T = {
       cargando: 'Carregando…',
       error_generico: 'Ocorreu um erro. É preciso tentar novamente.',
       vacio: 'Nenhum resultado.',
+      reintentar: 'Tentar novamente',
       guardar: 'Salvar',
       guardando: 'Salvando…',
       cancelar: 'Cancelar',
       confirmar: 'Confirmar',
       volver: 'Voltar',
       pendiente_de_enviar: 'Salvo, pendente de envio',
+      no_se_pudo_enviar: 'Não foi possível enviar',
     },
     nav: {
       mensajes: 'Mensagens',
@@ -1160,7 +1175,7 @@ export const T = {
       sin_conversaciones: 'Ainda não há nenhuma conversa.',
       sin_leer_uno: '1 mensagem não lida',
       sin_leer: '{n} mensagens não lidas',
-      contacto_tapado: 'Os dados de contato ficam ocultos até que o contato desta pessoa seja liberado. O que não for reconhecido como dado de contato aparece do outro lado exatamente como foi escrito.',
+      contacto_tapado: 'Os dados de contato ficam ocultos ao enviar a mensagem e não são guardados. O que não for reconhecido como dado de contato aparece do outro lado exatamente como foi escrito.',
       contacto_tapado_ya_paso: 'Nesta conversa já houve algo oculto.',
       tapado_en_este_mensaje: 'com dados de contato ocultos',
       escribir: 'Escrever uma mensagem',
@@ -1276,7 +1291,8 @@ export const T = {
       mostrar_mi_codigo: 'Mostrar o meu código para a rendição',
       ocultar_mi_codigo: 'Ocultar o meu código',
       mi_codigo_explicacion: 'Este código é para o Assistente que chega para rendê-lo ler. Ele se renova sozinho a cada poucos segundos.',
-      geo_no_disponible: 'Não foi possível obter a localização. É preciso ativar o GPS e tentar novamente.',
+      ubicacion_negada: 'O aplicativo não tem permissão para usar a localização.',
+      ubicacion_no_disponible: 'Não foi possível obter a localização neste momento.',
       cargar_reporte: 'Preencher Relatório Diário',
       cargar_reporte_de: 'Preencher o Relatório Diário de {nombre}',
       un_reporte_por_paciente: 'Cada pessoa tem o seu próprio Relatório Diário. É preciso preencher um para cada uma antes de encerrar o plantão.',
@@ -1586,5 +1602,9 @@ export const T = {
   },
 };
 
-export const DEFAULT_LOCALE = 'es-AR';
-export const LOCALES = ['es-AR', 'en', 'pt-BR'];
+// Cuáles son los tres idiomas y cuál es el de por defecto no se escribe acá: sale de
+// `i18n/idiomas.js`, que es el punto único donde está dicho para todo el producto —las pantallas
+// y el motor—. Estaba escrito cuatro veces, y las cuatro decían lo mismo por suerte, no por
+// construcción. Se siguen exportando desde este archivo con los nombres de siempre para que
+// ningún punto de consumo cambie.
+export { IDIOMA_POR_DEFECTO as DEFAULT_LOCALE, IDIOMAS_SOPORTADOS as LOCALES } from './idiomas.js';

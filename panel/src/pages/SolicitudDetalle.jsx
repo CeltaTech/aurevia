@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
 import { useConfirmarDestructivo } from '../context/TenantSessionContext';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
+import { useMotivosDeResolucion } from '../hooks/useMotivosDeResolucion';
+import { resolver } from '../lib/resoluciones';
 import { esAdminOSuperior } from '../lib/roles';
 import { linkWhatsapp } from '../lib/telefono';
 import { supabase } from '../lib/supabaseClient';
@@ -15,7 +18,12 @@ import { ElegirUnLugar } from '../components/lugares/ElegirUnLugar';
 import { AsistentesSugeridos } from './solicitudes/AsistentesSugeridos';
 import { NuevaGuardiaModal } from './guardias/NuevaGuardiaModal';
 
-const ESTADOS = ['nueva', 'en_gestion', 'asignada', 'cancelada', 'completada'];
+// Qué se resuelve en esta pantalla. Es el nombre guardado de la tabla, y con él salen los motivos
+// del catálogo de la Prestadora y se escribe la resolución.
+const TABLA = 'solicitudes';
+// El estado en el que queda una Solicitud que ya tiene su Guardia armada. Es lo único que esta
+// pantalla nombra de los estados, porque es el que ella misma resuelve sin preguntar; el motivo
+// con el que se resuelve sale igual del catálogo.
 const ESTADO_ASIGNADA = 'asignada';
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -24,7 +32,27 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
   const { t } = useLocale();
   const { usuario } = useAuth();
   const confirmarDestructivo = useConfirmarDestructivo();
-  const [nuevoEstado, setNuevoEstado] = useState(solicitud.estado || 'nueva');
+  const prestadoraId = usePrestadoraActual();
+  // Los motivos de esta Prestadora para resolver una Solicitud. En qué estado queda lo dice el
+  // motivo elegido, así que acá no hay ninguna lista de estados escrita.
+  const {
+    filas: motivos,
+    estado: estadoMotivos,
+    error: errorMotivos,
+    recargar: recargarMotivos,
+  } = useMotivosDeResolucion(prestadoraId, TABLA);
+  const [motivoId, setMotivoId] = useState('');
+  const [detalle, setDetalle] = useState('');
+  const motivoElegido = useMemo(
+    () => motivos.find((motivo) => motivo.id === motivoId) ?? null,
+    [motivos, motivoId],
+  );
+  // Con cuál se resuelve sola la Solicitud que acaba de quedar con su Guardia armada.
+  const motivoDeAsignada = useMemo(
+    // Uno que no pida escribir qué pasó: nadie va a estar ahí para escribirlo.
+    () => motivos.find((motivo) => motivo.estado === ESTADO_ASIGNADA && !motivo.pide_detalle) ?? null,
+    [motivos],
+  );
   const [nota, setNota] = useState(solicitud.nota_interna || '');
   // Qué lugar de la lista es el que dijo quien llamó. Son dos cosas distintas y por eso se guardan
   // aparte: `localidad` es lo que se escuchó, y esto es lo que se entendió. Sin esto, la Familia
@@ -41,23 +69,29 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
 
   // Una Solicitud con una guardia asignada ya no es una Solicitud nueva ni en gestión, y que ese
   // estado lo tenga que mover alguien a mano es pedirle a una persona que copie lo que el sistema
-  // acaba de ver. Si el cambio de estado falla, la guardia quedó creada igual: se avisa y la
-  // ventana no se cierra, para que se pueda guardar el estado a mano ahí mismo.
+  // acaba de ver. Queda resuelta con el motivo del catálogo que deja la Solicitud asignada, y la
+  // firma es de quien armó la guardia. Si la resolución falla, la guardia quedó creada igual: se
+  // avisa y la ventana no se cierra, para que se pueda resolver a mano ahí mismo.
   async function guardiaCreada() {
     setGuardiaNueva(null);
-    if ((solicitud.estado || 'nueva') === ESTADO_ASIGNADA) {
+    if (solicitud.estado === ESTADO_ASIGNADA) {
       onActualizada();
       return;
     }
 
-    const { error: errorEstado } = await supabase
-      .from('solicitudes')
-      .update({ estado: ESTADO_ASIGNADA })
-      .eq('id', solicitud.id);
-
-    if (errorEstado) {
-      setNuevoEstado(ESTADO_ASIGNADA);
+    if (!motivoDeAsignada) {
       setError(t.comun.error_generico);
+      return;
+    }
+
+    const { error: errorResolucion } = await resolver({
+      tabla: TABLA,
+      filaId: solicitud.id,
+      motivoId: motivoDeAsignada.id,
+    });
+
+    if (errorResolucion) {
+      setError(mensajeDeError(errorResolucion, t));
       return;
     }
 
@@ -92,7 +126,12 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
   }
 
   async function handleGuardar() {
-    if (nuevoEstado !== (solicitud.estado || 'nueva') && nuevoEstado === 'cancelada') {
+    // Resolver no es pisar el estado: es dejar escrito por qué se decidió y quién lo decidió. El
+    // estado en el que queda sale del motivo, nunca de esta pantalla.
+    const nuevoEstado = motivoElegido?.estado ?? null;
+    const cambiaElEstado = Boolean(nuevoEstado) && nuevoEstado !== solicitud.estado;
+
+    if (cambiaElEstado) {
       const confirmado = await confirmarDestructivo(t.solicitudes.confirmar_cambio_estado);
       if (!confirmado) return;
     }
@@ -100,13 +139,29 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
     setGuardando(true);
     setError(null);
 
+    if (motivoElegido) {
+      const { error: errorResolucion } = await resolver({
+        tabla: TABLA,
+        filaId: solicitud.id,
+        motivoId: motivoElegido.id,
+        detalle: motivoElegido.pide_detalle ? detalle.trim() : null,
+      });
+
+      if (errorResolucion) {
+        setError(mensajeDeError(errorResolucion, t));
+        setGuardando(false);
+        return;
+      }
+    }
+
+    // Lo que se anotó y qué lugar se reconoció son otra cosa que la decisión, y se guardan aparte.
     const { error: errorUpdate } = await supabase
       .from('solicitudes')
-      .update({ estado: nuevoEstado, nota_interna: nota, lugar_id: lugar || null })
+      .update({ nota_interna: nota, lugar_id: lugar || null })
       .eq('id', solicitud.id);
 
     if (errorUpdate) {
-      setError(t.comun.error_generico);
+      setError(mensajeDeError(errorUpdate, t));
       setGuardando(false);
       return;
     }
@@ -141,6 +196,8 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
           <dd>{solicitud.dias_horario}</dd>
           <dt>{t.solicitudes.descripcion}</dt>
           <dd>{solicitud.descripcion || '—'}</dd>
+          <dt>{t.solicitudes.col_estado}</dt>
+          <dd>{t.solicitudes[`estado_${solicitud.estado || 'nueva'}`]}</dd>
         </dl>
 
         {/* Es una lista y nunca texto libre: la localidad ya tiene ficha en la Prestadora y lo que
@@ -157,13 +214,48 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
           deshabilitado={guardando}
         />
 
-        <FormField label={t.solicitudes.col_estado} name="estado" type="select" value={nuevoEstado} onChange={(e) => setNuevoEstado(e.target.value)}>
-          {ESTADOS.map((estado) => (
-            <option key={estado} value={estado}>
-              {t.solicitudes[`estado_${estado}`]}
-            </option>
+        {/* Los cuatro estados de lo que carga datos: mientras la lista de motivos viene, se avisa;
+            si falló, se ofrece volver a pedirla; si la Prestadora se quedó sin ninguno encendido,
+            no hay nada que elegir. */}
+        {estadoMotivos === 'cargando' && <p>{t.comun.cargando}</p>}
+        {estadoMotivos === 'error' && (
+          <Alert variant="error">
+            {errorMotivos}{' '}
+            <Button variant="secondary" onClick={recargarMotivos}>{t.comun.reintentar}</Button>
+          </Alert>
+        )}
+        {estadoMotivos === 'vacio' && (
+          <Alert variant="info">{t.comun.vacio}</Alert>
+        )}
+
+        <FormField
+          label={t.comun.motivo}
+          name="motivo"
+          type="select"
+          value={motivoId}
+          onChange={(e) => {
+            setMotivoId(e.target.value);
+            setDetalle('');
+          }}
+          disabled={guardando || estadoMotivos !== 'listo'}
+        >
+          <option value="">{t.comun.motivo_elegir}</option>
+          {motivos.map((motivo) => (
+            <option key={motivo.id} value={motivo.id}>{motivo.nombre}</option>
           ))}
         </FormField>
+
+        {motivoElegido?.pide_detalle && (
+          <FormField
+            label={t.comun.detalle}
+            name="detalle"
+            type="textarea"
+            value={detalle}
+            onChange={(e) => setDetalle(e.target.value)}
+            disabled={guardando}
+            required
+          />
+        )}
 
         <FormField
           label={t.comun.nota_interna}
@@ -196,7 +288,10 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
           <Button variant="secondary" onClick={onClose} disabled={guardando}>
             {t.comun.cancelar}
           </Button>
-          <Button onClick={handleGuardar} disabled={guardando}>
+          <Button
+            onClick={handleGuardar}
+            disabled={guardando || (motivoElegido?.pide_detalle && !detalle.trim())}
+          >
             {guardando ? t.comun.guardando : t.comun.guardar}
           </Button>
         </div>

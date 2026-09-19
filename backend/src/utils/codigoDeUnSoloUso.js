@@ -111,7 +111,11 @@ export function codigoNuevoParaGuardar(expiraEn) {
 //
 // La lista de tablas está acá además de en la base para que un nombre de tabla no llegue nunca
 // desde afuera. Ninguna de las dos puntas la arma con lo que venga en un pedido.
-const TABLAS_CON_INTENTOS = new Set(['instrucciones_acceso_circulo', 'guardia_comprobaciones']);
+const TABLAS_CON_INTENTOS = new Set([
+  'instrucciones_acceso_circulo',
+  'guardia_comprobaciones',
+  'codigos_al_telefono',
+]);
 
 /**
  * Suma un intento y devuelve cuántos van, contando el que se acaba de hacer.

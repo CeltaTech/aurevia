@@ -13,6 +13,7 @@ import { panelNotificacionesRouter } from './routes/panelNotificaciones.js';
 import { panelCuentasRouter } from './routes/panelCuentas.js';
 import { panelUsuariosRouter } from './routes/panelUsuarios.js';
 import { panelLugaresDeTrabajoRouter } from './routes/panelLugaresDeTrabajo.js';
+import { panelFormulariosRouter } from './routes/panelFormularios.js';
 import { panelSesionTenantRouter } from './routes/panelSesionTenant.js';
 import { panelAuditoriaRouter } from './routes/panelAuditoria.js';
 import { panelPrestadorasRouter } from './routes/panelPrestadoras.js';
@@ -29,7 +30,10 @@ import { panelCobrosRouter } from './routes/panelCobros.js';
 import { panelVitalesAutorizacionRouter } from './routes/panelVitalesAutorizacion.js';
 import { panelConfiguracionPlataformaRouter } from './routes/panelConfiguracionPlataforma.js';
 import { panelMfaRecuperacionRouter } from './routes/panelMfaRecuperacion.js';
+import { panelCuentaSeguraRouter } from './routes/panelCuentaSegura.js';
+import { panelHabilitarClaveRouter } from './routes/panelHabilitarClave.js';
 import { configuracionPublicaRouter } from './routes/configuracionPublica.js';
+import { marcaDeLaPuertaRouter } from './routes/marcaDeLaPuerta.js';
 import { activarCuentaRouter } from './routes/activarCuenta.js';
 import { recuperarClaveRouter } from './routes/recuperarClave.js';
 import { panelEntrevistasRouter } from './routes/panelEntrevistas.js';
@@ -127,10 +131,14 @@ app.get('/health', (req, res) => {
 app.use('/api/publico/:prestadora/solicitud-servicio', solicitudServicioRouter);
 app.use('/api/publico/:prestadora/postulacion-asistente', postulacionAsistenteRouter);
 app.use('/api/publico/:prestadora/configuracion', configuracionPublicaRouter);
+// Y el cuarto: con qué marca se presenta la puerta por donde se está entrando, que es lo que la
+// pantalla de ingreso del Panel necesita saber antes de que nadie escriba una clave.
+app.use('/api/publico/:prestadora/marca', marcaDeLaPuertaRouter);
 app.use('/api/panel/notificar', panelNotificacionesRouter);
 app.use('/api/panel/cuentas', panelCuentasRouter);
 app.use('/api/panel/usuarios', panelUsuariosRouter);
 app.use('/api/panel/lugares-de-trabajo', panelLugaresDeTrabajoRouter);
+app.use('/api/panel/formularios', panelFormulariosRouter);
 app.use('/api/panel/sesion-tenant', panelSesionTenantRouter);
 app.use('/api/panel/auditoria', panelAuditoriaRouter);
 app.use('/api/panel/prestadoras', panelPrestadorasRouter);
@@ -149,6 +157,8 @@ app.use('/api/panel/emergencias', panelEmergenciasRouter);
 app.use('/api/panel/vitales-autorizacion', panelVitalesAutorizacionRouter);
 app.use('/api/panel/configuracion-plataforma', panelConfiguracionPlataformaRouter);
 app.use('/api/panel/mfa-recuperacion', panelMfaRecuperacionRouter);
+app.use('/api/panel/cuenta-segura', panelCuentaSeguraRouter);
+app.use('/api/panel/habilitar-clave', panelHabilitarClaveRouter);
 app.use('/api/activar-cuenta', activarCuentaRouter);
 app.use('/api/recuperar-clave', recuperarClaveRouter);
 // Sin sesión, como la activación de cuenta: quien llega trae la llave que le llegó por correo, y

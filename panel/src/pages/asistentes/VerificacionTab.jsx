@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEtapasIncorporacion } from '../../hooks/useEtapasIncorporacion';
+import { yaCargo } from '../../hooks/useCatalogo';
 import { supabase } from '../../lib/supabaseClient';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
@@ -14,7 +15,7 @@ import { ReferenciasLaborales } from './ReferenciasLaborales';
 const ESTADOS = ['pendiente', 'aprobada', 'rechazada'];
 
 export function VerificacionTab({ asistente }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { usuario } = useAuth();
   const { filas: etapas, estado: estadoEtapas, error: errorEtapas } = useEtapasIncorporacion(asistente.prestadora_id);
   const [verificaciones, setVerificaciones] = useState([]);
@@ -67,7 +68,7 @@ export function VerificacionTab({ asistente }) {
   const avance = avanceDeIncorporacion(etapas, verificaciones);
   const estadoCombinado = estadoCarga === 'error' || estadoEtapas === 'error'
     ? 'error'
-    : (estadoCarga === 'listo' && estadoEtapas === 'listo' ? 'listo' : 'cargando');
+    : (estadoCarga === 'listo' && yaCargo(estadoEtapas) ? 'listo' : 'cargando');
 
   return (
     <div>
@@ -141,7 +142,7 @@ export function VerificacionTab({ asistente }) {
               />
               {fila.completado_en && (
                 <p className="panel-explicacion">
-                  {t.asistentes.verificacion.completado_en} {new Date(fila.completado_en).toLocaleDateString()}
+                  {t.asistentes.verificacion.completado_en} {new Date(fila.completado_en).toLocaleDateString(locale)}
                 </p>
               )}
               {guardandoEtapa === etapaFila.clave && <p className="panel-explicacion">{t.comun.guardando}</p>}

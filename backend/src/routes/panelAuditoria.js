@@ -63,3 +63,37 @@ panelAuditoriaRouter.get('/', requiereRolPanel, async (req, res) => {
   if (error) return responderError(res, error);
   res.json({ eventos: data });
 });
+
+// El registro de lo que hace la gente de la Prestadora, que es la otra pregunta y por eso es la
+// otra tabla: aquella contesta qué hizo CeltaTech adentro de una Prestadora ajena, y ésta qué
+// hizo la Prestadora en su propia Organización. El porqué de que sean dos está escrito en
+// `supabase/migrations/20261001110000_registro_de_actividad.sql`.
+//
+// El alcance es el mismo de siempre y por el mismo motivo: la Prestadora sobre la que la persona
+// está parada, y ninguna otra. `prestadoraId` sale de `requiereRolPanel`, que resuelve la
+// precedencia con el mismo orden que `interno.current_tenant()`. Falla cerrado: sin Prestadora
+// resuelta no se entrega nada.
+//
+// Lo lee administración y nadie más. El registro dice qué hizo cada uno, y eso no es información
+// de quien coordina turnos. Es el mismo alcance que la política
+// `administracion_lee_el_registro_de_actividad` de la base.
+panelAuditoriaRouter.get('/actividad', requiereRolPanel, async (req, res) => {
+  const { rol, prestadoraId } = req.usuarioPanel;
+
+  if (!esAdminOSuperior(rol)) {
+    return res.status(403).json({ error: 'Sin permiso para ver el registro de actividad' });
+  }
+  if (!prestadoraId) {
+    return res.status(403).json({ error: 'Sin prestadora asociada' });
+  }
+
+  const { data, error } = await supabase
+    .from('registro_actividad')
+    .select('id, usuario_id, accion, tabla_afectada, registro_id, campos_cambiados, detalle, created_at, usuarios(nombre)')
+    .eq('prestadora_id', prestadoraId)
+    .order('created_at', { ascending: false })
+    .limit(500);
+
+  if (error) return responderError(res, error);
+  res.json({ actividad: data });
+});

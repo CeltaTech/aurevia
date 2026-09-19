@@ -6,6 +6,8 @@ import {
   reglaDeEquipoDe,
   REGLA_QUE_SE_PUEDE_TOCAR,
 } from './equipoDelPaciente.js';
+// El correo de una persona se pide en un solo lugar. Acá había una segunda copia de esa lectura.
+import { correoDe } from './correoDeUnaPersona.js';
 
 // Quiénes son el equipo de un Paciente, leídos de la base.
 // ============================================================================
@@ -278,18 +280,6 @@ async function nombresDeUsuarios(ids, prestadoraId) {
   }
   for (const fila of data ?? []) nombres.set(fila.id, fila.nombre);
   return nombres;
-}
-
-/**
- * El correo de una persona del Panel.
- *
- * Vive en la tabla de cuentas y no en `usuarios`, así que se pide por ahí. Sin correo el aviso no
- * sale para esa persona, pero el proceso sigue: los demás tienen que enterarse igual.
- */
-async function correoDe(usuarioId) {
-  const { data, error } = await supabase.auth.admin.getUserById(usuarioId);
-  if (error || !data?.user?.email) return null;
-  return data.user.email;
 }
 
 // La fecha de un momento como la guarda la base (`2026-08-07`), en hora local. `toISOString()` a

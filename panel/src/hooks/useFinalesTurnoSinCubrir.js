@@ -1,7 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
-import { mensajeDeError } from '../lib/errores';
-import { useLocale } from '../i18n/LocaleContext';
+import { useMemo } from 'react';
+import { useCatalogo } from './useCatalogo';
 import { finalesQueSeOfrecen } from '../lib/incidenteTurnoSinCubrir';
 
 // Cómo puede terminar un turno que quedó sin nadie, según esta Prestadora. Nace con los que trae
@@ -11,36 +9,20 @@ import { finalesQueSeOfrecen } from '../lib/incidenteTurnoSinCubrir';
 // Se piden los encendidos y se descartan acá los dos que escribe el motor: son finales de verdad
 // —quedan escritos en expedientes cerrados— pero no se eligen, porque la base ya los dice.
 export function useFinalesTurnoSinCubrir(prestadoraId) {
-  const { t } = useLocale();
-  const [filas, setFilas] = useState([]);
-  const [estado, setEstado] = useState('cargando'); // cargando | error | listo
-  const [error, setError] = useState(null);
+  const { filas: traidos, estado, error, recargar } = useCatalogo('finales_turno_sin_cubrir', {
+    filtros: { prestadora_id: prestadoraId, activo: true },
+    requiere: [prestadoraId],
+  });
 
-  const recargar = useCallback(async () => {
-    if (!prestadoraId) return;
-    setEstado('cargando');
-    setError(null);
+  const filas = useMemo(() => finalesQueSeOfrecen(traidos), [traidos]);
 
-    const { data, error: errorConsulta } = await supabase
-      .from('finales_turno_sin_cubrir')
-      .select('*')
-      .eq('prestadora_id', prestadoraId)
-      .eq('activo', true)
-      .order('orden');
-
-    if (errorConsulta) {
-      setError(mensajeDeError(errorConsulta, t));
-      setEstado('error');
-      return;
-    }
-
-    setFilas(finalesQueSeOfrecen(data ?? []));
-    setEstado('listo');
-  }, [prestadoraId, t]);
-
-  useEffect(() => {
-    recargar();
-  }, [recargar]);
-
-  return { filas, estado, error, recargar };
+  // El vacío se cuenta sobre lo que queda para elegir, no sobre lo que trajo la base: una
+  // Prestadora cuyos únicos finales encendidos son los dos que escribe el motor no tiene ninguno
+  // que ofrecer, y eso es lo que hay que decirle.
+  return {
+    filas,
+    estado: estado === 'listo' && filas.length === 0 ? 'vacio' : estado,
+    error,
+    recargar,
+  };
 }

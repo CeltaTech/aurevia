@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { FormField } from '../components/ui/FormField';
@@ -29,8 +29,43 @@ export function ClaveNueva() {
   const [motivoSinReintento, setMotivoSinReintento] = useState('');
   const [errorCampo, setErrorCampo] = useState(null);
   const [cambiada, setCambiada] = useState(false);
+  const [requiereCodigo, setRequiereCodigo] = useState(false);
+  const [codigo, setCodigo] = useState('');
 
   const avisoDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
+
+  /* EL SEGUNDO FACTOR SE PREGUNTA ACÁ Y NO AL PEDIR EL ENLACE. Preguntarlo antes contestaría si
+     esa persona tiene cuenta y si tiene número verificado; acá el enlace ya probó que lee ese
+     correo, así que no se filtra nada nuevo.
+
+     El motor contesta que no hace falta en tres casos —sin número verificado, sin vía para
+     mandarlo, o con la puerta que abrió la Prestadora—, y entonces esta pantalla queda como
+     estaba. El token va en el cuerpo: por la dirección web no viaja. */
+  useEffect(() => {
+    if (!token) return undefined;
+    let vigente = true;
+
+    (async () => {
+      try {
+        const respuesta = await fetch(`${API_URL}/api/recuperar-clave/segundo-factor`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        });
+        const resultado = await respuesta.json().catch(() => ({}));
+        if (!vigente || !respuesta.ok) return;
+        if (resultado.requiereCodigo) setRequiereCodigo(true);
+      } catch (err) {
+        // Que esto falle no puede trabar el cambio de clave: el motor vuelve a exigir el código
+        // al canjear, así que lo que se pierde es el casillero, no el control.
+        console.error('ClaveNueva:', err?.message);
+      }
+    })();
+
+    return () => {
+      vigente = false;
+    };
+  }, [token]);
 
   async function handleGuardar(evento) {
     evento.preventDefault();
@@ -54,7 +89,7 @@ export function ClaveNueva() {
       const respuesta = await fetch(`${API_URL}/api/recuperar-clave/canjear`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, password }),
+        body: JSON.stringify({ token, password, codigo: codigo || null }),
       });
       const resultado = await respuesta.json().catch(() => ({}));
       if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
@@ -137,7 +172,19 @@ export function ClaveNueva() {
           error={avisoDe('confirmacion')}
         />
 
-        <Button type="submit" disabled={enviando}>
+        {requiereCodigo && (
+          <FormField
+            label={t.cuenta_segura.codigo}
+            name="codigo"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            required
+            value={codigo}
+            onChange={(e) => setCodigo(e.target.value)}
+          />
+        )}
+
+        <Button type="submit" disabled={enviando || (requiereCodigo && !codigo)}>
           {enviando ? t.auth.activar_enviando : t.auth.clave_nueva_confirmar}
         </Button>
       </form>

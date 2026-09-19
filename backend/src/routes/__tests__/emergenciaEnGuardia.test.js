@@ -414,3 +414,53 @@ describe('la bandeja del Panel', () => {
     assert.equal(estado, 403);
   });
 });
+
+// ---------------------------------------------------------------------------
+// El reenvío de la cola sin señal
+// ---------------------------------------------------------------------------
+//
+// Una emergencia puede pasar dos veces en la misma guardia, así que el estado no alcanza para
+// reconocer un reenvío: dos filas iguales pueden ser dos emergencias de verdad. Lo que dice que
+// es el mismo hecho es el identificador que el teléfono puso ANTES del primer intento.
+
+const IDENTIFICADOR_DEL_TELEFONO = '77777777-7777-4777-8777-777777777777';
+
+describe('un reenvío de la cola no duplica la emergencia', () => {
+  it('el mismo aviso mandado dos veces escribe una sola emergencia', async () => {
+    emergenciasEnLaBase = [];
+    const primero = await desdeElTelefono(GUARDIA, { detalle: DETALLE, clienteUuid: IDENTIFICADOR_DEL_TELEFONO });
+    assert.equal(primero.estado, 200);
+    assert.equal(emergenciasAnotadas().length, 1);
+    assert.equal(emergenciasAnotadas()[0].cliente_uuid, IDENTIFICADOR_DEL_TELEFONO);
+
+    // Lo que pasa cuando se perdió la respuesta y no el pedido: la fila ya está.
+    emergenciasEnLaBase = [emergenciaDePrueba({ cliente_uuid: IDENTIFICADOR_DEL_TELEFONO })];
+    llamadas = [];
+
+    const segundo = await desdeElTelefono(GUARDIA, { detalle: DETALLE, clienteUuid: IDENTIFICADOR_DEL_TELEFONO });
+    assert.equal(segundo.estado, 200);
+    assert.equal(segundo.cuerpo.yaRegistrado, true);
+    assert.equal(emergenciasAnotadas().length, 0, 'el reenvío no puede escribir una segunda emergencia');
+  });
+
+  it('dos emergencias distintas de la misma guardia se guardan las dos', async () => {
+    // El otro lado de la regla: si esto también se frenara, la segunda emergencia de un turno
+    // largo no le llegaría a nadie.
+    emergenciasEnLaBase = [emergenciaDePrueba({ cliente_uuid: IDENTIFICADOR_DEL_TELEFONO })];
+    const { estado, cuerpo } = await desdeElTelefono(GUARDIA, {
+      detalle: DETALLE,
+      clienteUuid: '66666666-6666-4666-8666-666666666666',
+    });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.yaRegistrado, undefined);
+    assert.equal(emergenciasAnotadas().length, 1);
+  });
+
+  it('el reenvío no vuelve a avisarle al Coordinador', async () => {
+    emergenciasEnLaBase = [emergenciaDePrueba({ cliente_uuid: IDENTIFICADOR_DEL_TELEFONO })];
+    llamadas = [];
+    await desdeElTelefono(GUARDIA, { detalle: DETALLE, clienteUuid: IDENTIFICADOR_DEL_TELEFONO });
+    const escrituras = llamadas.filter((l) => l.clave.startsWith('POST /rest/v1/') || l.clave.startsWith('PATCH /rest/v1/'));
+    assert.deepEqual(escrituras, [], 'un reenvío reconocido no escribe nada');
+  });
+});

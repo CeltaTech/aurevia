@@ -92,9 +92,18 @@ function esLineaDeComentario(linea) {
 // tener: qué contrató cada cliente es de CeltaTech.
 const CLAVE_DE_ENTITLEMENT = new RegExp(`\\b${IDENTIDAD.codigo}(\\.[a-z0-9_]+)+`, 'gi');
 
+// El dominio sobre el que se le habla al servicio de acceso. No existe ni puede
+// existir, no llega a ninguna pantalla y no se cambia nunca: cambiarlo es perder
+// todas las cuentas, porque el servicio de acceso deja de encontrarlas
+// (`backend/src/config/correoDeAcceso.js`). Es de lo que se guarda para siempre,
+// como las claves de arriba, y por eso se deja pasar. La siembra lo arma en SQL
+// porque de ese lado no se puede importar el archivo donde esa forma se decide.
+const DOMINIO_DEL_ACCESO = new RegExp(`acceso\\.${IDENTIDAD.nombre}\\.invalid`, 'gi');
+
 function sinClavesDeEntitlement(linea, rutaRelativa) {
-  if (extname(rutaRelativa) !== '.sql') return linea;
-  return linea.replace(CLAVE_DE_ENTITLEMENT, '');
+  const sinDominio = linea.replace(DOMINIO_DEL_ACCESO, '');
+  if (extname(rutaRelativa) !== '.sql') return sinDominio;
+  return sinDominio.replace(CLAVE_DE_ENTITLEMENT, '');
 }
 
 function* recorrer(directorio) {

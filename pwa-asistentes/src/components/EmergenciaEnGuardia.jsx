@@ -43,7 +43,10 @@ export default function EmergenciaEnGuardia({ t, locale, guardiaId, alRegistrar 
     setEnviando(true);
     // El momento en que pasó viaja con el aviso. Si esto queda media hora en la cola, esa media
     // hora es justamente el dato que no se puede perder.
-    const datos = { detalle: detalle.trim(), ocurrido_at: new Date().toISOString() };
+    // El identificador del envío se pone antes del primer intento, para que un reenvío no
+    // anote la misma emergencia dos veces.
+    const clienteUuid = nuevoId();
+    const datos = { detalle: detalle.trim(), ocurrido_at: new Date().toISOString(), clienteUuid };
     try {
       const resultado = await api.avisarEmergencia(guardiaId, datos);
       setReportado({ at: resultado.reportadoAt, enviado: true });
@@ -56,7 +59,7 @@ export default function EmergenciaEnGuardia({ t, locale, guardiaId, alRegistrar 
         setEnviando(false);
         return;
       }
-      await agregarACola({ id: nuevoId(), tipo: 'emergencia', guardiaId, payload: datos });
+      await agregarACola({ id: clienteUuid, tipo: 'emergencia', guardiaId, payload: datos });
       setReportado({ at: datos.ocurrido_at, enviado: false });
       setAbriendo(false);
       setDetalle('');

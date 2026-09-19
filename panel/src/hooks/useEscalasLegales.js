@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
-import { mensajeDeError } from '../lib/errores';
-import { useLocale } from '../i18n/LocaleContext';
+import { useCallback } from 'react';
+import { useCatalogo } from './useCatalogo';
+import { usePaisDeLaPrestadora } from './usePaisDeLaPrestadora';
 
 // Trae únicamente las escalas legales de la jurisdicción de la Prestadora activa (resuelta
 // vía prestadoras.pais, mismo patrón que AdvertenciaLegalContext.jsx:29-33) — pendiente #72.
@@ -10,48 +9,38 @@ import { useLocale } from '../i18n/LocaleContext';
 // por prestadora_id. La resolución por fecha del hecho se hace después con
 // resolverEscalasVigentes, nunca acá.
 export function useEscalasLegales(prestadoraId) {
-  const { t } = useLocale();
-  const [filas, setFilas] = useState([]);
-  const [jurisdiccion, setJurisdiccion] = useState(null);
-  const [estado, setEstado] = useState('cargando'); // cargando | error | listo
-  const [error, setError] = useState(null);
+  const {
+    pais,
+    estado: estadoPais,
+    error: errorPais,
+    recargar: recargarPais,
+  } = usePaisDeLaPrestadora(prestadoraId);
 
-  const recargar = useCallback(async () => {
-    if (!prestadoraId) return;
-    setEstado('cargando');
-    setError(null);
+  const {
+    filas,
+    estado: estadoEscalas,
+    error: errorEscalas,
+    recargar: recargarEscalas,
+  } = useCatalogo('escalas_legales', {
+    filtros: { jurisdiccion: pais },
+    orden: { columna: 'vigencia_desde', ascendente: false },
+    requiere: [pais],
+  });
 
-    const { data: prestadora, error: errorPrestadora } = await supabase
-      .from('prestadoras')
-      .select('pais')
-      .eq('id', prestadoraId)
-      .single();
-    if (errorPrestadora || !prestadora) {
-      setError(mensajeDeError(errorPrestadora ?? { code: 'PGRST116' }, t));
-      setEstado('error');
-      return;
-    }
-    setJurisdiccion(prestadora.pais);
+  const recargar = useCallback(() => {
+    recargarPais();
+    recargarEscalas();
+  }, [recargarPais, recargarEscalas]);
 
-    const { data, error: errorEscalas } = await supabase
-      .from('escalas_legales')
-      .select('*')
-      .eq('jurisdiccion', prestadora.pais)
-      .order('vigencia_desde', { ascending: false });
+  // Sin jurisdicción no hay escala que buscar, así que lo que se muestra es lo que pasó al
+  // resolverla, no una lista vacía sin explicación.
+  const estado = estadoPais === 'listo' ? estadoEscalas : estadoPais;
 
-    if (errorEscalas) {
-      setError(mensajeDeError(errorEscalas, t));
-      setEstado('error');
-      return;
-    }
-
-    setFilas(data ?? []);
-    setEstado('listo');
-  }, [prestadoraId, t]);
-
-  useEffect(() => {
-    recargar();
-  }, [recargar]);
-
-  return { filas, estado, error, recargar, jurisdiccion };
+  return {
+    filas,
+    estado,
+    error: errorPais || errorEscalas,
+    recargar,
+    jurisdiccion: pais,
+  };
 }

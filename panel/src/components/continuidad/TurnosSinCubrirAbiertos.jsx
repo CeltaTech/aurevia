@@ -244,11 +244,11 @@ function CerrarTurnoVacio({ incidente, onClose, onCerrado }) {
         {finales.estado === 'error' && <Alert variant="error">{finales.error}</Alert>}
         {/* Sin lista no hay nada que elegir, y eso no es una falla del sistema: es una Prestadora
             que apagó todos sus finales. Se dice, y se dice dónde se arregla. */}
-        {finales.estado === 'listo' && finales.filas.length === 0 && (
+        {finales.estado === 'vacio' && (
           <Alert variant="error">{t.continuidad.turnos_vacios_sin_finales}</Alert>
         )}
 
-        {finales.estado === 'listo' && finales.filas.length > 0 && (
+        {finales.estado === 'listo' && (
           <FormField
             label={t.continuidad.turnos_vacios_como_termino}
             name="como-termino"

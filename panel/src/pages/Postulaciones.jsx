@@ -5,7 +5,9 @@ import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { useFiltros } from '../hooks/useFiltros';
 import { useZonasCobertura } from '../hooks/useZonasCobertura';
 import { useOpcionesPostulacion } from '../hooks/useOpcionesPostulacion';
+import { useListaDeOpciones } from '../hooks/useListaDeOpciones';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { FiltroDeCatalogo } from '../components/layout/FiltroDeCatalogo';
 import { PostulacionDetalle } from './PostulacionDetalle';
 import { traducirCodigos } from '../lib/postulacionCodigos';
 import { totalesDePostulaciones } from '../lib/totalesDePostulaciones';
@@ -34,13 +36,22 @@ export function Postulaciones() {
   const { t, locale } = useLocale();
   const prestadoraId = usePrestadoraActual();
   const { filas, estado, error, recargar } = useSupabaseTable('postulaciones');
-  const { filas: zonas } = useZonasCobertura(prestadoraId);
+  // Los cuatro estados de cada catálogo van al filtro que alimenta: quien filtra tiene que poder
+  // distinguir «todavía no llegó» de «falló» de «esta Prestadora no tiene ninguna».
+  const zonasDeCobertura = useZonasCobertura(prestadoraId);
+  const zonas = zonasDeCobertura.filas;
   const zonasLabels = useMemo(
     () => Object.fromEntries(zonas.map((z) => [z.codigo, z.nombre])),
     [zonas],
   );
   // Las especialidades son las que cargó esta Prestadora, no dos escritas en las traducciones.
-  const { filas: especialidades, labels: especialidadesLabels } = useOpcionesPostulacion(prestadoraId, 'especialidad');
+  const lasEspecialidades = useOpcionesPostulacion(prestadoraId, 'especialidad');
+  const especialidadesLabels = lasEspecialidades.labels;
+  // La disponibilidad y la situación fiscal salían del archivo de traducciones, recorridas con un
+  // bucle. Ahora son dos listas del registro de opciones, así que cada Prestadora puede agregar
+  // sus turnos sin que haga falta publicar una versión nueva del Panel.
+  const laDisponibilidad = useListaDeOpciones('disponibilidad');
+  const laSituacionFiscal = useListaDeOpciones('situacion_fiscal');
   const { f, set, limpiar, hayFiltros } = useFiltros(FILTROS_INICIALES);
   const [seleccionada, setSeleccionada] = useState(null);
 
@@ -98,30 +109,42 @@ export function Postulaciones() {
             </option>
           ))}
         </select>
-        <select value={f.especialidad} onChange={(e) => set('especialidad', e.target.value)} aria-label={t.postulaciones.filtro_especialidad}>
-          <option value="">{t.postulaciones.filtro_especialidad}</option>
-          {especialidades.map((e) => (
-            <option key={e.clave} value={e.clave}>{e.etiqueta}</option>
-          ))}
-        </select>
-        <select value={f.zona} onChange={(e) => set('zona', e.target.value)} aria-label={t.postulaciones.filtro_zona}>
-          <option value="">{t.postulaciones.filtro_zona}</option>
-          {zonas.map((z) => (
-            <option key={z.codigo} value={z.codigo}>{z.nombre}</option>
-          ))}
-        </select>
-        <select value={f.disponibilidad} onChange={(e) => set('disponibilidad', e.target.value)} aria-label={t.postulaciones.filtro_disponibilidad}>
-          <option value="">{t.postulaciones.filtro_disponibilidad}</option>
-          {Object.entries(t.postulaciones.disponibilidad_labels).map(([codigo, label]) => (
-            <option key={codigo} value={codigo}>{label}</option>
-          ))}
-        </select>
-        <select value={f.situacion_fiscal} onChange={(e) => set('situacion_fiscal', e.target.value)} aria-label={t.postulaciones.filtro_situacion_fiscal}>
-          <option value="">{t.postulaciones.filtro_situacion_fiscal}</option>
-          {Object.entries(t.postulaciones.situacion_fiscal_labels).map(([codigo, label]) => (
-            <option key={codigo} value={codigo}>{label}</option>
-          ))}
-        </select>
+        <FiltroDeCatalogo
+          etiqueta={t.postulaciones.filtro_especialidad}
+          valor={f.especialidad}
+          onCambiar={(v) => set('especialidad', v)}
+          opciones={lasEspecialidades.filas.map((e) => ({ valor: e.clave, texto: e.etiqueta }))}
+          estado={lasEspecialidades.estado}
+          error={lasEspecialidades.error}
+          recargar={lasEspecialidades.recargar}
+        />
+        <FiltroDeCatalogo
+          etiqueta={t.postulaciones.filtro_zona}
+          valor={f.zona}
+          onCambiar={(v) => set('zona', v)}
+          opciones={zonas.map((z) => ({ valor: z.codigo, texto: z.nombre }))}
+          estado={zonasDeCobertura.estado}
+          error={zonasDeCobertura.error}
+          recargar={zonasDeCobertura.recargar}
+        />
+        <FiltroDeCatalogo
+          etiqueta={t.postulaciones.filtro_disponibilidad}
+          valor={f.disponibilidad}
+          onCambiar={(v) => set('disponibilidad', v)}
+          opciones={laDisponibilidad.opciones.map((o) => ({ valor: o.clave, texto: o.texto }))}
+          estado={laDisponibilidad.estado}
+          error={laDisponibilidad.error}
+          recargar={laDisponibilidad.recargar}
+        />
+        <FiltroDeCatalogo
+          etiqueta={t.postulaciones.filtro_situacion_fiscal}
+          valor={f.situacion_fiscal}
+          onCambiar={(v) => set('situacion_fiscal', v)}
+          opciones={laSituacionFiscal.opciones.map((o) => ({ valor: o.clave, texto: o.texto }))}
+          estado={laSituacionFiscal.estado}
+          error={laSituacionFiscal.error}
+          recargar={laSituacionFiscal.recargar}
+        />
         <select value={f.urgencias} onChange={(e) => set('urgencias', e.target.value)} aria-label={t.postulaciones.filtro_urgencias}>
           <option value="">{t.postulaciones.filtro_urgencias}</option>
           <option value="si">{t.postulaciones.filtro_urgencias_si}</option>
@@ -184,12 +207,15 @@ export function Postulaciones() {
                 <td>{p.nombre}</td>
                 <td>{traducirCodigos(p.especialidades, especialidadesLabels)}</td>
                 <td>{traducirCodigos(p.zonas, zonasLabels)}</td>
-                <td>{new Date(p.creado_en).toLocaleDateString()}</td>
+                <td>{new Date(p.creado_en).toLocaleDateString(locale)}</td>
                 {/* La moneda sale de la fila, no de la Prestadora de quien mira: el importe está
                     guardado con la suya. Sin dato, `formatearImporte` escribe un guión. */}
                 <td>{formatearImporte(p.honorario_pretendido, p.moneda, locale)}</td>
                 <td>{p.anios_experiencia ?? '—'}</td>
-                <td>{t.postulaciones.situacion_fiscal_labels[p.situacion_fiscal] ?? p.situacion_fiscal}</td>
+                {/* Lo guardado es la clave; el texto sale del catálogo. Una clave sin opción
+                    cargada se muestra tal cual: lo que ya se escribió no depende de que el
+                    catálogo de hoy la siga teniendo. */}
+                <td>{laSituacionFiscal.textos[p.situacion_fiscal] ?? p.situacion_fiscal}</td>
                 <td>{p.disponible_urgencias ? t.comun.si : '—'}</td>
                 <td>{p.como_conocio || '—'}</td>
                 <td>

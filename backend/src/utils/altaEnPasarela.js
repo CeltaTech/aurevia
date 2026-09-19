@@ -53,6 +53,8 @@
 import { supabase } from '../db/connection.js';
 import { obtenerAdaptador, proveedoresDisponibles } from '../pasarelas/index.js';
 import { sumarDias } from './fechas.js';
+import { cuentaDeLaFicha } from './cuentaDeLaFicha.js';
+import { correoDe } from './correoDeUnaPersona.js';
 
 /** Los motivos por los que un alta no se puede hacer. Son códigos, no frases: la frase que lee la
  *  persona vive en las traducciones del Panel, en los tres idiomas
@@ -257,17 +259,14 @@ async function resolverRiel({ prestadoraId, proveedor }) {
   return { ok: true, proveedor: conectados[0] };
 }
 
-/** El correo real de la Familia. `usuarios` no guarda correos —viven del lado de las cuentas—, y
- *  `familias.id` es el mismo identificador que el de la cuenta, igual que ya resuelven
- *  `instruccionesCirculo.js` y `mfaRecuperacionEmail.js`. */
+/** El correo real de la Familia.
+ *
+ *  Dos pasos, y los dos hacen falta: `familias.id` es el Legajo, no la cuenta —dejaron de ser el
+ *  mismo número—, así que primero se busca de qué cuenta cuelga ese Legajo y recién ahí el correo,
+ *  que vive en `usuarios`. */
 async function correoDeLaFamilia(familiaId) {
   if (!familiaId) return null;
-  const { data, error } = await supabase.auth.admin.getUserById(familiaId);
-  if (error) {
-    console.error('No se pudo leer el correo de la Familia para el alta en la pasarela:', error.message);
-    return null;
-  }
-  return data?.user?.email || null;
+  return correoDe(await cuentaDeLaFicha('familias', familiaId));
 }
 
 /** Lo que se le devuelve a quien llamó. Nunca la credencial ni nada que venga de la caja fuerte. */

@@ -93,15 +93,10 @@ postulacionAsistenteRouter.post('/', resolverPrestadoraPublica, async (req, res)
     await enviarEmailCoordinador({
       evento: 'nueva_postulacion_asistente',
       prestadoraId,
+      // Del cuerpo del correo sale sólo el nombre: el documento, el teléfono, el correo y la
+      // situación fiscal se miran en el Panel, que es donde el permiso se comprueba.
       ...aviso('nueva_postulacion_asistente', await idiomaDeLaPrestadora(prestadoraId), {
         nombre: datos.nombre,
-        dni: datos.dni,
-        telefono: datos.telefono,
-        email: datos.email,
-        especialidades: datos.especialidades,
-        zonas: datos.zonas,
-        disponibilidad: datos.disponibilidad,
-        situacionFiscal: datos.situacion_fiscal,
       }),
     });
   } catch (err) {

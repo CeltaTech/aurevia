@@ -33,8 +33,8 @@ import { funcionDeRiesgoEncendida, ofreceMarketplace } from '../utils/marketplac
 import {
   LADO,
   abrirVideollamada,
-  contactoAbierto,
   conversacionDeLaPareja,
+  desdeCuando,
   escribirMensaje,
   marcarLeido,
   mensajesDeLaConversacion,
@@ -1503,13 +1503,12 @@ appFamiliasRouter.get('/marketplace/conversaciones/:id', requiereRolFamilia, asy
     await exigeVidriera(req);
     const conversacion = await conversacionDeLaFamilia(req);
 
-    const abierto = await contactoAbierto({
-      familiaId: conversacion.familia_id,
-      asistenteId: conversacion.asistente_id,
-    });
+    // El refresco del hilo abierto pide nada más lo posterior a lo que ya tiene. Sin `desde` sale
+    // el hilo entero, que es lo que hace falta al abrirlo.
+    const desde = desdeCuando(req.query?.desde);
 
     const [mensajes, { data: asistente }, enCurso, base] = await Promise.all([
-      mensajesDeLaConversacion({ conversacion, abierto }),
+      mensajesDeLaConversacion({ conversacion, desde }),
       supabase.from('asistentes').select('id, nombre, foto_url').eq('id', conversacion.asistente_id).maybeSingle(),
       videollamadaEnCurso(conversacion),
       direccionDeVideollamada(conversacion.prestadora_id),
@@ -1523,9 +1522,9 @@ appFamiliasRouter.get('/marketplace/conversaciones/:id', requiereRolFamilia, asy
         asistente: { id: conversacion.asistente_id, nombre: asistente?.nombre || '', foto_url: asistente?.foto_url || null },
       },
       mensajes,
-      // Viaja para que la pantalla pueda decir por qué hay marcas en el texto, y para que deje
-      // de decirlo cuando ya no las hay.
-      contacto_abierto: abierto,
+      // Qué es lo que viaja: el hilo entero, o nada más lo nuevo. La pantalla suma en un caso y
+      // reemplaza en el otro, y no tiene que deducirlo de lo que pidió.
+      solo_lo_nuevo: Boolean(desde),
       videollamada_disponible: Boolean(base),
       videollamada: enCurso,
     });
@@ -1549,13 +1548,9 @@ appFamiliasRouter.post('/marketplace/conversaciones/:id/mensajes', requiereRolFa
       cuerpo,
     });
 
-    // Se devuelve el mensaje como lo va a ver quien lo escribió: tapado si corresponde. Verlo
-    // entero del lado de quien lo mandó y tapado del otro haría creer que llegó completo.
-    const abierto = await contactoAbierto({
-      familiaId: conversacion.familia_id,
-      asistenteId: conversacion.asistente_id,
-    });
-    res.json({ mensajes: await mensajesDeLaConversacion({ conversacion, abierto }) });
+    // Se devuelve el hilo tal como quedó guardado: tapado si la base tapó algo, y con el motivo.
+    // Devolverle a quien escribió su texto entero le haría creer que llegó completo.
+    res.json({ mensajes: await mensajesDeLaConversacion({ conversacion }) });
   } catch (e) {
     responderError(res, e);
   }

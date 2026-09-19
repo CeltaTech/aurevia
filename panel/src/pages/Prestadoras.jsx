@@ -101,7 +101,7 @@ function ContadorDeCorreo() {
 }
 
 export function Prestadoras() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { sesion, recargar: recargarSesion, salir } = useTenantSession();
   const [prestadoras, setPrestadoras] = useState([]);
   const [estado, setEstado] = useState('cargando');
@@ -309,7 +309,7 @@ export function Prestadoras() {
         <Alert variant="info">
           <strong>{t.prestadoras.sesion_activa_titulo}:</strong> {sesion.prestadoras?.nombre_fantasia}
           {' — '}
-          {t.prestadoras.sesion_activa_expira.replace('{hora}', new Date(sesion.expira_at).toLocaleTimeString())}
+          {t.prestadoras.sesion_activa_expira.replace('{hora}', new Date(sesion.expira_at).toLocaleTimeString(locale))}
           {' '}
           <Button variant="secondary" onClick={handleSalir} disabled={saliendo}>
             {saliendo ? t.prestadoras.saliendo : t.prestadoras.salir}

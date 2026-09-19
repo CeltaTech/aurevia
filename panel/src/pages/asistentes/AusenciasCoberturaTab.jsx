@@ -55,7 +55,7 @@ async function llamarApiAusencias(path, opciones = {}) {
 }
 
 export function AusenciasCoberturaTab({ asistente }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const prestadoraId = usePrestadoraActual();
   const { empresa } = useEmpresa();
   const [ausencias, setAusencias] = useState([]);
@@ -362,8 +362,8 @@ export function AusenciasCoberturaTab({ asistente }) {
           return (
           <div key={a.id} className="panel-card-ausencia">
             <p>
-              <strong>{t.asistentes.ausencias[`tipo_${a.tipo}`]}</strong> — {new Date(a.fecha_inicio).toLocaleDateString()}
-              {a.fecha_fin ? ` → ${new Date(a.fecha_fin).toLocaleDateString()}` : ` (${t.asistentes.ausencias.en_curso})`}
+              <strong>{t.asistentes.ausencias[`tipo_${a.tipo}`]}</strong> — {new Date(a.fecha_inicio).toLocaleDateString(locale)}
+              {a.fecha_fin ? ` → ${new Date(a.fecha_fin).toLocaleDateString(locale)}` : ` (${t.asistentes.ausencias.en_curso})`}
             </p>
             {a.dias_computados !== null && a.dias_computados !== undefined && (
               <p>{con(t.asistentes.ausencias.dias_computados, { n: a.dias_computados })}</p>
@@ -452,7 +452,7 @@ export function AusenciasCoberturaTab({ asistente }) {
                 {/* Por qué la hace otro. La lista sale del catálogo de la Prestadora: si se quedó
                     sin ninguna encendida no hay nada que elegir, y se lo dice, porque un
                     desplegable vacío no explica nada. */}
-                {estadoMotivos === 'listo' && motivosSustitucion.length === 0 && (
+                {estadoMotivos === 'vacio' && (
                   <Alert variant="info">{t.asistentes.ausencias.sustitucion_sin_motivos}</Alert>
                 )}
                 {errorMotivos && <Alert variant="error">{errorMotivos}</Alert>}
@@ -462,7 +462,7 @@ export function AusenciasCoberturaTab({ asistente }) {
                   type="select"
                   value={coberturaForm[a.id]?.motivo || ''}
                   onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], motivo: e.target.value } }))}
-                  disabled={estadoMotivos !== 'listo' || motivosSustitucion.length === 0}
+                  disabled={estadoMotivos !== 'listo'}
                 >
                   <option value="">{t.guardias.nueva_guardia.elegir}</option>
                   {motivosSustitucion.map((m) => (

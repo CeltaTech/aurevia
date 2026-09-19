@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
+import { useMotivosDeResolucion } from '../../hooks/useMotivosDeResolucion';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
 import { FormField } from '../../components/ui/FormField';
@@ -16,7 +18,8 @@ import { con } from '../../lib/textos';
 // de cada una, elegir, guardar, cerrar, y repetir: diez guardias son cuarenta clics, y la
 // primera oportunidad de equivocarse aparece en el clic tres.
 //
-// Qué NO hace este archivo: hablar con la base. No importa `supabaseClient` a propósito. Este
+// Qué NO hace este archivo: escribir en la base. No importa `supabaseClient` a propósito —lee el
+// catálogo de motivos por el enganche de siempre, que es leer y no guardar—. Este
 // componente solo junta dos cosas —qué acción eligió el usuario y con qué parámetro— y se las
 // pasa a `onAplicar`. Quien guarda, quien decide el orden, quien limpia lo que haya que
 // limpiar de cada guardia (el incidente de relevo abierto, la publicación de la guardia
@@ -38,9 +41,15 @@ const CLAVE_BOTON = {
 
 const DIAS_POR_SEMANA = 7;
 
+// Qué se resuelve desde acá y en qué estado queda. Las mismas dos palabras que usa el detalle de una
+// guardia: es la misma decisión tomada sobre muchas, no otra parecida.
+const TABLA = 'guardias';
+const ESTADO_CANCELADA = 'cancelada';
+
 export function BarraAccionesMasivas({ seleccionadas = [], asistentes = [], onAplicar, onLimpiar }) {
   const { t } = useLocale();
   const confirmarDestructivo = useConfirmarDestructivo();
+  const prestadoraId = usePrestadoraActual();
 
   const [accion, setAccion] = useState(null);
   const [asistenteId, setAsistenteId] = useState('');
@@ -52,6 +61,21 @@ export function BarraAccionesMasivas({ seleccionadas = [], asistentes = [], onAp
   // el día que alguien tenga que explicar por qué se cayeron veinte guardias.
   const [origen, setOrigen] = useState('');
   const [alcance, setAlcance] = useState('');
+  // Y por qué se cancela, que es lo que después deja saber quién lo decidió y con qué razón. Sale
+  // del catálogo de la Prestadora, igual que en el detalle de una guardia: la vía rápida no guarda
+  // menos que la lenta.
+  const {
+    filas: motivos,
+    estado: estadoMotivos,
+    error: errorMotivos,
+    recargar: recargarMotivos,
+  } = useMotivosDeResolucion(prestadoraId, TABLA, ESTADO_CANCELADA);
+  const [motivoId, setMotivoId] = useState('');
+  const [detalle, setDetalle] = useState('');
+  const motivoElegido = useMemo(
+    () => motivos.find((motivo) => motivo.id === motivoId) ?? null,
+    [motivos, motivoId],
+  );
   // `enCurso` es true mientras `onAplicar` no volvió. Bloquea todos los botones: la regla 5 de
   // CLAUDE.md §7 no admite un segundo envío, y acá un doble clic no duplicaría un cambio sino
   // veinte.
@@ -86,7 +110,11 @@ export function BarraAccionesMasivas({ seleccionadas = [], asistentes = [], onAp
     (accion === 'reasignar' && Boolean(asistenteId)) ||
     (accion === 'correr' && minutosValidos) ||
     (accion === 'duplicar' && semanasValidas) ||
-    (accion === 'cancelar' && Boolean(origen) && Boolean(alcance));
+    (accion === 'cancelar'
+      && Boolean(motivoElegido)
+      && (!motivoElegido.pide_detalle || Boolean(detalle.trim()))
+      && Boolean(origen)
+      && Boolean(alcance));
 
   // Un adelanto de lo que va a pasar, calculado sobre la primera guardia marcada.
   // Es la única razón por la que este componente usa `horarios.js`: no guarda nada, solo
@@ -118,7 +146,14 @@ export function BarraAccionesMasivas({ seleccionadas = [], asistentes = [], onAp
     if (cual === 'reasignar') return { asistenteId };
     if (cual === 'correr') return { minutos: minutosNumero };
     if (cual === 'duplicar') return { semanas: semanasNumero };
-    if (cual === 'cancelar') return { origen, alcance };
+    if (cual === 'cancelar') {
+      return {
+        origen,
+        alcance,
+        motivoId,
+        detalle: motivoElegido?.pide_detalle ? detalle.trim() : null,
+      };
+    }
     return {};
   }
 
@@ -219,6 +254,55 @@ export function BarraAccionesMasivas({ seleccionadas = [], asistentes = [], onAp
 
           {accion === 'cancelar' && (
             <>
+              {/* Los cuatro estados de lo que carga datos: mientras la lista de motivos viene, se
+                  avisa; si falló, se ofrece volver a pedirla; si la Prestadora se quedó sin
+                  ninguno encendido, no hay nada que elegir. */}
+              {estadoMotivos === 'cargando' && <p>{t.comun.cargando}</p>}
+              {estadoMotivos === 'error' && (
+                <Alert variant="error">
+                  {errorMotivos}{' '}
+                  <Button type="button" variant="secondary" onClick={recargarMotivos}>
+                    {t.comun.reintentar}
+                  </Button>
+                </Alert>
+              )}
+              {estadoMotivos === 'vacio' && <Alert variant="info">{t.comun.vacio}</Alert>}
+
+              {/* Por qué se cancela. Sale del catálogo de la Prestadora, y el estado en el que
+                  quedan las guardias lo dice el motivo. */}
+              <FormField
+                label={t.comun.motivo}
+                name="masiva_cancelacion_motivo"
+                type="select"
+                value={motivoId}
+                onChange={(e) => {
+                  setResultado(null);
+                  setMotivoId(e.target.value);
+                  setDetalle('');
+                }}
+                disabled={enCurso || estadoMotivos !== 'listo'}
+              >
+                <option value="">{t.comun.motivo_elegir}</option>
+                {motivos.map((motivo) => (
+                  <option key={motivo.id} value={motivo.id}>{motivo.nombre}</option>
+                ))}
+              </FormField>
+
+              {motivoElegido?.pide_detalle && (
+                <FormField
+                  label={t.comun.detalle}
+                  name="masiva_cancelacion_detalle"
+                  type="textarea"
+                  value={detalle}
+                  onChange={(e) => {
+                    setResultado(null);
+                    setDetalle(e.target.value);
+                  }}
+                  disabled={enCurso}
+                  required
+                />
+              )}
+
               {/* Las mismas dos preguntas que hace el detalle de una guardia, con las mismas
                   palabras: son la misma decisión, no dos parecidas. */}
               <FormField

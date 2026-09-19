@@ -1,43 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
-import { mensajeDeError } from '../lib/errores';
-import { useLocale } from '../i18n/LocaleContext';
+import { useCatalogo } from './useCatalogo';
 
 // Zonas de cobertura reales configuradas por cada Prestadora (tabla zonas_cobertura) —
 // pendiente #18 candidatos 4 y 5 (docs/PLAN_HASTA_PRODUCCION.md). Reemplaza las 7 etiquetas fijas de
 // AMBA que antes vivían en t.postulaciones.zonas_labels: cada Prestadora puede operar en
 // cualquier región, sin geografía hardcodeada.
+//
+// La consulta y los cuatro estados salen de `useCatalogo`, que es la única pieza que trae una
+// lista de la base. Acá queda sólo lo que distingue a este catálogo de los demás.
 export function useZonasCobertura(prestadoraId) {
-  const { t } = useLocale();
-  const [filas, setFilas] = useState([]);
-  const [estado, setEstado] = useState('cargando'); // cargando | error | listo
-  const [error, setError] = useState(null);
-
-  const recargar = useCallback(async () => {
-    if (!prestadoraId) return;
-    setEstado('cargando');
-    setError(null);
-
-    const { data, error: errorConsulta } = await supabase
-      .from('zonas_cobertura')
-      .select('*')
-      .eq('prestadora_id', prestadoraId)
-      .eq('activa', true)
-      .order('orden');
-
-    if (errorConsulta) {
-      setError(mensajeDeError(errorConsulta, t));
-      setEstado('error');
-      return;
-    }
-
-    setFilas(data ?? []);
-    setEstado('listo');
-  }, [prestadoraId, t]);
-
-  useEffect(() => {
-    recargar();
-  }, [recargar]);
-
-  return { filas, estado, error, recargar };
+  return useCatalogo('zonas_cobertura', {
+    filtros: { prestadora_id: prestadoraId, activa: true },
+    requiere: [prestadoraId],
+  });
 }

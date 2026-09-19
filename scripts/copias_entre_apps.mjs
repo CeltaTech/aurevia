@@ -35,6 +35,15 @@ export const GRUPOS = [
     ],
   },
   {
+    que: 'con qué correo se le habla al servicio de acceso',
+    original: 'backend/src/config/correoDeAcceso.js',
+    copias: [
+      'panel/src/lib/correoDeAcceso.js',
+      'pwa-asistentes/src/lib/correoDeAcceso.js',
+      'pwa-familias/src/lib/correoDeAcceso.js',
+    ],
+  },
+  {
     que: 'qué clave se acepta',
     original: 'backend/src/config/reglaDeClave.js',
     copias: [
@@ -127,6 +136,11 @@ export const GRUPOS = [
     que: 'la marca de la Prestadora y qué funciones tiene encendidas',
     original: 'pwa-familias/src/context/PerfilContext.jsx',
     copias: ['pwa-asistentes/src/context/PerfilContext.jsx'],
+  },
+  {
+    que: 'qué pide cada formulario declarado y qué se acepta en cada casillero',
+    original: 'panel/src/lib/motorDeFormularios.js',
+    copias: ['backend/src/utils/motorDeFormularios.js'],
   },
   {
     que: 'cómo se muestra el tipo de un Asistente',
@@ -261,6 +275,33 @@ export const GRUPOS = [
     que: 'cómo se muestra un valor guardado en la base cuando falta su traducción',
     original: 'panel/src/i18n/valores.js',
     copias: ['pwa-asistentes/src/i18n/valores.js', 'pwa-familias/src/i18n/valores.js'],
+  },
+  {
+    que: 'cuáles son los tres idiomas y qué se habla en cada país',
+    original: 'backend/src/i18n/idiomas.js',
+    copias: [
+      'panel/src/i18n/idiomas.js',
+      'pwa-asistentes/src/i18n/idiomas.js',
+      'pwa-familias/src/i18n/idiomas.js',
+    ],
+  },
+  {
+    que: 'en qué idioma se le abre la pantalla a quien entra por primera vez',
+    original: 'panel/src/i18n/idiomaInicial.js',
+    copias: ['pwa-asistentes/src/i18n/idiomaInicial.js', 'pwa-familias/src/i18n/idiomaInicial.js'],
+  },
+  {
+    que: 'que una frase que falta avise en vez de dibujarse como un hueco en blanco',
+    original: 'panel/src/i18n/faltaLaFrase.js',
+    copias: ['pwa-asistentes/src/i18n/faltaLaFrase.js', 'pwa-familias/src/i18n/faltaLaFrase.js'],
+  },
+  {
+    que: 'el nombre de la Prestadora adentro del texto visible',
+    original: 'panel/src/i18n/marcaEnElTexto.js',
+    copias: [
+      'pwa-asistentes/src/i18n/marcaEnElTexto.js',
+      'pwa-familias/src/i18n/marcaEnElTexto.js',
+    ],
   },
   {
     que: 'la marca de la Prestadora guardada para cuando la aplicación no está abierta',

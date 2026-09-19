@@ -282,3 +282,91 @@ describe('terminar el descanso', () => {
     assert.equal(cierres().length, 0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// El reenvío de la cola sin señal
+// ---------------------------------------------------------------------------
+//
+// En una guardia de 72 horas se descansa más de una vez, así que dos filas iguales pueden ser dos
+// descansos de verdad: el estado no alcanza para reconocer un reenvío. Lo reconoce el
+// identificador que el teléfono pone ANTES del primer intento.
+//
+// Estas pruebas se rompen a propósito: se manda dos veces el mismo aviso, con el mismo
+// identificador, y la segunda vez no puede escribir nada.
+
+const IDENTIFICADOR = '33333333-3333-4333-8333-333333333333';
+
+describe('un reenvío de la cola no duplica el descanso', () => {
+  it('el mismo aviso mandado dos veces escribe un solo descanso', async () => {
+    const primero = await empezar(GUARDIA, { clienteUuid: IDENTIFICADOR });
+    assert.equal(primero.estado, 200);
+    assert.equal(descansosAnotados().length, 1);
+    assert.equal(descansosAnotados()[0].cliente_uuid, IDENTIFICADOR);
+
+    // Y ahora la base ya tiene esa fila, que es exactamente lo que pasa cuando se perdió la
+    // respuesta y no el pedido.
+    descansosEnLaBase = [
+      { id: DESCANSO, guardia_id: GUARDIA, cliente_uuid: IDENTIFICADOR, inicio_at: '2026-09-13T03:00:00.000Z', fin_at: null },
+    ];
+    llamadas = [];
+
+    const segundo = await empezar(GUARDIA, { clienteUuid: IDENTIFICADOR });
+    assert.equal(segundo.estado, 200);
+    assert.equal(segundo.cuerpo.yaRegistrado, true);
+    assert.equal(descansosAnotados().length, 0, 'el reenvío no puede escribir un segundo descanso');
+  });
+
+  it('dos descansos distintos de la misma guardia se guardan los dos', async () => {
+    // El otro lado de la regla: si esto también se frenara, la guardia larga perdería todos los
+    // descansos menos el primero.
+    descansosEnLaBase = [
+      { id: DESCANSO, guardia_id: GUARDIA, cliente_uuid: IDENTIFICADOR, inicio_at: '2026-09-13T03:00:00.000Z', fin_at: '2026-09-13T05:00:00.000Z' },
+    ];
+    const { estado, cuerpo } = await empezar(GUARDIA, { clienteUuid: '44444444-4444-4444-8444-444444444444' });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.yaRegistrado, undefined);
+    assert.equal(descansosAnotados().length, 1);
+  });
+
+  it('el reenvío del cierre no vuelve a escribir la hora de fin ni contesta que no hay descanso', async () => {
+    // Sin esto, el cierre que ya llegó encuentra el descanso cerrado y sale por el 404: a quien
+    // cerró su descanso se le diría que no había ninguno abierto.
+    descansosEnLaBase = [
+      {
+        id: DESCANSO,
+        guardia_id: GUARDIA,
+        inicio_at: '2026-09-13T03:00:00.000Z',
+        fin_at: '2026-09-13T05:00:00.000Z',
+        cliente_uuid_fin: IDENTIFICADOR,
+      },
+    ];
+    const { estado, cuerpo } = await terminar(GUARDIA, { clienteUuid: IDENTIFICADOR });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.yaRegistrado, true);
+    assert.equal(cuerpo.finAt, '2026-09-13T05:00:00.000Z');
+    assert.equal(cierres().length, 0, 'el reenvío del cierre no puede volver a escribir');
+  });
+
+  it('el cierre guarda su propio identificador, que no es el del que abrió', async () => {
+    descansosEnLaBase = [
+      {
+        id: DESCANSO,
+        guardia_id: GUARDIA,
+        cliente_uuid: IDENTIFICADOR,
+        cliente_uuid_fin: null,
+        inicio_at: '2026-09-13T03:00:00.000Z',
+        fin_at: null,
+      },
+    ];
+    const otro = '55555555-5555-4555-8555-555555555555';
+    const { estado } = await terminar(GUARDIA, { clienteUuid: otro });
+    assert.equal(estado, 200);
+    assert.equal(cierres()[0].cliente_uuid_fin, otro);
+  });
+
+  it('sin identificador el descanso se guarda igual: lo cargado desde el Panel no viene de ningún teléfono', async () => {
+    const { estado } = await empezar(GUARDIA);
+    assert.equal(estado, 200);
+    assert.equal(descansosAnotados()[0].cliente_uuid, null);
+  });
+});

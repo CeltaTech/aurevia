@@ -33,6 +33,32 @@ async function pedido(ruta, opciones = {}) {
   return datos;
 }
 
+/**
+ * Los datos de un acto del turno, con la hora del hecho y el identificador del envío puestos por
+ * el teléfono.
+ *
+ * LA HORA DEL HECHO LA PONE EL TELÉFONO, y el motor la guarda en su propia columna, aparte de la
+ * hora en que el dato le llegó a la base. Las dos no son la misma y no se mezclan: un check-in
+ * que esperó tres horas de señal ocurrió cuando la persona llegó, no cuando volvió la red.
+ *
+ * EL IDENTIFICADOR VA PUESTO DE ANTEMANO, antes del primer intento, para que un reenvío no
+ * duplique. Si el envío sale y la respuesta se pierde, el segundo intento llega con el mismo
+ * identificador y el motor lo reconoce en vez de anotar el hecho dos veces.
+ *
+ * Los dos se respetan si ya vienen: la cola manda los que anotó cuando pasó la cosa, y ésos son
+ * los que valen.
+ *
+ * El nombre `ocurrido_at` es el que ya usaban la emergencia y el «no puedo continuar»: es uno
+ * solo para todos los actos, no uno por pantalla.
+ */
+function conElActo(datos) {
+  return {
+    ...datos,
+    ocurrido_at: datos?.ocurrido_at ?? new Date().toISOString(),
+    clienteUuid: datos?.clienteUuid ?? crypto.randomUUID(),
+  };
+}
+
 export const api = {
   perfil: () => pedido('/perfil'),
   // Sus papeles y su Certificado. Va aparte de `/perfil` porque `/perfil` lo pide la aplicación
@@ -44,23 +70,23 @@ export const api = {
     pedido('/perfil/disponibilidad', { method: 'PATCH', body: JSON.stringify({ disponible }) }),
   misGuardias: () => pedido('/guardias'),
   guardia: (id) => pedido(`/guardias/${id}`),
-  checkin: (id, datos) => pedido(`/guardias/${id}/checkin`, { method: 'POST', body: JSON.stringify(datos) }),
-  checkout: (id, datos) => pedido(`/guardias/${id}/checkout`, { method: 'POST', body: JSON.stringify(datos) }),
+  checkin: (id, datos) => pedido(`/guardias/${id}/checkin`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
+  checkout: (id, datos) => pedido(`/guardias/${id}/checkout`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
   // Los dos actos de antes de llegar (pendiente #101). Son deliberados: los aprieta la persona,
   // y por eso quedan guardados como acto suyo y no como una cuenta del sistema. Ninguno de los
   // dos exige ubicación: sin GPS se manda igual y lo único que se pierde es la estimación.
-  registrarSalida: (id, datos) => pedido(`/guardias/${id}/salida`, { method: 'POST', body: JSON.stringify(datos) }),
-  avisarDemora: (id, datos) => pedido(`/guardias/${id}/aviso-demora`, { method: 'POST', body: JSON.stringify(datos) }),
+  registrarSalida: (id, datos) => pedido(`/guardias/${id}/salida`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
+  avisarDemora: (id, datos) => pedido(`/guardias/${id}/aviso-demora`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
   // Lo que pasa durante la guardia y no admite esperar al cierre. Manda el momento en que pasó,
   // porque si el aviso queda en la cola sin conexión lo que importa es esa hora y no la de la
   // sincronización.
-  avisarEmergencia: (id, datos) => pedido(`/guardias/${id}/emergencia`, { method: 'POST', body: JSON.stringify(datos) }),
+  avisarEmergencia: (id, datos) => pedido(`/guardias/${id}/emergencia`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
   // El «no puedo continuar» de quien se quedó esperando el relevo. No la libera del turno: avisa
   // con la máxima urgencia. Manda el momento por lo mismo que la emergencia.
-  noPuedeContinuar: (id, datos) => pedido(`/guardias/${id}/no-puedo-continuar`, { method: 'POST', body: JSON.stringify(datos) }),
+  noPuedeContinuar: (id, datos) => pedido(`/guardias/${id}/no-puedo-continuar`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
   // El descanso adentro de una guardia larga. No cierra nada ni descuenta nada: deja constancia.
-  empezarDescanso: (id, datos) => pedido(`/guardias/${id}/descanso/empezar`, { method: 'POST', body: JSON.stringify(datos) }),
-  terminarDescanso: (id, datos) => pedido(`/guardias/${id}/descanso/terminar`, { method: 'POST', body: JSON.stringify(datos) }),
+  empezarDescanso: (id, datos) => pedido(`/guardias/${id}/descanso/empezar`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
+  terminarDescanso: (id, datos) => pedido(`/guardias/${id}/descanso/terminar`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
   // El pase de guardia (pendiente #113). Tres pedidos y ninguno más:
   //   - el código que este Asistente muestra cuando es él el que se va y llega el relevo;
   //   - el aviso de que no hay nadie que pueda mostrarle el código, que aparece en la pantalla
@@ -79,7 +105,7 @@ export const api = {
     formData.append('foto', archivo);
     return pedido(`/guardias/${id}/reporte/foto`, { method: 'POST', body: formData });
   },
-  confirmarReporte: (id, datos) => pedido(`/guardias/${id}/reporte/confirmar`, { method: 'POST', body: JSON.stringify(datos) }),
+  confirmarReporte: (id, datos) => pedido(`/guardias/${id}/reporte/confirmar`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
   reportesDelPaciente: (pacienteId) => pedido(`/pacientes/${pacienteId}/reportes`),
   medicacionDelPaciente: (pacienteId) => pedido(`/medicacion/${pacienteId}`),
   // Pendiente #102 — consentimiento para el registro de ubicación. El idioma
@@ -120,7 +146,10 @@ export const api = {
   // otra punta. El dato de contacto sale tapado para los dos lados hasta que esa pareja lo abra:
   // tapar de un solo lado no taparía nada, porque alcanza con que lo escriba el otro.
   conversacionesDelMarketplace: () => pedido('/marketplace/conversaciones'),
-  conversacionDelMarketplace: (id) => pedido(`/marketplace/conversaciones/${id}`),
+  // Con `desde`, el motor contesta nada más lo posterior a ese momento: es el refresco del hilo
+  // abierto, que pide lo que le falta y no vuelve a bajar lo que ya está en pantalla.
+  conversacionDelMarketplace: (id, desde = null) =>
+    pedido(`/marketplace/conversaciones/${id}${desde ? `?desde=${encodeURIComponent(desde)}` : ''}`),
   escribirEnConversacion: (id, cuerpo) =>
     pedido(`/marketplace/conversaciones/${id}/mensajes`, { method: 'POST', body: JSON.stringify({ cuerpo }) }),
   abrirVideollamada: (id) => pedido(`/marketplace/conversaciones/${id}/videollamada`, { method: 'POST' }),

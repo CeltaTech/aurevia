@@ -30,17 +30,29 @@ const DATOS = {
   escalada_a_respaldo: {},
   escalada_a_todos_los_coordinadores: { minutos: 45 },
   escalada_a_la_administracion: { minutos: 90 },
-  alerta_temprana_sin_resolver: { guardiaId: 'g-1', origen: 'un origen', motivo: 'no contesta', minutos: 30 },
-  alerta_temprana_respaldo: { guardiaId: 'g-1', minutos: 30 },
+  // Ni la alerta temprana ni el incidente de relevo llevan el identificador de la guardia: dicen
+  // la fecha, la hora y a quién se atiende, igual que los avisos de guardia sin cerrar.
+  alerta_temprana_sin_resolver: {
+    fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
+    origen: 'un origen', motivo: 'no contesta', minutos: 30,
+  },
+  alerta_temprana_respaldo: {
+    fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'], minutos: 30,
+  },
   aviso_demora_asistente: { fecha: '2026-10-07', horaInicio: '08:00', origen: 'un origen', motivo: 'tránsito' },
-  incidente_relevo_sin_resolver: { guardiaId: 'g-1', nivel: 2, minutos: 45 },
-  incidente_relevo_respaldo: { guardiaId: 'g-1', minutos: 45 },
+  incidente_relevo_sin_resolver: {
+    fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena', 'Aníbal'], minutos: 45,
+  },
+  incidente_relevo_respaldo: {
+    fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'], minutos: 45,
+  },
   incidente_relevo_fase_automatica: {
-    guardiaId: 'g-1', minutosUmbral: 60,
+    fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'], minutosUmbral: 60,
     contactados: 3, sinNivel: false, sinOrden: false, quedaElFamiliar: true,
   },
   convocatoria_de_relevo: { fecha: '2026-10-07', horaInicio: '22:00', horaFin: '06:00' },
-  continuidad_de_guardia: {},
+  // El de la Familia es otro aviso: no lleva minutos, ni nivel de escalada, ni identificador.
+  incidente_relevo_familia: { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00' },
   cambio_de_asistente: {
     asistenteNuevo: 'Rita Solano', asistenteAnterior: 'Marcos Peña',
     turnos: [
@@ -95,11 +107,9 @@ const DATOS = {
     empresa: 'Cuidados del Sur', producto: IDENTIDAD.nombre,
   },
   estado_postulacion: { empresa: 'Cuidados del Sur', nombre: 'Marta', estado: 'aprobado' },
-  nueva_postulacion_asistente: {
-    nombre: 'Marta', dni: '11222333', telefono: '1150000000', email: 'marta@ejemplo',
-    especialidades: 'Acompañante', zonas: 'Sur', disponibilidad: 'Mañanas',
-    situacionFiscal: 'Monotributo',
-  },
+  // El aviso no lleva el documento, el teléfono, el correo ni la situación fiscal de quien se
+  // postula: eso se mira entrando al Panel, igual que el detalle de una emergencia.
+  nueva_postulacion_asistente: { nombre: 'Marta' },
   nueva_solicitud_servicio: {
     nombre: 'Elena', telefono: '1150000000', email: 'elena@ejemplo', localidad: 'Quilmes',
     tipoServicio: 'Acompañamiento', modalidad: 'Por hora', diasHorario: 'Lunes a viernes',
@@ -122,6 +132,12 @@ const DATOS = {
   entrevista_cancelada: {
     prestadora: 'Cuidados del Sur', cuando: 'martes, 7 de octubre de 2026, 10:00',
   },
+  // Los cuatro de la seguridad de la cuenta. Llevan lo mismo y nada más: a quién se le avisa y de
+  // parte de quién. Ni el número ni el código entran acá, porque tampoco entran en el aviso.
+  clave_recuperada: { nombre: 'Marta Giménez', prestadora: 'Cuidados del Sur' },
+  telefono_cambiado: { nombre: 'Marta Giménez', prestadora: 'Cuidados del Sur' },
+  entrada_desde_equipo_nuevo: { nombre: 'Marta Giménez', prestadora: 'Cuidados del Sur' },
+  cambio_de_clave_habilitado: { nombre: 'Marta Giménez', prestadora: 'Cuidados del Sur' },
 };
 
 // Sin esto, un aviso que existe en castellano y no en portugués saldría en castellano sin que
@@ -155,17 +171,17 @@ test('ningún aviso deja un hueco a la vista en ninguno de los tres idiomas', ()
 
 test('un idioma que no está en el catálogo cae en el de por defecto', () => {
   assert.deepEqual(
-    aviso('continuidad_de_guardia', 'fr-FR'),
-    aviso('continuidad_de_guardia', IDIOMA_POR_DEFECTO)
+    aviso('mensaje_del_coordinador', 'fr-FR'),
+    aviso('mensaje_del_coordinador', IDIOMA_POR_DEFECTO)
   );
   assert.deepEqual(
-    aviso('continuidad_de_guardia', null),
-    aviso('continuidad_de_guardia', IDIOMA_POR_DEFECTO)
+    aviso('mensaje_del_coordinador', null),
+    aviso('mensaje_del_coordinador', IDIOMA_POR_DEFECTO)
   );
 });
 
 test('los tres idiomas dicen cosas distintas', () => {
-  const titulos = IDIOMAS_DEL_CATALOGO.map((i) => aviso('continuidad_de_guardia', i).titulo);
+  const titulos = IDIOMAS_DEL_CATALOGO.map((i) => aviso('mensaje_del_coordinador', i).titulo);
   assert.equal(new Set(titulos).size, IDIOMAS_DEL_CATALOGO.length);
 });
 

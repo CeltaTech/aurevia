@@ -14,6 +14,7 @@ import { filtrarPorExcepcion } from '../lib/excepciones';
 import { estaSinCubrir } from '../lib/cobertura';
 import { reasignarGuardia } from '../lib/reasignarGuardia';
 import { moverGuardia } from '../lib/moverGuardia';
+import { resolver } from '../lib/resoluciones';
 import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../lib/pacientesDeGuardia';
 import { correrHora, hoyISO, sumarDias } from '../lib/horarios';
 import { COLUMNAS_ESTADO_MATRICULA } from '../lib/matricula';
@@ -57,6 +58,10 @@ const DIAS_A_LA_VISTA = 7;
    contador la grilla quedaría vacía, y el número de arriba parecería mentira. Dos días cubren
    el fin de semana largo sin traer media base. */
 const DIAS_HACIA_ATRAS = 2;
+
+/* Qué se resuelve cuando desde acá se cancelan muchas Guardias de una vez. Es el nombre guardado de
+   la tabla, el mismo que usa el detalle de una sola. */
+const TABLA_GUARDIAS = 'guardias';
 
 export function EstadoActual() {
   const { t } = useLocale();
@@ -317,7 +322,7 @@ export function EstadoActual() {
     cargar();
   }
 
-  async function aplicarAMuchas({ accion, asistenteId, minutos, semanas, origen, alcance }) {
+  async function aplicarAMuchas({ accion, asistenteId, minutos, semanas, origen, alcance, motivoId, detalle }) {
     let ok = 0;
     const total = seleccionadasEnteras.length;
 
@@ -340,10 +345,23 @@ export function EstadoActual() {
           })
           .eq('id', g.id);
       } else if (accion === 'cancelar') {
-        resultado = await supabase
-          .from('guardias')
-          .update({ estado: 'cancelada', cancelacion_origen: origen, cancelacion_alcance: alcance })
-          .eq('id', g.id);
+        // Cancelar no es pisar el estado: primero se escribe la resolución, con el motivo que se
+        // eligió una sola vez arriba y con la firma que pone la base, y el estado en el que queda
+        // cada Guardia sale de ese motivo. Si la resolución falla, esa Guardia no se toca y se
+        // cuenta como no hecha; las dos columnas de la cancelación se guardan recién después,
+        // porque son datos de la Guardia y no la decisión.
+        const { error: errorResolucion } = await resolver({
+          tabla: TABLA_GUARDIAS,
+          filaId: g.id,
+          motivoId,
+          detalle,
+        });
+        resultado = errorResolucion
+          ? { error: errorResolucion }
+          : await supabase
+              .from('guardias')
+              .update({ cancelacion_origen: origen, cancelacion_alcance: alcance })
+              .eq('id', g.id);
       } else if (accion === 'duplicar') {
         // Se copia la guardia sin lo que es propio de ESA guardia y no de su copia: la
         // identidad, cuándo se creó y los dos nombres que esta pantalla le pegó encima y

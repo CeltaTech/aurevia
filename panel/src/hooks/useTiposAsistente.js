@@ -1,7 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
-import { mensajeDeError } from '../lib/errores';
-import { useLocale } from '../i18n/LocaleContext';
+import { useMemo } from 'react';
+import { useCatalogo } from './useCatalogo';
 
 // El catálogo de tipos de Asistente, tal como lo ve esta Prestadora: los
 // generales de CeltaTech más los que ella misma creó. No hace falta filtrar por
@@ -20,33 +18,7 @@ import { useLocale } from '../i18n/LocaleContext';
 //                tipo que después se apagó: se le sigue mostrando el nombre
 //                que tiene, no un renglón en blanco.
 export function useTiposAsistente() {
-  const { t } = useLocale();
-  const [todos, setTodos] = useState([]);
-  const [estado, setEstado] = useState('cargando'); // cargando | error | listo
-  const [error, setError] = useState(null);
-
-  const recargar = useCallback(async () => {
-    setEstado('cargando');
-    setError(null);
-
-    const { data, error: errorConsulta } = await supabase
-      .from('tipos_asistente')
-      .select('*')
-      .order('orden');
-
-    if (errorConsulta) {
-      setError(mensajeDeError(errorConsulta, t));
-      setEstado('error');
-      return;
-    }
-
-    setTodos(data ?? []);
-    setEstado('listo');
-  }, [t]);
-
-  useEffect(() => {
-    recargar();
-  }, [recargar]);
+  const { filas: todos, estado, error, recargar } = useCatalogo('tipos_asistente');
 
   const paraElegir = useMemo(() => todos.filter((tipo) => tipo.activo), [todos]);
   const porId = useMemo(() => new Map(todos.map((tipo) => [tipo.id, tipo])), [todos]);

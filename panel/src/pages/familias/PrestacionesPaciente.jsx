@@ -991,7 +991,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                 {/* La lista sale del catálogo de la Prestadora, que ella arma en Configuración.
                     Si se quedó sin ninguno encendido no hay nada que elegir, y se lo dice: sin
                     eso el desplegable aparecería vacío y sin explicación. */}
-                {estadoMotivosCierre === 'listo' && motivosCierre.length === 0 && (
+                {estadoMotivosCierre === 'vacio' && (
                   <Alert variant="info">{t.prestaciones.cierre_servicio_sin_motivos}</Alert>
                 )}
                 {errorMotivosCierre && <Alert variant="error">{errorMotivosCierre}</Alert>}
@@ -1001,7 +1001,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                   type="select"
                   value={motivoCierre}
                   onChange={(e) => setMotivoCierre(e.target.value)}
-                  disabled={estadoMotivosCierre !== 'listo' || motivosCierre.length === 0}
+                  disabled={estadoMotivosCierre !== 'listo'}
                 >
                   <option value="">{t.guardias.nueva_guardia.elegir}</option>
                   {motivosCierre.map((m) => (

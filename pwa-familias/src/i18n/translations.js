@@ -72,6 +72,9 @@ export const T = {
       cargando: 'Cargando…',
       error_generico: 'Ocurrió un error. Se puede volver a intentar.',
       vacio: 'No hay resultados.',
+      // El botón que vuelve a pedir lo que no se pudo traer. Lo que ya está en pantalla se queda
+      // donde está: un intento que falla no borra lo que se leyó.
+      reintentar: 'Volver a intentar',
       volver: 'Volver',
       cancelar: 'Cancelar',
       // El puntaje dicho en palabras. Las estrellas dibujadas no se leen: un lector de
@@ -111,7 +114,7 @@ export const T = {
       // El aviso del tapado dice las dos cosas que hacen falta para no equivocarse: que el dato
       // de contacto no pasa, y que lo que el producto no reconoce sí pasa. El producto avisa, no
       // bloquea.
-      contacto_tapado: 'Los datos de contacto quedan tapados hasta que se abra el contacto de esta persona. Lo que no se reconozca como un dato de contacto se ve del otro lado tal como se escribió.',
+      contacto_tapado: 'Los datos de contacto se tapan al enviar el mensaje y no quedan guardados. Lo que no se reconozca como un dato de contacto se ve del otro lado tal como se escribió.',
       contacto_tapado_ya_paso: 'En esta conversación ya se tapó algo.',
       tapado_en_este_mensaje: 'con datos de contacto tapados',
       escribir: 'Escribir un mensaje',
@@ -599,6 +602,7 @@ export const T = {
       cargando: 'Loading…',
       error_generico: 'Something went wrong. Please try again.',
       vacio: 'No results.',
+      reintentar: 'Try again',
       volver: 'Back',
       cancelar: 'Cancel',
       puntaje_estrellas: '{n} out of 5 stars',
@@ -619,7 +623,7 @@ export const T = {
       sin_leer_uno: '1 unread message',
       sin_leer: '{n} unread messages',
       escribirle: 'Send them a message',
-      contacto_tapado: 'Contact details stay hidden until this person’s contact is unlocked. Anything not recognised as a contact detail is shown to the other side exactly as written.',
+      contacto_tapado: 'Contact details are hidden when the message is sent and are not stored. Anything not recognised as a contact detail is shown to the other side exactly as written.',
       contacto_tapado_ya_paso: 'Something has already been hidden in this conversation.',
       tapado_en_este_mensaje: 'contact details hidden',
       escribir: 'Write a message',
@@ -1052,6 +1056,7 @@ export const T = {
       cargando: 'Carregando…',
       error_generico: 'Ocorreu um erro. É possível tentar novamente.',
       vacio: 'Nenhum resultado.',
+      reintentar: 'Tentar novamente',
       volver: 'Voltar',
       cancelar: 'Cancelar',
       puntaje_estrellas: '{n} de 5 estrelas',
@@ -1072,7 +1077,7 @@ export const T = {
       sin_leer_uno: '1 mensagem não lida',
       sin_leer: '{n} mensagens não lidas',
       escribirle: 'Escrever uma mensagem',
-      contacto_tapado: 'Os dados de contato ficam ocultos até que o contato desta pessoa seja liberado. O que não for reconhecido como dado de contato aparece do outro lado exatamente como foi escrito.',
+      contacto_tapado: 'Os dados de contato ficam ocultos ao enviar a mensagem e não são guardados. O que não for reconhecido como dado de contato aparece do outro lado exatamente como foi escrito.',
       contacto_tapado_ya_paso: 'Nesta conversa já houve algo oculto.',
       tapado_en_este_mensaje: 'com dados de contato ocultos',
       escribir: 'Escrever uma mensagem',
@@ -1466,5 +1471,9 @@ export const T = {
   },
 };
 
-export const DEFAULT_LOCALE = 'es-AR';
-export const LOCALES = ['es-AR', 'en', 'pt-BR'];
+// Cuáles son los tres idiomas y cuál es el de por defecto no se escribe acá: sale de
+// `i18n/idiomas.js`, que es el punto único donde está dicho para todo el producto —las pantallas
+// y el motor—. Estaba escrito cuatro veces, y las cuatro decían lo mismo por suerte, no por
+// construcción. Se siguen exportando desde este archivo con los nombres de siempre para que
+// ningún punto de consumo cambie.
+export { IDIOMA_POR_DEFECTO as DEFAULT_LOCALE, IDIOMAS_SOPORTADOS as LOCALES } from './idiomas.js';

@@ -5,6 +5,7 @@ import {
   FUENTE_SIN_AVISO_NI_SALIDA,
 } from '../utils/fuentesAlertaTemprana.js';
 import { IDIOMA_POR_DEFECTO, IDIOMAS_SOPORTADOS, normalizarIdioma } from './idiomas.js';
+import { IDENTIDAD } from '../config/identidadProducto.js';
 
 /* Qué dice cada aviso que sale del motor, en los tres idiomas.
    ===========================================================
@@ -73,6 +74,18 @@ function correoConBoton({ saludo, cuerpo, boton, link, pieDeAviso, marca }) {
   return partes.join('\n');
 }
 
+// LA LÍNEA AL PIE. Todo correo dirigido a una Familia o a un Asistente lleva adelante la marca de
+// la Prestadora y el nombre del producto en una sola línea al pie
+// (`docs\REGLAS_PRODUCTOS_CAREONYS.md` §4). El nombre sale de `IDENTIDAD` y no de un parámetro:
+// así ningún emisor puede olvidarse de pasarlo y quedarse sin el pie. Los dos correos con formato
+// —activación y clave nueva— lo siguen recibiendo por parámetro, porque el pie va adentro del
+// armado del HTML.
+const PIE = {
+  es: `\n\n—\nCon la tecnología de ${IDENTIDAD.nombre}`,
+  en: `\n\n—\nPowered by ${IDENTIDAD.nombre}`,
+  pt: `\n\n—\nCom a tecnologia de ${IDENTIDAD.nombre}`,
+};
+
 const ES = {
   origen_de_alerta: ({ fuente }) => ({
     texto: {
@@ -104,7 +117,6 @@ const ES = {
       d.salidaMarcada
         ? 'El Asistente marcó su salida, así que se fue del domicilio: lo que falta es confirmar que quedó todo hecho.'
         : 'El Asistente no marcó su salida, así que no hay constancia de que la guardia haya terminado ni de quién quedó a cargo del Paciente.',
-      'Este aviso sale una sola vez por guardia.',
     ].join('\n'),
   }),
 
@@ -112,27 +124,33 @@ const ES = {
     texto: `La guardia del ${d.fecha}, de ${d.horaInicio} a ${d.horaFin}, sigue sin cerrarse ${Math.round(d.minutosDeAtraso)} minutos después del plazo.`,
   }),
 
-  escalada_a_respaldo: () => ({ asunto: 'Escalada a Coordinador de respaldo' }),
+  escalada_a_respaldo: () => ({ asunto: 'Sin resolver: pasa al Coordinador de respaldo' }),
 
   // Los dos escalones que siguen. El asunto dice los minutos porque el cuerpo es el mismo que ya
   // recibió quien coordina: sin eso, quien lo lee no sabe por qué le está llegando a él.
   escalada_a_todos_los_coordinadores: (d) => ({
-    asunto: `Escalada a todos los Coordinadores: sin resolver hace ${d.minutos} minutos`,
+    asunto: `Sin resolver hace ${d.minutos} minutos: pasa a todos los Coordinadores`,
   }),
 
   escalada_a_la_administracion: (d) => ({
-    asunto: `Escalada a la administración: sin resolver hace ${d.minutos} minutos`,
+    asunto: `Sin resolver hace ${d.minutos} minutos: pasa a la administración`,
   }),
 
   alerta_temprana_sin_resolver: (d) => ({
     asunto: 'Alerta temprana de posible ausencia sin resolver',
     // El origen va adelante del motivo a propósito: quien lee tiene que poder distinguir de un
     // vistazo un aviso que dio una persona de una cuenta que sacó el sistema.
-    texto: `Guardia ${d.guardiaId}. Origen: ${d.origen}. Motivo: ${d.motivo ?? '—'}. Sin resolver hace ${Math.round(d.minutos)} minutos.`,
+    texto: [
+      `Guardia del ${d.fecha}, de ${d.horaInicio} a ${d.horaFin}, para ${unirNombres(d.pacientes, 'y', 'Paciente sin nombre cargado')}.`,
+      `Origen: ${d.origen}. Motivo: ${d.motivo ?? '—'}. Sin resolver hace ${Math.round(d.minutos)} minutos.`,
+    ].join('\n'),
   }),
 
   alerta_temprana_respaldo: (d) => ({
-    texto: `Alerta temprana de guardia ${d.guardiaId} sigue sin resolver hace ${Math.round(d.minutos)} minutos.`,
+    texto: [
+      `Guardia del ${d.fecha}, de ${d.horaInicio} a ${d.horaFin}, para ${unirNombres(d.pacientes, 'y', 'Paciente sin nombre cargado')}.`,
+      `La alerta temprana sigue sin resolver hace ${Math.round(d.minutos)} minutos.`,
+    ].join('\n'),
   }),
 
   aviso_demora_asistente: (d) => ({
@@ -155,30 +173,34 @@ const ES = {
     texto: `Guardia del ${d.fecha} de ${d.horaInicio} a ${d.horaFin}. Terminó y el relevo no llegó. El Asistente sigue en el domicilio y avisó que no puede continuar. El detalle está en el Panel.`,
   }),
 
+  // El nivel de escalada no va en el texto: es una cuenta interna. Y este texto es sólo para quien
+  // coordina: a la Familia le llega el suyo, `incidente_relevo_familia`.
   incidente_relevo_sin_resolver: (d) => ({
-    asunto: 'Incidente de continuidad de guardia sin resolver',
-    texto: `Guardia ${d.guardiaId}, nivel de escalada actual: ${d.nivel}. Sin resolver hace ${Math.round(d.minutos)} minutos.`,
+    asunto: 'La guardia terminó y el relevo todavía no llegó',
+    texto: [
+      `Guardia del ${d.fecha}, de ${d.horaInicio} a ${d.horaFin}, para ${unirNombres(d.pacientes, 'y', 'Paciente sin nombre cargado')}.`,
+      `El relevo sigue sin llegar hace ${Math.round(d.minutos)} minutos.`,
+    ].join('\n'),
   }),
 
   incidente_relevo_respaldo: (d) => ({
-    texto: `Incidente de relevo de guardia ${d.guardiaId} sigue sin resolver hace ${Math.round(d.minutos)} minutos.`,
+    texto: [
+      `Guardia del ${d.fecha}, de ${d.horaInicio} a ${d.horaFin}, para ${unirNombres(d.pacientes, 'y', 'Paciente sin nombre cargado')}.`,
+      `El relevo sigue sin llegar hace ${Math.round(d.minutos)} minutos.`,
+    ].join('\n'),
   }),
 
   incidente_relevo_fase_automatica: (d) => ({
-    asunto: 'Fase automática de escalada: se salió a buscar quién cubre',
+    asunto: 'Se salió a buscar quién cubra la guardia',
     texto: [
-      `Guardia ${d.guardiaId} superó el umbral de fase automática (${d.minutosUmbral} minutos) sin resolverse.`,
-      d.sinNivel
-        ? 'No hay ningún nivel de escalada configurado para este incidente, así que no se contactó a nadie.'
-        : d.sinOrden
-          ? 'El nivel de escalada no tiene cargado ningún orden de prioridad, así que no se contactó a nadie.'
-          : d.contactados > 0
-            ? `Se le escribió a ${d.contactados} ${d.contactados === 1 ? 'Asistente' : 'Asistentes'}, en el orden de prioridad configurado.`
-            : 'No había nadie disponible para contactar en el orden de prioridad configurado.',
-      d.quedaElFamiliar
-        ? 'El orden de prioridad incluye al familiar: esa opción la tiene que autorizar una persona, así que queda en sus manos.'
-        : null,
-      'Nadie quedó asignado a la guardia: quien conteste lo tiene que asignar una persona.',
+      `Guardia del ${d.fecha}, de ${d.horaInicio} a ${d.horaFin}, para ${unirNombres(d.pacientes, 'y', 'Paciente sin nombre cargado')}. Sin resolver hace más de ${d.minutosUmbral} minutos.`,
+      d.sinNivel || d.sinOrden
+        ? 'No hay ningún orden de prioridad cargado, así que no se contactó a nadie.'
+        : d.contactados > 0
+          ? `Se le escribió a ${d.contactados} ${d.contactados === 1 ? 'Asistente' : 'Asistentes'}, en el orden de prioridad cargado.`
+          : 'No había nadie disponible en el orden de prioridad cargado.',
+      d.quedaElFamiliar ? 'Queda por avisarle al familiar, y esa decisión es suya.' : null,
+      'La guardia sigue sin nadie asignado.',
     ].filter(Boolean).join('\n'),
   }),
 
@@ -186,14 +208,19 @@ const ES = {
     titulo: `Se busca quién cubra una guardia: ${d.fecha}, de ${d.horaInicio} a ${d.horaFin}`,
   }),
 
-  continuidad_de_guardia: () => ({ titulo: 'Continuidad de guardia' }),
+  // A la Familia se le dice lo que le toca saber y nada más: cuál es la guardia y que el relevo
+  // todavía no llegó. Nada de adentro del funcionamiento, y con quién hablar si quiere preguntar.
+  incidente_relevo_familia: (d) => ({
+    titulo: 'Continuidad de guardia',
+    cuerpo: `La guardia del ${d.fecha}, de ${d.horaInicio} a ${d.horaFin}, terminó y el relevo todavía no llegó. Ante cualquier duda, puede comunicarse con el Coordinador.`,
+  }),
 
   cambio_de_asistente: (d) => ({
     asunto: d.turnos.length === 1 ? 'Cambió el Asistente de una guardia' : 'Cambió el Asistente de varias guardias',
     texto: [
       d.asistenteAnterior
-        ? `${d.asistenteAnterior} ya no hace ${d.turnos.length === 1 ? 'este turno' : 'estos turnos'}. Ahora ${d.turnos.length === 1 ? 'lo hace' : 'los hace'} ${d.asistenteNuevo ?? 'un Asistente sin nombre cargado'}.`
-        : `${d.turnos.length === 1 ? 'Este turno pasa' : 'Estos turnos pasan'} a ${d.asistenteNuevo ?? 'un Asistente sin nombre cargado'}.`,
+        ? `${d.asistenteAnterior} ya no hace ${d.turnos.length === 1 ? 'esta guardia' : 'estas guardias'}. Ahora ${d.turnos.length === 1 ? 'la hace' : 'las hace'} ${d.asistenteNuevo ?? 'un Asistente sin nombre cargado'}.`
+        : `${d.turnos.length === 1 ? 'Esta guardia pasa' : 'Estas guardias pasan'} a ${d.asistenteNuevo ?? 'un Asistente sin nombre cargado'}.`,
       ...d.turnos.map((turno) =>
         `${turno.fecha}, de ${turno.horaInicio} a ${turno.horaFin}, para ${unirNombres(turno.pacientes, 'y', 'Paciente sin nombre cargado')}.`),
     ].join('\n'),
@@ -210,7 +237,7 @@ const ES = {
     asunto: 'Un Asistente avisó que falta',
     texto: [
       `${d.asistente ?? 'Un Asistente'} no va a estar desde el ${d.fechaInicio}${d.fechaFin ? ` hasta el ${d.fechaFin}` : ''}.`,
-      `Deja ${d.turnos} guardia(s) sin nadie. La primera es la del ${d.fecha}, de ${d.horaInicio} a ${d.horaFin}, y empieza en ${d.horas} h.`,
+      `Deja ${d.turnos} ${d.turnos === 1 ? 'guardia' : 'guardias'} sin nadie. La primera es la del ${d.fecha}, de ${d.horaInicio} a ${d.horaFin}, y empieza en ${d.horas} h.`,
       d.veces > 1 ? `Es el aviso número ${d.veces} de esta misma ausencia.` : null,
     ].filter(Boolean).join('\n'),
   }),
@@ -221,7 +248,7 @@ const ES = {
       `${d.asistente ?? 'Un Asistente'} no va a estar desde el ${d.fechaInicio}${d.fechaFin ? ` hasta el ${d.fechaFin}` : ''}.`,
       `Guardia del ${d.fecha}, de ${d.horaInicio} a ${d.horaFin}, para ${unirNombres(d.pacientes, 'y', 'Paciente sin nombre cargado')}.`,
       d.yaEmpezo ? `Tendría que haber empezado hace ${d.horas} h.` : `Empieza en ${d.horas} h.`,
-      d.turnos > 1 ? `Además deja otras ${d.turnos - 1} guardia(s) sin nadie.` : null,
+      d.turnos > 1 ? `Además deja ${d.turnos - 1 === 1 ? 'otra guardia' : `otras ${d.turnos - 1} guardias`} sin nadie.` : null,
       d.veces > 1 ? `Es el aviso número ${d.veces} de esta misma ausencia.` : null,
     ].filter(Boolean).join('\n'),
   }),
@@ -239,8 +266,8 @@ const ES = {
 
   incidente_turno_sin_cubrir: (d) => ({
     asunto: d.yaEmpezo
-      ? 'Turno sin nadie: ya empezó y sigue abierto'
-      : 'Turno sin nadie: queda poco para que empiece',
+      ? 'Guardia sin nadie: ya empezó y sigue abierta'
+      : 'Guardia sin nadie: queda poco para que empiece',
     texto: [
       `Guardia del ${d.fecha}, de ${d.horaInicio} a ${d.horaFin}, para ${unirNombres(d.pacientes, 'y', 'Paciente sin nombre cargado')}.`,
       d.yaEmpezo ? `Tendría que haber empezado hace ${d.horas} h.` : `Empieza en ${d.horas} h.`,
@@ -250,25 +277,25 @@ const ES = {
       d.candidatos?.length
         ? `Equipo del Paciente: ${unirNombres(d.candidatos, 'y', '')}.`
         : 'Este Paciente todavía no tiene equipo armado.',
-      d.veces > 1 ? `Es el recordatorio número ${d.veces} de este mismo turno.` : null,
-      'Queda abierto hasta que se cierre desde el Panel diciendo cómo terminó.',
+      d.veces > 1 ? `Es el recordatorio número ${d.veces} de esta misma guardia.` : null,
     ].filter(Boolean).join('\n'),
   }),
+
   alerta_ia_coordinador: (d) => ({
-    asunto: d.esRoja ? 'Alerta ROJA de IA — Paciente' : 'Alerta AMARILLA de IA — Paciente',
-    texto: 'Ver detalle en el Panel.',
+    asunto: d.esRoja ? 'Alerta roja sobre un Paciente' : 'Alerta amarilla sobre un Paciente',
+    texto: 'El detalle está en el Panel.',
   }),
 
   alerta_ia_familia: (d) => ({
     titulo: d.esRoja ? 'Alerta sobre el Paciente' : 'Novedad sobre el Paciente',
     cuerpo: d.esRoja
-      ? 'Hay una novedad importante para revisar en la app.'
-      : 'Hay algo para mirar sin apuro en la app.',
+      ? 'Hay una novedad importante para revisar en la aplicación.'
+      : 'Hay algo para mirar sin apuro en la aplicación.',
   }),
 
   vencimiento_documentos: (d) => ({
-    asunto: `Vencimientos próximos de ${d.etiqueta} — ${d.documentos.length} Asistente(s)`,
-    texto: `Los siguientes Asistentes tienen ${d.etiqueta} vencido o por vencer dentro de ${d.dias} días:\n\n${d.documentos.map((x) => `${x.nombre}: vence ${x.fechaVencimiento}`).join('\n')}`,
+    asunto: `Vencimientos próximos de ${d.etiqueta} — ${d.documentos.length} ${d.documentos.length === 1 ? 'Asistente' : 'Asistentes'}`,
+    texto: `Estos Asistentes tienen ${d.etiqueta} vencido o por vencer dentro de ${d.dias} días:\n\n${d.documentos.map((x) => `${x.nombre}: vence ${x.fechaVencimiento}`).join('\n')}`,
   }),
 
   mfa_codigo_recuperacion: (d) => ({
@@ -307,32 +334,36 @@ const ES = {
     }),
   }),
 
+  /* No nombra ningún tipo de Asistente: los tipos salen de un catálogo que carga cada Prestadora,
+     y escribir uno acá lo dejaría fijo en el código para todas. */
   estado_postulacion: (d) => ({
-    asunto: `${d.empresa} — Actualización de la postulación`,
+    asunto: `${d.empresa} — Su postulación`,
     texto: [
       `Hola ${d.nombre || ''},`,
       '',
       {
-        en_revision: 'La postulación como Asistente Integral está en revisión.',
-        aprobado: 'La postulación como Asistente Integral fue aprobada. Pronto nos pondremos en contacto para los próximos pasos.',
-        rechazado: `Gracias por el interés en ${d.empresa}. En esta oportunidad no vamos a avanzar con la postulación.`,
+        en_revision: 'Su postulación está en revisión.',
+        aprobado: 'Su postulación fue aprobada. Nos vamos a poner en contacto con usted.',
+        rechazado: `Gracias por su interés en ${d.empresa}. En esta oportunidad no vamos a avanzar con su postulación.`,
       }[d.estado],
       '',
-      `Equipo ${d.empresa}`,
-    ].join('\n'),
+      `Equipo de ${d.empresa}`,
+    ].join('\n') + PIE.es,
   }),
 
+  // Los datos de quien se postula no salen en el cuerpo del correo, igual que en
+  // `emergencia_en_guardia`: se leen entrando al Panel, que es donde el permiso se comprueba.
   nueva_postulacion_asistente: (d) => ({
     asunto: `Nueva postulación de Asistente — ${d.nombre}`,
-    texto: `Nombre: ${d.nombre}\nDNI: ${d.dni}\nTeléfono: ${d.telefono}\nEmail: ${d.email}\nEspecialidades: ${d.especialidades}\nZonas: ${d.zonas}\nDisponibilidad: ${d.disponibilidad}\nSituación fiscal: ${d.situacionFiscal}`,
+    texto: `Se recibió una postulación de ${d.nombre}. Los datos están en el Panel.`,
   }),
 
   nueva_solicitud_servicio: (d) => ({
     asunto: `Nueva solicitud de servicio — ${d.nombre}`,
-    texto: `Nombre: ${d.nombre}\nTeléfono: ${d.telefono}\nEmail: ${d.email}\nLocalidad: ${d.localidad}\nServicio: ${d.tipoServicio} (${d.modalidad})\nDías y horario: ${d.diasHorario}\nDescripción: ${d.descripcion ?? '—'}`,
+    texto: `Nombre: ${d.nombre}\nTeléfono: ${d.telefono}\nCorreo: ${d.email}\nLocalidad: ${d.localidad}\nServicio: ${d.tipoServicio} (${d.modalidad})\nDías y horario: ${d.diasHorario}\nDescripción: ${d.descripcion ?? '—'}`,
   }),
 
-  mensaje_del_coordinador: () => ({ titulo: 'Nuevo mensaje del coordinador' }),
+  mensaje_del_coordinador: () => ({ titulo: 'Nuevo mensaje del Coordinador' }),
 
   guardia_asignada: (d) => ({
     titulo: 'Nueva guardia asignada',
@@ -346,7 +377,7 @@ const ES = {
 
   fin_periodo_sin_cargo: (d) => ({
     titulo: 'Termina el período sin cargo',
-    cuerpo: `El ${d.dia} empieza a cobrarse ${d.importe}. Si prefiere no continuar, puede darse de baja antes desde la aplicación.`,
+    cuerpo: `A partir del ${d.dia} se cobra ${d.importe}. Si prefiere no continuar, puede darse de baja antes desde la aplicación.`,
   }),
 
   cobro_no_realizado: (d) => ({
@@ -359,7 +390,7 @@ const ES = {
   // tuvo que ver con él.
   cese_de_servicio: () => ({
     titulo: 'Finalización de servicio',
-    cuerpo: 'Se cerró el servicio en el que participaba. Para más información, puede comunicarse con el coordinador.',
+    cuerpo: 'Se cerró el Servicio en el que participaba. Para más información, puede comunicarse con el Coordinador.',
   }),
 
   /* Los tres avisos de la entrevista salen por correo, porque quien se postuló todavía no tiene
@@ -370,19 +401,45 @@ const ES = {
      reprograma, y por eso el aviso dice desde cuándo se puede entrar. */
   entrevista_agendada: (d) => ({
     titulo: `Entrevista con ${d.prestadora}`,
-    cuerpo: `Su entrevista quedó agendada para el ${d.cuando}.\n\nEl día de la entrevista, entre por acá:\n${d.enlace}\n\nLa puerta se abre ${d.anticipo} minutos antes de la hora. No hace falta instalar nada ni crear ninguna cuenta.`,
+    cuerpo: `Su entrevista quedó agendada para el ${d.cuando}.\n\nEl día de la entrevista, entre por acá:\n${d.enlace}\n\nLa puerta se abre ${d.anticipo} minutos antes de la hora. No hace falta instalar nada ni crear ninguna cuenta.${PIE.es}`,
   }),
 
   entrevista_reprogramada: (d) => ({
     titulo: `Se cambió el día de su entrevista con ${d.prestadora}`,
-    cuerpo: `Su entrevista pasó al ${d.cuando}.\n\nEntre por el mismo enlace de siempre:\n${d.enlace}\n\nLa puerta se abre ${d.anticipo} minutos antes de la hora.`,
+    cuerpo: `Su entrevista pasó al ${d.cuando}.\n\nEntre por el mismo enlace de siempre:\n${d.enlace}\n\nLa puerta se abre ${d.anticipo} minutos antes de la hora.${PIE.es}`,
   }),
 
   // No dice por qué se canceló. El motivo es de la Prestadora, y un aviso automático que lo
   // adelante contesta mal una pregunta que todavía no se hizo.
   entrevista_cancelada: (d) => ({
     titulo: `Se canceló su entrevista con ${d.prestadora}`,
-    cuerpo: `La entrevista del ${d.cuando} quedó sin efecto. Su postulación sigue en pie: si se agenda una fecha nueva, va a recibir otro aviso como éste.`,
+    cuerpo: `La entrevista del ${d.cuando} quedó sin efecto. Su postulación sigue en pie.${PIE.es}`,
+  }),
+
+  // Los cuatro avisos de la seguridad de la cuenta. Salen siempre, sin que nadie los configure:
+  // quien recibe uno que no reconoce es la única persona que puede darse cuenta de que alguien más
+  // está entrando. Por eso cada uno dice qué hacer, y lo que hay que hacer es siempre lo mismo.
+  //
+  // NINGUNO LLEVA EL NÚMERO NI EL CÓDIGO. Son datos sensibles y no viajan por correo. El aviso dice
+  // que el número cambió, no a cuál.
+  clave_recuperada: (d) => ({
+    asunto: `Se cambió la clave de su cuenta en ${d.prestadora}`,
+    texto: `${d.nombre}: la clave de su cuenta acaba de cambiarse.\n\nSi no fue usted, avise a ${d.prestadora} ahora mismo.${PIE.es}`,
+  }),
+
+  telefono_cambiado: (d) => ({
+    asunto: `Se cambió el teléfono de su cuenta en ${d.prestadora}`,
+    texto: `${d.nombre}: el teléfono de su cuenta acaba de cambiarse y todavía está sin verificar.\n\nSi no fue usted, avise a ${d.prestadora} ahora mismo.${PIE.es}`,
+  }),
+
+  entrada_desde_equipo_nuevo: (d) => ({
+    asunto: `Entraron a su cuenta de ${d.prestadora} desde un equipo nuevo`,
+    texto: `${d.nombre}: se entró a su cuenta desde un equipo desde el que nunca se había entrado.\n\nSi no fue usted, cambie su clave y cierre la sesión en todos los equipos desde su propia pantalla.${PIE.es}`,
+  }),
+
+  cambio_de_clave_habilitado: (d) => ({
+    asunto: `${d.prestadora} habilitó un cambio de clave en su cuenta`,
+    texto: `${d.nombre}: ${d.prestadora} habilitó por un rato que usted elija una clave nueva. La clave la elige usted: nadie de ${d.prestadora} la ve ni la conoce.\n\nSi usted no llamó para pedirlo, avise ahora mismo.${PIE.es}`,
   }),
 };
 
@@ -390,18 +447,19 @@ const ES = {
 // búsqueda: si todavía no se ofreció a nadie, si se ofreció y nadie contestó, o si contestaron
 // todos que no. Son tres situaciones con tres acciones distintas.
 function estadoDeLaBusquedaES({ ofrecida, invitados, sinContestar, aceptaron }) {
+  const asistentes = (n) => `${n} ${n === 1 ? 'Asistente' : 'Asistentes'}`;
   if (!ofrecida) return 'Todavía no se le ofreció a ningún Asistente.';
   if (invitados === 0) return 'Está publicada, pero no se invitó a ningún Asistente en particular.';
-  if (sinContestar > 0) return `Se invitó a ${invitados} Asistente(s) y ${sinContestar} todavía no contestaron.`;
-  if (aceptaron > 0) return `${aceptaron} Asistente(s) aceptaron pero la guardia sigue sin asignar.`;
-  return `Se invitó a ${invitados} Asistente(s) y todos rechazaron.`;
+  if (sinContestar > 0) return `Se invitó a ${asistentes(invitados)} y ${sinContestar} todavía no ${sinContestar === 1 ? 'contestó' : 'contestaron'}.`;
+  if (aceptaron > 0) return `${asistentes(aceptaron)} ${aceptaron === 1 ? 'aceptó' : 'aceptaron'}, pero la guardia sigue sin asignar.`;
+  return `Se invitó a ${asistentes(invitados)} y ${invitados === 1 ? 'rechazó' : 'todos rechazaron'}.`;
 }
 
 const EN = {
   origen_de_alerta: ({ fuente }) => ({
     texto: {
       [FUENTE_AVISO_TELEFONICO]: 'phone call logged by the care provider',
-      [FUENTE_AVISO_DEMORA_ASISTENTE]: 'delay reported by the care worker from the app',
+      [FUENTE_AVISO_DEMORA_ASISTENTE]: 'delay reported by the care worker from the application',
       [FUENTE_CALCULO_LLEGADA_TARDIA]: 'system estimate: the expected arrival time is past the start time',
       [FUENTE_SIN_AVISO_NI_SALIDA]: 'the start time came with no departure recorded, no delay reported and no arrival logged',
     }[fuente] ?? 'source not recorded',
@@ -428,7 +486,6 @@ const EN = {
       d.salidaMarcada
         ? 'The care worker clocked out, so they left the home: what is missing is the confirmation that everything was done.'
         : 'The care worker did not clock out, so there is no record that the shift ended or of who was left in charge of the patient.',
-      'This notice is sent only once per shift.',
     ].join('\n'),
   }),
 
@@ -436,23 +493,29 @@ const EN = {
     texto: `The shift on ${d.fecha}, from ${d.horaInicio} to ${d.horaFin}, is still open ${Math.round(d.minutosDeAtraso)} minutes past the deadline.`,
   }),
 
-  escalada_a_respaldo: () => ({ asunto: 'Escalated to the backup coordinator' }),
+  escalada_a_respaldo: () => ({ asunto: 'Still unresolved: passed to the backup coordinator' }),
 
   escalada_a_todos_los_coordinadores: (d) => ({
-    asunto: `Escalated to every coordinator: unresolved for ${d.minutos} minutes`,
+    asunto: `Unresolved for ${d.minutos} minutes: passed to every coordinator`,
   }),
 
   escalada_a_la_administracion: (d) => ({
-    asunto: `Escalated to management: unresolved for ${d.minutos} minutes`,
+    asunto: `Unresolved for ${d.minutos} minutes: passed to management`,
   }),
 
   alerta_temprana_sin_resolver: (d) => ({
     asunto: 'Early warning of a possible no-show, unresolved',
-    texto: `Shift ${d.guardiaId}. Source: ${d.origen}. Reason: ${d.motivo ?? '—'}. Unresolved for ${Math.round(d.minutos)} minutes.`,
+    texto: [
+      `Shift on ${d.fecha}, from ${d.horaInicio} to ${d.horaFin}, for ${unirNombres(d.pacientes, 'and', 'patient with no name on file')}.`,
+      `Source: ${d.origen}. Reason: ${d.motivo ?? '—'}. Unresolved for ${Math.round(d.minutos)} minutes.`,
+    ].join('\n'),
   }),
 
   alerta_temprana_respaldo: (d) => ({
-    texto: `The early warning for shift ${d.guardiaId} has been unresolved for ${Math.round(d.minutos)} minutes.`,
+    texto: [
+      `Shift on ${d.fecha}, from ${d.horaInicio} to ${d.horaFin}, for ${unirNombres(d.pacientes, 'and', 'patient with no name on file')}.`,
+      `The early warning has been unresolved for ${Math.round(d.minutos)} minutes.`,
+    ].join('\n'),
   }),
 
   aviso_demora_asistente: (d) => ({
@@ -471,29 +534,31 @@ const EN = {
   }),
 
   incidente_relevo_sin_resolver: (d) => ({
-    asunto: 'Shift handover incident unresolved',
-    texto: `Shift ${d.guardiaId}, current escalation level: ${d.nivel}. Unresolved for ${Math.round(d.minutos)} minutes.`,
+    asunto: 'The shift ended and the relief has not arrived',
+    texto: [
+      `Shift on ${d.fecha}, from ${d.horaInicio} to ${d.horaFin}, for ${unirNombres(d.pacientes, 'and', 'patient with no name on file')}.`,
+      `The relief has still not arrived after ${Math.round(d.minutos)} minutes.`,
+    ].join('\n'),
   }),
 
   incidente_relevo_respaldo: (d) => ({
-    texto: `The handover incident for shift ${d.guardiaId} has been unresolved for ${Math.round(d.minutos)} minutes.`,
+    texto: [
+      `Shift on ${d.fecha}, from ${d.horaInicio} to ${d.horaFin}, for ${unirNombres(d.pacientes, 'and', 'patient with no name on file')}.`,
+      `The relief has still not arrived after ${Math.round(d.minutos)} minutes.`,
+    ].join('\n'),
   }),
 
   incidente_relevo_fase_automatica: (d) => ({
-    asunto: 'Automatic escalation phase: the search for cover has started',
+    asunto: 'The search for someone to cover the shift has started',
     texto: [
-      `Shift ${d.guardiaId} passed the automatic phase threshold (${d.minutosUmbral} minutes) without being resolved.`,
-      d.sinNivel
-        ? 'There is no escalation level configured for this incident, so nobody was contacted.'
-        : d.sinOrden
-          ? 'The escalation level has no priority order on file, so nobody was contacted.'
-          : d.contactados > 0
-            ? `${d.contactados} ${d.contactados === 1 ? 'care worker was' : 'care workers were'} contacted, in the configured priority order.`
-            : 'Nobody in the configured priority order was available to contact.',
-      d.quedaElFamiliar
-        ? 'The priority order includes the family member: that option has to be authorised by a person, so it is left to you.'
-        : null,
-      'Nobody has been assigned to the shift: whoever answers still has to be assigned by a person.',
+      `Shift on ${d.fecha}, from ${d.horaInicio} to ${d.horaFin}, for ${unirNombres(d.pacientes, 'and', 'patient with no name on file')}. Unresolved for more than ${d.minutosUmbral} minutes.`,
+      d.sinNivel || d.sinOrden
+        ? 'There is no priority order on file, so nobody was contacted.'
+        : d.contactados > 0
+          ? `${d.contactados} ${d.contactados === 1 ? 'care worker was' : 'care workers were'} contacted, in the priority order on file.`
+          : 'Nobody in the priority order on file was available to contact.',
+      d.quedaElFamiliar ? 'The family member is still to be told, and that decision is yours.' : null,
+      'The shift still has nobody assigned.',
     ].filter(Boolean).join('\n'),
   }),
 
@@ -501,42 +566,45 @@ const EN = {
     titulo: `Cover needed for a shift: ${d.fecha}, from ${d.horaInicio} to ${d.horaFin}`,
   }),
 
-  continuidad_de_guardia: () => ({ titulo: 'Shift continuity' }),
+  incidente_relevo_familia: (d) => ({
+    titulo: 'Shift continuity',
+    cuerpo: `The shift on ${d.fecha}, from ${d.horaInicio} to ${d.horaFin}, has ended and the relief has not arrived yet. If you have any questions, you can contact the coordinator.`,
+  }),
 
   cambio_de_asistente: (d) => ({
-    asunto: d.turnos.length === 1 ? 'The Assistant on a shift changed' : 'The Assistant on several shifts changed',
+    asunto: d.turnos.length === 1 ? 'The care worker on a shift changed' : 'The care worker on several shifts changed',
     texto: [
       d.asistenteAnterior
-        ? `${d.asistenteAnterior} no longer covers ${d.turnos.length === 1 ? 'this shift' : 'these shifts'}. ${d.asistenteNuevo ?? 'An Assistant with no name on file'} covers ${d.turnos.length === 1 ? 'it' : 'them'} now.`
-        : `${d.turnos.length === 1 ? 'This shift goes' : 'These shifts go'} to ${d.asistenteNuevo ?? 'an Assistant with no name on file'}.`,
+        ? `${d.asistenteAnterior} no longer covers ${d.turnos.length === 1 ? 'this shift' : 'these shifts'}. ${d.asistenteNuevo ?? 'A care worker with no name on file'} covers ${d.turnos.length === 1 ? 'it' : 'them'} now.`
+        : `${d.turnos.length === 1 ? 'This shift goes' : 'These shifts go'} to ${d.asistenteNuevo ?? 'a care worker with no name on file'}.`,
       ...d.turnos.map((turno) =>
         `${turno.fecha}, from ${turno.horaInicio} to ${turno.horaFin}, for ${unirNombres(turno.pacientes, 'and', 'patient with no name on file')}.`),
     ].join('\n'),
   }),
 
   cambio_de_asistente_familia: (d) => ({
-    titulo: 'Change of Assistant',
+    titulo: 'Change of care worker',
     cuerpo: d.turnos.length === 1
-      ? `The shift on ${d.turnos[0].fecha}, from ${d.turnos[0].horaInicio} to ${d.turnos[0].horaFin}, will be covered by ${d.asistenteNuevo ?? 'another Assistant'}.`
-      : `${d.turnos.length} shifts, starting with the one on ${d.turnos[0].fecha}, will be covered by ${d.asistenteNuevo ?? 'another Assistant'}.`,
+      ? `The shift on ${d.turnos[0].fecha}, from ${d.turnos[0].horaInicio} to ${d.turnos[0].horaFin}, will be covered by ${d.asistenteNuevo ?? 'another care worker'}.`
+      : `${d.turnos.length} shifts, starting with the one on ${d.turnos[0].fecha}, will be covered by ${d.asistenteNuevo ?? 'another care worker'}.`,
   }),
 
   ausencia_avisada_con_tiempo: (d) => ({
-    asunto: 'An Assistant reported an absence',
+    asunto: 'A care worker reported an absence',
     texto: [
-      `${d.asistente ?? 'An Assistant'} will be away from ${d.fechaInicio}${d.fechaFin ? ` to ${d.fechaFin}` : ''}.`,
-      `This leaves ${d.turnos} shift(s) with nobody. The first one is on ${d.fecha}, from ${d.horaInicio} to ${d.horaFin}, and it starts in ${d.horas} h.`,
+      `${d.asistente ?? 'A care worker'} will be away from ${d.fechaInicio}${d.fechaFin ? ` to ${d.fechaFin}` : ''}.`,
+      `This leaves ${d.turnos} ${d.turnos === 1 ? 'shift' : 'shifts'} with nobody. The first one is on ${d.fecha}, from ${d.horaInicio} to ${d.horaFin}, and it starts in ${d.horas} h.`,
       d.veces > 1 ? `This is notice number ${d.veces} for this same absence.` : null,
     ].filter(Boolean).join('\n'),
   }),
 
   ausencia_de_golpe: (d) => ({
-    asunto: d.yaEmpezo ? 'An Assistant is missing: the shift should have started already' : 'An Assistant is missing and the shift starts shortly',
+    asunto: d.yaEmpezo ? 'A care worker is missing: the shift should have started already' : 'A care worker is missing and the shift starts shortly',
     texto: [
-      `${d.asistente ?? 'An Assistant'} will be away from ${d.fechaInicio}${d.fechaFin ? ` to ${d.fechaFin}` : ''}.`,
+      `${d.asistente ?? 'A care worker'} will be away from ${d.fechaInicio}${d.fechaFin ? ` to ${d.fechaFin}` : ''}.`,
       `Shift on ${d.fecha}, from ${d.horaInicio} to ${d.horaFin}, for ${unirNombres(d.pacientes, 'and', 'patient with no name on file')}.`,
       d.yaEmpezo ? `It should have started ${d.horas} h ago.` : `It starts in ${d.horas} h.`,
-      d.turnos > 1 ? `It also leaves ${d.turnos - 1} more shift(s) with nobody.` : null,
+      d.turnos > 1 ? `It also leaves ${d.turnos - 1} more ${d.turnos - 1 === 1 ? 'shift' : 'shifts'} with nobody.` : null,
       d.veces > 1 ? `This is notice number ${d.veces} for this same absence.` : null,
     ].filter(Boolean).join('\n'),
   }),
@@ -566,24 +634,24 @@ const EN = {
         ? `Patient's team: ${unirNombres(d.candidatos, 'and', '')}.`
         : 'This patient has no team set up yet.',
       d.veces > 1 ? `This is reminder number ${d.veces} for this same shift.` : null,
-      'It stays open until it is closed from the panel, stating how it ended.',
     ].filter(Boolean).join('\n'),
   }),
+
   alerta_ia_coordinador: (d) => ({
-    asunto: d.esRoja ? 'RED AI alert — patient' : 'YELLOW AI alert — patient',
-    texto: 'See the details in the panel.',
+    asunto: d.esRoja ? 'Red alert about a patient' : 'Yellow alert about a patient',
+    texto: 'The details are in the Panel.',
   }),
 
   alerta_ia_familia: (d) => ({
     titulo: d.esRoja ? 'Alert about the patient' : 'Update about the patient',
     cuerpo: d.esRoja
-      ? 'There is something important to review in the app.'
-      : 'There is something to look at in the app, no rush.',
+      ? 'There is something important to review in the application.'
+      : 'There is something to look at in the application, no rush.',
   }),
 
   vencimiento_documentos: (d) => ({
-    asunto: `${d.etiqueta} expiring soon — ${d.documentos.length} care worker(s)`,
-    texto: `The following care workers have their ${d.etiqueta} expired or expiring within ${d.dias} days:\n\n${d.documentos.map((x) => `${x.nombre}: expires ${x.fechaVencimiento}`).join('\n')}`,
+    asunto: `${d.etiqueta} expiring soon — ${d.documentos.length} ${d.documentos.length === 1 ? 'care worker' : 'care workers'}`,
+    texto: `These care workers have their ${d.etiqueta} expired or expiring within ${d.dias} days:\n\n${d.documentos.map((x) => `${x.nombre}: expires ${x.fechaVencimiento}`).join('\n')}`,
   }),
 
   mfa_codigo_recuperacion: (d) => ({
@@ -623,28 +691,28 @@ const EN = {
   }),
 
   estado_postulacion: (d) => ({
-    asunto: `${d.empresa} — Update on your application`,
+    asunto: `${d.empresa} — Your application`,
     texto: [
       `Hi ${d.nombre || ''},`,
       '',
       {
-        en_revision: 'Your application as an Asistente Integral is under review.',
-        aprobado: 'Your application as an Asistente Integral was approved. We will contact you soon about next steps.',
+        en_revision: 'Your application is under review.',
+        aprobado: 'Your application was approved. We will be in touch with you.',
         rechazado: `Thank you for your interest in ${d.empresa}. We will not be moving forward with your application at this time.`,
       }[d.estado],
       '',
-      `${d.empresa} Team`,
-    ].join('\n'),
+      `The ${d.empresa} team`,
+    ].join('\n') + PIE.en,
   }),
 
   nueva_postulacion_asistente: (d) => ({
     asunto: `New care worker application — ${d.nombre}`,
-    texto: `Name: ${d.nombre}\nID number: ${d.dni}\nPhone: ${d.telefono}\nEmail: ${d.email}\nSpecialties: ${d.especialidades}\nAreas: ${d.zonas}\nAvailability: ${d.disponibilidad}\nTax status: ${d.situacionFiscal}`,
+    texto: `An application from ${d.nombre} was received. The details are in the Panel.`,
   }),
 
   nueva_solicitud_servicio: (d) => ({
     asunto: `New service request — ${d.nombre}`,
-    texto: `Name: ${d.nombre}\nPhone: ${d.telefono}\nEmail: ${d.email}\nTown: ${d.localidad}\nService: ${d.tipoServicio} (${d.modalidad})\nDays and hours: ${d.diasHorario}\nDescription: ${d.descripcion ?? '—'}`,
+    texto: `Name: ${d.nombre}\nPhone: ${d.telefono}\nEmail address: ${d.email}\nTown: ${d.localidad}\nService: ${d.tipoServicio} (${d.modalidad})\nDays and hours: ${d.diasHorario}\nDescription: ${d.descripcion ?? '—'}`,
   }),
 
   mensaje_del_coordinador: () => ({ titulo: 'New message from the coordinator' }),
@@ -661,7 +729,7 @@ const EN = {
 
   fin_periodo_sin_cargo: (d) => ({
     titulo: 'The free period is ending',
-    cuerpo: `On ${d.dia} charging starts at ${d.importe}. If you would rather not continue, you can cancel before then from the app.`,
+    cuerpo: `From ${d.dia} the charge is ${d.importe}. If you would rather not continue, you can cancel before then from the application.`,
   }),
 
   cobro_no_realizado: (d) => ({
@@ -671,38 +739,59 @@ const EN = {
 
   cese_de_servicio: () => ({
     titulo: 'Service ended',
-    cuerpo: 'The service you were part of has ended. For more information, please get in touch with the coordinator.',
+    cuerpo: 'The service you were taking part in has been closed. For more information, please get in touch with the coordinator.',
   }),
 
   entrevista_agendada: (d) => ({
     titulo: `Interview with ${d.prestadora}`,
-    cuerpo: `Your interview is scheduled for ${d.cuando}.\n\nOn the day, join here:\n${d.enlace}\n\nThe door opens ${d.anticipo} minutes before the start time. Nothing to install, no account to create.`,
+    cuerpo: `Your interview is scheduled for ${d.cuando}.\n\nOn the day, join here:\n${d.enlace}\n\nThe door opens ${d.anticipo} minutes before the start time. Nothing to install, no account to create.${PIE.en}`,
   }),
 
   entrevista_reprogramada: (d) => ({
     titulo: `Your interview with ${d.prestadora} has moved`,
-    cuerpo: `Your interview is now set for ${d.cuando}.\n\nJoin through the same link as before:\n${d.enlace}\n\nThe door opens ${d.anticipo} minutes before the start time.`,
+    cuerpo: `Your interview is now set for ${d.cuando}.\n\nJoin through the same link as before:\n${d.enlace}\n\nThe door opens ${d.anticipo} minutes before the start time.${PIE.en}`,
   }),
 
   entrevista_cancelada: (d) => ({
     titulo: `Your interview with ${d.prestadora} was cancelled`,
-    cuerpo: `The interview set for ${d.cuando} has been called off. Your application still stands: if a new date is scheduled, you will get another message like this one.`,
+    cuerpo: `The interview set for ${d.cuando} has been called off. Your application still stands.${PIE.en}`,
+  }),
+
+  clave_recuperada: (d) => ({
+    asunto: `Your ${d.prestadora} account password was changed`,
+    texto: `${d.nombre}: the password on your account has just been changed.\n\nIf this was not you, tell ${d.prestadora} right away.${PIE.en}`,
+  }),
+
+  telefono_cambiado: (d) => ({
+    asunto: `The phone number on your ${d.prestadora} account was changed`,
+    texto: `${d.nombre}: the phone number on your account has just been changed and is not verified yet.\n\nIf this was not you, tell ${d.prestadora} right away.${PIE.en}`,
+  }),
+
+  entrada_desde_equipo_nuevo: (d) => ({
+    asunto: `Your ${d.prestadora} account was opened from a new device`,
+    texto: `${d.nombre}: your account was opened from a device that had never been used before.\n\nIf this was not you, change your password and sign out on every device from your own screen.${PIE.en}`,
+  }),
+
+  cambio_de_clave_habilitado: (d) => ({
+    asunto: `${d.prestadora} opened a password change on your account`,
+    texto: `${d.nombre}: ${d.prestadora} has opened a short window for you to choose a new password. You choose it: nobody at ${d.prestadora} sees it or knows it.\n\nIf you did not call to ask for this, say so right away.${PIE.en}`,
   }),
 };
 
 function estadoDeLaBusquedaEN({ ofrecida, invitados, sinContestar, aceptaron }) {
+  const cuidadores = (n) => `${n} ${n === 1 ? 'care worker' : 'care workers'}`;
   if (!ofrecida) return 'It has not been offered to any care worker yet.';
   if (invitados === 0) return 'It is published, but no particular care worker was invited.';
-  if (sinContestar > 0) return `${invitados} care worker(s) were invited and ${sinContestar} have not replied yet.`;
-  if (aceptaron > 0) return `${aceptaron} care worker(s) accepted but the shift is still unassigned.`;
-  return `${invitados} care worker(s) were invited and all of them declined.`;
+  if (sinContestar > 0) return `${cuidadores(invitados)} were invited and ${sinContestar} ${sinContestar === 1 ? 'has' : 'have'} not replied yet.`;
+  if (aceptaron > 0) return `${cuidadores(aceptaron)} accepted, but the shift is still unassigned.`;
+  return `${cuidadores(invitados)} were invited and ${invitados === 1 ? 'declined' : 'all of them declined'}.`;
 }
 
 const PT = {
   origen_de_alerta: ({ fuente }) => ({
     texto: {
       [FUENTE_AVISO_TELEFONICO]: 'aviso por telefone registrado pela Prestadora',
-      [FUENTE_AVISO_DEMORA_ASISTENTE]: 'aviso de atraso dado pelo Asistente pelo aplicativo',
+      [FUENTE_AVISO_DEMORA_ASISTENTE]: 'aviso de atraso dado pelo Assistente pelo aplicativo',
       [FUENTE_CALCULO_LLEGADA_TARDIA]: 'cálculo do sistema: o horário previsto de chegada passa do horário de início',
       [FUENTE_SIN_AVISO_NI_SALIDA]: 'chegou o horário de início sem registro de saída, sem aviso de atraso e sem chegada registrada',
     }[fuente] ?? 'origem sem registro',
@@ -712,10 +801,10 @@ const PT = {
     asunto: 'Plantão terminado e ainda sem fechar',
     texto: [
       `Plantão de ${d.fecha}, das ${d.horaInicio} às ${d.horaFin}, para ${unirNombres(d.pacientes, 'e', 'Paciente sem nome cadastrado')}.`,
-      `A cargo de ${d.asistente || 'Asistente sem atribuição'}. Terminava há ${enMinutosUHoras(d.minutosDeAtraso, 'minutos', 'horas')} e continua aberto.`,
+      `A cargo de ${d.asistente || 'Assistente sem atribuição'}. Terminava há ${enMinutosUHoras(d.minutosDeAtraso, 'minutos', 'horas')} e continua aberto.`,
       d.salidaMarcada
-        ? 'O Asistente já registrou a saída: falta confirmar que ficou tudo feito.'
-        : 'O Asistente ainda não registrou a saída.',
+        ? 'O Assistente já registrou a saída: falta confirmar que ficou tudo feito.'
+        : 'O Assistente ainda não registrou a saída.',
       d.veces > 1 ? `É o aviso número ${d.veces} deste mesmo plantão.` : null,
     ].filter(Boolean).join('\n'),
   }),
@@ -724,12 +813,11 @@ const PT = {
     asunto: 'Urgente: um plantão está há horas sem fechar',
     texto: [
       `Plantão de ${d.fecha}, das ${d.horaInicio} às ${d.horaFin}, para ${unirNombres(d.pacientes, 'e', 'Paciente sem nome cadastrado')}.`,
-      `A cargo de ${d.asistente || 'Asistente sem atribuição'}. Terminava há ${enMinutosUHoras(d.minutosDeAtraso, 'minutos', 'horas')} e continua aberto.`,
+      `A cargo de ${d.asistente || 'Assistente sem atribuição'}. Terminava há ${enMinutosUHoras(d.minutosDeAtraso, 'minutos', 'horas')} e continua aberto.`,
       'O Coordenador já foi avisado e o plantão continua sem fechar. É preciso que alguém com autoridade intervenha.',
       d.salidaMarcada
-        ? 'O Asistente registrou a saída, então saiu do domicílio: falta confirmar que ficou tudo feito.'
-        : 'O Asistente não registrou a saída, então não há constância de que o plantão tenha terminado nem de quem ficou a cargo do Paciente.',
-      'Este aviso sai uma única vez por plantão.',
+        ? 'O Assistente registrou a saída, então saiu do domicílio: falta confirmar que ficou tudo feito.'
+        : 'O Assistente não registrou a saída, então não há registro de que o plantão tenha terminado nem de quem ficou a cargo do Paciente.',
     ].join('\n'),
   }),
 
@@ -737,27 +825,33 @@ const PT = {
     texto: `O plantão de ${d.fecha}, das ${d.horaInicio} às ${d.horaFin}, continua sem fechar ${Math.round(d.minutosDeAtraso)} minutos depois do prazo.`,
   }),
 
-  escalada_a_respaldo: () => ({ asunto: 'Escalado ao Coordenador de retaguarda' }),
+  escalada_a_respaldo: () => ({ asunto: 'Sem resolver: passa ao Coordenador de retaguarda' }),
 
   escalada_a_todos_los_coordinadores: (d) => ({
-    asunto: `Escalado a todos os Coordenadores: sem resolver há ${d.minutos} minutos`,
+    asunto: `Sem resolver há ${d.minutos} minutos: passa a todos os Coordenadores`,
   }),
 
   escalada_a_la_administracion: (d) => ({
-    asunto: `Escalado à administração: sem resolver há ${d.minutos} minutos`,
+    asunto: `Sem resolver há ${d.minutos} minutos: passa à administração`,
   }),
 
   alerta_temprana_sin_resolver: (d) => ({
     asunto: 'Alerta antecipado de possível ausência sem resolver',
-    texto: `Plantão ${d.guardiaId}. Origem: ${d.origen}. Motivo: ${d.motivo ?? '—'}. Sem resolver há ${Math.round(d.minutos)} minutos.`,
+    texto: [
+      `Plantão de ${d.fecha}, das ${d.horaInicio} às ${d.horaFin}, para ${unirNombres(d.pacientes, 'e', 'Paciente sem nome cadastrado')}.`,
+      `Origem: ${d.origen}. Motivo: ${d.motivo ?? '—'}. Sem resolver há ${Math.round(d.minutos)} minutos.`,
+    ].join('\n'),
   }),
 
   alerta_temprana_respaldo: (d) => ({
-    texto: `O alerta antecipado do plantão ${d.guardiaId} continua sem resolver há ${Math.round(d.minutos)} minutos.`,
+    texto: [
+      `Plantão de ${d.fecha}, das ${d.horaInicio} às ${d.horaFin}, para ${unirNombres(d.pacientes, 'e', 'Paciente sem nome cadastrado')}.`,
+      `O alerta antecipado continua sem resolver há ${Math.round(d.minutos)} minutos.`,
+    ].join('\n'),
   }),
 
   aviso_demora_asistente: (d) => ({
-    asunto: 'Aviso de atraso do Asistente',
+    asunto: 'Aviso de atraso do Assistente',
     texto: `Plantão de ${d.fecha} às ${d.horaInicio}. Origem: ${d.origen}. Motivo: ${d.motivo}.`,
   }),
 
@@ -767,34 +861,36 @@ const PT = {
   }),
 
   no_puede_continuar_la_extension: (d) => ({
-    asunto: 'O Assistente que espera o rendimento não pode continuar',
-    texto: `Plantão de ${d.fecha} das ${d.horaInicio} às ${d.horaFin}. Terminou e ninguém chegou. O Assistente continua no domicílio e avisou que não pode continuar. O detalhe está no Painel.`,
+    asunto: 'O Assistente que espera a rendição não pode continuar',
+    texto: `Plantão de ${d.fecha} das ${d.horaInicio} às ${d.horaFin}. Terminou e a rendição não chegou. O Assistente continua no domicílio e avisou que não pode continuar. O detalhe está no Painel.`,
   }),
 
   incidente_relevo_sin_resolver: (d) => ({
-    asunto: 'Incidente de continuidade de plantão sem resolver',
-    texto: `Plantão ${d.guardiaId}, nível de escalada atual: ${d.nivel}. Sem resolver há ${Math.round(d.minutos)} minutos.`,
+    asunto: 'O plantão terminou e a rendição ainda não chegou',
+    texto: [
+      `Plantão de ${d.fecha}, das ${d.horaInicio} às ${d.horaFin}, para ${unirNombres(d.pacientes, 'e', 'Paciente sem nome cadastrado')}.`,
+      `A rendição continua sem chegar há ${Math.round(d.minutos)} minutos.`,
+    ].join('\n'),
   }),
 
   incidente_relevo_respaldo: (d) => ({
-    texto: `O incidente de rendição do plantão ${d.guardiaId} continua sem resolver há ${Math.round(d.minutos)} minutos.`,
+    texto: [
+      `Plantão de ${d.fecha}, das ${d.horaInicio} às ${d.horaFin}, para ${unirNombres(d.pacientes, 'e', 'Paciente sem nome cadastrado')}.`,
+      `A rendição continua sem chegar há ${Math.round(d.minutos)} minutos.`,
+    ].join('\n'),
   }),
 
   incidente_relevo_fase_automatica: (d) => ({
-    asunto: 'Fase automática de escalada: saiu-se à procura de quem cubra',
+    asunto: 'Saiu-se à procura de quem cubra o plantão',
     texto: [
-      `O plantão ${d.guardiaId} passou o limite da fase automática (${d.minutosUmbral} minutos) sem se resolver.`,
-      d.sinNivel
-        ? 'Não há nenhum nível de escalada configurado para este incidente, portanto ninguém foi contatado.'
-        : d.sinOrden
-          ? 'O nível de escalada não tem nenhuma ordem de prioridade cadastrada, portanto ninguém foi contatado.'
-          : d.contactados > 0
-            ? `${d.contactados} ${d.contactados === 1 ? 'Assistente foi contatado' : 'Assistentes foram contatados'}, na ordem de prioridade configurada.`
-            : 'Não havia ninguém disponível para contatar na ordem de prioridade configurada.',
-      d.quedaElFamiliar
-        ? 'A ordem de prioridade inclui o familiar: essa opção precisa ser autorizada por uma pessoa, portanto fica nas suas mãos.'
-        : null,
-      'Ninguém ficou designado ao plantão: quem responder ainda precisa ser designado por uma pessoa.',
+      `Plantão de ${d.fecha}, das ${d.horaInicio} às ${d.horaFin}, para ${unirNombres(d.pacientes, 'e', 'Paciente sem nome cadastrado')}. Sem resolver há mais de ${d.minutosUmbral} minutos.`,
+      d.sinNivel || d.sinOrden
+        ? 'Não há nenhuma ordem de prioridade cadastrada, portanto ninguém foi contatado.'
+        : d.contactados > 0
+          ? `${d.contactados} ${d.contactados === 1 ? 'Assistente foi contatado' : 'Assistentes foram contatados'}, na ordem de prioridade cadastrada.`
+          : 'Não havia ninguém disponível na ordem de prioridade cadastrada.',
+      d.quedaElFamiliar ? 'Falta avisar o familiar, e essa decisão é sua.' : null,
+      'O plantão continua sem ninguém atribuído.',
     ].filter(Boolean).join('\n'),
   }),
 
@@ -802,7 +898,10 @@ const PT = {
     titulo: `Procura-se quem cubra um plantão: ${d.fecha}, das ${d.horaInicio} às ${d.horaFin}`,
   }),
 
-  continuidad_de_guardia: () => ({ titulo: 'Continuidade de plantão' }),
+  incidente_relevo_familia: (d) => ({
+    titulo: 'Continuidade de plantão',
+    cuerpo: `O plantão de ${d.fecha}, das ${d.horaInicio} às ${d.horaFin}, terminou e a rendição ainda não chegou. Em caso de dúvida, pode entrar em contato com o Coordenador.`,
+  }),
 
   cambio_de_asistente: (d) => ({
     asunto: d.turnos.length === 1 ? 'O Assistente de um plantão mudou' : 'O Assistente de vários plantões mudou',
@@ -826,7 +925,7 @@ const PT = {
     asunto: 'Um Assistente avisou que vai faltar',
     texto: [
       `${d.asistente ?? 'Um Assistente'} não vai estar de ${d.fechaInicio}${d.fechaFin ? ` até ${d.fechaFin}` : ''}.`,
-      `Deixa ${d.turnos} plantão(ões) sem ninguém. O primeiro é o de ${d.fecha}, das ${d.horaInicio} às ${d.horaFin}, e começa em ${d.horas} h.`,
+      `Deixa ${d.turnos} ${d.turnos === 1 ? 'plantão' : 'plantões'} sem ninguém. O primeiro é o de ${d.fecha}, das ${d.horaInicio} às ${d.horaFin}, e começa em ${d.horas} h.`,
       d.veces > 1 ? `É o aviso número ${d.veces} desta mesma ausência.` : null,
     ].filter(Boolean).join('\n'),
   }),
@@ -837,7 +936,7 @@ const PT = {
       `${d.asistente ?? 'Um Assistente'} não vai estar de ${d.fechaInicio}${d.fechaFin ? ` até ${d.fechaFin}` : ''}.`,
       `Plantão de ${d.fecha}, das ${d.horaInicio} às ${d.horaFin}, para ${unirNombres(d.pacientes, 'e', 'Paciente sem nome cadastrado')}.`,
       d.yaEmpezo ? `Deveria ter começado há ${d.horas} h.` : `Começa em ${d.horas} h.`,
-      d.turnos > 1 ? `Além disso, deixa outros ${d.turnos - 1} plantão(ões) sem ninguém.` : null,
+      d.turnos > 1 ? `Além disso, deixa ${d.turnos - 1 === 1 ? 'outro plantão' : `outros ${d.turnos - 1} plantões`} sem ninguém.` : null,
       d.veces > 1 ? `É o aviso número ${d.veces} desta mesma ausência.` : null,
     ].filter(Boolean).join('\n'),
   }),
@@ -867,12 +966,12 @@ const PT = {
         ? `Equipe do Paciente: ${unirNombres(d.candidatos, 'e', '')}.`
         : 'Este Paciente ainda não tem equipe montada.',
       d.veces > 1 ? `É o lembrete número ${d.veces} deste mesmo plantão.` : null,
-      'Fica aberto até ser fechado no Painel, dizendo como terminou.',
     ].filter(Boolean).join('\n'),
   }),
+
   alerta_ia_coordinador: (d) => ({
-    asunto: d.esRoja ? 'Alerta VERMELHO de IA — Paciente' : 'Alerta AMARELO de IA — Paciente',
-    texto: 'Ver o detalhe no Painel.',
+    asunto: d.esRoja ? 'Alerta vermelho sobre um Paciente' : 'Alerta amarelo sobre um Paciente',
+    texto: 'O detalhe está no Painel.',
   }),
 
   alerta_ia_familia: (d) => ({
@@ -883,72 +982,72 @@ const PT = {
   }),
 
   vencimiento_documentos: (d) => ({
-    asunto: `Vencimentos próximos de ${d.etiqueta} — ${d.documentos.length} Asistente(s)`,
-    texto: `Os seguintes Asistentes têm ${d.etiqueta} vencido ou a vencer dentro de ${d.dias} dias:\n\n${d.documentos.map((x) => `${x.nombre}: vence ${x.fechaVencimiento}`).join('\n')}`,
+    asunto: `Vencimentos próximos de ${d.etiqueta} — ${d.documentos.length} ${d.documentos.length === 1 ? 'Assistente' : 'Assistentes'}`,
+    texto: `Estes Assistentes têm ${d.etiqueta} vencido ou a vencer dentro de ${d.dias} dias:\n\n${d.documentos.map((x) => `${x.nombre}: vence ${x.fechaVencimiento}`).join('\n')}`,
   }),
 
   mfa_codigo_recuperacion: (d) => ({
     asunto: `Código de recuperação de acesso — ${d.producto}`,
-    texto: `O código de recuperação é ${d.codigo}. Vence em ${d.minutos} minutos. Se não foi você que pediu, pode ignorar este email.`,
+    texto: `O código de recuperação é ${d.codigo}. Vence em ${d.minutos} minutos. Se não tiver sido solicitado, pode ignorar este e-mail.`,
   }),
 
   codigo_instruccion_circulo: (d) => ({
     asunto: `Código para confirmar os acessos do seu círculo familiar — ${d.remite}`,
-    texto: `O seu código para confirmar a instrução sobre os acessos do seu círculo familiar é ${d.codigo}. Vence em ${d.minutos} minutos. Se não foi você que pediu, não o use e avise ${d.remite}.`,
+    texto: `O seu código para confirmar a instrução sobre os acessos do seu círculo familiar é ${d.codigo}. Vence em ${d.minutos} minutos. Se não tiver sido solicitado, não o use e avise ${d.remite}.`,
   }),
 
   activacion_cuenta: (d) => ({
     asunto: `Ative a sua conta na ${d.empresa}`,
-    texto: `Olá ${d.nombre},\n\nA sua conta na ${d.empresa} já está criada. Falta um passo: escolher a sua senha.\n\nA ativação é feita aqui:\n${d.link}\n\nO link expira em ${d.dias} dias. Se não esperava este email, pode ignorá-lo.\n\n—\nCom a tecnologia de ${d.producto}`,
+    texto: `Olá ${d.nombre},\n\nA sua conta na ${d.empresa} já está criada. Falta um passo: escolher a sua senha.\n\nA ativação é feita aqui:\n${d.link}\n\nO link expira em ${d.dias} dias. Se este e-mail não era esperado, pode ser ignorado.\n\n—\nCom a tecnologia de ${d.producto}`,
     html: correoConBoton({
       saludo: `Olá ${d.nombre},`,
       cuerpo: `A sua conta na ${d.empresa} já está criada. Falta um passo: escolher a sua senha.`,
       boton: 'Ativar a minha conta',
       link: d.link,
-      pieDeAviso: `O link expira em ${d.dias} dias. Se não esperava este email, pode ignorá-lo.`,
+      pieDeAviso: `O link expira em ${d.dias} dias. Se este e-mail não era esperado, pode ser ignorado.`,
       marca: `Com a tecnologia de ${d.producto}`,
     }),
   }),
 
   recuperacion_clave: (d) => ({
     asunto: `Recupere a sua senha na ${d.empresa}`,
-    texto: `Olá ${d.nombre},\n\nFoi pedida uma senha nova para a sua conta na ${d.empresa}.\n\nÉ escolhida aqui:\n${d.link}\n\nO link expira em ${d.horas} horas e serve uma só vez. Se não o pediu, pode ignorar este email: a sua senha continua a mesma.\n\n—\nCom a tecnologia de ${d.producto}`,
+    texto: `Olá ${d.nombre},\n\nFoi pedida uma senha nova para a sua conta na ${d.empresa}.\n\nA escolha é feita aqui:\n${d.link}\n\nO link expira em ${d.horas} horas e serve uma só vez. Se não tiver sido solicitada, pode ignorar este e-mail: a sua senha continua a mesma.\n\n—\nCom a tecnologia de ${d.producto}`,
     html: correoConBoton({
       saludo: `Olá ${d.nombre},`,
       cuerpo: `Foi pedida uma senha nova para a sua conta na ${d.empresa}.`,
       boton: 'Escolher uma senha nova',
       link: d.link,
-      pieDeAviso: `O link expira em ${d.horas} horas e serve uma só vez. Se não o pediu, pode ignorar este email: a sua senha continua a mesma.`,
+      pieDeAviso: `O link expira em ${d.horas} horas e serve uma só vez. Se não tiver sido solicitada, pode ignorar este e-mail: a sua senha continua a mesma.`,
       marca: `Com a tecnologia de ${d.producto}`,
     }),
   }),
 
   estado_postulacion: (d) => ({
-    asunto: `${d.empresa} — Atualização da candidatura`,
+    asunto: `${d.empresa} — A sua candidatura`,
     texto: [
       `Olá ${d.nombre || ''},`,
       '',
       {
-        en_revision: 'A candidatura como Asistente Integral está em análise.',
-        aprobado: 'A candidatura como Asistente Integral foi aprovada. Em breve entraremos em contato para os próximos passos.',
+        en_revision: 'A sua candidatura está em análise.',
+        aprobado: 'A sua candidatura foi aprovada. Entraremos em contato.',
         rechazado: `Obrigado pelo interesse na ${d.empresa}. Desta vez não vamos avançar com a candidatura.`,
       }[d.estado],
       '',
       `Equipe ${d.empresa}`,
-    ].join('\n'),
+    ].join('\n') + PIE.pt,
   }),
 
   nueva_postulacion_asistente: (d) => ({
-    asunto: `Nova candidatura de Asistente — ${d.nombre}`,
-    texto: `Nome: ${d.nombre}\nDocumento: ${d.dni}\nTelefone: ${d.telefono}\nEmail: ${d.email}\nEspecialidades: ${d.especialidades}\nZonas: ${d.zonas}\nDisponibilidade: ${d.disponibilidad}\nSituação fiscal: ${d.situacionFiscal}`,
+    asunto: `Nova candidatura de Assistente — ${d.nombre}`,
+    texto: `Foi recebida uma candidatura de ${d.nombre}. Os dados estão no Painel.`,
   }),
 
   nueva_solicitud_servicio: (d) => ({
     asunto: `Nova solicitação de serviço — ${d.nombre}`,
-    texto: `Nome: ${d.nombre}\nTelefone: ${d.telefono}\nEmail: ${d.email}\nLocalidade: ${d.localidad}\nServiço: ${d.tipoServicio} (${d.modalidad})\nDias e horário: ${d.diasHorario}\nDescrição: ${d.descripcion ?? '—'}`,
+    texto: `Nome: ${d.nombre}\nTelefone: ${d.telefono}\nE-mail: ${d.email}\nLocalidade: ${d.localidad}\nServiço: ${d.tipoServicio} (${d.modalidad})\nDias e horário: ${d.diasHorario}\nDescrição: ${d.descripcion ?? '—'}`,
   }),
 
-  mensaje_del_coordinador: () => ({ titulo: 'Nova mensagem do coordenador' }),
+  mensaje_del_coordinador: () => ({ titulo: 'Nova mensagem do Coordenador' }),
 
   guardia_asignada: (d) => ({
     titulo: 'Novo plantão atribuído',
@@ -962,7 +1061,7 @@ const PT = {
 
   fin_periodo_sin_cargo: (d) => ({
     titulo: 'Termina o período sem cobrança',
-    cuerpo: `Em ${d.dia} começa a ser cobrado ${d.importe}. Se preferir não continuar, pode cancelar antes pelo aplicativo.`,
+    cuerpo: `A partir de ${d.dia} passa a ser cobrado ${d.importe}. Se preferir não continuar, pode cancelar antes pelo aplicativo.`,
   }),
 
   cobro_no_realizado: (d) => ({
@@ -972,31 +1071,52 @@ const PT = {
 
   cese_de_servicio: () => ({
     titulo: 'Fim do serviço',
-    cuerpo: 'O serviço do qual participava foi encerrado. Para mais informações, pode entrar em contato com o coordenador.',
+    cuerpo: 'O Serviço do qual participava foi encerrado. Para mais informações, pode entrar em contato com o Coordenador.',
   }),
 
   entrevista_agendada: (d) => ({
     titulo: `Entrevista com ${d.prestadora}`,
-    cuerpo: `Sua entrevista ficou marcada para ${d.cuando}.\n\nNo dia da entrevista, entre por aqui:\n${d.enlace}\n\nA porta abre ${d.anticipo} minutos antes do horário. Não é preciso instalar nada nem criar nenhuma conta.`,
+    cuerpo: `A sua entrevista ficou marcada para ${d.cuando}.\n\nNo dia da entrevista, entre por aqui:\n${d.enlace}\n\nA porta abre ${d.anticipo} minutos antes do horário. Não é preciso instalar nada nem criar nenhuma conta.${PIE.pt}`,
   }),
 
   entrevista_reprogramada: (d) => ({
     titulo: `Mudou o dia da sua entrevista com ${d.prestadora}`,
-    cuerpo: `Sua entrevista passou para ${d.cuando}.\n\nEntre pelo mesmo link de sempre:\n${d.enlace}\n\nA porta abre ${d.anticipo} minutos antes do horário.`,
+    cuerpo: `A sua entrevista passou para ${d.cuando}.\n\nEntre pelo mesmo link de sempre:\n${d.enlace}\n\nA porta abre ${d.anticipo} minutos antes do horário.${PIE.pt}`,
   }),
 
   entrevista_cancelada: (d) => ({
     titulo: `Sua entrevista com ${d.prestadora} foi cancelada`,
-    cuerpo: `A entrevista de ${d.cuando} ficou sem efeito. Sua candidatura continua de pé: se for marcada uma nova data, você vai receber outro aviso como este.`,
+    cuerpo: `A entrevista de ${d.cuando} ficou sem efeito. A sua candidatura continua de pé.${PIE.pt}`,
+  }),
+
+  clave_recuperada: (d) => ({
+    asunto: `A senha da sua conta na ${d.prestadora} foi alterada`,
+    texto: `${d.nombre}: a senha da sua conta acaba de ser alterada.\n\nSe não foi você, avise a ${d.prestadora} agora mesmo.${PIE.pt}`,
+  }),
+
+  telefono_cambiado: (d) => ({
+    asunto: `O telefone da sua conta na ${d.prestadora} foi alterado`,
+    texto: `${d.nombre}: o telefone da sua conta acaba de ser alterado e ainda está sem verificar.\n\nSe não foi você, avise a ${d.prestadora} agora mesmo.${PIE.pt}`,
+  }),
+
+  entrada_desde_equipo_nuevo: (d) => ({
+    asunto: `Entraram na sua conta da ${d.prestadora} a partir de um equipamento novo`,
+    texto: `${d.nombre}: entraram na sua conta a partir de um equipamento do qual nunca se tinha entrado.\n\nSe não foi você, troque a sua senha e feche a sessão em todos os equipamentos pela sua própria tela.${PIE.pt}`,
+  }),
+
+  cambio_de_clave_habilitado: (d) => ({
+    asunto: `A ${d.prestadora} liberou uma troca de senha na sua conta`,
+    texto: `${d.nombre}: a ${d.prestadora} liberou por um tempo curto que você escolha uma senha nova. A senha é escolhida por você: ninguém da ${d.prestadora} a vê nem a conhece.\n\nSe você não ligou para pedir isso, avise agora mesmo.${PIE.pt}`,
   }),
 };
 
 function estadoDeLaBusquedaPT({ ofrecida, invitados, sinContestar, aceptaron }) {
-  if (!ofrecida) return 'Ainda não foi oferecido a nenhum Asistente.';
-  if (invitados === 0) return 'Está publicado, mas não se convidou nenhum Asistente em particular.';
-  if (sinContestar > 0) return `Convidaram-se ${invitados} Asistente(s) e ${sinContestar} ainda não responderam.`;
-  if (aceptaron > 0) return `${aceptaron} Asistente(s) aceitaram mas o plantão continua sem atribuição.`;
-  return `Convidaram-se ${invitados} Asistente(s) e todos recusaram.`;
+  const assistentes = (n) => `${n} ${n === 1 ? 'Assistente' : 'Assistentes'}`;
+  if (!ofrecida) return 'Ainda não foi oferecido a nenhum Assistente.';
+  if (invitados === 0) return 'Está publicado, mas não se convidou nenhum Assistente em particular.';
+  if (sinContestar > 0) return `Foram convidados ${assistentes(invitados)} e ${sinContestar} ainda não ${sinContestar === 1 ? 'respondeu' : 'responderam'}.`;
+  if (aceptaron > 0) return `${assistentes(aceptaron)} ${aceptaron === 1 ? 'aceitou' : 'aceitaram'}, mas o plantão continua sem atribuição.`;
+  return `Foram convidados ${assistentes(invitados)} e ${invitados === 1 ? 'recusou' : 'todos recusaram'}.`;
 }
 
 const CATALOGO = { 'es-AR': ES, en: EN, 'pt-BR': PT };

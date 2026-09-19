@@ -3,12 +3,13 @@ import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { agregarACola, nuevoId, pendientesDeGuardia } from '../lib/colaOffline';
+import { motivoQueSeMuestra } from '../lib/reglasDeLaCola';
 import { sincronizarCola, suscribirseASincronizacion } from '../lib/sincronizarCola';
 import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
 import { nombreTipo } from '../lib/tipoDeAsistente';
 import { finDeGuardia } from '../lib/horarios';
-import { obtenerUbicacion } from '../lib/ubicacionDelTelefono';
+import { obtenerUbicacion, esFalloDeUbicacion } from '../lib/ubicacionDelTelefono';
 import { useSeVe } from '../context/PerfilContext';
 import AntesDeLlegar from '../components/AntesDeLlegar';
 import DomicilioTemporal from '../components/DomicilioTemporal';
@@ -205,6 +206,9 @@ export default function GuardiaActiva() {
   // cambie.
   const [, redibujar] = useState(0);
   const [checkinPendiente, setCheckinPendiente] = useState(null); // { desde } o null
+  // Por qué el motor rechazó lo que espera en este teléfono. Es una de las ocho situaciones del
+  // catálogo, nunca el texto crudo del motor, y vacío mientras no haya ningún rechazo.
+  const [motivoDeLaCola, setMotivoDeLaCola] = useState('');
   // Los dos actos de antes de llegar (pendiente #101) esperando señal. Se miran igual que el
   // check-in pendiente: quien avisó sin conexión tiene que ver que su aviso quedó guardado, o
   // vuelve a apretar el botón pensando que no salió.
@@ -253,7 +257,18 @@ export default function GuardiaActiva() {
   }
 
   async function revisarPendientes() {
-    const pendientes = await pendientesDeGuardia(id);
+    // Leer la cola del teléfono es una zona aparte de la guardia: si la base local del aparato no
+    // abre, la pantalla del turno sigue funcionando. Lo que no se pudo leer no se inventa —los
+    // avisos quedan como estaban— y no se le grita nada a nadie por algo que no hizo.
+    let pendientes;
+    try {
+      pendientes = await pendientesDeGuardia(id);
+    } catch {
+      return;
+    }
+    // El motivo del primero que quedó rechazado. Es uno solo porque lo que viene detrás depende
+    // de él: cuando se destraba el primero, los siguientes salen.
+    setMotivoDeLaCola(motivoQueSeMuestra(pendientes.find((p) => motivoQueSeMuestra(p))));
     const checkin = pendientes.find((p) => p.tipo === 'checkin');
     setCheckinPendiente(checkin ? { desde: checkin.creadoEn } : null);
     // Un reporte esperando señal cuenta como cargado: ya lo escribió el Asistente, y si no
@@ -339,7 +354,10 @@ export default function GuardiaActiva() {
       // puerta y tiene que poder intentar otra cosa ahí mismo, sin volver a empezar.
       if (MOTIVOS_DEL_CODIGO.includes(e.motivo)) return { ok: false, mensaje: mensajeDeError(e, t) };
       setPasandoCheckin(false);
-      setError(e.message === 'sin_geo' ? t.guardia_activa.geo_no_disponible : mensajeDeError(e, t));
+      // Los dos fallos de ubicación se cuentan distinto: el que se arregla desde la configuración
+      // del teléfono y el que no se arregla desde ningún lado. La clave del error es la clave de
+      // la frase, así que un fallo nuevo se explica agregando su texto y nada más.
+      setError(esFalloDeUbicacion(e) ? t.guardia_activa[e.message] : mensajeDeError(e, t));
     } finally {
       setHaciendoCheckin(false);
     }
@@ -377,7 +395,7 @@ export default function GuardiaActiva() {
     } catch (e) {
       if (MOTIVOS_DEL_CODIGO.includes(e.motivo)) return { ok: false, mensaje: mensajeDeError(e, t) };
       setPasandoCheckout(false);
-      if (e.message === 'sin_geo') setError(t.guardia_activa.geo_no_disponible);
+      if (esFalloDeUbicacion(e)) setError(t.guardia_activa[e.message]);
       // `falta_reporte` es el único motivo que se sigue mirando acá, y es a propósito: su
       // frase lleva adentro los nombres de los Pacientes cuyo reporte falta, y eso una
       // búsqueda por motivo no lo hace. Si el turno cubrió a dos personas y se escribió una
@@ -458,9 +476,19 @@ export default function GuardiaActiva() {
 
       {aviso && <div className="alert alert-alerta" role="status">{aviso}</div>}
 
-      {checkinPendiente && (
-        <div className="alert alert-info" role="status">
-          <span aria-hidden="true">⏳</span> {t.comun.pendiente_de_enviar}
+      {/* Lo que espera señal en este teléfono, y el motivo cuando el motor lo rechazó. El motivo
+          se guardaba desde siempre y no se mostraba nunca: la persona veía «pendiente de enviar»
+          para algo que ya no se iba a mandar más. La frase sale del catálogo de situaciones, así
+          que nunca llega el texto crudo del motor. */}
+      {(checkinPendiente || motivoDeLaCola) && (
+        <div className={motivoDeLaCola ? 'alert alert-alerta' : 'alert alert-info'} role="status">
+          {motivoDeLaCola ? (
+            `${t.comun.no_se_pudo_enviar}: ${t.errores[motivoDeLaCola] ?? t.errores.falla_del_sistema}`
+          ) : (
+            <>
+              <span aria-hidden="true">⏳</span> {t.comun.pendiente_de_enviar}
+            </>
+          )}
         </div>
       )}
 

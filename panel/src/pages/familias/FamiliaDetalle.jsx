@@ -64,7 +64,7 @@ function resumenDeAccesos(accesos, t) {
 }
 
 export function FamiliaDetalle() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { id } = useParams();
   const navigate = useNavigate();
   const { usuario } = useAuth();
@@ -325,7 +325,7 @@ export function FamiliaDetalle() {
           )}
           <dl className="panel-detalle-lista">
             <dt>{t.familias.col_fecha_alta}</dt>
-            <dd>{new Date(familia.created_at).toLocaleDateString()}</dd>
+            <dd>{new Date(familia.created_at).toLocaleDateString(locale)}</dd>
           </dl>
           <Button onClick={guardarContacto} disabled={guardandoContacto || !puedeEditarFamilia}>
             {guardandoContacto ? t.comun.guardando : t.comun.guardar}
@@ -401,7 +401,7 @@ export function FamiliaDetalle() {
       {instruccionPendiente && (
         <Alert variant="warning">
           {con(t.familias.circulo.instruccion_pendiente, {
-            fecha: new Date(instruccionPendiente.created_at).toLocaleDateString(),
+            fecha: new Date(instruccionPendiente.created_at).toLocaleDateString(locale),
           })}{' '}
           <Button variant="secondary" onClick={() => setDocumentoAVer(instruccionPendiente)}>
             {t.familias.circulo.ver_documento}
@@ -416,7 +416,7 @@ export function FamiliaDetalle() {
       {!instruccionPendiente && ultimaInstruccion && (
         <p className="panel-explicacion">
           {con(t.familias.circulo.ultima_instruccion, {
-            fecha: new Date(ultimaInstruccion.cerrada_en || ultimaInstruccion.created_at).toLocaleDateString(),
+            fecha: new Date(ultimaInstruccion.cerrada_en || ultimaInstruccion.created_at).toLocaleDateString(locale),
             como: t.familias.circulo[`cerrada_${ultimaInstruccion.cerrada_como}`] || '',
           })}
         </p>

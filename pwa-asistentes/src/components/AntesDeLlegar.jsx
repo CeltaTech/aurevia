@@ -60,7 +60,11 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
     } catch {
       punto = null;
     }
-    const datos = { ...punto, medioTransporte: medioTransporte.trim() || undefined };
+    // El identificador del envío se pone antes del primer intento, no al encolar: si la salida
+    // llegó al motor y lo que se perdió fue la respuesta, el reenvío tiene que traer el mismo
+    // identificador para que allá se reconozca en vez de anotarse dos veces.
+    const clienteUuid = nuevoId();
+    const datos = { ...punto, medioTransporte: medioTransporte.trim() || undefined, clienteUuid };
     try {
       const resultado = await api.registrarSalida(guardiaId, datos);
       if (resultado.yaLlego) setAviso(t.antes_de_llegar.ya_llego);
@@ -76,7 +80,7 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
       }
       // Sin señal: se guarda en el teléfono y sale solo. La hora que le va a quedar es la de
       // cuando llegue al motor y no la de ahora — se dice así en pantalla, sin disimularlo.
-      await agregarACola({ id: nuevoId(), tipo: 'salida', guardiaId, payload: datos });
+      await agregarACola({ id: clienteUuid, tipo: 'salida', guardiaId, payload: datos });
       setAviso(t.antes_de_llegar.sin_conexion);
       setAbriendoSalida(false);
       setMedioTransporte('');
@@ -91,7 +95,8 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
     setError('');
     setAviso('');
     setAvisandoDemora(true);
-    const datos = { motivo };
+    const clienteUuid = nuevoId();
+    const datos = { motivo, clienteUuid };
     try {
       const resultado = await api.avisarDemora(guardiaId, datos);
       if (resultado.yaLlego) setAviso(t.antes_de_llegar.ya_llego);
@@ -107,7 +112,7 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
         setAvisandoDemora(false);
         return;
       }
-      await agregarACola({ id: nuevoId(), tipo: 'aviso_demora', guardiaId, payload: datos });
+      await agregarACola({ id: clienteUuid, tipo: 'aviso_demora', guardiaId, payload: datos });
       setDemoraEnEsteTelefono({ at: null, motivo });
       setAviso(t.antes_de_llegar.sin_conexion);
       setAbriendoDemora(false);

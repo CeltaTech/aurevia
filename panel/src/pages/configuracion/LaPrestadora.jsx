@@ -16,10 +16,12 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { FacturacionFamiliasTab } from './FacturacionFamiliasTab';
 import { ConsentimientoPagadorTab } from './ConsentimientoPagadorTab';
 import { TabLugares } from './LosLugares';
+import { LaMoneda } from './LaMoneda';
+import { ElSoftwareDeAfuera } from './ElSoftwareDeAfuera';
 
-/* Quién es la Prestadora y cómo trabaja: su nombre y sus datos, las modalidades
-   que tiene contratadas, las zonas donde presta, a qué plazo le pagan las Familias
-   y —si vende por marketplace— por dónde cobra. */
+/* Quién es la Prestadora y cómo trabaja: su nombre y sus datos, en qué moneda
+   trabaja, las modalidades que tiene contratadas, las zonas donde presta, a qué
+   plazo le pagan las Familias y —si vende por marketplace— por dónde cobra. */
 export function ConfiguracionPrestadora() {
   const { t } = useLocale();
   const { tieneModalidad } = useModalidades();
@@ -28,11 +30,13 @@ export function ConfiguracionPrestadora() {
     <>
       <h2>{t.configuracion.tab_empresa}</h2>
       <TabEmpresa />
+      <LaMoneda />
       <TabModalidades />
       <h2>{t.configuracion.tab_zonas}</h2>
       <TabZonas />
       <TabLugares />
       <FacturacionFamiliasTab />
+      <ElSoftwareDeAfuera />
       <ConsentimientoPagadorTab />
       {tieneModalidad('marketplace') && <TabPasarela />}
     </>

@@ -18,6 +18,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { correoDeAcceso } from '../../config/correoDeAcceso.js';
 
 const PRESTADORA_PROPIA = '11111111-1111-1111-1111-111111111111';
 const USUARIO = '22222222-2222-2222-2222-222222222222';
@@ -560,7 +561,10 @@ describe('la Prestadora nace con su administrador', () => {
 
     const acceso = filaEscritaEn('POST /auth/v1/admin/users');
     assert.ok(acceso, 'dio de alta la Prestadora y nadie puede entrar a configurarla');
-    assert.equal(acceso.email, ALTA_COMPLETA.admin_email);
+    // Al servicio de acceso no se le entrega el correo de la persona sino el que lleva la
+    // Prestadora adentro: la misma persona tiene una cuenta por cada Prestadora donde trabaja.
+    assert.equal(acceso.email, await correoDeAcceso(ALTA_COMPLETA.admin_email, NUEVA));
+    assert.notEqual(acceso.email, ALTA_COMPLETA.admin_email);
 
     const ficha = filaEscritaEn('POST /rest/v1/usuarios');
     assert.ok(ficha, 'creó la cuenta de acceso y no quedó la ficha de la persona');
@@ -606,19 +610,21 @@ describe('sin administrador no queda Prestadora', () => {
   });
 
   it('el correo que ya tiene cuenta se dice como tal, y tampoco queda Prestadora', async () => {
-    // El caso más probable de todos: quien va a administrar esta Prestadora ya administra otra.
-    // El servicio de acceso avisa en inglés y sin código propio, así que llega tal cual.
+    // Ese correo ya tiene cuenta EN ESTA MISMA Prestadora: la de otra es otra cuenta y no se
+    // cruza con ésta. El servicio de acceso avisa en inglés y sin código propio, así que llega
+    // tal cual.
     respuestas.set('POST /auth/v1/admin/users', () =>
       falla(422, { message: 'A user with this email address has already been registered' })
     );
-    // Y detrás de ese correo hay alguien de verdad: la cuenta existe y su ficha es de otra
-    // Prestadora, la que la base falsa contesta en `GET /rest/v1/usuarios`.
+    // Y detrás de ese correo hay alguien de verdad, no el sobrante de un alta cortada por la
+    // mitad: la cuenta existe y tiene ficha.
+    const correoInterno = await correoDeAcceso(ALTA_COMPLETA.admin_email, NUEVA);
     respuestas.set('GET /auth/v1/admin/users', () => ({
-      users: [{ id: ADMINISTRADOR, email: ALTA_COMPLETA.admin_email }],
+      users: [{ id: ADMINISTRADOR, email: correoInterno }],
     }));
     const { estado, cuerpo } = await darDeAlta();
     assert.equal(estado, 409);
-    assert.equal(cuerpo.motivo, 'correo_de_otra_cuenta');
+    assert.equal(cuerpo.motivo, 'correo_de_esta_prestadora');
     seDeshizo();
     // El detalle lleva el identificador de la cuenta ajena: acá se comprueba que no salió.
     assert.doesNotMatch(JSON.stringify(cuerpo), new RegExp(ADMINISTRADOR));

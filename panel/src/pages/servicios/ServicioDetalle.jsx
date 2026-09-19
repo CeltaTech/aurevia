@@ -166,7 +166,7 @@ export function ServicioDetalle() {
         <span className={claseBadge(servicio.estado)}>
           {traducirValor(t.servicios, `estado_${servicio.estado}`)}
         </span>{' '}
-        <strong>{t.servicios.col_alta}:</strong> {new Date(servicio.created_at).toLocaleDateString()}
+        <strong>{t.servicios.col_alta}:</strong> {new Date(servicio.created_at).toLocaleDateString(locale)}
       </p>
 
       <Alert variant="info">

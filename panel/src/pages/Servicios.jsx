@@ -24,7 +24,7 @@ const CONSULTA =
   'prestaciones(paciente_id), guardias(paciente_id)';
 
 export function Servicios() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const navigate = useNavigate();
   const [filas, setFilas] = useState([]);
   const [contactos, setContactos] = useState(new Map());
@@ -131,7 +131,7 @@ export function Servicios() {
                   <span><strong>{t.servicios.col_pacientes}:</strong> {pacientes.size}</span>
                   <span><strong>{t.servicios.col_prestaciones}:</strong> {prestaciones.length}</span>
                   <span><strong>{t.servicios.col_guardias}:</strong> {guardias.length}</span>
-                  <span><strong>{t.servicios.col_alta}:</strong> {new Date(s.created_at).toLocaleDateString()}</span>
+                  <span><strong>{t.servicios.col_alta}:</strong> {new Date(s.created_at).toLocaleDateString(locale)}</span>
                 </div>
                 <div className="lista-tarjeta-acciones">
                   <Button variant="secondary" onClick={() => navigate(`/servicios/${s.id}`)}>

@@ -6,6 +6,8 @@ import { obtenerUbicacion } from '../../lib/ubicacion';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
 import { useMotivosAvisoPrevio } from '../../hooks/useMotivosAvisoPrevio';
+import { useMotivosDeResolucion } from '../../hooks/useMotivosDeResolucion';
+import { resolver } from '../../lib/resoluciones';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
@@ -16,9 +18,16 @@ import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { DescansosDeLaGuardia } from './DescansosDeLaGuardia';
 
+// Qué se resuelve en esta pantalla y en qué estado queda. Es el nombre guardado de la tabla, y con
+// él salen los motivos del catálogo de la Prestadora y se escribe la resolución. El estado se nombra
+// acá porque una Guardia también se cierra a mano desde otra pantalla: sin acotarlo, el desplegable
+// de cancelar ofrecería los motivos de cerrar.
+const TABLA = 'guardias';
+const ESTADO_CANCELADA = 'cancelada';
+
 export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose, onActualizada }) {
   const modal = useModalAccesible(onClose);
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { usuario } = useAuth();
   const prestadoraId = usePrestadoraActual();
   const confirmarDestructivo = useConfirmarDestructivo();
@@ -26,6 +35,20 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
   const [medioTransporte, setMedioTransporte] = useState('');
   const [cancelacionOrigen, setCancelacionOrigen] = useState('');
   const [cancelacionAlcance, setCancelacionAlcance] = useState('');
+  // Los motivos de esta Prestadora para cancelar una Guardia. En qué estado queda la Guardia lo dice
+  // el motivo elegido, así que acá no hay ninguna lista de estados escrita.
+  const {
+    filas: motivosCancelacion,
+    estado: estadoMotivosCancelacion,
+    error: errorMotivosCancelacion,
+    recargar: recargarMotivosCancelacion,
+  } = useMotivosDeResolucion(prestadoraId, TABLA, ESTADO_CANCELADA);
+  const [cancelacionMotivoId, setCancelacionMotivoId] = useState('');
+  const [cancelacionDetalle, setCancelacionDetalle] = useState('');
+  const motivoCancelacion = useMemo(
+    () => motivosCancelacion.find((motivo) => motivo.id === cancelacionMotivoId) ?? null,
+    [motivosCancelacion, cancelacionMotivoId],
+  );
   const [avisoPrevioMotivo, setAvisoPrevioMotivo] = useState('');
   const [avisoPrevioTexto, setAvisoPrevioTexto] = useState('');
   const [sugiriendoMotivo, setSugiriendoMotivo] = useState(false);
@@ -120,9 +143,34 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
     actualizar({ checkout_at: new Date().toISOString(), checkout_lat: lat, checkout_lng: lng, estado: 'completada' });
   }
 
+  /* Cancelar una Guardia no es pisar su estado: es dejar escrito por qué se canceló y quién lo
+     decidió. La resolución se escribe primero, y el estado en el que queda la Guardia sale del
+     motivo elegido, nunca de esta pantalla. Quién pidió la cancelación y hasta dónde llega son dos
+     datos de la Guardia y se guardan aparte, como la nota interna en las otras pantallas. */
   async function handleCancelar() {
     if (!(await confirmarDestructivo(t.guardias.detalle.confirmar_cancelar))) return;
-    actualizar({ estado: 'cancelada', cancelacion_origen: cancelacionOrigen, cancelacion_alcance: cancelacionAlcance });
+    if (!motivoCancelacion) return;
+
+    setError(null);
+    setProcesando(true);
+
+    const { error: errorResolucion } = await resolver({
+      tabla: TABLA,
+      filaId: guardia.id,
+      motivoId: motivoCancelacion.id,
+      detalle: motivoCancelacion.pide_detalle ? cancelacionDetalle.trim() : null,
+    });
+
+    if (errorResolucion) {
+      setProcesando(false);
+      setError(mensajeDeError(errorResolucion, t));
+      return;
+    }
+
+    await actualizar({
+      cancelacion_origen: cancelacionOrigen,
+      cancelacion_alcance: cancelacionAlcance,
+    });
   }
 
   /* Marcar la ausencia se lo pide al motor, y no se hace acá.
@@ -294,7 +342,7 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
         <ul className="panel-momentos-registrados">
           {momentosDeLaGuardia.map(({ clave, at }) => (
             <li key={clave}>
-              {t.guardias.detalle[clave]} · {at ? new Date(at).toLocaleString() : t.guardias.detalle.momento_sin_registro}
+              {t.guardias.detalle[clave]} · {at ? new Date(at).toLocaleString(locale) : t.guardias.detalle.momento_sin_registro}
             </li>
           ))}
         </ul>
@@ -304,7 +352,7 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
             {cobertura === COBERTURA.OFRECIDA ? (
               <>
                 <p className="panel-explicacion">
-                  {t.guardias.publicada_el.replace('{fecha}', new Date(guardia.ofrecida_at).toLocaleString())}
+                  {t.guardias.publicada_el.replace('{fecha}', new Date(guardia.ofrecida_at).toLocaleString(locale))}
                 </p>
                 <Button variant="secondary" onClick={handleDespublicar} disabled={procesando}>
                   {t.guardias.despublicar}
@@ -389,6 +437,50 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
         {puedeCancelar && (
           <div className="panel-resultado-calculo">
             <h3>{t.guardias.detalle.cancelar_guardia}</h3>
+
+            {/* Los cuatro estados de lo que carga datos: mientras la lista de motivos viene, se
+                avisa; si falló, se ofrece volver a pedirla; si la Prestadora se quedó sin ninguno
+                encendido, no hay nada que elegir. */}
+            {estadoMotivosCancelacion === 'cargando' && <p>{t.comun.cargando}</p>}
+            {estadoMotivosCancelacion === 'error' && (
+              <Alert variant="error">
+                {errorMotivosCancelacion}{' '}
+                <Button variant="secondary" onClick={recargarMotivosCancelacion}>
+                  {t.comun.reintentar}
+                </Button>
+              </Alert>
+            )}
+            {estadoMotivosCancelacion === 'vacio' && <Alert variant="info">{t.comun.vacio}</Alert>}
+
+            <FormField
+              label={t.comun.motivo}
+              name="cancelacion_motivo"
+              type="select"
+              value={cancelacionMotivoId}
+              onChange={(e) => {
+                setCancelacionMotivoId(e.target.value);
+                setCancelacionDetalle('');
+              }}
+              disabled={procesando || estadoMotivosCancelacion !== 'listo'}
+            >
+              <option value="">{t.comun.motivo_elegir}</option>
+              {motivosCancelacion.map((motivo) => (
+                <option key={motivo.id} value={motivo.id}>{motivo.nombre}</option>
+              ))}
+            </FormField>
+
+            {motivoCancelacion?.pide_detalle && (
+              <FormField
+                label={t.comun.detalle}
+                name="cancelacion_detalle"
+                type="textarea"
+                value={cancelacionDetalle}
+                onChange={(e) => setCancelacionDetalle(e.target.value)}
+                disabled={procesando}
+                required
+              />
+            )}
+
             <FormField
               label={t.guardias.detalle.cancelacion_origen}
               name="cancelacion_origen"
@@ -414,7 +506,13 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
             <Button
               variant="secondary"
               onClick={handleCancelar}
-              disabled={procesando || !cancelacionOrigen || !cancelacionAlcance}
+              disabled={
+                procesando
+                || !motivoCancelacion
+                || (motivoCancelacion.pide_detalle && !cancelacionDetalle.trim())
+                || !cancelacionOrigen
+                || !cancelacionAlcance
+              }
             >
               {t.guardias.detalle.cancelar_guardia}
             </Button>

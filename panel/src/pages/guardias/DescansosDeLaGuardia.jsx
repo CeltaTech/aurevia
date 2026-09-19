@@ -25,7 +25,7 @@ import { mensajeDeError } from '../../lib/errores';
  * de quien llama y no por lo que venga en el pedido.
  */
 export function DescansosDeLaGuardia({ guardiaId }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const tr = t.guardias.detalle.descansos;
   const [descansos, setDescansos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -90,8 +90,8 @@ export function DescansosDeLaGuardia({ guardiaId }) {
         <ul className="panel-momentos-registrados">
           {descansos.map((d) => (
             <li key={d.id}>
-              {new Date(d.inicio_at).toLocaleString()} –{' '}
-              {d.fin_at ? new Date(d.fin_at).toLocaleString() : tr.en_curso}
+              {new Date(d.inicio_at).toLocaleString(locale)} –{' '}
+              {d.fin_at ? new Date(d.fin_at).toLocaleString(locale) : tr.en_curso}
               {d.nota ? ` · ${d.nota}` : ''}
             </li>
           ))}

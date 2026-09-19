@@ -51,7 +51,10 @@ export default function ExtensionDeTurno({ t, locale, guardiaId, extension, alAv
   async function alNoPoderContinuar() {
     setError('');
     setEnviando(true);
-    const datos = { detalle: detalle.trim(), ocurrido_at: new Date().toISOString() };
+    // El identificador del envío se pone antes del primer intento, para que un reenvío no
+    // anote el mismo aviso dos veces.
+    const clienteUuid = nuevoId();
+    const datos = { detalle: detalle.trim(), ocurrido_at: new Date().toISOString(), clienteUuid };
     try {
       const resultado = await api.noPuedeContinuar(guardiaId, datos);
       setAvisado({ at: resultado.avisadoAt, enviado: true });
@@ -64,7 +67,7 @@ export default function ExtensionDeTurno({ t, locale, guardiaId, extension, alAv
         setEnviando(false);
         return;
       }
-      await agregarACola({ id: nuevoId(), tipo: 'no_puede_continuar', guardiaId, payload: datos });
+      await agregarACola({ id: clienteUuid, tipo: 'no_puede_continuar', guardiaId, payload: datos });
       setAvisado({ at: datos.ocurrido_at, enviado: false });
       setAbriendo(false);
       setDetalle('');

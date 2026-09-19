@@ -14,7 +14,7 @@ import { useLocale } from '../i18n/LocaleContext';
    uno abajo del otro con su título, que es como resuelven esto los programas que
    tienen muchas opciones: una lista de secciones arriba, y adentro de cada
    sección todo a la vista sin más clics. */
-const SECCIONES = ['prestadora', 'asistentes', 'cuidado', 'avisos', 'aplicaciones', 'accesos'];
+const SECCIONES = ['prestadora', 'asistentes', 'cuidado', 'listas', 'avisos', 'aplicaciones', 'accesos'];
 
 export function Configuracion() {
   const { t } = useLocale();

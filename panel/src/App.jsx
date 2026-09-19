@@ -22,6 +22,8 @@ import { ActivarCuenta } from './pages/ActivarCuenta';
 import { RecuperarClave } from './pages/RecuperarClave';
 import { ClaveNueva } from './pages/ClaveNueva';
 import { MiClave } from './pages/MiClave';
+import { CuentaSegura } from './pages/CuentaSegura';
+import { HabilitarClave } from './pages/HabilitarClave';
 import { Muestra } from './pages/Muestra';
 import { MuestraEstadoActual } from './pages/MuestraEstadoActual';
 import { Dashboard } from './pages/Dashboard';
@@ -54,6 +56,7 @@ import { Configuracion } from './pages/Configuracion';
 import { ConfiguracionPrestadora } from './pages/configuracion/LaPrestadora';
 import { ConfiguracionAsistentes } from './pages/configuracion/Asistentes';
 import { ConfiguracionCuidado } from './pages/configuracion/ElCuidado';
+import { LasListasDeOpciones } from './pages/configuracion/LasListasDeOpciones';
 import { ConfiguracionAvisos } from './pages/configuracion/Avisos';
 import { ConfiguracionAplicaciones } from './pages/configuracion/LasAplicaciones';
 import { ConfiguracionAccesos } from './pages/configuracion/Accesos';
@@ -211,11 +214,23 @@ function App() {
                       <Route path="prestadora" element={<ConfiguracionPrestadora />} />
                       <Route path="asistentes" element={<ConfiguracionAsistentes />} />
                       <Route path="cuidado" element={<ConfiguracionCuidado />} />
+                      <Route path="listas" element={<LasListasDeOpciones />} />
                       <Route path="avisos" element={<ConfiguracionAvisos />} />
                       <Route path="aplicaciones" element={<ConfiguracionAplicaciones />} />
                       <Route path="accesos" element={<ConfiguracionAccesos />} />
                     </Route>
                     <Route path="mi-clave" element={<MiClave />} />
+                    {/* La seguridad de la propia cuenta la tiene cualquiera que entre al Panel:
+                        no lleva permiso, porque no se está tocando la cuenta de nadie más. */}
+                    <Route path="cuenta-segura" element={<CuentaSegura />} />
+                    <Route
+                      path="habilitar-clave"
+                      element={
+                        <ProtectedRoute permiso="habilitar_cambio_de_clave">
+                          <HabilitarClave />
+                        </ProtectedRoute>
+                      }
+                    />
                     <Route path="auditoria" element={<ProtectedRoute roles={ROLES_ADMINISTRACION}><Auditoria /></ProtectedRoute>} />
                     {/* Las pantallas del Marketplace llevan dos candados y no uno: el rol,
                         que dice quién de la Prestadora entra, y la modalidad, que dice si esa

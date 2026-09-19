@@ -145,13 +145,24 @@ JOIN public.zonas_cobertura z
 -- 2. Las once cuentas: tres del Panel, cuatro Asistentes, tres Familias y una
 --    persona del círculo familiar
 --
---    Una cuenta vive en dos lugares. En `auth.users` está el correo y la
---    contraseña, que es lo que mira el sistema de ingreso; en `public.usuarios`
---    está el nombre, el rol y a qué Prestadora pertenece, que es lo que mira el
---    producto. Las dos filas comparten el mismo identificador. Hay además una
---    tercera fila, en `auth.identities`, donde el sistema de ingreso anota "por
---    qué medio entra esta persona"; sin ella, entrar con correo y contraseña no
---    funciona.
+--    Una cuenta vive en dos lugares. En `auth.users` está el correo de acceso y
+--    la contraseña, que es lo que mira el sistema de ingreso; en
+--    `public.usuarios` está el nombre, el rol, el correo de verdad y a qué
+--    Prestadora pertenece, que es lo que mira el producto. Las dos filas
+--    comparten el mismo identificador. Hay además una tercera fila, en
+--    `auth.identities`, donde el sistema de ingreso anota "por qué medio entra
+--    esta persona"; sin ella, entrar con correo y contraseña no funciona.
+--
+--    EL CORREO QUE VE EL SISTEMA DE INGRESO NO ES EL DE LA PERSONA. Hay una
+--    cuenta por Prestadora, y el mismo correo en dos Prestadoras son dos
+--    cuentas distintas; el sistema de ingreso, en cambio, exige que ningún
+--    correo se repita en todo el sistema. Lo que se le entrega es entonces el
+--    resumen de la Prestadora junto con el correo, sobre un dominio que no
+--    existe. Se arma acá exactamente igual que en
+--    `backend/src/config/correoDeAcceso.js`, que es donde esa forma se decide y
+--    de donde no se despega: resumen SHA-256 de `<prestadora>:<correo>`, en
+--    hexadecimal, sobre `acceso.careonys.invalid`. El correo de verdad queda en
+--    `public.usuarios.email`, que es donde el aislamiento sí se impone.
 --
 --    POR QUÉ ESTÁ TODO EN UNA SOLA ORDEN Y NO EN TRES. Porque la herramienta que
 --    aplica esta siembra manda el archivo entero de una vez y revisa todas las
@@ -166,7 +177,7 @@ JOIN public.zonas_cobertura z
 --    Los tres roles del Panel están para comprobar que cada uno ve lo que le
 --    corresponde y nada más. Todos entran con la misma contraseña.
 -- ----------------------------------------------------------------------------
-WITH personas (id, email, nombre, rol, telefono) AS (
+WITH escritas (id, email, nombre, rol, telefono) AS (
   VALUES
     -- Los tres roles del Panel
     ('20000000-0000-4000-8000-000000000001'::uuid, 'superadmin@sandbox.local'::text,   'Sofía Superadmin'::text,      'superadmin'::text,       NULL::text),
@@ -186,6 +197,17 @@ WITH personas (id, email, nombre, rol, telefono) AS (
     -- titulares y ven todo, con lo cual una instrucción que niegue algo no se puede comprobar.
     ('40000000-0000-4000-8000-000000000011',       'marcela.gomez@sandbox.local',      'Marcela Gómez',               'familia',                '+54 11 4002-0011')
 ),
+personas AS (
+  SELECT
+    e.id,
+    lower(e.email) AS email,
+    encode(
+      extensions.digest('11111111-1111-4111-8111-111111111111:' || lower(e.email), 'sha256'),
+      'hex'
+    ) || '@acceso.careonys.invalid' AS correo_de_acceso,
+    e.nombre, e.rol, e.telefono
+  FROM escritas e
+),
 cuentas_de_ingreso AS (
   INSERT INTO auth.users (
     instance_id, id, aud, role, email, encrypted_password,
@@ -194,7 +216,7 @@ cuentas_de_ingreso AS (
     confirmation_token, recovery_token, email_change_token_new, email_change
   )
   SELECT
-    '00000000-0000-0000-0000-000000000000', p.id, 'authenticated', 'authenticated', p.email,
+    '00000000-0000-0000-0000-000000000000', p.id, 'authenticated', 'authenticated', p.correo_de_acceso,
     extensions.crypt('local-sandbox-2026', extensions.gen_salt('bf')),
     now(), now(), now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
@@ -209,13 +231,13 @@ medios_de_ingreso AS (
   )
   SELECT
     p.id::text, p.id,
-    jsonb_build_object('sub', p.id::text, 'email', p.email, 'email_verified', true),
+    jsonb_build_object('sub', p.id::text, 'email', p.correo_de_acceso, 'email_verified', true),
     'email', now(), now(), now()
   FROM personas p
   RETURNING user_id
 )
-INSERT INTO public.usuarios (id, rol, nombre, telefono, prestadora_id)
-SELECT p.id, p.rol, p.nombre, p.telefono, '11111111-1111-4111-8111-111111111111'
+INSERT INTO public.usuarios (id, rol, nombre, telefono, email, prestadora_id)
+SELECT p.id, p.rol, p.nombre, p.telefono, p.email, '11111111-1111-4111-8111-111111111111'
 FROM personas p;
 
 -- Hasta dónde llega quien coordina. Carla alcanza los dos lugares de la Ciudad y los dos de la
@@ -939,12 +961,23 @@ WHERE z.codigo = 'la_plata' AND z.prestadora_id = '22222222-2222-4222-8222-22222
 
 -- Las cuatro cuentas de la segunda Prestadora, con la misma mecánica de tres
 -- tablas que explica el punto 2. Entran con la misma contraseña que el resto.
-WITH personas (id, email, nombre, rol, telefono) AS (
+WITH escritas (id, email, nombre, rol, telefono) AS (
   VALUES
     ('50000000-0000-4000-8000-000000000001'::uuid, 'admin@sur.local'::text,   'Alicia Administradora Sur'::text, 'admin_prestadora'::text, '+54 221 400-0001'::text),
     ('50000000-0000-4000-8000-000000000002',       'coordinadora@sur.local',  'Cecilia Coordinadora Sur',        'coordinador',            '+54 221 400-0002'),
     ('50000000-0000-4000-8000-000000000003',       'asistente.sur@sur.local', 'Elena Escobar',                   'asistente',              '+54 221 400-0003'),
     ('50000000-0000-4000-8000-000000000004',       'familia.rios@sur.local',  'Familia Ríos',                    'familia',                '+54 221 400-0004')
+),
+personas AS (
+  SELECT
+    e.id,
+    lower(e.email) AS email,
+    encode(
+      extensions.digest('22222222-2222-4222-8222-222222222222:' || lower(e.email), 'sha256'),
+      'hex'
+    ) || '@acceso.careonys.invalid' AS correo_de_acceso,
+    e.nombre, e.rol, e.telefono
+  FROM escritas e
 ),
 cuentas_de_ingreso AS (
   INSERT INTO auth.users (
@@ -954,7 +987,7 @@ cuentas_de_ingreso AS (
     confirmation_token, recovery_token, email_change_token_new, email_change
   )
   SELECT
-    '00000000-0000-0000-0000-000000000000', p.id, 'authenticated', 'authenticated', p.email,
+    '00000000-0000-0000-0000-000000000000', p.id, 'authenticated', 'authenticated', p.correo_de_acceso,
     extensions.crypt('local-sandbox-2026', extensions.gen_salt('bf')),
     now(), now(), now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
@@ -969,13 +1002,13 @@ medios_de_ingreso AS (
   )
   SELECT
     p.id::text, p.id,
-    jsonb_build_object('sub', p.id::text, 'email', p.email, 'email_verified', true),
+    jsonb_build_object('sub', p.id::text, 'email', p.correo_de_acceso, 'email_verified', true),
     'email', now(), now(), now()
   FROM personas p
   RETURNING user_id
 )
-INSERT INTO public.usuarios (id, rol, nombre, telefono, prestadora_id)
-SELECT p.id, p.rol, p.nombre, p.telefono, '22222222-2222-4222-8222-222222222222'
+INSERT INTO public.usuarios (id, rol, nombre, telefono, email, prestadora_id)
+SELECT p.id, p.rol, p.nombre, p.telefono, p.email, '22222222-2222-4222-8222-222222222222'
 FROM personas p;
 
 INSERT INTO public.asistentes (id, usuario_id, nombre, prestadora_id)
@@ -1167,16 +1200,6 @@ VALUES ('a3000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-1111111
         'intravenosa', 'enfermeria');
 
 
--- De qué Prestadora es parte cada cuenta. Se deriva de las cuentas ya sembradas y no se escribe
--- a mano cuenta por cuenta: así una cuenta nueva en este archivo queda con su membresía sin que
--- nadie se acuerde de agregarla en dos lugares.
-INSERT INTO public.membresias (usuario_id, prestadora_id, rol)
-SELECT u.id, u.prestadora_id, u.rol
-  FROM public.usuarios u
- WHERE u.prestadora_id IS NOT NULL
-ON CONFLICT (usuario_id, prestadora_id) DO NOTHING;
-
-
 -- ----------------------------------------------------------------------------
 -- 9. Limpieza y aviso final
 -- ----------------------------------------------------------------------------
@@ -1189,6 +1212,7 @@ BEGIN
   RAISE NOTICE '';
   RAISE NOTICE 'Base local sembrada. Dos Prestadoras: Sandbox y Cuidar del Sur.';
   RAISE NOTICE 'Contraseña de todas las cuentas: local-sandbox-2026';
+  RAISE NOTICE 'Los correos de abajo son los que se escriben en la pantalla de ingreso.';
   RAISE NOTICE '  Sandbox, Panel  -> superadmin@sandbox.local / admin@sandbox.local / coordinadora@sandbox.local';
   RAISE NOTICE '  Sandbox, Asistentes -> ana.asistente@sandbox.local (y bruno, clara, delia)';
   RAISE NOTICE '  Sandbox, Familias   -> familia.gomez@sandbox.local (y lopez, morales)';

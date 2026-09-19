@@ -82,8 +82,30 @@ trabajador de fondo no tiene sesión; del lado del motor la arma
 `backend/src/utils/marcaPrestadora.js` con `prestadoras.nombre_fantasia` y `prestadoras.logo_url`.
 La línea al pie —*«con la tecnología de {{producto}}»*— **va siempre** y es el **único** uso de
 `IDENTIDAD` en una superficie de Familia o Asistente. **El producto no consulta qué contrató
-ninguna Prestadora**, acá ni en ningún otro lado: eso es de CeltaTech (`celtatech/CLAUDE.md` §2). Excepción abierta: la pantalla de ingreso, donde todavía no se sabe de qué Prestadora
-se trata (pendiente #141). Detalle en `docs/MARCA.md` §0.
+ninguna Prestadora**, acá ni en ningún otro lado: eso es de CeltaTech (`celtatech/CLAUDE.md` §2).
+**Y la pantalla de ingreso también sabe de quién es la puerta**: se lo dice la dirección del
+navegador. `panel/src/lib/puertaDeIngreso.js` la traduce al segmento que el motor ya lee, y
+`backend/src/routes/marcaDeLaPuerta.js` devuelve el nombre y el logotipo sin pedir sesión. Detalle
+en `docs/MARCA.md` §0.
+
+**Y para nombrarla adentro de una frase hay marcador, igual que el producto.** `{{prestadora}}`
+en cualquier traducción, resuelto en `src/i18n/marcaEnElTexto.js` (original en el Panel, copia
+idéntica en las dos aplicaciones) y alimentado por `PerfilContext.jsx` en las aplicaciones y
+`EmpresaContext.jsx` en el Panel. Sin Prestadora conocida cae al nombre del producto. **Sólo
+texto:** la marca dibujada no pasa por ahí y sigue saliendo de `useMarca()`.
+
+**En qué idioma se le abre la pantalla a quien entra por primera vez** lo decide
+`src/i18n/idiomaInicial.js`: lo que esa persona haya elegido alguna vez, después lo que diga la
+dirección —`.com.br` y `.pt` son portugués, `.co.uk` inglés— y recién después el navegador,
+comparando sólo la primera parte de la etiqueta para que `pt-PT` caiga en `pt-BR` y `en-GB` en
+`en`. Qué se habla en cada país sale de `i18n/idiomas.js`, que es el mismo archivo para las
+pantallas y el motor. **Sólo se guarda lo que la persona eligió a mano**, para que un navegador
+que cambia de idioma se siga notando.
+
+**Una frase que falta avisa, no deja un hueco.** `src/i18n/faltaLaFrase.js` envuelve el árbol de
+traducciones: la clave que no existe avisa una vez por consola y muestra un guion en producción y
+`[falta: la.ruta]` en desarrollo. Ningún punto de consumo cambia — `t` se sigue leyendo como
+objeto.
 
 **El trato se le dice al modelo una sola vez**, en `backend/src/utils/tratoIA.js`. Ningún prompt
 copia ese párrafo, y los prompts tampoco tutean al modelo, porque eso lo empuja a contestar así.

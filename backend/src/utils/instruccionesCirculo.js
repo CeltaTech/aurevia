@@ -6,6 +6,7 @@ import { avisarPorWhatsapp } from './whatsapp.js';
 import { enviarEmail, configuracionEvento } from './email.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import { cuentaDeLaFicha, cuentasDeLasFichas } from './cuentaDeLaFicha.js';
+import { correoDe } from './correoDeUnaPersona.js';
 import { aviso } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import {
@@ -248,13 +249,14 @@ export async function pedirCodigo({ instruccionId, familiaId }) {
     }
   }
 
-  const { data: cuenta } = await supabase.auth.admin.getUserById(familiaId);
-  if (!cuenta?.user?.email) {
+  // `familiaId` es el Legajo; el correo es de la persona y vive en la cuenta de la que cuelga.
+  const correoTitular = await correoDe(await cuentaDeLaFicha('familias', familiaId));
+  if (!correoTitular) {
     throw new ErrorConMotivo('sin_canal', 'No hay a dónde mandar el código');
   }
 
   await enviarEmail({
-    to: cuenta.user.email,
+    to: correoTitular,
     asunto: textos.asunto,
     texto: cuerpo,
     prestadoraId: instruccion.prestadora_id,

@@ -14,7 +14,7 @@ import { NuevaFamiliaModal } from './familias/NuevaFamiliaModal';
 import { mensajeDeError } from '../lib/errores';
 
 export function Familias() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const navigate = useNavigate();
   const { usuario } = useAuth();
   const esAdmin = esAdminOSuperior(usuario?.rol);
@@ -132,7 +132,7 @@ export function Familias() {
               <div className="lista-tarjeta-meta">
                 <span><strong>{t.familias.col_telefono}:</strong> {fam.solicitudes?.telefono || '—'}</span>
                 <span><strong>{t.familias.col_email}:</strong> {fam.solicitudes?.email || '—'}</span>
-                <span><strong>{t.familias.col_fecha_alta}:</strong> {new Date(fam.created_at).toLocaleDateString()}</span>
+                <span><strong>{t.familias.col_fecha_alta}:</strong> {new Date(fam.created_at).toLocaleDateString(locale)}</span>
               </div>
               <div className="lista-tarjeta-acciones">
                 <Button variant="secondary" onClick={() => navigate(`/familias/${fam.id}`)}>{t.comun.ver_detalle}</Button>

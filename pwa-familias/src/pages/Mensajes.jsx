@@ -15,7 +15,7 @@ import { mensajeDeError } from '../lib/errores';
 // `familia` cuando quien mira es el Asistente. No hace falta que la pantalla sepa cuál de las dos
 // aplicaciones es: le alcanza con mirar qué vino.
 export default function Mensajes() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [conversaciones, setConversaciones] = useState(null);
   const [error, setError] = useState('');
 
@@ -55,7 +55,7 @@ export default function Mensajes() {
             <Link key={c.id} to={`/mensajes/${c.id}`} className="guardia-card" style={{ display: 'block' }}>
               <div className="guardia-card-paciente">{otro.nombre}</div>
               {c.ultimo_mensaje_at && (
-                <div className="guardia-card-detalle">{new Date(c.ultimo_mensaje_at).toLocaleString()}</div>
+                <div className="guardia-card-detalle">{new Date(c.ultimo_mensaje_at).toLocaleString(locale)}</div>
               )}
               {sinLeer && <div className="guardia-card-detalle">{sinLeer}</div>}
             </Link>

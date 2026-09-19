@@ -52,7 +52,7 @@ import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 const DIAS_DE_CONTEXTO = 14;
 
 export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { usuario } = useAuth();
   const prestadoraId = usePrestadoraActual();
   const tp = t.guardias.cobertura_panel;
@@ -410,7 +410,7 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
                         new Date(guardia.oferta_limite_at) < new Date()
                           ? tp.limite_vencido
                           : tp.limite_vence,
-                        { fecha: new Date(guardia.oferta_limite_at).toLocaleString() }
+                        { fecha: new Date(guardia.oferta_limite_at).toLocaleString(locale) }
                       )}
                     </p>
                   )}

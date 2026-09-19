@@ -22,7 +22,7 @@ export const IDIOMA_DEL_DOCUMENTO = 'es-AR';
 const SEPARADOR = '-'.repeat(72);
 
 function fechaLegible(fecha) {
-  return new Intl.DateTimeFormat('es-AR', {
+  return new Intl.DateTimeFormat(IDIOMA_DEL_DOCUMENTO, {
     day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
   }).format(fecha);
 }

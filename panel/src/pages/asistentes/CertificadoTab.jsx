@@ -10,7 +10,7 @@ import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 
 export function CertificadoTab({ asistente }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const prestadoraId = usePrestadoraActual();
   const [certificado, setCertificado] = useState(null);
   const [qrDataUrl, setQrDataUrl] = useState(null);
@@ -76,9 +76,9 @@ export function CertificadoTab({ asistente }) {
                 {certificado.activo ? t.asistentes.certificado.estado_activo : t.asistentes.certificado.estado_inactivo}
               </span>
             </p>
-            <p>{t.asistentes.certificado.fecha_emision}: {new Date(certificado.fecha_emision).toLocaleDateString()}</p>
+            <p>{t.asistentes.certificado.fecha_emision}: {new Date(certificado.fecha_emision).toLocaleDateString(locale)}</p>
             {certificado.fecha_vencimiento && (
-              <p>{t.asistentes.certificado.fecha_vencimiento}: {new Date(certificado.fecha_vencimiento).toLocaleDateString()}</p>
+              <p>{t.asistentes.certificado.fecha_vencimiento}: {new Date(certificado.fecha_vencimiento).toLocaleDateString(locale)}</p>
             )}
             {qrDataUrl && (
               <>

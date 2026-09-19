@@ -28,6 +28,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { guardarMarca } from '../lib/marcaGuardada';
+import { anotarNombreDeLaPrestadora } from '../i18n/marcaEnElTexto';
 import { useAuth } from './AuthContext';
 
 const MARCA_VACIA = { nombre: null, logoUrl: null };
@@ -43,6 +44,9 @@ export function PerfilProvider({ children }) {
   useEffect(() => {
     if (!session) {
       setPerfil(PERFIL_VACIO);
+      // Sin sesión no se sabe de qué Prestadora se trata, y el nombre de la anterior no puede
+      // quedar colgado en el texto de la pantalla de ingreso de la siguiente.
+      anotarNombreDeLaPrestadora(null);
       return undefined;
     }
 
@@ -58,6 +62,9 @@ export function PerfilProvider({ children }) {
           marketplace: datos.marketplace === true,
         });
         if (datos.marca) guardarMarca(datos.marca);
+        // Y el nombre queda anotado para las frases que la nombran con el marcador
+        // {{prestadora}} (i18n/marcaEnElTexto.js).
+        anotarNombreDeLaPrestadora(datos.marca?.nombre);
       })
       .catch(() => {
         // Sin esta respuesta la pantalla igual funciona: se ve el encabezado sin nombre y

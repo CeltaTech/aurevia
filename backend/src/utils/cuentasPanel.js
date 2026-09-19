@@ -10,6 +10,7 @@ import { guardarLugaresDe } from './lugaresDeCadaPersona.js';
 import { nombreDelLugar } from './catalogoDeLugares.js';
 import { domicilioEscrito, partesDelDomicilio } from './domicilioEscrito.js';
 import { cuentaDeLaFicha } from './cuentaDeLaFicha.js';
+import { correoComparable, correoDeAcceso } from '../config/correoDeAcceso.js';
 
 // Comprueba que un tipo de Asistente exista y sea de los que esta Prestadora puede usar:
 // los generales de CeltaTech (`prestadora_id` vacío) o los que creó ella misma. Devuelve el
@@ -91,14 +92,18 @@ function correoYaTomado(errorAuth) {
   return /already (been )?registered|already exists|email.*taken/i.test(errorAuth?.message || '');
 }
 
-// Busca la cuenta de acceso de un correo, sin recorrer la lista entera.
+// Busca la cuenta de acceso de una persona EN UNA PRESTADORA, sin recorrer la lista entera.
 //
-// El filtro del servicio de acceso busca por parecido, no por igualdad: preguntando por
-// "beto@ejemplo.com" también devuelve "beto@ejemplo.com.ar". Por eso la igualdad se
-// comprueba acá. Recorrer todas las cuentas no es alternativa: con cientos de Prestadoras
+// La Prestadora no es un detalle: la misma persona tiene una cuenta distinta en cada una, y
+// buscar sólo por el correo devolvería la de otra. Con qué correo se le habla al servicio de
+// acceso lo decide `correoDeAcceso`, que es el único lugar donde eso se arma.
+//
+// El filtro del servicio de acceso busca por parecido, no por igualdad, así que la igualdad se
+// comprueba acá igual. Recorrer todas las cuentas no es alternativa: con cientos de Prestadoras
 // son decenas de miles de filas (CLAUDE.md §2).
-export async function buscarCuentaDeAcceso(email) {
-  const url = `${process.env.SUPABASE_URL}/auth/v1/admin/users?filter=${encodeURIComponent(email)}`;
+export async function buscarCuentaDeAcceso(email, prestadoraId) {
+  const interno = await correoDeAcceso(email, prestadoraId);
+  const url = `${process.env.SUPABASE_URL}/auth/v1/admin/users?filter=${encodeURIComponent(interno)}`;
   const respuesta = await fetch(url, {
     headers: {
       apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -108,7 +113,7 @@ export async function buscarCuentaDeAcceso(email) {
   if (!respuesta.ok) return null;
 
   const cuerpo = await respuesta.json().catch(() => null);
-  const buscado = String(email).trim().toLowerCase();
+  const buscado = interno.toLowerCase();
   return (cuerpo?.users || []).find((u) => String(u.email || '').toLowerCase() === buscado) || null;
 }
 
@@ -129,7 +134,7 @@ export async function buscarCuentaDeAcceso(email) {
 // Entonces: si es basura, se borra y el alta sigue. Si detrás hay una persona de verdad, no
 // se toca nada y se explica qué pasa, con un motivo que la pantalla sabe traducir.
 async function limpiarCuentaSobrante(email, prestadoraId) {
-  const cuenta = await buscarCuentaDeAcceso(email);
+  const cuenta = await buscarCuentaDeAcceso(email, prestadoraId);
   if (!cuenta) return; // no se pudo mirar; el alta va a fallar igual, con el error de siempre
 
   const { data: perfil } = await supabase
@@ -146,11 +151,13 @@ async function limpiarCuentaSobrante(email, prestadoraId) {
     return;
   }
 
-  // Hay alguien detrás. Qué se cuenta depende de si esa persona es de esta Prestadora: de
-  // otra no se dice nada, ni siquiera que existe (CLAUDE.md §2 y §6, aislamiento entre
-  // Prestadoras). Las dos frases viven en las traducciones, en los tres idiomas.
+  // Hay alguien detrás, y sólo puede ser de esta Prestadora: el correo con el que se le habla al
+  // servicio de acceso lleva la Prestadora adentro, así que la cuenta de la misma persona en otra
+  // Prestadora es otra cuenta y no se cruza con ésta. Antes acá se distinguían dos casos y el
+  // segundo le contaba a un administrador que ese correo existía en otra Prestadora, que es
+  // exactamente lo que el aislamiento no permite (CLAUDE.md §2 y §6). Ese caso ya no existe.
   throw new ErrorConMotivo(
-    perfil.prestadora_id === prestadoraId ? 'correo_de_esta_prestadora' : 'correo_de_otra_cuenta',
+    'correo_de_esta_prestadora',
     `El correo ya tiene una cuenta de acceso (${cuenta.id})`,
   );
 }
@@ -165,18 +172,23 @@ async function limpiarCuentaSobrante(email, prestadoraId) {
 export async function crearCuentaConPerfil({ email, nombre, telefono, rol, prestadoraId, enviarActivacion = false }) {
   const passwordTemporal = crypto.randomBytes(24).toString('base64url');
 
+  // Con qué correo se le habla al servicio de acceso por esta persona en esta Prestadora. Nunca
+  // el que la persona escribió: ése es el mismo en todas, y acá cada Prestadora tiene su cuenta.
+  const correoInterno = await correoDeAcceso(email, prestadoraId);
+
   let { data: authData, error: errorAuth } = await supabase.auth.admin.createUser({
-    email,
+    email: correoInterno,
     password: passwordTemporal,
     email_confirm: true,
   });
 
-  // El correo ya estaba tomado. Antes de rendirse hay que mirar qué hay detrás: puede ser
-  // basura de un alta anterior que se cortó, y en ese caso el alta tiene que seguir.
+  // Ya estaba tomado, o sea que esa persona ya tiene cuenta EN ESTA PRESTADORA. Antes de
+  // rendirse hay que mirar qué hay detrás: puede ser basura de un alta anterior que se cortó,
+  // y en ese caso el alta tiene que seguir.
   if (errorAuth && correoYaTomado(errorAuth)) {
     await limpiarCuentaSobrante(email, prestadoraId);
     ({ data: authData, error: errorAuth } = await supabase.auth.admin.createUser({
-      email,
+      email: correoInterno,
       password: passwordTemporal,
       email_confirm: true,
     }));
@@ -190,31 +202,14 @@ export async function crearCuentaConPerfil({ email, nombre, telefono, rol, prest
 
   const { error: errorPerfil } = await supabase
     .from('usuarios')
-    .insert({ id: userId, rol, nombre, telefono, prestadora_id: prestadoraId });
+    // El correo va acá y no del lado del acceso: allá lo que queda es un resumen, y además el
+    // aislamiento entre Prestadoras no se puede imponer de ese lado. Se guarda comparable, que es
+    // como se busca.
+    .insert({ id: userId, rol, nombre, telefono, email: correoComparable(email), prestadora_id: prestadoraId });
 
   if (errorPerfil) {
     await supabase.auth.admin.deleteUser(userId);
     throw new Error(errorPerfil.message);
-  }
-
-  // De qué Prestadora es parte esta persona, y con qué papel ahí. Va junto con la fila de la
-  // cuenta y no después: una cuenta sin membresía no pertenece a ninguna Prestadora, así que si
-  // esto falla el alta se deshace entera y no queda nadie a medio dar de alta.
-  //
-  // Hoy las dos columnas de `usuarios` siguen siendo las que lee el resto del producto y la
-  // membresía va al lado; cuando el último lector pase a la membresía, esas dos columnas se
-  // retiran y acá queda sólo esta escritura. Superadmin entra igual: su Prestadora es la
-  // ficticia y la tiene cargada como cualquiera.
-  if (prestadoraId) {
-    const { error: errorMembresia } = await supabase
-      .from('membresias')
-      .insert({ usuario_id: userId, prestadora_id: prestadoraId, rol });
-
-    if (errorMembresia) {
-      await supabase.from('usuarios').delete().eq('id', userId);
-      await supabase.auth.admin.deleteUser(userId);
-      throw new Error(errorMembresia.message);
-    }
   }
 
   if (enviarActivacion) {

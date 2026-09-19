@@ -42,7 +42,11 @@ export default function DescansoEnGuardia({ t, locale, guardiaId, descansoAbiert
     setError('');
     setUltimoCierre(null);
     setTrabajando(true);
-    const datos = { ocurrido_at: new Date().toISOString() };
+    // El identificador del envío se pone antes del primer intento: si el descanso llegó al motor
+    // y lo que se perdió fue la respuesta, el reenvío tiene que traer el mismo para no anotarlo
+    // dos veces.
+    const clienteUuid = nuevoId();
+    const datos = { ocurrido_at: new Date().toISOString(), clienteUuid };
     try {
       const resultado = await api.empezarDescanso(guardiaId, datos);
       setAbierto(resultado.descanso ?? { inicio_at: datos.ocurrido_at });
@@ -53,7 +57,7 @@ export default function DescansoEnGuardia({ t, locale, guardiaId, descansoAbiert
         setTrabajando(false);
         return;
       }
-      await agregarACola({ id: nuevoId(), tipo: 'descanso_empezar', guardiaId, payload: datos });
+      await agregarACola({ id: clienteUuid, tipo: 'descanso_empezar', guardiaId, payload: datos });
       setAbierto({ inicio_at: datos.ocurrido_at });
       alCambiar?.();
       sincronizarCola();
@@ -65,7 +69,8 @@ export default function DescansoEnGuardia({ t, locale, guardiaId, descansoAbiert
   async function alTerminar() {
     setError('');
     setTrabajando(true);
-    const datos = { ocurrido_at: new Date().toISOString() };
+    const clienteUuid = nuevoId();
+    const datos = { ocurrido_at: new Date().toISOString(), clienteUuid };
     try {
       await api.terminarDescanso(guardiaId, datos);
       setUltimoCierre(datos.ocurrido_at);
@@ -77,7 +82,7 @@ export default function DescansoEnGuardia({ t, locale, guardiaId, descansoAbiert
         setTrabajando(false);
         return;
       }
-      await agregarACola({ id: nuevoId(), tipo: 'descanso_terminar', guardiaId, payload: datos });
+      await agregarACola({ id: clienteUuid, tipo: 'descanso_terminar', guardiaId, payload: datos });
       setUltimoCierre(datos.ocurrido_at);
       setAbierto(null);
       alCambiar?.();

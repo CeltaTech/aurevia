@@ -35,7 +35,7 @@ import { MODALIDAD } from '../utils/modalidades.js';
 import {
   LADO,
   abrirVideollamada,
-  contactoAbierto,
+  desdeCuando,
   escribirMensaje,
   marcarLeido,
   mensajesDeLaConversacion,
@@ -46,6 +46,8 @@ import { puedeRegistrarUbicacion } from '../utils/consentimientoUbicacion.js';
 import { faltaElSustituto, MOTIVO_SIN_SUSTITUTO } from '../utils/guardiaSinSustituto.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { MOTIVOS_DEMORA } from '../utils/motivosDemora.js';
+import { horaDelHecho } from '../utils/horaDelHecho.js';
+import { identificadorDelTelefono, filaDeEsteAviso } from '../utils/reenvioDeLaCola.js';
 import { FUENTE_AVISO_DEMORA_ASISTENTE } from '../utils/fuentesAlertaTemprana.js';
 import { notificarCoordinador } from '../utils/whatsapp.js';
 import { aviso } from '../i18n/avisos.js';
@@ -837,14 +839,23 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
 
-  /* Cuándo pasó, no cuándo se pudo enviar. Es la única ruta de la aplicación que acepta el momento
-     del teléfono, y tiene motivo: un aviso que estuvo media hora en la cola sin conexión guardado
-     con la hora de la sincronización contaría mal lo que pasó, y acá esa media hora es el dato.
-     Se acepta sólo hacia atrás: una hora futura sería un reloj mal puesto, y con eso no se escribe
-     nada. */
-  const delTelefono = Date.parse(req.body?.ocurrido_at ?? '');
-  const ahora = Date.now();
-  const reportadoAt = new Date(Number.isNaN(delTelefono) || delTelefono > ahora ? ahora : delTelefono).toISOString();
+  /* Cuándo pasó, no cuándo se pudo enviar: acá esa media hora que el aviso estuvo en la cola es el
+     dato. El criterio es uno solo para todas las rutas y vive en `utils/horaDelHecho.js`. */
+  const reportadoAt = horaDelHecho(req.body?.ocurrido_at);
+
+  /* Y si este mismo aviso ya llegó, no se escribe una segunda emergencia. Una emergencia puede
+     pasar dos veces en la misma guardia, así que acá el estado no alcanza para reconocer un
+     reenvío: lo reconoce el identificador que el teléfono puso antes del primer intento. */
+  const clienteUuid = identificadorDelTelefono(req.body);
+  const yaEstaba = await filaDeEsteAviso({
+    tabla: 'emergencias_guardia',
+    guardiaId: guardia.id,
+    clienteUuid,
+    campos: 'id, reportado_at',
+  });
+  if (yaEstaba) {
+    return res.json({ ok: true, yaRegistrado: true, reportadoAt: yaEstaba.reportado_at });
+  }
 
   const { data: emergencia, error } = await supabase
     .from('emergencias_guardia')
@@ -853,6 +864,7 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
       guardia_id: guardia.id,
       reportado_por: req.usuarioAsistente.id,
       reportado_at: reportadoAt,
+      cliente_uuid: clienteUuid,
       // Un tope, para que un teléfono con un problema no escriba un texto sin fin. Se recorta y se
       // guarda igual: un aviso de emergencia no se pierde porque alguien escribió de más.
       detalle: detalle.slice(0, 2000),
@@ -938,12 +950,8 @@ appAsistentesRouter.post('/guardias/:id/no-puedo-continuar', requiereRolAsistent
 
   const detalle = typeof req.body?.detalle === 'string' ? req.body.detalle.trim() : '';
 
-  // Cuándo pasó, no cuándo se pudo enviar, con el mismo criterio que el aviso de emergencia: un
-  // aviso que estuvo media hora en la cola sin conexión guardado con la hora de la sincronización
-  // contaría mal lo que pasó. Se acepta sólo hacia atrás: una hora futura es un reloj mal puesto.
-  const delTelefono = Date.parse(req.body?.ocurrido_at ?? '');
-  const ahora = Date.now();
-  const avisadoAt = new Date(Number.isNaN(delTelefono) || delTelefono > ahora ? ahora : delTelefono).toISOString();
+  // Cuándo pasó, no cuándo se pudo enviar, con el mismo criterio que el aviso de emergencia.
+  const avisadoAt = horaDelHecho(req.body?.ocurrido_at);
 
   const { error } = await supabase
     .from('extensiones_de_turno')
@@ -1007,11 +1015,22 @@ appAsistentesRouter.post('/guardias/:id/descanso/empezar', requiereRolAsistente,
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
 
-  // Mismo criterio que el aviso de emergencia: se acepta el momento del teléfono, sólo hacia
-  // atrás. Una hora futura es un reloj mal puesto.
-  const delTelefono = Date.parse(req.body?.ocurrido_at ?? '');
-  const ahora = Date.now();
-  const inicioAt = new Date(Number.isNaN(delTelefono) || delTelefono > ahora ? ahora : delTelefono).toISOString();
+  // Mismo criterio que el aviso de emergencia: se acepta el momento del teléfono, sólo hacia atrás.
+  const inicioAt = horaDelHecho(req.body?.ocurrido_at);
+
+  // Y el mismo reconocimiento del reenvío: en una guardia de 72 horas se descansa más de una vez,
+  // así que dos filas iguales pueden ser dos descansos de verdad. Lo que dice que es el mismo es
+  // el identificador que puso el teléfono.
+  const clienteUuid = identificadorDelTelefono(req.body);
+  const yaEstaba = await filaDeEsteAviso({
+    tabla: 'descansos_guardia',
+    guardiaId: guardia.id,
+    clienteUuid,
+    campos: 'id, inicio_at',
+  });
+  if (yaEstaba) {
+    return res.json({ ok: true, yaRegistrado: true, descanso: yaEstaba });
+  }
 
   const { data: descanso, error } = await supabase
     .from('descansos_guardia')
@@ -1020,6 +1039,7 @@ appAsistentesRouter.post('/guardias/:id/descanso/empezar', requiereRolAsistente,
       guardia_id: guardia.id,
       registrado_por: req.usuarioAsistente.id,
       inicio_at: inicioAt,
+      cliente_uuid: clienteUuid,
       nota: typeof req.body?.nota === 'string' ? req.body.nota.trim().slice(0, 2000) || null : null,
     })
     .select('id, inicio_at')
@@ -1038,9 +1058,22 @@ appAsistentesRouter.post('/guardias/:id/descanso/terminar', requiereRolAsistente
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
 
-  const delTelefono = Date.parse(req.body?.ocurrido_at ?? '');
-  const ahora = Date.now();
-  const finAt = new Date(Number.isNaN(delTelefono) || delTelefono > ahora ? ahora : delTelefono).toISOString();
+  const finAt = horaDelHecho(req.body?.ocurrido_at);
+
+  /* El cierre tiene su propio identificador, y se mira antes que nada: el reenvío de un cierre que
+     ya llegó encuentra el descanso cerrado y sin él saldría por el 404 de más abajo, diciéndole a
+     quien cerró su descanso que no había ninguno abierto. */
+  const clienteUuid = identificadorDelTelefono(req.body);
+  const yaCerrado = await filaDeEsteAviso({
+    tabla: 'descansos_guardia',
+    guardiaId: guardia.id,
+    clienteUuid,
+    columna: 'cliente_uuid_fin',
+    campos: 'id, fin_at',
+  });
+  if (yaCerrado) {
+    return res.json({ ok: true, yaRegistrado: true, finAt: yaCerrado.fin_at });
+  }
 
   const { data: abierto } = await supabase
     .from('descansos_guardia')
@@ -1055,11 +1088,11 @@ appAsistentesRouter.post('/guardias/:id/descanso/terminar', requiereRolAsistente
 
   // Un momento del teléfono anterior al inicio dejaría la fila fuera de la restricción de la base
   // y el error saldría como falla del sistema. Ante un reloj que no cierra, vale el de acá.
-  const fin = finAt > abierto.inicio_at ? finAt : new Date(ahora).toISOString();
+  const fin = finAt > abierto.inicio_at ? finAt : new Date().toISOString();
 
   const { error } = await supabase
     .from('descansos_guardia')
-    .update({ fin_at: fin })
+    .update({ fin_at: fin, cliente_uuid_fin: clienteUuid })
     .eq('id', abierto.id);
 
   if (error) {
@@ -1682,13 +1715,12 @@ appAsistentesRouter.get('/marketplace/conversaciones/:id', requiereRolAsistente,
     await exigeMarketplace(req);
     const conversacion = await conversacionDelAsistente(req);
 
-    const abierto = await contactoAbierto({
-      familiaId: conversacion.familia_id,
-      asistenteId: conversacion.asistente_id,
-    });
+    // El refresco del hilo abierto pide nada más lo posterior a lo que ya tiene. Sin `desde` sale
+    // el hilo entero, que es lo que hace falta al abrirlo.
+    const desde = desdeCuando(req.query?.desde);
 
     const [mensajes, nombre, enCurso, base] = await Promise.all([
-      mensajesDeLaConversacion({ conversacion, abierto }),
+      mensajesDeLaConversacion({ conversacion, desde }),
       nombreDeLaFamilia(conversacion.familia_id),
       videollamadaEnCurso(conversacion),
       direccionDeVideollamada(conversacion.prestadora_id),
@@ -1699,7 +1731,9 @@ appAsistentesRouter.get('/marketplace/conversaciones/:id', requiereRolAsistente,
     res.json({
       conversacion: { id: conversacion.id, familia: { nombre } },
       mensajes,
-      contacto_abierto: abierto,
+      // Qué es lo que viaja: el hilo entero, o nada más lo nuevo. La pantalla suma en un caso y
+      // reemplaza en el otro, y no tiene que deducirlo de lo que pidió.
+      solo_lo_nuevo: Boolean(desde),
       videollamada_disponible: Boolean(base),
       videollamada: enCurso,
     });
@@ -1723,11 +1757,9 @@ appAsistentesRouter.post('/marketplace/conversaciones/:id/mensajes', requiereRol
       cuerpo,
     });
 
-    const abierto = await contactoAbierto({
-      familiaId: conversacion.familia_id,
-      asistenteId: conversacion.asistente_id,
-    });
-    res.json({ mensajes: await mensajesDeLaConversacion({ conversacion, abierto }) });
+    // Se devuelve el hilo tal como quedó guardado: tapado si la base tapó algo, y con el motivo.
+    // Devolverle a quien escribió su texto entero le haría creer que llegó completo.
+    res.json({ mensajes: await mensajesDeLaConversacion({ conversacion }) });
   } catch (e) {
     responderError(res, e);
   }

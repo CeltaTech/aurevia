@@ -5,11 +5,14 @@ import { useAuth } from '../context/AuthContext';
 import { useConfirmarDestructivo } from '../context/TenantSessionContext';
 import { useZonasCobertura } from '../hooks/useZonasCobertura';
 import { useOpcionesPostulacion } from '../hooks/useOpcionesPostulacion';
+import { useListaDeOpciones } from '../hooks/useListaDeOpciones';
 import { useTiposAsistente } from '../hooks/useTiposAsistente';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { esAdminOSuperior } from '../lib/roles';
 import { nombreTipo } from '../lib/tiposAsistente';
 import { traducirCodigos } from '../lib/postulacionCodigos';
+import { useMotivosDeResolucion } from '../hooks/useMotivosDeResolucion';
+import { resolver } from '../lib/resoluciones';
 import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
@@ -18,7 +21,9 @@ import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import { EntrevistaDePostulacion } from '../components/EntrevistaDePostulacion';
 
-const ESTADOS = ['pendiente', 'en_revision', 'aprobado', 'rechazado'];
+// Qué se resuelve en esta pantalla. Es el nombre guardado de la tabla, y con él salen los motivos
+// del catálogo de la Prestadora y se escribe la resolución.
+const TABLA = 'postulaciones';
 const API_URL = import.meta.env.VITE_API_URL;
 
 export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
@@ -36,7 +41,24 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
   // Las especialidades son las que cargó esta Prestadora, no dos escritas en las traducciones.
   const { labels: especialidadesLabels } = useOpcionesPostulacion(prestadoraId, 'especialidad');
   const { paraElegir: tiposAsistente } = useTiposAsistente();
-  const [nuevoEstado, setNuevoEstado] = useState(postulacion.estado);
+  // La disponibilidad y la situación fiscal salen del registro de opciones, no del archivo de
+  // traducciones: lo guardado es la clave y el texto lo pone el catálogo.
+  const laDisponibilidad = useListaDeOpciones('disponibilidad');
+  const laSituacionFiscal = useListaDeOpciones('situacion_fiscal');
+  // Los motivos de esta Prestadora para resolver una postulación. En qué estado queda la
+  // postulación lo dice el motivo elegido, así que acá no hay ninguna lista de estados escrita.
+  const {
+    filas: motivos,
+    estado: estadoMotivos,
+    error: errorMotivos,
+    recargar: recargarMotivos,
+  } = useMotivosDeResolucion(prestadoraId, TABLA);
+  const [motivoId, setMotivoId] = useState('');
+  const [detalle, setDetalle] = useState('');
+  const motivoElegido = useMemo(
+    () => motivos.find((motivo) => motivo.id === motivoId) ?? null,
+    [motivos, motivoId],
+  );
   const [tipoAsistenteId, setTipoAsistenteId] = useState('');
   const [nota, setNota] = useState(postulacion.nota_interna || '');
   const [guardando, setGuardando] = useState(false);
@@ -69,7 +91,12 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
   }
 
   async function handleGuardar() {
-    if (nuevoEstado !== postulacion.estado) {
+    // Resolver no es pisar el estado: es dejar escrito por qué se decidió y quién lo decidió. El
+    // estado en el que queda sale del motivo, nunca de esta pantalla.
+    const nuevoEstado = motivoElegido?.estado ?? null;
+    const cambiaElEstado = Boolean(nuevoEstado) && nuevoEstado !== postulacion.estado;
+
+    if (cambiaElEstado) {
       const confirmado = await confirmarDestructivo(t.postulaciones.confirmar_cambio_estado);
       if (!confirmado) return;
     }
@@ -77,18 +104,34 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
     setGuardando(true);
     setError(null);
 
+    if (motivoElegido) {
+      const { error: errorResolucion } = await resolver({
+        tabla: TABLA,
+        filaId: postulacion.id,
+        motivoId: motivoElegido.id,
+        detalle: motivoElegido.pide_detalle ? detalle.trim() : null,
+      });
+
+      if (errorResolucion) {
+        setError(mensajeDeError(errorResolucion, t));
+        setGuardando(false);
+        return;
+      }
+    }
+
+    // La nota interna es otra cosa y se guarda aparte: es lo que el equipo anota, no la decisión.
     const { error: errorUpdate } = await supabase
       .from('postulaciones')
-      .update({ estado: nuevoEstado, nota_interna: nota })
+      .update({ nota_interna: nota })
       .eq('id', postulacion.id);
 
     if (errorUpdate) {
-      setError(t.comun.error_generico);
+      setError(mensajeDeError(errorUpdate, t));
       setGuardando(false);
       return;
     }
 
-    if (nuevoEstado !== postulacion.estado && nuevoEstado !== 'pendiente') {
+    if (cambiaElEstado) {
       try {
         const { data } = await supabase.auth.getSession();
         await fetch(`${API_URL}/api/panel/notificar/postulante`, {
@@ -132,24 +175,61 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
           <dt>{t.postulaciones.col_zonas}</dt>
           <dd>{traducirCodigos(postulacion.zonas, zonasLabels)}</dd>
           <dt>{t.postulaciones.disponibilidad}</dt>
-          <dd>{traducirCodigos(postulacion.disponibilidad, t.postulaciones.disponibilidad_labels)}</dd>
+          <dd>{traducirCodigos(postulacion.disponibilidad, laDisponibilidad.textos)}</dd>
           <dt>{t.postulaciones.anios_experiencia}</dt>
           <dd>{postulacion.anios_experiencia || '—'}</dd>
           <dt>{t.postulaciones.col_situacion_fiscal}</dt>
-          <dd>{t.postulaciones.situacion_fiscal_labels[postulacion.situacion_fiscal] ?? postulacion.situacion_fiscal}</dd>
+          <dd>{laSituacionFiscal.textos[postulacion.situacion_fiscal] ?? postulacion.situacion_fiscal}</dd>
           <dt>{t.postulaciones.como_conocio}</dt>
           <dd>{postulacion.como_conocio || '—'}</dd>
           <dt>{t.postulaciones.mensaje}</dt>
           <dd>{postulacion.mensaje || '—'}</dd>
+          <dt>{t.postulaciones.col_estado}</dt>
+          <dd>{t.postulaciones[`estado_${postulacion.estado}`]}</dd>
         </dl>
 
-        <FormField label={t.postulaciones.col_estado} name="estado" type="select" value={nuevoEstado} onChange={(e) => setNuevoEstado(e.target.value)}>
-          {ESTADOS.map((estado) => (
-            <option key={estado} value={estado}>
-              {t.postulaciones[`estado_${estado}`]}
-            </option>
+        {/* Los cuatro estados de lo que carga datos: mientras la lista de motivos viene, se avisa;
+            si falló, se ofrece volver a pedirla; si la Prestadora se quedó sin ninguno encendido,
+            no hay nada que elegir. */}
+        {estadoMotivos === 'cargando' && <p>{t.comun.cargando}</p>}
+        {estadoMotivos === 'error' && (
+          <Alert variant="error">
+            {errorMotivos}{' '}
+            <Button variant="secondary" onClick={recargarMotivos}>{t.comun.reintentar}</Button>
+          </Alert>
+        )}
+        {estadoMotivos === 'vacio' && (
+          <Alert variant="info">{t.comun.vacio}</Alert>
+        )}
+
+        <FormField
+          label={t.comun.motivo}
+          name="motivo"
+          type="select"
+          value={motivoId}
+          onChange={(e) => {
+            setMotivoId(e.target.value);
+            setDetalle('');
+          }}
+          disabled={guardando || estadoMotivos !== 'listo'}
+        >
+          <option value="">{t.comun.motivo_elegir}</option>
+          {motivos.map((motivo) => (
+            <option key={motivo.id} value={motivo.id}>{motivo.nombre}</option>
           ))}
         </FormField>
+
+        {motivoElegido?.pide_detalle && (
+          <FormField
+            label={t.comun.detalle}
+            name="detalle"
+            type="textarea"
+            value={detalle}
+            onChange={(e) => setDetalle(e.target.value)}
+            disabled={guardando}
+            required
+          />
+        )}
 
         <FormField
           label={t.comun.nota_interna}
@@ -204,7 +284,10 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
           <Button variant="secondary" onClick={onClose} disabled={guardando}>
             {t.comun.cancelar}
           </Button>
-          <Button onClick={handleGuardar} disabled={guardando}>
+          <Button
+            onClick={handleGuardar}
+            disabled={guardando || (motivoElegido?.pide_detalle && !detalle.trim())}
+          >
             {guardando ? t.comun.guardando : t.comun.guardar}
           </Button>
         </div>

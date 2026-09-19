@@ -185,7 +185,7 @@ export function AccesosDelCirculoModal({ familiaId, miembros, puedeEditar, usuar
    lo único que la hoja conserva (ver la regla `@media print` de `index.css`), y los botones
    llevan `no-imprimir` para no salir en el papel que alguien va a firmar. */
 export function DocumentoDeLaInstruccion({ texto, fecha, recienGuardado = false, onCerrar }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const modal = useModalAccesible(onCerrar);
 
   return (
@@ -198,7 +198,7 @@ export function DocumentoDeLaInstruccion({ texto, fecha, recienGuardado = false,
           {fecha && (
             <dl className="panel-detalle-lista">
               <dt>{t.familias.circulo.documento_fecha}</dt>
-              <dd>{new Date(fecha).toLocaleDateString()}</dd>
+              <dd>{new Date(fecha).toLocaleDateString(locale)}</dd>
             </dl>
           )}
         </div>

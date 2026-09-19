@@ -1,5 +1,6 @@
 import { supabase } from '../db/connection.js';
 import { enviarEmail } from './email.js';
+import { correoDe } from './correoDeUnaPersona.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 import { codigoNuevo, huellaDelCodigo, estaVencido, vencimientoEnMinutos } from './codigoDeUnSoloUso.js';
 import { aviso } from '../i18n/avisos.js';
@@ -12,8 +13,8 @@ import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 const VIGENCIA_MINUTOS = 10;
 
 export async function solicitarCodigoRecuperacion(usuarioId) {
-  const { data: userData, error } = await supabase.auth.admin.getUserById(usuarioId);
-  if (error || !userData?.user?.email) {
+  const correo = await correoDe(usuarioId);
+  if (!correo) {
     throw new Error('No se pudo resolver el email registrado del usuario');
   }
 
@@ -41,7 +42,7 @@ export async function solicitarCodigoRecuperacion(usuarioId) {
     .maybeSingle();
 
   await enviarEmail({
-    to: userData.user.email,
+    to: correo,
     ...aviso('mfa_codigo_recuperacion', await idiomaDeLaPrestadora(usuario?.prestadora_id), {
       codigo,
       minutos: VIGENCIA_MINUTOS,

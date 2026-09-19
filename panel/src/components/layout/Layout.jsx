@@ -11,11 +11,12 @@ import { esAdminOSuperior } from '../../lib/roles';
 import { MODALIDAD } from '../../lib/modalidades';
 import { SelectoresPreferencias } from './SelectoresPreferencias';
 import { FranjaPuestaEnMarcha } from './FranjaPuestaEnMarcha';
+import { EquipoNuevo } from './EquipoNuevo';
 
 const AVISO_MINUTOS_RESTANTES = 10; // aviso "a los 50 minutos" de una sesión de 60
 
 function BannerSesionTenant() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { sesion, salir, renovar } = useTenantSession();
   const [saliendo, setSaliendo] = useState(false);
   const [renovando, setRenovando] = useState(false);
@@ -24,7 +25,7 @@ function BannerSesionTenant() {
 
   const minutosRestantes = (new Date(sesion.expira_at).getTime() - Date.now()) / 60000;
   const porVencer = minutosRestantes <= AVISO_MINUTOS_RESTANTES;
-  const horaExpiracion = new Date(sesion.expira_at).toLocaleTimeString();
+  const horaExpiracion = new Date(sesion.expira_at).toLocaleTimeString(locale);
 
   async function handleSalir() {
     setSaliendo(true);
@@ -205,6 +206,7 @@ export function Layout() {
         { a: '/auditoria', texto: t.nav.auditoria, ver: esAdmin },
         { a: '/marketplace/auditoria-legal', texto: t.nav.marketplace_auditoria_legal, ver: marketplace },
         { a: '/importacion', texto: t.nav.importacion, ver: esAdmin || puede('importar_datos_masivos') },
+        { a: '/habilitar-clave', texto: t.nav.habilitar_clave, ver: esAdmin || puede('habilitar_cambio_de_clave') },
         { a: '/prestadoras', texto: t.nav.prestadoras, ver: esSuperadmin },
       ],
     },
@@ -264,6 +266,9 @@ export function Layout() {
         </nav>
       </aside>
       <div className="panel-main">
+        {/* Entrar desde un aparato nuevo: se pregunta una sola vez por aparato, apenas se entra.
+            Mientras el código esté pendiente, la pantalla de atrás no se usa. */}
+        <EquipoNuevo />
         <BannerSesionTenant />
         {/* Debajo de la sesión de soporte y encima de todo lo demás: mientras la Prestadora no
             termine de cargar lo suyo, el reclamo la acompaña a la pantalla que abra. Se apaga
@@ -275,6 +280,7 @@ export function Layout() {
               muestra del sistema de diseño usa exactamente los mismos tres desplegables. */}
           <SelectoresPreferencias />
           <NavLink to="/mi-clave">{t.nav.mi_clave}</NavLink>
+          <NavLink to="/cuenta-segura">{t.nav.cuenta_segura}</NavLink>
           <button className="panel-logout" onClick={logout}>
             {t.nav.cerrar_sesion}
           </button>

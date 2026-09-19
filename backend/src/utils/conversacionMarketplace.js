@@ -3,13 +3,13 @@
 
    QUÉ ES. Una conversación por pareja —una Familia, un Asistente—, con sus mensajes. El chat es
    libre (`docs/PRD_07_Modalidad_Marketplace.md:69`); lo que se cobra es el dato de contacto, y
-   ese dato sale tapado mientras el contacto de esa pareja no esté abierto. Quién tapa es
-   `contactoTapado.js`, y este archivo no vuelve a decidirlo: pregunta una sola cosa —si el
-   contacto está abierto— y le pasa la respuesta.
+   ese dato no llega a guardarse: lo tapa la base antes de escribir el mensaje, con el cuerpo de
+   reglas de `public.reglas_de_los_mensajes`. Este archivo no tapa nada y no decide nada de eso;
+   lo que lee ya viene tapado.
 
    LAS DOS PUNTAS USAN ESTO MISMO. La aplicación de la Familia y la del Asistente entran por
-   rutas distintas y al mismo hilo. Si cada ruta armara su consulta, el tapado sería dos
-   decisiones y bastaría con que una se olvidara. Acá es una.
+   rutas distintas y al mismo hilo. Si cada ruta armara su consulta, la forma en que un mensaje
+   sale serían dos decisiones y bastaría con que una se olvidara. Acá es una.
 
    LA PRESTADORA NO ESTÁ EN LA CONVERSACIÓN Y NO LA LEE. Recluta, admite, gerencia y configura;
    no ve lo que se hablan. Está guardada en cada fila para el aislamiento entre Organizaciones,
@@ -43,26 +43,10 @@ export const AVISO_AUTOMATICO = { VIDEOLLAMADA: 'videollamada_empezo' };
  *  pasan antes de contratar a alguien, y pone un techo a lo que viaja en un pedido. */
 const TOPE_DE_MENSAJES = 200;
 
-/**
- * ¿Esta Familia ya abrió el contacto de este Asistente?
- *
- * Es la única pregunta de la que depende el tapado. Falla cerrado: ante un error de la base
- * contesta que no, porque contestar que sí destapa un dato que quizá nadie pagó.
- */
-export async function contactoAbierto({ familiaId, asistenteId }) {
-  const { data, error } = await supabase
-    .from('contactos_vistos_marketplace')
-    .select('id')
-    .eq('familia_id', familiaId)
-    .eq('asistente_id', asistenteId)
-    .maybeSingle();
-
-  if (error) {
-    console.error('Error consultando contactos_vistos_marketplace:', error.message);
-    return false;
-  }
-  return Boolean(data);
-}
+/* SI ESA FAMILIA YA ABRIÓ EL CONTACTO DE ESE ASISTENTE NO SE PREGUNTA ACÁ, Y YA NO CAMBIA NADA
+   DEL HILO. Lo tapado en un mensaje no se destapa nunca, porque no quedó guardado. El dato de
+   contacto que esa Familia paga sale por su propio circuito, y esa pregunta vive una sola vez, en
+   `contactoDelAsistente.js`. */
 
 /**
  * La conversación de una pareja. Con `crear`, la abre si no existía.
@@ -104,21 +88,61 @@ export async function conversacionDeLaPareja({ prestadoraId, familiaId, asistent
 }
 
 /**
+ * El momento a partir del cual se piden mensajes, o null.
+ *
+ * Lo que llega del pedido es texto, y un texto que no es una fecha no se interpreta: se ignora, y
+ * entonces sale el hilo entero. Contestar un error dejaría la pantalla sin la conversación que ya
+ * tenía, que es justo lo contrario de lo que se busca.
+ */
+export function desdeCuando(valor) {
+  if (valor === undefined || valor === null || valor === '') return null;
+  const momento = new Date(String(valor));
+  return Number.isNaN(momento.getTime()) ? null : momento.toISOString();
+}
+
+/**
+ * Por qué se tapó, por clave de regla y en los tres idiomas.
+ *
+ * Sale del catálogo y se pide una sola vez por hilo, no una por mensaje. Ante un error de la base
+ * el hilo sale igual: sin el motivo se pierde la explicación, no la conversación.
+ */
+async function motivosDelCatalogo() {
+  const { data, error } = await supabase.from('reglas_de_los_mensajes').select('clave, motivo');
+
+  if (error) {
+    console.error('Error consultando reglas_de_los_mensajes:', error.message);
+    return {};
+  }
+  return Object.fromEntries((data || []).map((r) => [r.clave, r.motivo]));
+}
+
+/**
  * Los mensajes de un hilo, listos para salir hacia una pantalla.
  *
- * Es la única puerta: nadie más consulta `mensajes_marketplace` para mostrarlos. El tapado pasa
- * acá adentro, una vez, para los dos lados.
+ * Es la única puerta: nadie más consulta `mensajes_marketplace` para mostrarlos. Salen tal como
+ * están guardados, que es ya tapados, con el motivo al lado de los que la base tapó.
+ *
+ * Con `desde` salen solamente los posteriores a ese momento. Es lo que usa el refresco del hilo
+ * abierto: pide lo que le falta y no vuelve a bajar lo que ya tiene.
  */
-export async function mensajesDeLaConversacion({ conversacion, abierto }) {
-  const { data, error } = await supabase
+export async function mensajesDeLaConversacion({ conversacion, desde = null }) {
+  let consulta = supabase
     .from('mensajes_marketplace')
-    .select('id, lado, cuerpo, automatico, created_at, leido_at')
-    .eq('conversacion_id', conversacion.id)
+    .select('id, lado, cuerpo, automatico, created_at, leido_at, regla_tapada')
+    .eq('conversacion_id', conversacion.id);
+
+  if (desde) consulta = consulta.gt('created_at', desde);
+
+  const { data, error } = await consulta
     .order('created_at', { ascending: true })
     .limit(TOPE_DE_MENSAJES);
 
   if (error) throw error;
-  return (data || []).map((m) => mensajeHaciaAfuera(m, abierto));
+
+  const hayTapado = (data || []).some((m) => m.regla_tapada);
+  const motivos = hayTapado ? await motivosDelCatalogo() : {};
+
+  return (data || []).map((m) => mensajeHaciaAfuera(m, motivos));
 }
 
 /** Da por leído lo que le escribió el otro lado. Lo propio no se marca: ya lo leyó quien lo
@@ -136,8 +160,8 @@ export async function marcarLeido({ conversacion, lado }) {
 /**
  * Guarda un mensaje y avisa al otro lado.
  *
- * El texto se guarda entero, sin tapar: el día que esa pareja abre el contacto, se abre también
- * lo que ya se dijeron, porque es exactamente el dato que se pagó.
+ * Lo que la base tapa no llega a guardarse: el disparador de `mensajes_marketplace` tapa el texto
+ * antes de escribirlo, así que lo que vuelve de la base ya viene tapado, y es lo que hay.
  */
 export async function escribirMensaje({ conversacion, lado, autorUsuarioId, cuerpo, automatico = false }) {
   const { data, error } = await supabase
@@ -150,7 +174,7 @@ export async function escribirMensaje({ conversacion, lado, autorUsuarioId, cuer
       cuerpo,
       automatico,
     })
-    .select('id, lado, cuerpo, automatico, created_at, leido_at')
+    .select('id, lado, cuerpo, automatico, created_at, leido_at, regla_tapada')
     .single();
 
   if (error) throw error;

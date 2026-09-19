@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
-import { mensajeDeError } from '../lib/errores';
-import { useLocale } from '../i18n/LocaleContext';
+import { useCallback, useMemo } from 'react';
+import { useCatalogo } from './useCatalogo';
+import { usePaisDeLaPrestadora } from './usePaisDeLaPrestadora';
 
 /* Con qué documentos se identifica una Persona en el país de la Prestadora.
    =========================================================================
@@ -18,50 +17,38 @@ import { useLocale } from '../i18n/LocaleContext';
    no pide el documento: dejarlo como casillero libre haría que cada quien escriba lo que le
    parezca, y un documento tipeado mal crea una persona que no existe. */
 export function useTiposDeDocumento(prestadoraId) {
-  const { t } = useLocale();
-  const [porClase, setPorClase] = useState({ fisica: [], juridica: [] });
-  const [estado, setEstado] = useState('cargando'); // cargando | error | listo
-  const [error, setError] = useState(null);
+  const {
+    pais,
+    estado: estadoPais,
+    error: errorPais,
+    recargar: recargarPais,
+  } = usePaisDeLaPrestadora(prestadoraId);
 
-  const recargar = useCallback(async () => {
-    if (!prestadoraId) return;
-    setEstado('cargando');
-    setError(null);
+  const {
+    filas,
+    estado: estadoCatalogo,
+    error: errorCatalogo,
+    recargar: recargarCatalogo,
+  } = useCatalogo('catalogo_documentos_de_identidad', {
+    columnas: 'clase, codigo, sigla',
+    filtros: { pais, activo: true },
+    requiere: [pais],
+  });
 
-    const { data: prestadora, error: errorPrestadora } = await supabase
-      .from('prestadoras')
-      .select('pais')
-      .eq('id', prestadoraId)
-      .single();
-    if (errorPrestadora || !prestadora) {
-      setError(mensajeDeError(errorPrestadora ?? { code: 'PGRST116' }, t));
-      setEstado('error');
-      return;
-    }
+  const recargar = useCallback(() => {
+    recargarPais();
+    recargarCatalogo();
+  }, [recargarPais, recargarCatalogo]);
 
-    const { data, error: errorCatalogo } = await supabase
-      .from('catalogo_documentos_de_identidad')
-      .select('clase, codigo, sigla')
-      .eq('pais', prestadora.pais)
-      .eq('activo', true)
-      .order('orden');
+  const porClase = useMemo(
+    () => ({
+      fisica: filas.filter((uno) => uno.clase === 'fisica'),
+      juridica: filas.filter((uno) => uno.clase === 'juridica'),
+    }),
+    [filas],
+  );
 
-    if (errorCatalogo) {
-      setError(mensajeDeError(errorCatalogo, t));
-      setEstado('error');
-      return;
-    }
+  const estado = estadoPais === 'listo' ? estadoCatalogo : estadoPais;
 
-    setPorClase({
-      fisica: (data ?? []).filter((uno) => uno.clase === 'fisica'),
-      juridica: (data ?? []).filter((uno) => uno.clase === 'juridica'),
-    });
-    setEstado('listo');
-  }, [prestadoraId, t]);
-
-  useEffect(() => {
-    recargar();
-  }, [recargar]);
-
-  return { porClase, estado, error, recargar };
+  return { porClase, estado, error: errorPais || errorCatalogo, recargar };
 }

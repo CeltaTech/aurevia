@@ -5,6 +5,7 @@ import { FormField } from '../components/ui/FormField';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { errorDeLaRespuesta, mensajeDeError } from '../lib/errores';
+import { segmentoDeLaPuerta } from '../lib/puertaDeIngreso';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -14,6 +15,10 @@ const API_URL = import.meta.env.VITE_API_URL;
 // decide el motor, que contesta igual en los dos casos. Si contestara distinto, esta pantalla
 // sería una forma de averiguar quién tiene cuenta, preguntando de a un correo por vez, sin
 // necesidad de tener sesión.
+//
+// LA PRESTADORA SALE DE LA DIRECCIÓN POR DONDE SE ENTRÓ. Cada Prestadora donde la persona trabaja
+// es una cuenta distinta con su propia clave, así que el pedido tiene que decir de cuál se trata,
+// y lo dice la dirección del navegador, no un casillero que se pueda escribir.
 export function RecuperarClave() {
   const { t } = useLocale();
   const [email, setEmail] = useState('');
@@ -26,7 +31,11 @@ export function RecuperarClave() {
     setError(null);
     setEnviando(true);
     try {
-      const respuesta = await fetch(`${API_URL}/api/recuperar-clave`, {
+      // El mismo segmento que arma la pantalla de ingreso, de un solo lugar: si las dos lo
+      // dedujeran por su cuenta, una dirección con subdominio entraría por una puerta y recuperaría
+      // por otra (`lib/puertaDeIngreso.js`).
+      const puerta = encodeURIComponent(segmentoDeLaPuerta(window.location.hostname));
+      const respuesta = await fetch(`${API_URL}/api/recuperar-clave/pedir/${puerta}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

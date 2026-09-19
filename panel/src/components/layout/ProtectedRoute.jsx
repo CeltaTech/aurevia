@@ -4,15 +4,31 @@ import { usePermisos } from '../../context/PermisosContext';
 import { useModalidades } from '../../context/ModalidadesContext';
 import { useLocale } from '../../i18n/LocaleContext';
 import { esAdminOSuperior, ROLES_PANEL } from '../../lib/roles';
+import { Alert } from '../ui/Alert';
 
 export function ProtectedRoute({ children, soloAdmin = false, roles = null, permiso = null, modalidad = null }) {
-  const { session, usuario, cargando, mfaEstado } = useAuth();
-  const { puede, cargado: permisosCargados } = usePermisos();
-  const { tieneModalidad, cargado: modalidadesCargadas } = useModalidades();
+  const { session, usuario, estado: estadoSesion, mfaEstado } = useAuth();
+  const { puede, estado: estadoPermisos } = usePermisos();
+  const { tieneModalidad, estado: estadoModalidades } = useModalidades();
   const { t } = useLocale();
 
-  if (cargando) {
+  // Que no se haya podido averiguar algo no es lo mismo que que no exista: se lo dice, y la
+  // pantalla no se abre. Sin esto, una lectura fallida dejaba un «Cargando…» para siempre o,
+  // peor, un vacío que se lee como «acá no hay nada».
+  function avisoDeFalla() {
+    return (
+      <div className="pantalla-cargando">
+        <Alert variant="error">{t.comun.error_generico}</Alert>
+      </div>
+    );
+  }
+
+  if (estadoSesion === 'cargando') {
     return <div className="pantalla-cargando">{t.comun.cargando}</div>;
+  }
+
+  if (estadoSesion === 'error') {
+    return avisoDeFalla();
   }
 
   // Qué roles entran al Panel se decide en un solo lugar (lib/roles.js, CLAUDE.md §7.12) —
@@ -40,7 +56,8 @@ export function ProtectedRoute({ children, soloAdmin = false, roles = null, perm
   // mientras no llegan no entra — si algo falla, la pantalla no se abre, que es el lado
   // correcto para equivocarse.
   if (permiso && !esAdminOSuperior(usuario.rol)) {
-    if (!permisosCargados) return <div className="pantalla-cargando">{t.comun.cargando}</div>;
+    if (estadoPermisos === 'cargando') return <div className="pantalla-cargando">{t.comun.cargando}</div>;
+    if (estadoPermisos === 'error') return avisoDeFalla();
     if (!puede(permiso)) return <Navigate to="/" replace />;
   }
 
@@ -56,7 +73,8 @@ export function ProtectedRoute({ children, soloAdmin = false, roles = null, perm
   // modalidades tiene la Prestadora, no se entra. Si algo falla, la pantalla no se abre, que
   // es el lado correcto para equivocarse.
   if (modalidad) {
-    if (!modalidadesCargadas) return <div className="pantalla-cargando">{t.comun.cargando}</div>;
+    if (estadoModalidades === 'cargando') return <div className="pantalla-cargando">{t.comun.cargando}</div>;
+    if (estadoModalidades === 'error') return avisoDeFalla();
     if (!tieneModalidad(modalidad)) return <Navigate to="/" replace />;
   }
 

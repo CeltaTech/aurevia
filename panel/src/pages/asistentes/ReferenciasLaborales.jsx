@@ -29,7 +29,7 @@ import {
    se esperan sale de la configuración de esa Prestadora, y viene contado desde el motor. */
 
 export function ReferenciasLaborales({ asistente }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const tr = t.asistentes.verificacion.referencias;
   const [datos, setDatos] = useState(null);
   const [estado, setEstado] = useState('cargando');
@@ -153,7 +153,7 @@ export function ReferenciasLaborales({ asistente }) {
                 auditoría, que es donde se pregunta quién hizo qué. */}
             {referencia.verificada_en && (
               <p className="panel-explicacion">
-                {tr.verificada_por} {new Date(referencia.verificada_en).toLocaleDateString()}
+                {tr.verificada_por} {new Date(referencia.verificada_en).toLocaleDateString(locale)}
               </p>
             )}
             {guardando === referencia.id && <p className="panel-explicacion">{t.comun.guardando}</p>}

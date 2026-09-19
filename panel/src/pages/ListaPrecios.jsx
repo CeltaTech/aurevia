@@ -71,7 +71,7 @@ export function ListaPrecios() {
                 {/* Cada fila trae su propia moneda (`lista_precios.moneda`, que completa sola
                     la base): el precio se muestra con ella y no con la que se suponga. */}
                 <td>{formatearImporte(p.precio, p.moneda, locale)}</td>
-                <td>{new Date(p.vigente_desde).toLocaleDateString()}</td>
+                <td>{new Date(p.vigente_desde).toLocaleDateString(locale)}</td>
                 <td>
                   <span className={claseBadge(p.activo ? 'activo' : 'inactivo')}>
                     {p.activo ? t.lista_precios.activo_si : t.lista_precios.activo_no}

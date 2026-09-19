@@ -17,7 +17,7 @@ import { useCatalogoDeLugares } from './useCatalogoDeLugares';
    el array en cada dibujo no debe volver a consultar por eso. */
 export function useLugaresDelPlantel(ids) {
   const clave = [...new Set((ids ?? []).filter(Boolean))].sort().join(',');
-  const { lugares: catalogo, estado: estadoCatalogo } = useCatalogoDeLugares();
+  const { lugares: catalogo, estado: estadoCatalogo, error: errorCatalogo } = useCatalogoDeLugares();
   const [lugaresPorPersona, setLugaresPorPersona] = useState(new Map());
   const [estado, setEstado] = useState('cargando');
   const ultima = useRef(0);
@@ -61,7 +61,10 @@ export function useLugaresDelPlantel(ids) {
           : estado === 'listo' && estadoCatalogo === 'listo'
             ? 'listo'
             : 'cargando',
+      // Devolver el estado y tragarse el error deja a la pantalla con un cartel de error sin
+      // texto: el error viaja con el estado o no sirve de nada.
+      error: errorCatalogo ?? null,
     }),
-    [lugaresPorPersona, nombreDeLugar, catalogo, estado, estadoCatalogo],
+    [lugaresPorPersona, nombreDeLugar, catalogo, estado, estadoCatalogo, errorCatalogo],
   );
 }

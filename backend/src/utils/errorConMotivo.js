@@ -149,12 +149,39 @@ const ESTADO_POR_MOTIVO = {
   nombre_de_prestadora_repetido: 409,
   pais_sin_moneda: 409,
   correo_invalido: 400,
+  // Cambiar desde Configuración la moneda en la que trabaja una Prestadora. Es 400 porque el
+  // dato vino mal cargado: se eligió una moneda que el catálogo no tiene. No nombra el catálogo
+  // ni el dominio de la base.
+  moneda_desconocida: 400,
+  // Con qué software de afuera se conecta la Prestadora. Los dos son 400 porque el dato vino mal
+  // cargado: se eligió un software que el catálogo no tiene, o se cambió de software sin traer la
+  // credencial con la que se entra al nuevo. Ninguno nombra el catálogo ni la caja fuerte.
+  software_desconocido: 400,
+  credencial_requerida: 400,
   // El consentimiento del Pagador. Los dos son 409 por lo mismo que el correo ya tomado: el pedido
   // está bien armado y choca con el estado de las cosas. Sin Pagador elegido no hay a quién hacerle
   // firmar nada, y lo que ya se firmó no se anula. Si cayeran en 500 la pantalla diría "algo falló
   // de nuestro lado" cuando no falló nada de este lado.
   sin_pagador: 409,
   ya_cerrado: 409,
+  // Los formularios declarados. El incompleto es 400 porque el dato vino mal cargado, y viaja con
+  // la lista de lo que falta para que quien trabaja vea todo junto y no de a un renglón por vez.
+  // El no declarado es 404 y contesta lo mismo cuando el formulario no existe y cuando es de otra
+  // Prestadora, que desde afuera se tienen que ver iguales.
+  formulario_incompleto: 400,
+  formulario_no_declarado: 404,
+  // El teléfono como segundo factor, y lo que la Prestadora habilita cuando alguien la llama.
+  // El número mal cargado es 400. Que esa Prestadora todavía no tenga por dónde mandar un código es
+  // 409 —el pedido está bien armado y choca con el estado de las cosas, y se arregla dando de alta
+  // la plantilla—, y nunca 500: no falló nada de este lado. La clave actual equivocada es 400 y no
+  // 401, porque quien lo pide ya tiene sesión: no es que no pudo entrar, es que escribió mal un
+  // dato. Y habilitar hacia arriba o a uno mismo es 403, que es lo que la web dice cuando el pedido
+  // se entendió perfectamente y aun así no corresponde.
+  telefono_invalido: 400,
+  telefono_sin_verificar: 409,
+  via_de_telefono_no_disponible: 409,
+  clave_actual_incorrecta: 400,
+  no_puede_habilitar: 403,
   // Y el postulante que llega a deshora no recibe ningún error: llegar temprano no es equivocarse.
   // La puerta pública le contesta bien, con el cuándo y con en qué momento está, y la pantalla le
   // dice si tiene que volver más tarde o si la entrevista ya pasó.

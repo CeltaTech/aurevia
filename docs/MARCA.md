@@ -74,9 +74,10 @@ solo dentro de la carpeta propia.
 **El logo es opcional.** Sin logo la pantalla no se rompe: muestra el nombre de la Prestadora
 escrito.
 
-**Lo que todavía no se puede.** La pantalla de ingreso —antes de escribir el usuario— sigue
-mostrando la marca del producto, porque hasta que alguien no entra la aplicación no sabe de
-qué Prestadora se trata. Anotado como pendiente `#141`.
+**La pantalla de ingreso muestra la marca de la Prestadora.** Se la dice la dirección: cada
+Prestadora entra por la suya. `panel/src/lib/puertaDeIngreso.js` traduce esa dirección al segmento
+que el motor lee, y `backend/src/routes/marcaDeLaPuerta.js` devuelve el nombre y el logotipo sin
+pedir sesión. Si la dirección no corresponde a ninguna Prestadora, queda la marca del producto.
 
 ## 1. Los dos nombres, y por qué importa la diferencia
 
@@ -129,6 +130,12 @@ sobre cualquier fondo, alcanza con una sola versión y no hacen falta las varian
 
 - **El nombre en texto** no necesita ningún archivo: sale de `identidadProducto.js` y se
   reparte solo por los marcadores `{{producto}}` / `{{productoCorto}}`.
+- **El nombre de la Prestadora adentro de una frase** tiene su propio marcador,
+  `{{prestadora}}`, que funciona igual y vive en `src/i18n/marcaEnElTexto.js` (original en el
+  Panel, copia idéntica en las dos aplicaciones). Lo alimentan `PerfilContext.jsx` en las
+  aplicaciones y `EmpresaContext.jsx` en el Panel; mientras no hay Prestadora anotada el marcador
+  cae al nombre del producto. La marca **dibujada** no pasa por acá y sigue saliendo
+  de `useMarca()`: un marcador reemplaza texto, y una imagen no es texto.
 - **Los colores** (`colorPrimario`, `colorFondo`) ya salen de ahí, y de ahí los toma el
   manifiesto de las dos PWA.
 - **El manifiesto y el `<title>`** de las PWA ya se arman desde la identidad — cuando existan

@@ -4,6 +4,7 @@ import { useEmpresa } from '../../context/EmpresaContext';
 import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
 import { useEscalasLegales } from '../../hooks/useEscalasLegales';
 import { useFormulasCese } from '../../hooks/useFormulasCese';
+import { yaCargo } from '../../hooks/useCatalogo';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { useMonedaActual } from '../../hooks/useMonedaActual';
 import { resolverEscalasVigentes, resolverFormulasVigentes } from '../../lib/escalasLegales';
@@ -29,9 +30,12 @@ function humanizarClave(clave) {
   return clave.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()).trim();
 }
 
-function formatearValorCalculo(valor, t) {
+// Esto se muestra en pantalla, así que el número se escribe en el idioma en el que quien mira
+// está usando el Panel. Estaba clavado en castellano, y la misma cifra se leía distinta —el punto
+// y la coma se dan vuelta— según el idioma del resto de la pantalla.
+function formatearValorCalculo(valor, t, locale) {
   if (typeof valor === 'boolean') return valor ? t.comun.si : t.comun.no;
-  if (typeof valor === 'number') return valor.toLocaleString('es-AR');
+  if (typeof valor === 'number') return valor.toLocaleString(locale);
   if (valor === null || valor === undefined || valor === '') return '—';
   return String(valor);
 }
@@ -223,7 +227,7 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
           <tbody>
             {ceses.map((c) => (
               <tr key={c.id}>
-                <td>{new Date(c.fecha_cese).toLocaleDateString()}</td>
+                <td>{new Date(c.fecha_cese).toLocaleDateString(locale)}</td>
                 <td>{t.asistentes.causales[c.causal]}</td>
                 <td>{formatearImporte(c.monto_total, c.moneda, locale)}</td>
                 <td>
@@ -266,7 +270,7 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
             ))}
           </FormField>
 
-          <Button variant="secondary" onClick={calcular} disabled={estadoEscalas !== 'listo' || estadoFormulas !== 'listo'}>
+          <Button variant="secondary" onClick={calcular} disabled={!yaCargo(estadoEscalas) || !yaCargo(estadoFormulas)}>
             {t.asistentes.cese.calcular}
           </Button>
 
@@ -280,7 +284,7 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
                   {Object.entries(resultado.detalleCalculo).map(([clave, valor]) => (
                     <div key={clave} style={{ display: 'contents' }}>
                       <dt>{humanizarClave(clave)}</dt>
-                      <dd>{formatearValorCalculo(valor, t)}</dd>
+                      <dd>{formatearValorCalculo(valor, t, locale)}</dd>
                     </div>
                   ))}
                 </dl>

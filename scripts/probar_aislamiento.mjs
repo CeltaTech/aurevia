@@ -56,6 +56,10 @@ import { readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+// Con qué correo se le habla al servicio de acceso. Se importa de donde eso se decide, y no se
+// copia acá: hay una cuenta por Prestadora, y el correo que ve el servicio de acceso lleva la
+// Prestadora adentro. Una copia despegada dejaría la prueba entrando a cuentas que no existen.
+import { correoDeAcceso } from '../backend/src/config/correoDeAcceso.js';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -108,11 +112,14 @@ function consultarBase(sql) {
   return salida.trim().split('\n').filter(Boolean).map((l) => l.split('|'));
 }
 
-async function entrar(base, llavePublica, email) {
+// Entra como esa persona en esa Prestadora. El correo que se escribe es el de siempre; el que
+// recibe el servicio de acceso lo arma `correoDeAcceso`, porque en cada Prestadora esa persona
+// tiene una cuenta distinta.
+async function entrar(base, llavePublica, email, prestadoraId) {
   const r = await fetch(`${base}/auth/v1/token?grant_type=password`, {
     method: 'POST',
     headers: { apikey: llavePublica, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password: CONTRASENA }),
+    body: JSON.stringify({ email: await correoDeAcceso(email, prestadoraId), password: CONTRASENA }),
   });
   const cuerpo = await r.json().catch(() => ({}));
   if (!cuerpo.access_token) {
@@ -532,12 +539,12 @@ async function principal() {
 
   const [sesiones, piezas] = await Promise.all([
     (async () => ({
-      adminA: await entrar(entorno.base, entorno.llavePublica, `admin${PRESTADORA_A.sufijo}`),
-      adminB: await entrar(entorno.base, entorno.llavePublica, `admin${PRESTADORA_B.sufijo}`),
-      familiaA: await entrar(entorno.base, entorno.llavePublica, `familia.gomez${PRESTADORA_A.sufijo}`),
-      familiaB: await entrar(entorno.base, entorno.llavePublica, `familia.rios${PRESTADORA_B.sufijo}`),
-      asistenteA: await entrar(entorno.base, entorno.llavePublica, `ana.asistente${PRESTADORA_A.sufijo}`),
-      asistenteB: await entrar(entorno.base, entorno.llavePublica, `asistente.sur${PRESTADORA_B.sufijo}`),
+      adminA: await entrar(entorno.base, entorno.llavePublica, `admin${PRESTADORA_A.sufijo}`, idA),
+      adminB: await entrar(entorno.base, entorno.llavePublica, `admin${PRESTADORA_B.sufijo}`, idB),
+      familiaA: await entrar(entorno.base, entorno.llavePublica, `familia.gomez${PRESTADORA_A.sufijo}`, idA),
+      familiaB: await entrar(entorno.base, entorno.llavePublica, `familia.rios${PRESTADORA_B.sufijo}`, idB),
+      asistenteA: await entrar(entorno.base, entorno.llavePublica, `ana.asistente${PRESTADORA_A.sufijo}`, idA),
+      asistenteB: await entrar(entorno.base, entorno.llavePublica, `asistente.sur${PRESTADORA_B.sufijo}`, idB),
     }))(),
     (async () => {
       const uno = (sql) => (consultarBase(sql)[0] || [null])[0];
@@ -554,18 +561,23 @@ async function principal() {
 
   // Las cuatro personas de teléfono: un Asistente y una Familia de cada
   // Prestadora. El identificador sale de la base por el correo, no escrito acá.
-  const porCorreo = (correo) =>
-    (consultarBase(`SELECT id FROM auth.users WHERE email = '${correo}';`)[0] || [null])[0];
+  // Se busca en el Padrón y no del lado del servicio de acceso, que desde el
+  // modelo de una cuenta por Prestadora guarda un resumen y no el correo; y con
+  // la Prestadora, porque el mismo correo en otra es otra cuenta.
+  const porCorreo = (correo, prestadoraId) =>
+    (consultarBase(
+      `SELECT id FROM public.usuarios WHERE lower(email) = '${correo.toLowerCase()}' AND prestadora_id = '${prestadoraId}';`,
+    )[0] || [null])[0];
 
   const personas = [
     { nombre: `el Asistente de ${PRESTADORA_A.nombre}`, corto: 'asis A', tipo: 'asistente',
-      id: porCorreo(`ana.asistente${PRESTADORA_A.sufijo}`), token: sesiones.asistenteA },
+      id: porCorreo(`ana.asistente${PRESTADORA_A.sufijo}`, idA), token: sesiones.asistenteA },
     { nombre: `la Familia de ${PRESTADORA_A.nombre}`,   corto: 'fam A',  tipo: 'familia',
-      id: porCorreo(`familia.gomez${PRESTADORA_A.sufijo}`), token: sesiones.familiaA },
+      id: porCorreo(`familia.gomez${PRESTADORA_A.sufijo}`, idA), token: sesiones.familiaA },
     { nombre: `el Asistente de ${PRESTADORA_B.nombre}`, corto: 'asis B', tipo: 'asistente',
-      id: porCorreo(`asistente.sur${PRESTADORA_B.sufijo}`), token: sesiones.asistenteB },
+      id: porCorreo(`asistente.sur${PRESTADORA_B.sufijo}`, idB), token: sesiones.asistenteB },
     { nombre: `la Familia de ${PRESTADORA_B.nombre}`,   corto: 'fam B',  tipo: 'familia',
-      id: porCorreo(`familia.rios${PRESTADORA_B.sufijo}`), token: sesiones.familiaB },
+      id: porCorreo(`familia.rios${PRESTADORA_B.sufijo}`, idB), token: sesiones.familiaB },
   ];
 
   const problemas = await probarLaBase(entorno, idA, idB, sesiones);

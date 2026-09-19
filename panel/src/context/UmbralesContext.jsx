@@ -21,6 +21,12 @@
 // MIENTRAS NO LLEGÓ LA RESPUESTA, VALEN LOS DE FÁBRICA. Una pantalla que no puede pintar un chip
 // no sirve, y la diferencia entre un umbral y otro es de matiz: en el peor caso una guardia queda
 // un instante del color de al lado.
+//
+// PERO EL FALLO SE DICE, no se disfraza de valor de fábrica. Antes, una lectura que
+// no se podía hacer daba exactamente lo mismo que una Prestadora que no configuró nada, y quien
+// consumía esto no tenía forma de distinguir «todavía no llegó» de «falló». Los de fábrica
+// siguen valiendo para pintar —eso no cambia—, y además `useEstadoDeUmbrales()` dice en cuál de
+// las tres situaciones está: 'cargando', 'error' o 'listo'.
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -28,6 +34,7 @@ import { UMBRALES, umbralesDeLaPrestadora } from '../lib/semaforoGuardia';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 
 const UmbralesContext = createContext(UMBRALES);
+const EstadoDeUmbralesContext = createContext('cargando');
 
 async function cargarUmbralesPropios() {
   const [avisoSinCubrir, ausenciaAutomatica, escaladaCoordinador] = await Promise.all([
@@ -39,39 +46,69 @@ async function cargarUmbralesPropios() {
       .maybeSingle(),
   ]);
 
-  return umbralesDeLaPrestadora({
-    avisoSinCubrir: avisoSinCubrir.data,
-    ausenciaAutomatica: ausenciaAutomatica.data,
-    escaladaCoordinador: escaladaCoordinador.data,
-  });
+  // Si alguna de las tres no se pudo leer, lo que se arme con las otras dos no son los umbrales
+  // de esta Prestadora: son los de fábrica en el renglón que faltó, y eso es un número
+  // inventado con cara de configurado.
+  if (avisoSinCubrir.error || ausenciaAutomatica.error || escaladaCoordinador.error) {
+    return { umbrales: UMBRALES, fallo: true };
+  }
+
+  return {
+    umbrales: umbralesDeLaPrestadora({
+      avisoSinCubrir: avisoSinCubrir.data,
+      ausenciaAutomatica: ausenciaAutomatica.data,
+      escaladaCoordinador: escaladaCoordinador.data,
+    }),
+    fallo: false,
+  };
 }
 
 export function UmbralesProvider({ children }) {
   const prestadoraId = usePrestadoraActual();
   const [umbrales, setUmbrales] = useState(UMBRALES);
+  const [estado, setEstado] = useState('cargando');
 
   useEffect(() => {
     // Sin Prestadora resuelta —la pantalla de ingreso, o el usuario todavía cargando— no hay a
     // quién preguntarle, y quedan los de fábrica.
     if (!prestadoraId) {
       setUmbrales(UMBRALES);
+      setEstado('cargando');
       return undefined;
     }
 
     let activo = true;
-    cargarUmbralesPropios().then((traidos) => {
-      if (activo) setUmbrales(traidos);
-    });
+    setEstado('cargando');
+    cargarUmbralesPropios()
+      .then((traidos) => {
+        if (!activo) return;
+        setUmbrales(traidos.umbrales);
+        setEstado(traidos.fallo ? 'error' : 'listo');
+      })
+      .catch(() => {
+        if (!activo) return;
+        setUmbrales(UMBRALES);
+        setEstado('error');
+      });
 
     return () => {
       activo = false;
     };
   }, [prestadoraId]);
 
-  return <UmbralesContext.Provider value={umbrales}>{children}</UmbralesContext.Provider>;
+  return (
+    <UmbralesContext.Provider value={umbrales}>
+      <EstadoDeUmbralesContext.Provider value={estado}>{children}</EstadoDeUmbralesContext.Provider>
+    </UmbralesContext.Provider>
+  );
 }
 
 /** Los umbrales listos para el contexto del semáforo: `{ ahora, umbrales: useUmbrales() }`. */
 export function useUmbrales() {
   return useContext(UmbralesContext);
+}
+
+/** En cuál de las tres situaciones está la lectura: 'cargando', 'error' o 'listo'. */
+export function useEstadoDeUmbrales() {
+  return useContext(EstadoDeUmbralesContext);
 }

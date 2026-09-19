@@ -9,7 +9,7 @@ import { EstadoLista } from '../layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 
 export function HiloComunicacion({ asistenteId, mostrarEncabezado = true, onEnviado }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { usuario } = useAuth();
   const prestadoraId = usePrestadoraActual();
   const [mensajes, setMensajes] = useState([]);
@@ -83,7 +83,7 @@ export function HiloComunicacion({ asistenteId, mostrarEncabezado = true, onEnvi
             <div key={m.id} className={`panel-chat-burbuja ${m.usuario_id === usuario.id ? 'panel-chat-burbuja-propia' : ''}`}>
               <div className="panel-chat-burbuja-autor">{m.usuarios?.nombre || '—'}</div>
               <div className="panel-chat-burbuja-texto">{m.mensaje}</div>
-              <div className="panel-chat-burbuja-hora">{new Date(m.created_at).toLocaleString()}</div>
+              <div className="panel-chat-burbuja-hora">{new Date(m.created_at).toLocaleString(locale)}</div>
             </div>
           ))}
         </div>

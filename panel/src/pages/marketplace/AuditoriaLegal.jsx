@@ -35,7 +35,7 @@ async function llamarApi(path, opciones = {}) {
 // Prestadora; si ese país no tiene documento, no se muestra nada y se enciende igual. Apagar
 // no muestra ninguna: lo que el documento legal advierte es de usar la función.
 export function MarketplaceAuditoriaLegal() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { usuario } = useAuth();
   const prestadoraId = usePrestadoraActual();
   const { verificarAntesDeActivar } = useAdvertenciaLegal();
@@ -85,8 +85,13 @@ export function MarketplaceAuditoriaLegal() {
     // El aviso va antes de pedir el cambio: sirve para decidir, y después de encendida ya no
     // hay nada que decidir. Si la persona lo cancela, no se enciende nada.
     if (activa) {
-      const confirmado = await verificarAntesDeActivar(prestadoraId, funcion.clave);
-      if (!confirmado) return;
+      const respuesta = await verificarAntesDeActivar(prestadoraId, funcion.clave);
+      // No se pudo consultar si hay advertencia que mostrar: se lo dice y no se enciende nada.
+      if (respuesta === 'error') {
+        setErrorFunciones(t.comun.error_generico);
+        return;
+      }
+      if (respuesta !== 'seguir') return;
     }
     setCambiando(funcion.clave);
     setErrorFunciones(null);
@@ -149,7 +154,7 @@ export function MarketplaceAuditoriaLegal() {
                 </td>
                 <td>
                   {f.advertida_en ? (
-                    new Date(f.advertida_en).toLocaleString()
+                    new Date(f.advertida_en).toLocaleString(locale)
                   ) : (
                     <span className="panel-dato-vacio">
                       {f.texto_advertencia ? '—' : t.marketplace.funciones_riesgo_sin_documento}
@@ -178,7 +183,7 @@ export function MarketplaceAuditoriaLegal() {
           <tbody>
             {eventos.map((e) => (
               <tr key={e.id}>
-                <td>{new Date(e.created_at).toLocaleString()}</td>
+                <td>{new Date(e.created_at).toLocaleString(locale)}</td>
                 <td>{e.usuarios?.nombre || '—'}</td>
                 <td>{t.marketplace[`funcion_${e.funcion_clave}`] || e.funcion_clave}</td>
                 <td>{e.texto_mostrado}</td>

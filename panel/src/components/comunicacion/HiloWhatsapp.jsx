@@ -42,7 +42,7 @@ function esBorrador(mensaje) {
 }
 
 export function HiloWhatsapp({ conversacionId, onCambio }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [mensajes, setMensajes] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -141,7 +141,7 @@ export function HiloWhatsapp({ conversacionId, onCambio }) {
                 {esBorrador(m) && ` · ${t.comunicacion.sin_enviar}`}
               </div>
               <div className="panel-chat-burbuja-texto">{m.texto}</div>
-              <div className="panel-chat-burbuja-hora">{new Date(m.created_at).toLocaleString()}</div>
+              <div className="panel-chat-burbuja-hora">{new Date(m.created_at).toLocaleString(locale)}</div>
             </div>
           ))}
         </div>

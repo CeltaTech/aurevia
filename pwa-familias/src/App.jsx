@@ -29,9 +29,18 @@ import Mensajes from './pages/Mensajes';
 import Conversacion from './pages/Conversacion';
 
 function RutaPrivada({ children }) {
-  const { session, cargando } = useAuth();
+  const { session, estado } = useAuth();
   const { t } = useLocale();
-  if (cargando) return <div className="pantalla-cargando estado-cargando">{t.comun.cargando}</div>;
+  if (estado === 'cargando') return <div className="pantalla-cargando estado-cargando">{t.comun.cargando}</div>;
+  // No se pudo averiguar quién entró. Se lo dice, en vez de dejarla pasar sin ficha y mostrarle
+  // una aplicación vacía como si no tuviera nada.
+  if (estado === 'error') {
+    return (
+      <div className="pantalla-cargando">
+        <div className="alert alert-error" role="alert">{t.comun.error_generico}</div>
+      </div>
+    );
+  }
   if (!session) return <Navigate to="/login" replace />;
   return children;
 }

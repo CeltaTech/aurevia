@@ -33,6 +33,11 @@ import { Button } from '../ui/Button';
    `filtrado` y `onLimpiarFiltros` son opcionales: una pantalla que no los pasa muestra el
    cartel de "todavía no hay nada".
 
+   El vacío llega de dos maneras y las dos valen. La pantalla que hace una cuenta propia —porque
+   filtró, o porque junta varias listas— lo dice con `vacio`. La que carga su lista con
+   `useCatalogo` no cuenta nada: ahí el vacío es un estado del catálogo y viene adentro de
+   `estado`, igual que «cargando» y «error».
+
    `ayudaVacio` también es opcional, y es el segundo renglón del cartel: el que dice qué hacer.
    Por defecto es el genérico —"cuando se cargue el primer registro va a aparecer acá"—, pero
    hay listas donde el vacío no significa que falte cargar algo sino que falta abrir algo. La
@@ -70,7 +75,7 @@ export function EstadoLista({
     );
   }
 
-  if (vacio) {
+  if (vacio || estado === 'vacio') {
     // Con filtros puestos: el filtro no encontró nada, y la salida es sacarlo.
     if (filtrado) {
       return (

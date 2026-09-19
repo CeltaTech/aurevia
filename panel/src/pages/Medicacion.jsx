@@ -56,8 +56,14 @@ export function Medicacion() {
 
   async function aceptar(fila) {
     if (fila.sinMatricula) {
-      const confirmado = await verificarAntesDeActivar(prestadoraId, 'medicacion_via_sin_matricula');
-      if (!confirmado) return;
+      const respuesta = await verificarAntesDeActivar(prestadoraId, 'medicacion_via_sin_matricula');
+      // No se pudo consultar si hay advertencia que mostrar: se lo dice y no se acepta nada. La
+      // alternativa —seguir como si no hubiera nada que advertir— es la que se corrigió.
+      if (respuesta === 'error') {
+        setError(t.comun.error_generico);
+        return;
+      }
+      if (respuesta !== 'seguir') return;
     }
     setAccionEnCurso(fila.id);
     setError(null);

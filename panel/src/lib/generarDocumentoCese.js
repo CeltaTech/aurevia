@@ -8,6 +8,16 @@ import { jsPDF } from 'jspdf';
 const MARGEN = 20;
 const ANCHO_UTIL = 170;
 
+// EL DOCUMENTO VA EN CASTELLANO. Todo lo que este archivo escribe —«Certificado de trabajo»,
+// «Se certifica que…», las causales, el aviso legal— está redactado en castellano acá adentro,
+// porque es un papel que se firma y se entrega, no una pantalla que cambia de idioma con quien
+// la mira. Entonces las fechas y los importes que van adentro de ese papel se escriben también
+// en castellano: un documento con el cuerpo en castellano y la fecha en formato inglés no se lee.
+// El idioma del documento se declara una sola vez, acá, en vez de quedar suelto en cada función
+// que da forma a un número. El día que una Prestadora entregue este papel en otro idioma, se
+// cambia de lugar —pasa a ser un dato de la Prestadora— y hay un solo renglón que tocar.
+export const IDIOMA_DEL_DOCUMENTO = 'es-AR';
+
 function textoDisclaimerLegal(nombreEmpresa) {
   return (
     `Documento generado automáticamente por el sistema de ${nombreEmpresa} a partir de los datos cargados. ` +
@@ -61,7 +71,7 @@ function formatoFecha(fecha) {
     const [anio, mes, dia] = fecha.slice(0, 10).split('-');
     return `${dia}/${mes}/${anio}`;
   }
-  return new Date(fecha).toLocaleDateString('es-AR');
+  return new Date(fecha).toLocaleDateString(IDIOMA_DEL_DOCUMENTO);
 }
 
 // El signo del peso argentino estaba escrito acá adentro, de modo que un documento de una
@@ -69,7 +79,7 @@ function formatoFecha(fecha) {
 // no viniera, se escribe el número solo antes que un símbolo puesto por descarte.
 function formatoMonto(monto, moneda) {
   if (monto === null || monto === undefined) return 'A definir (cálculo manual)';
-  return Number(monto).toLocaleString('es-AR', {
+  return Number(monto).toLocaleString(IDIOMA_DEL_DOCUMENTO, {
     minimumFractionDigits: 2,
     ...(moneda ? { style: 'currency', currency: moneda } : {}),
   });

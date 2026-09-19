@@ -22,7 +22,7 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
    pantalla lo muestra. Repartida entre pantallas, la misma pregunta terminaría contestándose
    distinto según dónde se mire. */
 export function EstadoDelPagador({ familiaId, puedeRegistrar }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [estado, setEstado] = useState('cargando');
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState(null);
@@ -145,7 +145,7 @@ export function EstadoDelPagador({ familiaId, puedeRegistrar }) {
             {consentimientoCerrado && (
               <>
                 <dt>{textos.firmado_el}</dt>
-                <dd>{new Date(consentimientoCerrado.cerrado_en).toLocaleDateString()}</dd>
+                <dd>{new Date(consentimientoCerrado.cerrado_en).toLocaleDateString(locale)}</dd>
               </>
             )}
           </dl>
@@ -240,7 +240,7 @@ export function EstadoDelPagador({ familiaId, puedeRegistrar }) {
                       </td>
                       <td>
                         {papel.fechaVencimiento
-                          ? new Date(papel.fechaVencimiento).toLocaleDateString()
+                          ? new Date(papel.fechaVencimiento).toLocaleDateString(locale)
                           : '—'}
                       </td>
                       <td>

@@ -23,7 +23,7 @@
 //
 // QUÉ PRUEBA
 //
-// Dos cosas distintas, y las dos hacen falta:
+// Tres cosas distintas, y las tres hacen falta:
 //
 //   1. EL CAMINO REAL. Abre sesión de administradora de la Prestadora de
 //      pruebas y da de alta una fila en cada tabla que tenga uno de estos
@@ -35,6 +35,15 @@
 //      Le pregunta a la base, para todos sus disparadores que corren con el rol
 //      de quien escribe, si alguno llama a una función que ese rol no pueda
 //      ejecutar. Con el defecto puesto esto encontraba ocho.
+//
+//   3. QUIÉN PUEDE ESCRIBIR QUÉ. Que leer la configuración y escribirla sean
+//      dos cosas distintas del lado de la base, y no de la pantalla: el
+//      catálogo lo lee cualquiera de la Prestadora, lo escribe el personal, la
+//      configuración de la empresa la escribe la administración, y lo de cada
+//      Asistente lo escribe además el dueño de su propia ficha. Cada negativa
+//      va con su afirmativa sobre la misma tabla, cambiando nada más que quién
+//      tiene la sesión: sola, la negativa la daría igual una política que niega
+//      todo, que además rompe el Panel.
 //
 // La primera prueba el caso conocido; la segunda, la clase entera. Sin la
 // segunda, un disparador nuevo repetiría el defecto y esta prueba seguiría en
@@ -65,6 +74,10 @@ import { readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+// Con qué correo se le habla al servicio de acceso. Se importa de donde eso se decide, y no se
+// copia acá: hay una cuenta por Prestadora, y el correo que ve el servicio de acceso lleva la
+// Prestadora adentro.
+import { correoDeAcceso } from '../backend/src/config/correoDeAcceso.js';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -83,6 +96,8 @@ const CONTRASENA = 'local-sandbox-2026';
 const ADMINISTRADORA = 'admin@sandbox.local';
 // El pase más angosto del Panel: lo que alcanza se decide por el Asistente de cada fila.
 const COORDINADORA = 'coordinadora@sandbox.local';
+// Y alguien que no es del Panel: tiene sesión en la Prestadora y su propia ficha, nada más.
+const ASISTENTE = 'ana.asistente@sandbox.local';
 
 const verde = (t) => `\x1b[32m${t}\x1b[0m`;
 const rojo = (t) => `\x1b[31m${t}\x1b[0m`;
@@ -111,11 +126,14 @@ function consultarBase(sql) {
   return salida.trim().split('\n').filter(Boolean).map((l) => l.split('|'));
 }
 
-async function entrar(base, llavePublica, email) {
+// Entra como esa persona en esa Prestadora. El correo que se escribe es el de siempre; el que
+// recibe el servicio de acceso lo arma `correoDeAcceso`, porque en cada Prestadora esa persona
+// tiene una cuenta distinta.
+async function entrar(base, llavePublica, email, prestadoraId) {
   const r = await fetch(`${base}/auth/v1/token?grant_type=password`, {
     method: 'POST',
     headers: { apikey: llavePublica, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password: CONTRASENA }),
+    body: JSON.stringify({ email: await correoDeAcceso(email, prestadoraId), password: CONTRASENA }),
   });
   const cuerpo = await r.json().catch(() => ({}));
   if (!cuerpo.access_token) {
@@ -336,7 +354,7 @@ async function probarElHueco({ base, llavePublica }, d) {
   console.log('\n== El hueco: armar el turno sin Asistente todavía ==\n');
   console.log(gris(`  Sesión: ${COORDINADORA}\n`));
 
-  const token = await entrar(base, llavePublica, COORDINADORA);
+  const token = await entrar(base, llavePublica, COORDINADORA, d.prestadora);
   const enUnMes = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
   const r = await fetch(`${base}/rest/v1/series_guardias`, {
@@ -420,6 +438,191 @@ function probarLaClaseEntera() {
 }
 
 // ---------------------------------------------------------------------------
+// Cuarta comprobación: leer la configuración y escribirla no son lo mismo
+//
+// El catálogo lo lee cualquiera de la Prestadora; lo escribe el personal; y la
+// configuración de la empresa la escribe la administración. Hasta acá eso vivía
+// sólo en la pantalla, así que la base dejaba pasar a quien la pantalla frenaba.
+//
+// Se prueban las dos caras. Sólo comprobar que algo rebota no prueba nada: una
+// política que niega todo rebota igual, y encima rompe el Panel. Por eso cada
+// negativa viene con su afirmativa, con la misma tabla y el mismo pedido,
+// cambiando nada más que quién tiene la sesión.
+// ---------------------------------------------------------------------------
+
+async function pedir({ base, llavePublica }, token, metodo, ruta, cuerpo) {
+  const r = await fetch(`${base}/rest/v1/${ruta}`, {
+    method: metodo,
+    headers: {
+      apikey: llavePublica,
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    ...(cuerpo ? { body: JSON.stringify(cuerpo) } : {}),
+  });
+  const leido = await r.json().catch(() => null);
+  return { ok: r.ok, estado: r.status, cuerpo: leido, filas: Array.isArray(leido) ? leido : [] };
+}
+
+async function probarQuienEscribeLaConfiguracion(entorno, d) {
+  console.log('\n== Leer la configuración y escribirla: quién puede cada cosa ==\n');
+
+  const [[asistenteDeLaSesion, usuarioDelAsistente]] = consultarBase(`
+    SELECT a.id, a.usuario_id FROM public.asistentes a
+      JOIN public.usuarios u ON u.id = a.usuario_id
+     WHERE u.email = '${ASISTENTE}' AND a.prestadora_id = '${d.prestadora}'
+     LIMIT 1;
+  `);
+  if (!asistenteDeLaSesion) {
+    throw new Error(`No encontré la ficha de ${ASISTENTE} en la Prestadora de pruebas.`);
+  }
+
+  const problemas = [];
+  const bien = (t, n) => { console.log(verde(`  ✓ ${t}`)); if (n) console.log(gris(`      ${n}`)); };
+  const mal = (t, n) => { console.log(rojo(`  ✗ ${t}`)); console.log(rojo(`      ${n}`)); problemas.push(`${t} — ${n}`); };
+
+  const deLaAdministracion = await entrar(entorno.base, entorno.llavePublica, ADMINISTRADORA, d.prestadora);
+  const deLaCoordinadora = await entrar(entorno.base, entorno.llavePublica, COORDINADORA, d.prestadora);
+  const delAsistente = await entrar(entorno.base, entorno.llavePublica, ASISTENTE, d.prestadora);
+
+  // ---- El catálogo lo lee cualquiera de la Prestadora ----------------------
+  const lectura = await pedir(entorno, delAsistente, 'GET', `configuracion_ausencias?select=prestadora_id&prestadora_id=eq.${d.prestadora}`);
+  if (lectura.filas.length === 1) {
+    bien('el Asistente lee la configuración de ausencias de su Prestadora', 'configuracion_ausencias_la_lee_su_prestadora');
+  } else {
+    mal('el Asistente lee la configuración de ausencias de su Prestadora',
+        `esperaba 1 fila y vinieron ${lectura.filas.length} (${lectura.estado})`);
+  }
+
+  const lugaresQueVe = await pedir(entorno, delAsistente, 'GET', `lugares?select=id&prestadora_id=eq.${d.prestadora}`);
+  if (lugaresQueVe.filas.length > 0) {
+    bien('el Asistente lee el catálogo de Lugares de su Prestadora', 'lugares_los_lee_su_prestadora');
+  } else {
+    mal('el Asistente lee el catálogo de Lugares de su Prestadora',
+        `esperaba al menos una fila y no vino ninguna (${lugaresQueVe.estado})`);
+  }
+
+  // ---- El catálogo lo escribe el personal, y sólo el personal ---------------
+  const lugarDelAsistente = await pedir(entorno, delAsistente, 'POST', 'lugares', {
+    prestadora_id: d.prestadora, nombre: 'Lugar de la prueba de escritura', pais: 'AR',
+  });
+  if (lugarDelAsistente.ok) {
+    consultarBase("DELETE FROM public.lugares WHERE nombre = 'Lugar de la prueba de escritura';");
+    mal('el Asistente NO escribe el catálogo de Lugares', 'la base lo dejó cargar un Lugar');
+  } else {
+    bien('el Asistente NO escribe el catálogo de Lugares', `rebotó con ${lugarDelAsistente.estado}`);
+  }
+
+  const lugarDeLaCoordinadora = await pedir(entorno, deLaCoordinadora, 'POST', 'lugares', {
+    prestadora_id: d.prestadora, nombre: 'Lugar de la prueba de escritura', pais: 'AR',
+  });
+  if (lugarDeLaCoordinadora.ok) {
+    consultarBase("DELETE FROM public.lugares WHERE nombre = 'Lugar de la prueba de escritura';");
+    bien('la Coordinadora SÍ escribe el catálogo de Lugares', 'lugares_los_escribe_el_personal');
+  } else {
+    const c = lugarDeLaCoordinadora.cuerpo || {};
+    mal('la Coordinadora SÍ escribe el catálogo de Lugares',
+        `${lugarDeLaCoordinadora.estado} ${c.code || ''} ${c.message || ''}`.trim());
+  }
+
+  // ---- Las referencias laborales son del personal, no de cualquiera ---------
+  const referenciaDelAsistente = await pedir(entorno, delAsistente, 'POST', 'referencias_laborales_asistente', {
+    prestadora_id: d.prestadora, asistente_id: asistenteDeLaSesion,
+    nombre: 'Referencia de la prueba de escritura', telefono: '000',
+  });
+  if (referenciaDelAsistente.ok) {
+    consultarBase("DELETE FROM public.referencias_laborales_asistente WHERE nombre = 'Referencia de la prueba de escritura';");
+    mal('el Asistente NO carga referencias laborales', 'la base lo dejó cargar una referencia de su propia ficha');
+  } else {
+    bien('el Asistente NO carga referencias laborales', `rebotó con ${referenciaDelAsistente.estado}`);
+  }
+
+  const referenciaDeLaCoordinadora = await pedir(entorno, deLaCoordinadora, 'POST', 'referencias_laborales_asistente', {
+    prestadora_id: d.prestadora, asistente_id: asistenteDeLaSesion,
+    nombre: 'Referencia de la prueba de escritura', telefono: '000',
+  });
+  if (referenciaDeLaCoordinadora.ok) {
+    consultarBase("DELETE FROM public.referencias_laborales_asistente WHERE nombre = 'Referencia de la prueba de escritura';");
+    bien('la Coordinadora SÍ carga referencias laborales', 'referencias_laborales_las_gestiona_el_personal');
+  } else {
+    const c = referenciaDeLaCoordinadora.cuerpo || {};
+    mal('la Coordinadora SÍ carga referencias laborales',
+        `${referenciaDeLaCoordinadora.estado} ${c.code || ''} ${c.message || ''}`.trim());
+  }
+
+  // ---- Y la configuración de la empresa la escribe la administración --------
+  // Rebotar por política devuelve 200 con ninguna fila tocada, que se lee igual
+  // que un pedido que no encontró nada. Por eso los dos pedidos son idénticos y
+  // apuntan a una fila que existe: lo único que cambia es quién tiene la sesión.
+  const [[comoEstaba]] = consultarBase(
+    `SELECT updated_at FROM public.configuracion_ausencias WHERE prestadora_id = '${d.prestadora}';`,
+  );
+  const cuandoSea = new Date(Date.now() - 60_000).toISOString();
+
+  const tocaLaCoordinadora = await pedir(
+    entorno, deLaCoordinadora, 'PATCH',
+    `configuracion_ausencias?prestadora_id=eq.${d.prestadora}`, { updated_at: cuandoSea },
+  );
+  if (tocaLaCoordinadora.filas.length === 0) {
+    bien('la Coordinadora NO escribe la configuración de ausencias', 'no tocó ninguna fila');
+  } else {
+    mal('la Coordinadora NO escribe la configuración de ausencias', 'la base la dejó modificarla');
+  }
+
+  const tocaLaAdministracion = await pedir(
+    entorno, deLaAdministracion, 'PATCH',
+    `configuracion_ausencias?prestadora_id=eq.${d.prestadora}`, { updated_at: cuandoSea },
+  );
+  if (tocaLaAdministracion.filas.length === 1) {
+    bien('la administración SÍ escribe la configuración de ausencias', 'configuracion_ausencias_la_escribe_la_administracion');
+  } else {
+    const c = tocaLaAdministracion.cuerpo || {};
+    mal('la administración SÍ escribe la configuración de ausencias',
+        `${tocaLaAdministracion.estado} ${c.code || ''} ${c.message || ''}`.trim() || 'no tocó ninguna fila');
+  }
+
+  consultarBase(
+    `UPDATE public.configuracion_ausencias SET updated_at = '${comoEstaba}' WHERE prestadora_id = '${d.prestadora}';`,
+  );
+
+  // ---- Y lo de cada Asistente lo escribe el dueño de su ficha, y nadie más --
+  const hoy = new Date().toISOString().slice(0, 10);
+  const matricula = (ficha) => ({
+    prestadora_id: d.prestadora, asistente_id: ficha, tipo: 'enfermeria',
+    numero_matricula: 'PRUEBA-ESCRITURA', vigente_desde: hoy,
+    registrado_por: usuarioDelAsistente, cargada_por_el_asistente: true,
+  });
+
+  const matriculaPropia = await pedir(entorno, delAsistente, 'POST', 'matriculas_asistente', matricula(asistenteDeLaSesion));
+  if (matriculaPropia.ok) {
+    consultarBase("DELETE FROM public.matriculas_asistente WHERE numero_matricula = 'PRUEBA-ESCRITURA';");
+    bien('el Asistente SÍ carga la Matrícula de su propia ficha', 'asistente_carga_su_matricula');
+  } else {
+    const c = matriculaPropia.cuerpo || {};
+    mal('el Asistente SÍ carga la Matrícula de su propia ficha',
+        `${matriculaPropia.estado} ${c.code || ''} ${c.message || ''}`.trim());
+  }
+
+  const [[otraFicha]] = consultarBase(`
+    SELECT a.id FROM public.asistentes a
+     WHERE a.prestadora_id = '${d.prestadora}' AND a.id <> '${asistenteDeLaSesion}'
+     ORDER BY a.id LIMIT 1;
+  `);
+  if (otraFicha) {
+    const matriculaAjena = await pedir(entorno, delAsistente, 'POST', 'matriculas_asistente', matricula(otraFicha));
+    if (matriculaAjena.ok) {
+      consultarBase("DELETE FROM public.matriculas_asistente WHERE numero_matricula = 'PRUEBA-ESCRITURA';");
+      mal('el Asistente NO carga la Matrícula de otra ficha', 'la base lo dejó escribir en la ficha de otro');
+    } else {
+      bien('el Asistente NO carga la Matrícula de otra ficha', `rebotó con ${matriculaAjena.estado}`);
+    }
+  }
+
+  return problemas;
+}
+
+// ---------------------------------------------------------------------------
 
 function limpiar(creado, idAsistente) {
   // Se borra con la llave del dueño de la base y no con la sesión, porque lo
@@ -439,7 +642,7 @@ function limpiar(creado, idAsistente) {
 async function main() {
   const entorno = leerEntorno();
   const d = anclas();
-  const token = await entrar(entorno.base, entorno.llavePublica, ADMINISTRADORA);
+  const token = await entrar(entorno.base, entorno.llavePublica, ADMINISTRADORA, d.prestadora);
 
   let resultado = { problemas: [], creado: [] };
   try {
@@ -453,7 +656,8 @@ async function main() {
 
   const delHueco = await probarElHueco(entorno, d);
   const deLaClase = probarLaClaseEntera();
-  const problemas = [...resultado.problemas, ...delHueco, ...deLaClase];
+  const deLaConfiguracion = await probarQuienEscribeLaConfiguracion(entorno, d);
+  const problemas = [...resultado.problemas, ...delHueco, ...deLaClase, ...deLaConfiguracion];
 
   console.log('');
   if (problemas.length) {
@@ -470,7 +674,8 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(verde('BIEN — quien tiene sesión puede dar de alta, y ningún disparador pide un permiso que no tiene.'));
+  console.log(verde('BIEN — quien tiene sesión puede dar de alta, ningún disparador pide un permiso que no'));
+  console.log(verde('tiene, y la configuración la escribe sólo quien corresponde.'));
   process.exit(0);
 }
 

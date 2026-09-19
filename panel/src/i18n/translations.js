@@ -1270,6 +1270,9 @@ export const T = {
         vencimientos_sin_tipos: 'La prestadora todavía no configuró ningún documento a seguir (Configuración > Documentos de Asistentes).',
         vencimientos_col_tipo: 'Documento',
         vencimientos_col_vencimiento: 'Vencimiento',
+        vencimientos_col_papel: 'Papel',
+        papel_mirar: 'Ver',
+        papel_rechazado: 'No se pudo presentar el papel, revise el archivo e inténtelo nuevamente.',
       },
       evaluaciones: {
         col_fecha: 'Fecha',
@@ -4088,6 +4091,9 @@ export const T = {
         vencimientos_sin_tipos: 'The provider hasn\'t configured any tracked documents yet (Settings > Assistant documents).',
         vencimientos_col_tipo: 'Document',
         vencimientos_col_vencimiento: 'Expiry date',
+        vencimientos_col_papel: 'File',
+        papel_mirar: 'View',
+        papel_rechazado: 'The file could not be submitted. Please check it and try again.',
       },
       evaluaciones: {
         col_fecha: 'Date',
@@ -6890,6 +6896,9 @@ export const T = {
         vencimientos_sin_tipos: 'A prestadora ainda não configurou nenhum documento a acompanhar (Configuração > Documentos dos Assistentes).',
         vencimientos_col_tipo: 'Documento',
         vencimientos_col_vencimiento: 'Vencimento',
+        vencimientos_col_papel: 'Documento anexado',
+        papel_mirar: 'Ver',
+        papel_rechazado: 'Não foi possível enviar o documento, verifique o arquivo e tente novamente.',
       },
       evaluaciones: {
         col_fecha: 'Data',

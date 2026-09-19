@@ -24,6 +24,7 @@ import { useTiposAsistente } from '../../hooks/useTiposAsistente';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { useMonedaActual } from '../../hooks/useMonedaActual';
 import { supabase } from '../../lib/supabaseClient';
+import { subirPapel, direccionParaMirar, TIPOS_ACEPTADOS, TAMANO_MAXIMO } from '../../lib/papelesDelLegajo';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
@@ -489,16 +490,19 @@ function DocumentosVencimiento({ asistenteId }) {
   const [tipos, setTipos] = useState([]);
   const [valores, setValores] = useState({});
   const [documentoIds, setDocumentoIds] = useState({});
+  const [rutas, setRutas] = useState({});
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [guardandoTipoId, setGuardandoTipoId] = useState(null);
+  const [subiendoTipoId, setSubiendoTipoId] = useState(null);
+  const [abriendoTipoId, setAbriendoTipoId] = useState(null);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
     const [{ data: tiposData, error: errorTipos }, { data: documentosData, error: errorDocumentos }] = await Promise.all([
       supabase.from('tipos_documento_asistente').select('id, nombre, requiere_vencimiento').eq('activo', true).order('nombre'),
-      supabase.from('documentos_asistente').select('id, tipo_documento_id, fecha_vencimiento').eq('asistente_id', asistenteId),
+      supabase.from('documentos_asistente').select('id, tipo_documento_id, fecha_vencimiento, ruta_archivo').eq('asistente_id', asistenteId),
     ]);
     if (errorTipos || errorDocumentos) {
       setError(t.comun.error_generico);
@@ -508,12 +512,15 @@ function DocumentosVencimiento({ asistenteId }) {
     setTipos(tiposData ?? []);
     const nuevosValores = {};
     const nuevosIds = {};
+    const nuevasRutas = {};
     for (const doc of documentosData ?? []) {
       nuevosValores[doc.tipo_documento_id] = doc.fecha_vencimiento || '';
       nuevosIds[doc.tipo_documento_id] = doc.id;
+      nuevasRutas[doc.tipo_documento_id] = doc.ruta_archivo || null;
     }
     setValores(nuevosValores);
     setDocumentoIds(nuevosIds);
+    setRutas(nuevasRutas);
     setEstado('listo');
   }, [asistenteId, t]);
 
@@ -521,22 +528,63 @@ function DocumentosVencimiento({ asistenteId }) {
     recargar();
   }, [recargar]);
 
-  async function guardarDocumento(tipoId) {
-    setGuardandoTipoId(tipoId);
-    setError(null);
+  // El renglón se guarda con lo que haya: la fecha de vencimiento, el papel, o los dos. Un papel
+  // recién subido viaja en `ruta` porque el estado todavía no se releyó.
+  async function guardarDocumento(tipoId, ruta) {
     const fecha = valores[tipoId] || null;
+    const rutaArchivo = ruta === undefined ? rutas[tipoId] ?? null : ruta;
     const { error: errorGuardar } = await supabase
       .from('documentos_asistente')
       .upsert(
-        { id: documentoIds[tipoId], asistente_id: asistenteId, tipo_documento_id: tipoId, fecha_vencimiento: fecha, prestadora_id: prestadoraId },
+        { id: documentoIds[tipoId], asistente_id: asistenteId, tipo_documento_id: tipoId, fecha_vencimiento: fecha, ruta_archivo: rutaArchivo, prestadora_id: prestadoraId },
         { onConflict: 'asistente_id,tipo_documento_id' },
       );
-    setGuardandoTipoId(null);
     if (errorGuardar) {
+      setError(t.comun.error_generico);
+      return false;
+    }
+    await recargar();
+    return true;
+  }
+
+  async function guardarVencimiento(tipoId) {
+    setGuardandoTipoId(tipoId);
+    setError(null);
+    await guardarDocumento(tipoId);
+    setGuardandoTipoId(null);
+  }
+
+  // Volver a presentar un papel no pisa el anterior: cada archivo lleva su propio identificador y
+  // el renglón apunta al último.
+  async function presentarPapel(tipoId, archivo) {
+    if (!archivo) return;
+    setSubiendoTipoId(tipoId);
+    setError(null);
+    if (archivo.size > TAMANO_MAXIMO || !TIPOS_ACEPTADOS.includes(archivo.type)) {
+      setError(t.asistentes.documentos.papel_rechazado);
+      setSubiendoTipoId(null);
+      return;
+    }
+    const ruta = await subirPapel({ prestadoraId, asistenteId, archivo });
+    if (!ruta) {
+      setError(t.comun.error_generico);
+      setSubiendoTipoId(null);
+      return;
+    }
+    await guardarDocumento(tipoId, ruta);
+    setSubiendoTipoId(null);
+  }
+
+  async function mirarPapel(tipoId) {
+    setAbriendoTipoId(tipoId);
+    setError(null);
+    const direccion = await direccionParaMirar(rutas[tipoId]);
+    setAbriendoTipoId(null);
+    if (!direccion) {
       setError(t.comun.error_generico);
       return;
     }
-    recargar();
+    window.open(direccion, '_blank', 'noopener,noreferrer');
   }
 
   return (
@@ -549,6 +597,7 @@ function DocumentosVencimiento({ asistenteId }) {
             <tr>
               <th>{t.asistentes.documentos.vencimientos_col_tipo}</th>
               <th>{t.asistentes.documentos.vencimientos_col_vencimiento}</th>
+              <th>{t.asistentes.documentos.vencimientos_col_papel}</th>
               <th></th>
             </tr>
           </thead>
@@ -567,8 +616,26 @@ function DocumentosVencimiento({ asistenteId }) {
                   ) : '—'}
                 </td>
                 <td>
+                  <input
+                    type="file"
+                    accept={TIPOS_ACEPTADOS.join(',')}
+                    disabled={subiendoTipoId === tipo.id}
+                    onChange={(e) => {
+                      const archivo = e.target.files?.[0];
+                      e.target.value = '';
+                      presentarPapel(tipo.id, archivo);
+                    }}
+                    aria-label={con(t.comun.campo_de_fila, { campo: t.asistentes.documentos.vencimientos_col_papel, nombre: tipo.nombre })}
+                  />
+                  {rutas[tipo.id] && (
+                    <button onClick={() => mirarPapel(tipo.id)} disabled={abriendoTipoId === tipo.id}>
+                      {t.asistentes.documentos.papel_mirar}
+                    </button>
+                  )}
+                </td>
+                <td>
                   {tipo.requiere_vencimiento && (
-                    <button onClick={() => guardarDocumento(tipo.id)} disabled={guardandoTipoId === tipo.id}>
+                    <button onClick={() => guardarVencimiento(tipo.id)} disabled={guardandoTipoId === tipo.id}>
                       {guardandoTipoId === tipo.id ? t.comun.guardando : t.comun.guardar}
                     </button>
                   )}

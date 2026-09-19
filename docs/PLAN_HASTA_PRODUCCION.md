@@ -39,17 +39,16 @@ para el Asistente. Faltan las pantallas, y **esperan la maqueta**, porque hasta 
 toca apariencia ni recorrido ahí.
 
 **2.** Una cuenta en varias Prestadoras. **Un Asistente trabaja en varias Prestadoras y una Familia
-contrata con varias.** Es regla decidida y hoy es imposible para los dos por el mismo motivo: hay
-una sola tabla de cuentas para todos, con una sola Prestadora por cuenta, y la ficha del Asistente
-y la de la Familia se identifican con el mismo número que la cuenta, así que una cuenta es una
-ficha. Encima de eso el correo es único en todo el sistema. La ficha pasa a ser una por Prestadora
-colgando de la misma cuenta, y adentro de una Prestadora el mismo correo no puede aparecer dos
-veces. Aparte se guarda en cuál está parada la sesión, una por vez, **escrita por el servidor
-después de comprobar la ficha y nunca por el pedido**, y comprobada de nuevo cada vez que se lee.
-Si la persona está en una sola, entra derecho; si está en varias, elige, y eso vale igual en la
-aplicación de la Familia y en la del Asistente. Viaja además el detalle que sostiene todo: **quien
-resuelve o verifica algo tiene que ser de la misma Prestadora que aquello sobre lo que actúa**,
-atado con claves de dos columnas para que lo impida la base y no la pantalla.
+contrata con varias.** La base ya lo admite: cada Legajo es uno por Prestadora y cuelga de una sola
+cuenta, el mismo correo no puede aparecer dos veces adentro de una Prestadora, quien resuelve o
+verifica algo tiene que ser de la misma Prestadora que aquello sobre lo que actúa, y existe la
+tabla que recuerda en cuál está parada cada sesión.
+
+**Falta que eso se use.** El motor tiene que escribir esa fila —**él, después de comprobar el
+Legajo, y nunca lo que venga en el pedido**— y leerla en cada consulta. Si la persona está en una
+sola Prestadora entra derecho; si está en varias, elige, y eso vale igual en la aplicación de la
+Familia y en la del Asistente. Cuando eso funcione se retira el último escalón que queda: la
+Prestadora guardada en la cuenta, que hoy sigue contestando cuando no hay ninguna elegida.
 
 **El aislamiento acá tiene que ser más duro que en el resto del producto, y por eso se prueba
 aparte.** Hasta hoy una cuenta pertenece a una sola Prestadora, así que una fuga se nota; desde

@@ -77,7 +77,7 @@ escrito.
 **La pantalla de ingreso muestra la marca de la Prestadora.** Se la dice la dirección: cada
 Prestadora entra por la suya. `panel/src/lib/puertaDeIngreso.js` traduce esa dirección al segmento
 que el motor lee, y `backend/src/routes/marcaDeLaPuerta.js` devuelve el nombre y el logotipo sin
-pedir sesión. Si la dirección no corresponde a ninguna Prestadora, queda la marca del producto.
+pedir sesión. Si la dirección no corresponde a ninguna Prestadora, no se entra: no hay a cuál.
 
 ## 1. Los dos nombres, y por qué importa la diferencia
 

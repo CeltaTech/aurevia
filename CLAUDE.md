@@ -5,7 +5,7 @@
 > | Qué | Dónde | Cómo llega |
 > |---|---|---|
 > | Lo común a todos los productos de CeltaTech | `..\..\CLAUDE.md` | **Se lee solo**, porque la línea de comandos junta los `CLAUDE.md` hacia arriba |
-> | Lo de Careonys y el Marketplace | `..\..\docs\REGLAS_PRODUCTOS_CAREONYS.md` | **A mano, al empezar** |
+> | Lo de Careonys y Match | `..\..\docs\REGLAS_PRODUCTOS_CAREONYS.md` | **A mano, al empezar** |
 > | El glosario de los dos | `..\..\docs\GLOSARIO_PRODUCTOS_CAREONYS.md` | **A mano, al empezar** |
 > | Lo de este producto | este archivo | Se lee solo |
 >
@@ -72,7 +72,7 @@ cinco veces, una por unidad desplegable, y `scripts/verificar_identidad.mjs` cor
 cinco no coinciden o si el nombre está escrito a mano.
 
 **El `codigo: 'aurevia'` no se toca por ahora.** Es identificador guardado, no marca: con él se
-arman la base local del teléfono y el prefijo de los respaldos. **Cambiarlo se evalúa en el momento de la fusión con el Marketplace**, y
+arman la base local del teléfono y el prefijo de los respaldos. **Cambiarlo se evalúa en el momento de la fusión con Match**, y
 hasta entonces queda como está. Ver la excepción del glosario, §4.
 
 **Dónde vive la marca de la Prestadora.** En las dos aplicaciones, `src/context/PerfilContext.jsx`

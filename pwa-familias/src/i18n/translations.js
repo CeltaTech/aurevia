@@ -47,7 +47,7 @@ export const T = {
         // nada que apagar.
         acceso_inexistente: 'No se encontró ese acceso. Conviene volver a abrir la pantalla.',
         forma_que_no_se_renueva: 'Ese acceso no se renueva solo, así que no hay nada que dar de baja.',
-        // La vidriera del Marketplace pedida en una Prestadora que no trabaja de esa manera. No
+        // La vidriera de Match pedida en una Prestadora que no trabaja de esa manera. No
         // es una función apagada: es que esa Prestadora asigna ella a su gente, y decirlo así
         // evita que alguien le reclame que le "active" algo que no ofrece.
         marketplace_no_habilitado: 'Esta Prestadora asigna ella misma a sus Asistentes, así que no hay una lista para elegir.',
@@ -82,14 +82,14 @@ export const T = {
       campo_obligatorio: 'Hace falta completar este campo.',
     },
     nav: {
-      // El chat con la otra punta del Marketplace. Sólo aparece donde la Prestadora ofrece esa
+      // El chat con la otra punta de Match. Sólo aparece donde la Prestadora ofrece esa
       // modalidad de trabajo.
       mensajes: 'Mensajes',
       pacientes: 'Mis Pacientes',
       // El código para el Asistente que llega. Va en el menú de abajo porque se busca con el
       // timbre sonando: tiene que estar a un toque desde cualquier pantalla.
       codigo: 'Código',
-      // La vidriera del Marketplace. Sólo aparece donde la Prestadora ofrece esa modalidad.
+      // La vidriera de Match. Sólo aparece donde la Prestadora ofrece esa modalidad.
       buscar: 'Buscar',
       perfil: 'Mi Perfil',
       cerrar_sesion: 'Cerrar sesión',
@@ -410,7 +410,7 @@ export const T = {
       estado_vigente: 'Vigente',
       estado_vencida: 'Vencida',
       estado_cancelada: 'Cancelada',
-      sin_acceso: 'Todavía no hay un acceso del marketplace para este Paciente.',
+      sin_acceso: 'Todavía no hay un acceso de Match para este Paciente.',
       importe: 'Importe',
       proximo_cobro: 'Próximo cobro',
       generar_qr_titulo: 'Pagar en efectivo con QR',
@@ -878,7 +878,7 @@ export const T = {
       estado_vigente: 'Current',
       estado_vencida: 'Overdue',
       estado_cancelada: 'Cancelled',
-      sin_acceso: 'There is no marketplace access for this Patient yet.',
+      sin_acceso: 'There is no Match access for this Patient yet.',
       importe: 'Amount',
       proximo_cobro: 'Next charge',
       generar_qr_titulo: 'Pay in cash with QR',
@@ -1331,7 +1331,7 @@ export const T = {
       estado_vigente: 'Vigente',
       estado_vencida: 'Vencida',
       estado_cancelada: 'Cancelada',
-      sin_acceso: 'Ainda não há um acesso do marketplace para este Paciente.',
+      sin_acceso: 'Ainda não há um acesso a Match para este Paciente.',
       importe: 'Valor',
       proximo_cobro: 'Próxima cobrança',
       generar_qr_titulo: 'Pagar em dinheiro com QR',

@@ -85,7 +85,7 @@ export const T = {
       pendiente_de_enviar: 'Guardado, pendiente de enviar',
     },
     nav: {
-      // El chat con la otra punta del Marketplace. Sólo aparece donde la Prestadora ofrece esa
+      // El chat con la otra punta de Match. Sólo aparece donde la Prestadora ofrece esa
       // modalidad de trabajo.
       mensajes: 'Mensajes',
       guardias: 'Mis Guardias',

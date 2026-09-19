@@ -258,7 +258,7 @@ contrató a la Prestadora, no a un Coordinador: el teléfono personal de quien c
 el dato de contacto de alguien que trabaja ahí, y además rota. Lo que se ofrece son los canales
 que la propia Prestadora cargó en Configuración › La Prestadora —teléfono, WhatsApp y correo—, y
 dónde suenan lo decide ella. El teléfono o el correo de un Asistente no aparece acá nunca: cómo
-llegar a alguien del plantel es lo que la modalidad Marketplace abre a pedido y con el contacto
+llegar a alguien del plantel es lo que la modalidad Match abre a pedido y con el contacto
 tapado hasta entonces.
 
 **Sin ningún canal cargado no hay botón.** Uno que no lleva a ningún lado hace creer que del otro

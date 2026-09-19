@@ -775,7 +775,7 @@ CREATE TABLE ceses (
 ## Tabla: calificaciones_asistente (pendiente #13(b), diseñado 2026-07-13)
 
 Calificación que la Familia deja sobre el Asistente tras una guardia — informativa para el
-marketplace, no dispara ninguna acción automática del sistema sobre el Asistente. La única
+Match, no dispara ninguna acción automática del sistema sobre el Asistente. La única
 injerencia de la prestadora es decidir si una calificación puntual se muestra en la ficha
 pública del Asistente (`visible_publica`) o no — nunca editar/borrar el contenido de la
 calificación en sí (estrellas/comentario son de la Familia, no de la prestadora).
@@ -953,7 +953,7 @@ postulaciones (Etapa 1, independiente) → asistentes (directo, sin tabla interm
 Ningún PRD original define esas tablas (ver `CONTEXT.md`, sección de gap). **En prestación
 directa** requiere decisión de negocio antes de implementarse.
 
-En la modalidad Marketplace el cobro sí está definido y aplicado, y su schema no vive acá sino
+En la modalidad Match el cobro sí está definido y aplicado, y su schema no vive acá sino
 en `docs/PRD_07_Modalidad_Marketplace.md`: `formas_de_cobro_marketplace` (las piezas con las que
 cada Prestadora arma su forma de cobrar) y `accesos_marketplace` (qué tiene habilitado cada
 Familia), más `cobros_marketplace`, `prestadora_pasarela_pago`, `credenciales_pasarela_pago` y

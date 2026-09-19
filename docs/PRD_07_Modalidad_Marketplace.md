@@ -1,4 +1,4 @@
-# Modalidad Marketplace — diseño de negocio (Familia ↔ Asistente)
+# Modalidad Match — diseño de negocio (Familia ↔ Asistente)
 
 > Decisiones tomadas con el Desarrollador el 2026-07-24, antes de tocar código
 > (`CLAUDE.md` §11: inventario/decisión → plan → aprobación → código). Este documento fija
@@ -18,7 +18,7 @@
   `supabase/migrations/`). Este diseño ya anticipaba correctamente el principio del §4 de
   este documento, antes de que se discutiera en detalle.
 
-Las 3 modalidades de trabajo de una Prestadora (directa / marketplace / subcontratación) son
+Las 3 modalidades de trabajo de una Prestadora (directa / Match / subcontratación) son
 **combinables entre sí**, no mutuamente excluyentes — una Prestadora puede operar varias a
 la vez.
 
@@ -100,7 +100,7 @@ Resguardos obligatorios, no opcionales:
 
 ### 3.4 Dónde las carga
 
-En **Panel > Formas de cobro de marketplace**, que es para esta modalidad lo que la lista de
+En **Panel > Formas de cobro de Match**, que es para esta modalidad lo que la lista de
 precios es para la prestación directa. La pantalla pregunta por las piezas, no por un tipo de
 forma: nombre, importe, cada cuántos y de qué, días gratis, contactos incluidos, si se renueva
 sola y si se ofrece. La moneda no se pregunta —es la de la Prestadora y la completa la base—, y
@@ -234,10 +234,10 @@ intervención en el vínculo:
    reutiliza el mecanismo ya construido para prestación directa.
 6. **Contenido y recursos para cuidadores familiares.**
 
-## 5. Riesgo legal invertido (modalidad marketplace)
+## 5. Riesgo legal invertido (modalidad Match)
 
 En prestación directa, el riesgo es que la Prestadora controle tanto al Asistente que
-parezca su empleadora (art. 23 LCT, ver `docs/legal/argentina.md`). En marketplace el
+parezca su empleadora (art. 23 LCT, ver `docs/legal/argentina.md`). En Match el
 riesgo es el mismo principio aplicado al revés: que la **plataforma** (no la Familia)
 ejerza ese control de forma agregada entre todas las Familias.
 
@@ -245,7 +245,7 @@ ejerza ese control de forma agregada entre todas las Familias.
 |---|---|---|
 | Calificación por estrellas visible, como opinión de la Familia, **sin consecuencia automática decidida por la plataforma** | Bajo | Es información al consumidor, equivalente a una reseña de Google/MercadoLibre. La "autoexclusión" (nadie la elige por su nota baja) es la Familia decidiendo, no la plataforma. |
 | Verificación de identidad / antecedentes penales | Bajo | Función de seguridad, no de dirección del trabajo — describir con exactitud literal qué se verificó y qué no (caso California vs. Care.com: sancionados por afirmar una verificación que no hacían). |
-| Toggle de disponibilidad del Asistente (activar/desactivar) | Bajo | El Asistente decide sobre sí misma; ya reconocido en `CLAUDE.md` §3 como autonomía del Asistente en modalidad marketplace. |
+| Toggle de disponibilidad del Asistente (activar/desactivar) | Bajo | El Asistente decide sobre sí misma; ya reconocido en `CLAUDE.md` §3 como autonomía del Asistente en modalidad Match. |
 | Herramientas de horario/penalización/calificación **operadas por la Familia sobre su propio Asistente** | Bajo | Es la Familia ejerciendo su rol de empleadora doméstica (Ley 26.844), no la plataforma. |
 | Ranking o puntaje que la **plataforma** calcula y usa para decidir si el Asistente sigue apareciendo ante *cualquier* Familia | Alto | La plataforma decide el futuro laboral del Asistente en general — mismo hecho citado en Uber BV vs Aslam (Reino Unido, 2021). |
 | Consecuencia automática atada a la nota agregada (ej. "por debajo de X estrellas dejás de aparecer") | Alto | Convierte la opinión del consumidor en una decisión algorítmica de la plataforma sobre el Asistente. |
@@ -259,8 +259,8 @@ tenían ese resguardo.
 
 **Mecánica de la advertencia**: igual que en prestación directa (`CLAUDE.md` §3) — nunca
 bloquea, solo advierte al activar una función de riesgo alto, con texto propio de
-marketplace (no reutilizar el texto de prestación directa, el riesgo apunta al revés). Ver
-`docs/legal/argentina.md` §"Modalidad marketplace" para la tabla de advertencias.
+Match (no reutilizar el texto de prestación directa, el riesgo apunta al revés). Ver
+`docs/legal/argentina.md` §"Modalidad Match" para la tabla de advertencias.
 
 ## 6. Geolocalización del Asistente (check-in/checkout)
 
@@ -276,7 +276,7 @@ persona):
 - Cualquier costo asociado se acuerda entre Familia y Asistente directamente — la
   plataforma no cobra ni intermedia ese dinero.
 
-## 7. Alcance de las PWA en modalidad marketplace
+## 7. Alcance de las PWA en modalidad Match
 
 **PWA Familia:**
 - Buscar/filtrar perfiles con insignias de verificación y calificación (opinión).
@@ -303,12 +303,12 @@ persona):
 
 ## 8. Propuesta original del Desarrollador para el dashboard (sin rearmar todavía)
 
-Antes de entrar en el detalle de marketplace (§2-7), el Desarrollador ya había dejado esta
+Antes de entrar en el detalle de Match (§2-7), el Desarrollador ya había dejado esta
 propuesta cruda de agrupación para el dashboard de Admin_prestadora, pidiendo explícitamente
 "rearma tu esquema en función de esto y dime si estoy dejando algo afuera de
 consideración" — pedido que quedó sin responder porque la conversación pasó primero a la
 corrección de arquitectura de 3 niveles (`ARQUITECTURA_NIVELES.md`) y luego a resolver las
-4 preguntas abiertas de marketplace (§2-7 de este documento). Se deja registrada tal cual,
+4 preguntas abiertas de Match (§2-7 de este documento). Se deja registrada tal cual,
 textual, para no perderla:
 
 **a) Prestación directa** (la modalidad más común hoy en Argentina):
@@ -320,7 +320,7 @@ textual, para no perderla:
 - **Facturación, pagos y cobranzas**.
 - **Administración de servicios** (Guardias, etc.).
 
-**b) Marketplace** (similar a cuidarlos.com):
+**b) Match** (similar a cuidarlos.com):
 - Las Familias tratan a través del sistema la contratación de Asistentes, con todo el
   soporte y coberturas adicionales que se ofrezcan.
 - Los Asistentes comparten con la modalidad directa todo lo referente a reclutamiento,
@@ -336,7 +336,7 @@ en el código»; post-MVP).
 
 **Todavía pendiente**: el "rearme del esquema" en sí (cómo quedan agrupados estos bloques
 en la UI del dashboard, qué falta considerar) — es el próximo paso de diseño antes de tocar
-código, ahora que las 4 preguntas de marketplace (§2-7) y la separación de niveles ya están
+código, ahora que las 4 preguntas de Match (§2-7) y la separación de niveles ya están
 resueltas y no van a hacer cambiar la respuesta.
 
 ## 9. Qué falta antes de escribir código
@@ -347,13 +347,13 @@ resueltas y no van a hacer cambiar la respuesta.
 - **La columna `asistentes.canales` existe pero no la lee nadie.** Está creada en la base,
   con su regla (`directo`, `marketplace`, al menos uno) y su valor de arranque, y ninguna
   pantalla ni ruta del motor la consulta: hoy nada impide ofrecerle una guardia de
-  marketplace a un Asistente que solo trabaja en prestación directa. Tiene fila propia,
+  Match a un Asistente que solo trabaja en prestación directa. Tiene fila propia,
   la `#154`, en `docs/PLAN_HASTA_PRODUCCION.md`.
 - **Rediseño del dashboard de Admin_prestadora** en "grupos fundamentales" por modalidad —
   este documento alimenta ese rediseño, todavía no iniciado.
 
 Ya no está pendiente lo demás que este apartado daba por hacer: la columna `canales` está
-aplicada contra la base real, y las advertencias de marketplace están escritas en
+aplicada contra la base real, y las advertencias de Match están escritas en
 `docs/legal/argentina.md`, que lleva su propia nota de revisión pendiente por un abogado
 laboralista — no hace falta repetirla acá.
 

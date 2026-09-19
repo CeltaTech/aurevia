@@ -357,7 +357,7 @@ real (15 policies, incluyendo el patrón OR-de-dos-EXISTS de
 `guardia_saliente_id IS NULL`). Sigue sin existir ninguna ruta backend ni pantalla de Panel
 que consuma estas tablas.
 
-**Marketplace — cómo cobra la Prestadora y qué tiene habilitado la Familia.** Son dos tablas y
+**Match — cómo cobra la Prestadora y qué tiene habilitado la Familia.** Son dos tablas y
 se leen juntas. `formas_de_cobro_marketplace` guarda las piezas con las que cada Prestadora arma
 su forma de cobrar —qué importe, cada cuánto, con qué período gratuito, con qué saldo de
 contactos, si se renueva sola—; `accesos_marketplace`, a qué forma se adhirió cada Familia, con
@@ -507,6 +507,6 @@ depósito `fotos-identidad`, creado por
 - Si se automatiza la consulta de antecedentes penales: proveedor no elegido.
 - Cómo la Prestadora le cobra a la Familia el cuidado prestado **en prestación directa**: no hay
   decisión de negocio, y por lo tanto tampoco de seguridad de datos de pago. En la modalidad
-  Marketplace sí está resuelto y construido (`docs/PRD_07_Modalidad_Marketplace.md`): el cobro lo
+  Match sí está resuelto y construido (`docs/PRD_07_Modalidad_Marketplace.md`): el cobro lo
   hace una pasarela y el producto no guarda nunca un dato de tarjeta — sólo el identificador que
   devuelve el proveedor.

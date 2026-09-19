@@ -20,12 +20,12 @@
 
 ## 1. Punto de partida (qué ya está decidido, no se vuelve a discutir acá)
 
-- Las 3 modalidades de trabajo de una Prestadora — **prestación directa**, **marketplace**
+- Las 3 modalidades de trabajo de una Prestadora — **prestación directa**, **Match**
   y **cooperativa** — son combinables entre sí, no mutuamente excluyentes
   (`docs/PRD_07_Modalidad_Marketplace.md:22-24`).
 - El plantel de Asistentes, el Proceso de Incorporación de Asistentes y el control de
   personal (vínculo/cese/score de riesgo/ausencias) son **infraestructura común** a
-  prestación directa y marketplace — "un solo plantel, un solo proceso de verificación,
+  prestación directa y Match — "un solo plantel, un solo proceso de verificación,
   una sola base de Asistentes certificados, sea cual sea el canal por el que después
   trabajen" (`docs/PRD_07_Modalidad_Marketplace.md:191`).
 - El campo técnico que ya soporta esto es `asistentes.canales TEXT[]` (default
@@ -60,10 +60,10 @@
 ## 2. Esquema rearmado — 4 grupos de navegación
 
 La propuesta cruda original del Desarrollador (`docs/PRD_07_Modalidad_Marketplace.md:164-193`)
-tenía 3 bloques (directa / marketplace / cooperativa) más una infraestructura común
-mencionada al pasar dentro del bloque marketplace. El rearme más importante es **sacar esa
+tenía 3 bloques (directa / Match / cooperativa) más una infraestructura común
+mencionada al pasar dentro del bloque Match. El rearme más importante es **sacar esa
 infraestructura común de adentro de un bloque y ponerla primera, arriba de los 3**, porque
-hoy son Asistentes en un mismo plantel — meterla dentro de "marketplace" en el menú
+hoy son Asistentes en un mismo plantel — meterla dentro de "Match" en el menú
 insinuaría que es exclusiva de esa modalidad, cuando el pendiente #13 dice lo contrario.
 
 Resultado: **4 grupos**, no 3.
@@ -80,7 +80,7 @@ Resultado: **4 grupos**, no 3.
 ### Grupo 1 — Plantel de Asistentes (infraestructura compartida, pendiente #13)
 
 Visible siempre que **alguna** modalidad basada en Asistentes esté activa (directa o
-marketplace — cooperativa también los necesita en algún momento, ver §3 pregunta 4):
+Match — cooperativa también los necesita en algún momento, ver §3 pregunta 4):
 
 - Proceso de Incorporación de Asistentes (hoy "Postulaciones" + "Solicitudes")
 - Asistentes (ficha, plantel, `canales` para saber en qué modalidad participa cada uno)
@@ -92,11 +92,11 @@ marketplace — cooperativa también los necesita en algún momento, ver §3 pre
 `checkin_lat`/`checkin_lng`/`checkout_at`/`checkout_lat`/`checkout_lng`) sin filtrar por
 canal. `Continuidad.jsx` consulta `incidentes_relevo`, `alertas_tempranas_guardia` y
 `notificaciones_cierre_servicio`, todas ligadas a `guardias` por `guardia_entrante_id`/
-`guardia_saliente_id`/`guardia_id`, tampoco filtra por canal. El PRD_07 de marketplace
+`guardia_saliente_id`/`guardia_id`, tampoco filtra por canal. El PRD_07 de Match
 (`docs/PRD_07_Modalidad_Marketplace.md:75-92,124-160`) confirma explícitamente que
-marketplace también usa check-in/checkout y geolocalización sobre el mismo concepto de
+Match también usa check-in/checkout y geolocalización sobre el mismo concepto de
 Guardia. Conclusión: ambas pantallas son infraestructura compartida real entre directa y
-marketplace, no una suposición — quedan confirmadas en el Grupo 1.
+Match, no una suposición — quedan confirmadas en el Grupo 1.
 
 ### Grupo 2 — Prestación directa
 
@@ -110,18 +110,18 @@ Visible solo si la Prestadora tiene esta modalidad activa:
 - Lista de precios
 - Informes de obra social
 
-### Grupo 3 — Marketplace
+### Grupo 3 — Match
 
 Visible solo si la Prestadora tiene esta modalidad activa. Todo lo que ya está cerrado en
 `docs/PRD_07_Modalidad_Marketplace.md` necesita una pantalla en algún lado — hoy ninguna
 existe en el menú actual, es la parte que más código nuevo va a requerir:
 
-- Familias marketplace — padrón y estado del cobro que cada Familia le paga a la Prestadora
+- Familias Match — padrón y estado del cobro que cada Familia le paga a la Prestadora
   (`docs/PRD_07_Modalidad_Marketplace.md`, §3)
 - Calificaciones y descargos — vista de `calificaciones_asistente` con el derecho de
   descargo del Asistente (`docs/PRD_07_Modalidad_Marketplace.md:115-117`, mitigante "no
   opcional")
-- Advertencias legales de marketplace — panel de auditoría de qué función de riesgo alto
+- Advertencias legales de Match — panel de auditoría de qué función de riesgo alto
   (`docs/legal/argentina.md:66-72`) se activó, cuándo y qué advertencia se mostró (mismo
   patrón de auditoría que ya exige `CLAUDE.md` §3 y §6)
 
@@ -176,23 +176,23 @@ antes de programar:
    del glosario (`CLAUDE.md` §4, "antes de usar un término de negocio nuevo: verificarlo...
    si no está, proponerlo para aprobación") — este documento no propone un nombre nuevo, deja
    señalado el conflicto para que se resuelva antes de nombrar cualquier pantalla.
-4. **¿Un Asistente puede participar de cooperativa además de directo/marketplace?** El
+4. **¿Un Asistente puede participar de cooperativa además de directo/Match?** El
    campo `canales` hoy solo admite `'directo'`/`'marketplace'`
    (`docs/DATA_MODEL.md:226-227`, `CHECK (canales <@ ARRAY['directo','marketplace']::TEXT[])`)
    — no contempla un tercer valor `'cooperativa'`. Si cooperativa también comparte el mismo
    plantel de Asistentes (Grupo 1), ese `CHECK` constraint necesita revisión el día que se
    diseñe cooperativa en profundidad, no alcanza con agregarla a la UI del menú.
 5. **Resuelto (2026-07-24)**: pantalla propia en el Grupo 3 para el cobro mensual que la Familia
-   de marketplace le paga a la Prestadora, separada de "Facturación, pagos y cobranzas" de
+   de Match le paga a la Prestadora, separada de "Facturación, pagos y cobranzas" de
    prestación directa (que factura servicios de cuidado) — son dos naturalezas de cobro distintas
    y no comparten pantalla.
 6. **Resuelto (2026-07-24)**: Informes de obra social y Lista de precios son exclusivos de
-   prestación directa — confirman ubicación en el Grupo 2. En marketplace la Familia
+   prestación directa — confirman ubicación en el Grupo 2. En Match la Familia
    contrata directo al Asistente, sin derivación de obra social ni lista de precios de la
    Prestadora de por medio.
 7. ~~**Verificación de Guardias / Continuidad**~~ — **Resuelto (2026-07-24)**: se leyó el
    código real, ambas operan sobre `guardias` sin distinguir canal, y el PRD_07 confirma que
-   marketplace usa el mismo mecanismo de check-in/checkout — quedan confirmadas como
+   Match usa el mismo mecanismo de check-in/checkout — quedan confirmadas como
    infraestructura compartida en el Grupo 1 (ver §2).
 8. **Resuelto (2026-07-24)**: el Grupo 4 (Cooperativas) **no se muestra** en el menú hasta
    tener el diseño completo de esa modalidad (post-MVP, pendiente #53) — se descarta el
@@ -201,10 +201,10 @@ antes de programar:
 
 ## 4. Fuera de alcance de este documento (explícito, para no generar expectativa)
 
-- No se diseñaron las pantallas nuevas de marketplace (cobro, calificaciones, auditoría de
+- No se diseñaron las pantallas nuevas de Match (cobro, calificaciones, auditoría de
   advertencias) más allá de nombrarlas como necesarias en el Grupo 3.
 - No se tocó ningún archivo de `panel/src`, `backend/src` ni ninguna migración de Supabase.
-- No se definió el nombre comercial de "Familias" en contexto de marketplace (pregunta 3 de
+- No se definió el nombre comercial de "Familias" en contexto de Match (pregunta 3 de
   §3) — se mantiene "Familia" por ser el término ya aprobado del glosario, salvo que el
   Desarrollador decida abrir una excepción explícita.
 
@@ -214,7 +214,7 @@ antes de programar:
 tabla propia `prestadora_modalidades` como punto único de verdad de la modalidad activa (no se
 cuelga de lo que cada Prestadora haya contratado, por no ser la misma decisión);
 ninguna modalidad activada por defecto al alta, el onboarding suma un paso explícito de
-elección; Facturación de marketplace en pantalla propia (Grupo 3), separada de la de
+elección; Facturación de Match en pantalla propia (Grupo 3), separada de la de
 prestación directa; Informes de obra social y Lista de precios confirmados exclusivos de
 prestación directa (Grupo 2); Verificación de Guardias/Continuidad confirmadas como
 infraestructura compartida real (Grupo 1, verificado leyendo el código); Cooperativa

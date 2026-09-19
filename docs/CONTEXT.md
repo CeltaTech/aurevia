@@ -8,7 +8,7 @@
 ## Modelo de negocio (lo mínimo que el código necesita saber)
 
 - Familias solicitan un servicio → la prestadora asigna un Asistente Integral (empresa directa,
-  fase actual) → evoluciona a marketplace (familia elige directamente) y B2B (obras
+  fase actual) → evoluciona a Match (familia elige directamente) y B2B (obras
   sociales / prepagas, y coordinación de prestadoras terceras).
 - Precio de referencia de lanzamiento: **nunca hardcodear** — se carga desde configuración
   (la lista de precios del Panel), no desde una constante en el código. Mientras no haya
@@ -138,8 +138,8 @@ Etapa 2 — Panel de administración
   - **Reportes, alertas y medicación** — el reporte diario que arma la IA, las alertas por
     patrones, los signos vitales con su autorización, y las indicaciones de medicación.
   - **El dinero** — lista de precios y prestaciones, facturación a las Familias, cobros,
-    informes a obras sociales y los rieles de cobro del Marketplace.
-  - **Marketplace** — vidriera, perfiles públicos, conversaciones con videollamada, formas de
+    informes a obras sociales y los rieles de cobro de Match.
+  - **Match** — vidriera, perfiles públicos, conversaciones con videollamada, formas de
     cobro que arma cada Prestadora, accesos, calificaciones y auditoría legal.
   - **Configuración y gobierno** — configuración por Prestadora y de plataforma, usuarios y
     permisos, segundo factor con su recuperación, auditoría, importación, contenidos, avisos en
@@ -300,7 +300,7 @@ porque una factura emitida no cambia: si mañana esa Familia pasa a pagar por s�
 tienen que seguir diciendo a quién se le reclamaron. El nombre es texto y no se interpreta — el
 padrón de obras sociales cambia de país en país y el producto no conoce ninguno.
 
-**En la modalidad Marketplace** (`docs/PRD_07_Modalidad_Marketplace.md`), la Familia le paga a la Prestadora por una pasarela,
+**En la modalidad Match** (`docs/PRD_07_Modalidad_Marketplace.md`), la Familia le paga a la Prestadora por una pasarela,
 y **cada Prestadora arma su propia forma de cobrar** con las piezas que el producto le da
 —importe, cada cuánto, período gratuito, saldo de contactos, si se renueva sola— en
 `formas_de_cobro_marketplace`. Lo que cada Familia tiene habilitado vive en

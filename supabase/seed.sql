@@ -1155,6 +1155,16 @@ VALUES ('a3000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-1111111
         'intravenosa', 'enfermeria');
 
 
+-- De qué Prestadora es parte cada cuenta. Se deriva de las cuentas ya sembradas y no se escribe
+-- a mano cuenta por cuenta: así una cuenta nueva en este archivo queda con su membresía sin que
+-- nadie se acuerde de agregarla en dos lugares.
+INSERT INTO public.membresias (usuario_id, prestadora_id, rol)
+SELECT u.id, u.prestadora_id, u.rol
+  FROM public.usuarios u
+ WHERE u.prestadora_id IS NOT NULL
+ON CONFLICT (usuario_id, prestadora_id) DO NOTHING;
+
+
 -- ----------------------------------------------------------------------------
 -- 9. Limpieza y aviso final
 -- ----------------------------------------------------------------------------

@@ -196,6 +196,26 @@ export async function crearCuentaConPerfil({ email, nombre, telefono, rol, prest
     throw new Error(errorPerfil.message);
   }
 
+  // De qué Prestadora es parte esta persona, y con qué papel ahí. Va junto con la fila de la
+  // cuenta y no después: una cuenta sin membresía no pertenece a ninguna Prestadora, así que si
+  // esto falla el alta se deshace entera y no queda nadie a medio dar de alta.
+  //
+  // Hoy las dos columnas de `usuarios` siguen siendo las que lee el resto del producto y la
+  // membresía va al lado; cuando el último lector pase a la membresía, esas dos columnas se
+  // retiran y acá queda sólo esta escritura. Superadmin entra igual: su Prestadora es la
+  // ficticia y la tiene cargada como cualquiera.
+  if (prestadoraId) {
+    const { error: errorMembresia } = await supabase
+      .from('membresias')
+      .insert({ usuario_id: userId, prestadora_id: prestadoraId, rol });
+
+    if (errorMembresia) {
+      await supabase.from('usuarios').delete().eq('id', userId);
+      await supabase.auth.admin.deleteUser(userId);
+      throw new Error(errorMembresia.message);
+    }
+  }
+
   if (enviarActivacion) {
     try {
       await invitarActivacionCuenta({ usuarioId: userId, email, nombre, rol, prestadoraId });

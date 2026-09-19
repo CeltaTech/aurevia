@@ -112,6 +112,7 @@ beforeEach(() => {
       : [{ id: QUIEN_LLAMA, rol: 'admin_prestadora', prestadora_id: PRESTADORA }],
   );
   respuestas.set('POST /rest/v1/usuarios', () => []);
+  respuestas.set('POST /rest/v1/membresias', () => []);
   respuestas.set('DELETE /rest/v1/usuarios', () => []);
   respuestas.set('POST /auth/v1/admin/users', () => ({ id: NUEVA_CUENTA }));
   respuestas.set('DELETE /auth/v1/admin/users/:id', () => ({}));

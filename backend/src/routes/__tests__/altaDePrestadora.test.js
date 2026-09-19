@@ -196,6 +196,7 @@ beforeEach(() => {
   // de acceso devuelve la cuenta suelta, no adentro de una lista.
   respuestas.set('POST /auth/v1/admin/users', () => ({ id: ADMINISTRADOR }));
   respuestas.set('POST /rest/v1/usuarios', () => []);
+  respuestas.set('POST /rest/v1/membresias', () => []);
   // Y lo que se usa sólo cuando el alta se deshace.
   respuestas.set('DELETE /rest/v1/prestadoras', () => []);
   // La dirección desde la que va a mandar. El catálogo dice qué dominios son de una casilla

@@ -214,7 +214,7 @@ ella le abre la puerta. Es el camino tradicional y hay que darlo: acá la coordi
 esa persona, le vio la cara y le conoce la voz, que es justo lo que no pasa en una mesa de ayuda
 de una empresa grande, donde este mismo mecanismo es hoy el agujero más grande que existe. **Ella
 habilita, no cambia:** nunca elige la clave de nadie ni la ve, abre una puerta que dura poco y
-sirve una vez. La pantalla le muestra la ficha con la foto para que reconozca a quien tiene al
+sirve una vez. La pantalla le muestra el Legajo con la foto para que reconozca a quien tiene al
 teléfono, sin interrogatorio ni reglas que recordar. **No puede hacérselo a sí misma ni a quien
 esté por encima:** a la coordinadora la habilita la administración, y a la administración el rol
 técnico de la empresa. Entra al catálogo de permisos como cualquier otra acción y sale de fábrica
@@ -461,7 +461,7 @@ dirección, y los dos depósitos de respaldo. El repositorio ya se llama `careon
 
 **82. Usted** — El alta y la baja de Prestadoras: Match expone una puerta firmada para que CeltaTech dé de alta y de baja clientes; Careonys no tiene nada parecido. ¿Se construye la misma, o se siguen dando de alta a mano?
 
-**83. Usted** — El acompañamiento online: ¿prestación más, o guardia sin domicilio? Si es guardia, hay que decidir qué reemplaza al fichaje por ubicación.
+**83. Usted** — El acompañamiento online: ¿prestación más, o guardia sin domicilio? Si es guardia, hay que decidir qué reemplaza al check-in por ubicación.
 
 **84. Usted** — El «Gestor del cuidado»: ¿rol nuevo, variante de Coordinador, o entrada en el catálogo de permisos por Prestadora? La tercera no rompe la regla de los tres roles de Panel; las dos primeras sí. Hoy el Coordinador se asigna por guardia, no por Familia.
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
 import { useEmpresa } from '../context/EmpresaContext';
@@ -69,6 +69,8 @@ export function Login() {
         <Button type="submit" disabled={enviando}>
           {enviando ? t.auth.ingresando : t.auth.ingresar}
         </Button>
+
+        <Link to="/recuperar-clave">{t.auth.recuperar_link}</Link>
       </form>
     </div>
   );

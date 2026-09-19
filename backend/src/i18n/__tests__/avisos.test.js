@@ -90,6 +90,10 @@ const DATOS = {
     nombre: 'Elena', link: 'https://ejemplo/activar', dias: 7,
     empresa: 'Cuidados del Sur', producto: IDENTIDAD.nombre,
   },
+  recuperacion_clave: {
+    nombre: 'Elena', link: 'https://ejemplo/clave-nueva', horas: 2,
+    empresa: 'Cuidados del Sur', producto: IDENTIDAD.nombre,
+  },
   estado_postulacion: { empresa: 'Cuidados del Sur', nombre: 'Marta', estado: 'aprobado' },
   nueva_postulacion_asistente: {
     nombre: 'Marta', dni: '11222333', telefono: '1150000000', email: 'marta@ejemplo',

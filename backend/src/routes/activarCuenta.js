@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { activarCuentaConToken } from '../utils/activacionCuenta.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
+import { claveAceptable } from '../config/reglaDeClave.js';
 
 export const activarCuentaRouter = Router();
 
@@ -19,7 +20,7 @@ activarCuentaRouter.post('/', async (req, res) => {
 
   try {
     if (!token || !password) throw new ErrorConMotivo('faltan_datos');
-    if (typeof password !== 'string' || password.length < 8) throw new ErrorConMotivo('password_debil');
+    if (!claveAceptable(password)) throw new ErrorConMotivo('password_debil');
 
     await activarCuentaConToken(token, password);
     res.json({ ok: true });

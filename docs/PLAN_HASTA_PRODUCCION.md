@@ -33,15 +33,10 @@ la sección de Reclutamiento está esperando justamente esto.
   señalados en el paso que los necesita.
 - **El inventario de allá se usa como lista de control**, leyéndolo y sin escribir en él.
 
-**1.** Recuperar la clave y cambiarla. **No existen en ninguna de las tres aplicaciones.** Hoy
-quien pierde la clave depende de que un administrador le reenvíe la invitación, y el administrador
-que pierde la suya depende del rol técnico; la clave temporal del alta se le devuelve al
-administrador para que la comunique a mano. Entra acá también el mínimo de caracteres, que hoy son
-ocho escritos a mano en cuatro archivos y seis en la configuración de la plataforma, que es la que
-manda: cualquier camino que no pase por la activación acepta seis. Un solo lugar decide el número.
-Y se corrige el canje del enlace de activación, que fija la clave antes de marcar el enlace como
-usado y sin que las dos cosas vayan juntas, así que si el segundo paso falla el enlace sigue
-sirviendo (`backend/src/utils/activacionCuenta.js:114-117`).
+**1.** Recuperar la clave y cambiarla en las dos aplicaciones de teléfono. El motor, que es común
+a las tres, ya está: las puertas, el aviso por correo y el enlace sirven igual para la Familia y
+para el Asistente. Faltan las pantallas, y **esperan la maqueta**, porque hasta que llegue no se
+toca apariencia ni recorrido ahí.
 
 **2.** Una cuenta en varias Prestadoras. **Un Asistente trabaja en varias Prestadoras y una Familia
 contrata con varias.** Es regla decidida y hoy es imposible para los dos por el mismo motivo: hay

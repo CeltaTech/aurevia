@@ -1,0 +1,25 @@
+name: Verificar la regla de la clave
+
+# Que el mínimo de caracteres sea uno solo. El número vive en
+# backend/src/config/reglaDeClave.js y lo importan el motor y las tres pantallas, pero la
+# plataforma tiene el suyo en un archivo de configuración que no puede importar nada, y es el
+# que manda de verdad. Esto falla si se despegan, o si alguien vuelve a escribir un mínimo a
+# mano. El script no tiene dependencias, así que no hay npm install.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verificar la regla de la clave
+        run: node scripts/verificar_regla_de_clave.mjs

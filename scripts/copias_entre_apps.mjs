@@ -35,6 +35,15 @@ export const GRUPOS = [
     ],
   },
   {
+    que: 'qué clave se acepta',
+    original: 'backend/src/config/reglaDeClave.js',
+    copias: [
+      'panel/src/lib/reglaDeClave.js',
+      'pwa-asistentes/src/lib/reglaDeClave.js',
+      'pwa-familias/src/lib/reglaDeClave.js',
+    ],
+  },
+  {
     que: 'de qué avisa el canal en vivo',
     original: 'backend/src/avisosEnVivo/asuntos.js',
     copias: ['panel/src/lib/asuntosEnVivo.js'],

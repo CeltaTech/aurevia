@@ -294,6 +294,19 @@ const ES = {
     }),
   }),
 
+  recuperacion_clave: (d) => ({
+    asunto: `Recupere su clave en ${d.empresa}`,
+    texto: `Hola ${d.nombre},\n\nSe pidió una clave nueva para su cuenta en ${d.empresa}.\n\nSe elige acá:\n${d.link}\n\nEl enlace vence en ${d.horas} horas y sirve una sola vez. Si no lo pidió, puede ignorar este correo: su clave sigue siendo la de siempre.\n\n—\nCon la tecnología de ${d.producto}`,
+    html: correoConBoton({
+      saludo: `Hola ${d.nombre},`,
+      cuerpo: `Se pidió una clave nueva para su cuenta en ${d.empresa}.`,
+      boton: 'Elegir una clave nueva',
+      link: d.link,
+      pieDeAviso: `El enlace vence en ${d.horas} horas y sirve una sola vez. Si no lo pidió, puede ignorar este correo: su clave sigue siendo la de siempre.`,
+      marca: `Con la tecnología de ${d.producto}`,
+    }),
+  }),
+
   estado_postulacion: (d) => ({
     asunto: `${d.empresa} — Actualización de la postulación`,
     texto: [
@@ -596,6 +609,19 @@ const EN = {
     }),
   }),
 
+  recuperacion_clave: (d) => ({
+    asunto: `Recover your ${d.empresa} password`,
+    texto: `Hi ${d.nombre},\n\nA new password was requested for your ${d.empresa} account.\n\nChoose it here:\n${d.link}\n\nThe link expires in ${d.horas} hours and works only once. If you did not request it, you can ignore this email: your password stays as it was.\n\n—\nPowered by ${d.producto}`,
+    html: correoConBoton({
+      saludo: `Hi ${d.nombre},`,
+      cuerpo: `A new password was requested for your ${d.empresa} account.`,
+      boton: 'Choose a new password',
+      link: d.link,
+      pieDeAviso: `The link expires in ${d.horas} hours and works only once. If you did not request it, you can ignore this email: your password stays as it was.`,
+      marca: `Powered by ${d.producto}`,
+    }),
+  }),
+
   estado_postulacion: (d) => ({
     asunto: `${d.empresa} — Update on your application`,
     texto: [
@@ -880,6 +906,19 @@ const PT = {
       boton: 'Ativar a minha conta',
       link: d.link,
       pieDeAviso: `O link expira em ${d.dias} dias. Se não esperava este email, pode ignorá-lo.`,
+      marca: `Com a tecnologia de ${d.producto}`,
+    }),
+  }),
+
+  recuperacion_clave: (d) => ({
+    asunto: `Recupere a sua senha na ${d.empresa}`,
+    texto: `Olá ${d.nombre},\n\nFoi pedida uma senha nova para a sua conta na ${d.empresa}.\n\nÉ escolhida aqui:\n${d.link}\n\nO link expira em ${d.horas} horas e serve uma só vez. Se não o pediu, pode ignorar este email: a sua senha continua a mesma.\n\n—\nCom a tecnologia de ${d.producto}`,
+    html: correoConBoton({
+      saludo: `Olá ${d.nombre},`,
+      cuerpo: `Foi pedida uma senha nova para a sua conta na ${d.empresa}.`,
+      boton: 'Escolher uma senha nova',
+      link: d.link,
+      pieDeAviso: `O link expira em ${d.horas} horas e serve uma só vez. Se não o pediu, pode ignorar este email: a sua senha continua a mesma.`,
       marca: `Com a tecnologia de ${d.producto}`,
     }),
   }),

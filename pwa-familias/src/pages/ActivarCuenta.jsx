@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { errorDeLaRespuesta, mensajeDeError } from '../lib/errores';
+import { MINIMO_DE_CARACTERES, claveAceptable } from '../lib/reglaDeClave';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -33,8 +34,11 @@ export default function ActivarCuenta() {
     setError('');
     setErrorCampo(null);
 
-    if (password.length < 8) {
-      setErrorCampo({ campo: 'password', texto: t.auth.activar_password_corta });
+    if (!claveAceptable(password)) {
+      setErrorCampo({
+        campo: 'password',
+        texto: t.auth.activar_password_corta.replace('{{minimo}}', MINIMO_DE_CARACTERES),
+      });
       return;
     }
     if (password !== confirmacion) {

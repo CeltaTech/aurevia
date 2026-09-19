@@ -274,6 +274,7 @@ export function Layout() {
           {/* Idioma, tema y densidad. Están en su propio archivo porque la pantalla de
               muestra del sistema de diseño usa exactamente los mismos tres desplegables. */}
           <SelectoresPreferencias />
+          <NavLink to="/mi-clave">{t.nav.mi_clave}</NavLink>
           <button className="panel-logout" onClick={logout}>
             {t.nav.cerrar_sesion}
           </button>

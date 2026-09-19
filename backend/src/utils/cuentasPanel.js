@@ -96,7 +96,7 @@ function correoYaTomado(errorAuth) {
 // "beto@ejemplo.com" también devuelve "beto@ejemplo.com.ar". Por eso la igualdad se
 // comprueba acá. Recorrer todas las cuentas no es alternativa: con cientos de Prestadoras
 // son decenas de miles de filas (CLAUDE.md §2).
-async function buscarCuentaDeAcceso(email) {
+export async function buscarCuentaDeAcceso(email) {
   const url = `${process.env.SUPABASE_URL}/auth/v1/admin/users?filter=${encodeURIComponent(email)}`;
   const respuesta = await fetch(url, {
     headers: {

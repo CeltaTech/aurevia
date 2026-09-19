@@ -111,8 +111,33 @@ export async function activarCuentaConToken(token, passwordNueva) {
   if (fila.usado_en) throw new ErrorConMotivo('token_ya_usado');
   if (new Date(fila.expira_en) < new Date()) throw new ErrorConMotivo('token_vencido');
 
-  const { error: errorPassword } = await supabase.auth.admin.updateUserById(fila.usuario_id, { password: passwordNueva });
-  if (errorPassword) throw new Error(errorPassword.message);
+  // EL ENLACE SE TOMA ANTES DE TOCAR LA CLAVE, y se toma condicionado a que siga libre.
+  //
+  // Antes era al revés: se fijaba la clave y recién después se marcaba el enlace como usado,
+  // sin que las dos escrituras fueran juntas. Son dos sistemas distintos —la cuenta y la base—
+  // así que no hay transacción que las abarque, y eso dejaba dos huecos. Si la segunda
+  // escritura fallaba, el enlace quedaba sirviendo con la clave ya cambiada: un enlace de un
+  // solo uso que se podía usar de nuevo. Y dos pedidos con el mismo enlace al mismo tiempo
+  // pasaban los dos, porque los dos leían `usado_en` vacío antes de que ninguno escribiera.
+  //
+  // Tomándolo primero, el `is('usado_en', null)` lo resuelve: el segundo pedido no encuentra
+  // nada que actualizar y se va por donde se va un enlace ya usado. Lo que puede quedar mal
+  // ahora es lo contrario —enlace consumido sin clave nueva—, y eso falla cerrado: nadie entra
+  // con una clave que no se fijó. Igual se devuelve el enlace si la cuenta no acepta la clave,
+  // para que quien se equivocó pueda volver a intentar con ese mismo correo.
+  const { data: tomado, error: errorTomar } = await supabase
+    .from('tokens_activacion_cuenta')
+    .update({ usado_en: new Date().toISOString() })
+    .eq('id', fila.id)
+    .is('usado_en', null)
+    .select('id')
+    .maybeSingle();
+  if (errorTomar) throw new Error(errorTomar.message);
+  if (!tomado) throw new ErrorConMotivo('token_ya_usado');
 
-  await supabase.from('tokens_activacion_cuenta').update({ usado_en: new Date().toISOString() }).eq('id', fila.id);
+  const { error: errorPassword } = await supabase.auth.admin.updateUserById(fila.usuario_id, { password: passwordNueva });
+  if (errorPassword) {
+    await supabase.from('tokens_activacion_cuenta').update({ usado_en: null }).eq('id', fila.id);
+    throw new Error(errorPassword.message);
+  }
 }

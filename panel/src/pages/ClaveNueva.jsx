@@ -10,20 +10,15 @@ import { MINIMO_DE_CARACTERES, claveAceptable } from '../lib/reglaDeClave';
 const API_URL = import.meta.env.VITE_API_URL;
 
 // Los tres motivos que contesta el motor son definitivos: con ese mismo enlace, reintentar no
-// sirve nunca. Cuando llega uno, el formulario se retira en vez de quedar invitando a un intento
-// que ya se sabe que va a fallar.
+// sirve nunca, así que el formulario se retira en vez de invitar a un intento que va a fallar.
 const MOTIVOS_SIN_REINTENTO = ['token_invalido', 'token_ya_usado', 'token_vencido'];
 
-// Donde el administrador de una Prestadora nueva elige su contraseña.
+// Donde se elige la clave nueva, con el enlace que llegó por correo.
 //
-// Va afuera del Panel, al lado de la entrada y del segundo factor, porque quien llega acá
-// todavía no tiene con qué entrar: trae la llave que le llegó por correo, y esa llave es toda
-// su credencial. El motor la revisa en `/api/activar-cuenta`, que es la misma puerta que usan
-// las dos aplicaciones de teléfono: la llave no distingue rol, así que no hay una segunda.
-//
-// Existe porque el alta de una Prestadora la crea desde CeltaTech (`panelPrestadoras.js`), y
-// quien la da de alta no puede ver ni elegir la contraseña de nadie.
-export function ActivarCuenta() {
+// Es la hermana de `ActivarCuenta`: el mismo formulario, contra otra puerta del motor. Se
+// escriben aparte porque no son lo mismo —una activa una cuenta que nunca se usó y la otra
+// reemplaza la clave de una que está en uso—, y los enlaces de una no sirven en la otra.
+export function ClaveNueva() {
   const { t } = useLocale();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
@@ -32,15 +27,12 @@ export function ActivarCuenta() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
   const [motivoSinReintento, setMotivoSinReintento] = useState('');
-  // Los dos problemas de acá son de un campo concreto —la contraseña corta, la repetida que no
-  // coincide—, así que el aviso se cuelga de ese campo y no de todo el formulario. Arriba queda
-  // el cartel general sólo para lo que contesta el motor, que no es de ningún campo.
   const [errorCampo, setErrorCampo] = useState(null);
-  const [activada, setActivada] = useState(false);
+  const [cambiada, setCambiada] = useState(false);
 
   const avisoDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
 
-  async function handleActivar(evento) {
+  async function handleGuardar(evento) {
     evento.preventDefault();
     setError(null);
     setErrorCampo(null);
@@ -59,16 +51,14 @@ export function ActivarCuenta() {
 
     setEnviando(true);
     try {
-      const respuesta = await fetch(`${API_URL}/api/activar-cuenta`, {
+      const respuesta = await fetch(`${API_URL}/api/recuperar-clave/canjear`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password }),
       });
       const resultado = await respuesta.json().catch(() => ({}));
-      // La explicación viene del motor, que es el único que sabe qué pasó: manda un motivo y acá
-      // se busca la frase en las traducciones. Esta pantalla no compara códigos.
       if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
-      setActivada(true);
+      setCambiada(true);
     } catch (err) {
       setError(mensajeDeError(err, t));
       if (MOTIVOS_SIN_REINTENTO.includes(err?.motivo)) setMotivoSinReintento(err.motivo);
@@ -81,19 +71,20 @@ export function ActivarCuenta() {
     return (
       <div className="login-pantalla">
         <div className="login-card">
-          <h1>{t.auth.activar_titulo}</h1>
+          <h1>{t.auth.clave_nueva_titulo}</h1>
           <Alert variant="error">{t.auth.activar_token_invalido}</Alert>
+          <Link to="/recuperar-clave">{t.auth.recuperar_titulo}</Link>
         </div>
       </div>
     );
   }
 
-  if (activada) {
+  if (cambiada) {
     return (
       <div className="login-pantalla">
         <div className="login-card">
-          <h1>{t.auth.activar_titulo}</h1>
-          <Alert variant="success">{t.auth.activar_exito}</Alert>
+          <h1>{t.auth.clave_nueva_titulo}</h1>
+          <Alert variant="success">{t.auth.clave_nueva_exito}</Alert>
           <Link to="/login">{t.auth.activar_ingresar}</Link>
         </div>
       </div>
@@ -104,10 +95,12 @@ export function ActivarCuenta() {
     return (
       <div className="login-pantalla">
         <div className="login-card">
-          <h1>{t.auth.activar_titulo}</h1>
+          <h1>{t.auth.clave_nueva_titulo}</h1>
           <Alert variant="error">{error}</Alert>
-          {motivoSinReintento === 'token_ya_usado' && (
+          {motivoSinReintento === 'token_ya_usado' ? (
             <Link to="/login">{t.auth.activar_ingresar}</Link>
+          ) : (
+            <Link to="/recuperar-clave">{t.auth.recuperar_titulo}</Link>
           )}
         </div>
       </div>
@@ -116,9 +109,9 @@ export function ActivarCuenta() {
 
   return (
     <div className="login-pantalla">
-      <form className="login-card" onSubmit={handleActivar}>
-        <h1>{t.auth.activar_titulo}</h1>
-        <p className="login-subtitulo">{t.auth.activar_subtitulo}</p>
+      <form className="login-card" onSubmit={handleGuardar}>
+        <h1>{t.auth.clave_nueva_titulo}</h1>
+        <p className="login-subtitulo">{t.auth.clave_nueva_subtitulo}</p>
 
         {error && <Alert variant="error">{error}</Alert>}
 
@@ -145,7 +138,7 @@ export function ActivarCuenta() {
         />
 
         <Button type="submit" disabled={enviando}>
-          {enviando ? t.auth.activar_enviando : t.auth.activar_confirmar}
+          {enviando ? t.auth.activar_enviando : t.auth.clave_nueva_confirmar}
         </Button>
       </form>
     </div>

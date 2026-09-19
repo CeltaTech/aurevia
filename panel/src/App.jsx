@@ -19,6 +19,9 @@ import { Login } from './pages/Login';
 import { Mfa } from './pages/Mfa';
 import { EntrevistaPublica } from './pages/EntrevistaPublica';
 import { ActivarCuenta } from './pages/ActivarCuenta';
+import { RecuperarClave } from './pages/RecuperarClave';
+import { ClaveNueva } from './pages/ClaveNueva';
+import { MiClave } from './pages/MiClave';
 import { Muestra } from './pages/Muestra';
 import { MuestraEstadoActual } from './pages/MuestraEstadoActual';
 import { Dashboard } from './pages/Dashboard';
@@ -119,6 +122,8 @@ function App() {
                       contraseña. Va acá afuera por lo mismo: la llave le llegó por correo y
                       todavía no tiene ninguna cuenta con la que entrar. */}
                   <Route path="/activar-cuenta" element={<ActivarCuenta />} />
+                  <Route path="/recuperar-clave" element={<RecuperarClave />} />
+                  <Route path="/clave-nueva" element={<ClaveNueva />} />
                   {/* La muestra del sistema de diseño existe SOLO mientras se desarrolla.
                       `import.meta.env.DEV` es falso al compilar para publicar, el
                       compilador borra esta línea y la pantalla no llega al servidor: no es
@@ -210,6 +215,7 @@ function App() {
                       <Route path="aplicaciones" element={<ConfiguracionAplicaciones />} />
                       <Route path="accesos" element={<ConfiguracionAccesos />} />
                     </Route>
+                    <Route path="mi-clave" element={<MiClave />} />
                     <Route path="auditoria" element={<ProtectedRoute roles={ROLES_ADMINISTRACION}><Auditoria /></ProtectedRoute>} />
                     {/* Las pantallas del Marketplace llevan dos candados y no uno: el rol,
                         que dice quién de la Prestadora entra, y la modalidad, que dice si esa

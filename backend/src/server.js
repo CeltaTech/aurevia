@@ -31,6 +31,7 @@ import { panelConfiguracionPlataformaRouter } from './routes/panelConfiguracionP
 import { panelMfaRecuperacionRouter } from './routes/panelMfaRecuperacion.js';
 import { configuracionPublicaRouter } from './routes/configuracionPublica.js';
 import { activarCuentaRouter } from './routes/activarCuenta.js';
+import { recuperarClaveRouter } from './routes/recuperarClave.js';
 import { panelEntrevistasRouter } from './routes/panelEntrevistas.js';
 import { entrevistaPublicaRouter } from './routes/entrevistaPublica.js';
 import { panelEmergenciasRouter } from './routes/panelEmergencias.js';
@@ -149,6 +150,7 @@ app.use('/api/panel/vitales-autorizacion', panelVitalesAutorizacionRouter);
 app.use('/api/panel/configuracion-plataforma', panelConfiguracionPlataformaRouter);
 app.use('/api/panel/mfa-recuperacion', panelMfaRecuperacionRouter);
 app.use('/api/activar-cuenta', activarCuentaRouter);
+app.use('/api/recuperar-clave', recuperarClaveRouter);
 // Sin sesión, como la activación de cuenta: quien llega trae la llave que le llegó por correo, y
 // no tiene ninguna cuenta con la que entrar. La Prestadora sale de la llave, no de la dirección.
 app.use('/api/entrevista', entrevistaPublicaRouter);
